@@ -15,15 +15,19 @@ closedir $dh;
 
 @dirs = sort @dirs;
 
+my @check = qw/
+    27NA
+    K527
+    W4TN
+    TS54
+    DWX9
+/;
 my @skip = qw/
     EHF6 6CK3 9WXW Z9M4 U3C3
     P76L N782 CC74 C4HZ BEC7 6ZKB 6LVF 5TYM
     WZ62 UGM3 LE5A L94M
-/;
-my @check = qw/
-    27NA
-/;
-my @todo = qw/
+
+
     87E4 ZF4X UT92 YD5X W42U UDR7 U9NS TL85
     TE2A SYW4 SBG9 S9E8 S3PD RZT7 QF4Y Q9WF
     Q88A PW8X NHX8 MZX3 M5DY M5C3 M29M LQZ7
@@ -55,7 +59,15 @@ my @todo = qw/
     MYW6 MJS9 M9B4
     M7A3 KMK3 HS5T D9TU
 
-    W4TN RTP8 7T8X 6JQW 6FWR
+/;
+my @todo = qw/
+
+    RTP8
+    7T8X
+
+/;
+my @done = qw/
+    6FWR
 /;
 my @anchors = qw/
     ZH7C X38W V55R HMQ5 CUP7 BP6S 6M2F
@@ -63,7 +75,7 @@ my @anchors = qw/
 my @keymap = qw/
     V9D5
 /;
-push @todo, @check, @anchors, @keymap;
+push @skip, @check, @anchors, @keymap;
 
 if (my $dir = $ENV{YAML_TEST_DIR}) {
     @dirs = ($dir);
@@ -87,12 +99,20 @@ for my $dir (@dirs) {
     my $skip = exists $skip{ $dir };
     my $todo = exists $todo{ $dir };
 
-    TODO: {
-        local $TODO = $todo;
+    if ($skip) {
         SKIP: {
             skip "SKIP $dir", 1 if $skip;
             test($dir, $yaml, \@test_events);
         }
+    }
+    elsif ($todo) {
+        TODO: {
+            local $TODO = $todo;
+            test($dir, $yaml, \@test_events);
+        }
+    }
+    else {
+        test($dir, $yaml, \@test_events);
     }
 }
 
@@ -119,7 +139,7 @@ sub test {
 
 #    @events = @squashed;
     my $ok = is_deeply(\@events, $test_events, "$name");
-    if (not $ok and not $TODO) {
+    if (not $ok and not $TODO or $ENV{YAML_PP_TRACE}) {
         diag "YAML:\n$yaml" unless $TODO;
         diag "EVENTS:\n" . join '', map { "$_\n" } @$test_events;
         diag "GOT EVENTS:\n" . join '', map { "$_\n" } @events;
