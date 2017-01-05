@@ -21,61 +21,180 @@ my @check = qw/
     W4TN
     TS54
     DWX9
+    7T8X
+    RTP8
+    HS5T
+    M7A3
+    M9B4
+    MJS9
+    6ZKB
 /;
 my @skip = qw/
-    EHF6 6CK3 9WXW Z9M4 U3C3
-    P76L N782 CC74 C4HZ BEC7 6ZKB 6LVF 5TYM
-    WZ62 UGM3 LE5A L94M
 
-
-    87E4 ZF4X UT92 YD5X W42U UDR7 U9NS TL85
-    TE2A SYW4 SBG9 S9E8 S3PD RZT7 QF4Y Q9WF
-    Q88A PW8X NHX8 MZX3 M5DY M5C3 M29M LQZ7
-    LP6E L9U5 JS2J JHB9 J7PZ CT4Q 6HB6 6BCT
-    5WE3
-
-    S4T7 RR7F R4YG RLU9 S4JQ
-    PRH3 PBJ2 P94K P2AD NP9H
-    MXS3 KZN9 K858 K4SU JTV5
-    JQ4R J9HZ J7VC J5UC J3BT
-    HMK4 H2RW GH63 G4RS FUP4
-    FRK4 FQ7F FH7J F8F9 F2C7
-    E76Z DHP8 DFF7 DBG4 D88J
-    AZ63 A984 A2M4 C2DT AZW3
-    A6F9 9YRD 9U5K 9SHH 9J7A
-    9FMG 93JH 8UDB 8QBE 8MK2
-    8KHE 7W2P 7FWL 7BUB 7A4E
-    77H8 74H7 735Y 6VJK 6JWB
-    65WH 5NYZ 5KJE 5GBF 5BVJ
-    57H4 54T7 4ZYM 4UYU 4GC6
-    4CQQ 4ABK 3GZX 3ALJ 5C5M
-    35KP 2XXW 2SXE 2JQS 2AUY
+    NHX8
+    M29M
+    J7VC
+    HMK4
+    A984
+    AZW3
+    5NYZ
+    4ZYM
     229Q
+    S4T7
+    UT92
 
-    8G76
+    U9NS
+    TE2A
+    SYW4
 
-    98YD
 
-    MYW6 MJS9 M9B4
-    M7A3 KMK3 HS5T D9TU
 
+/;
+
+my @multiline = qw/
+    5BVJ
+    5GBF
+    6VJK
+    9FMG
+    9YRD
+    A6F9
+    F8F9
+    H2RW
+    K858
+    NP9H
+    P2AD
+    P94K
+    M5C3
+/;
+my @quoted = qw/
+    4CQQ
+    4GC6
+    4UYU
+    7A4E
+    9SHH
+    G4RS
+    J3BT
+    PRH3
+    MZX3
+    TL85
+/;
+
+my @flow = qw/
+    4ABK
+    54T7
+    5KJE
+    8UDB
+    C2DT
+    D88J
+    DFF7
+    DHP8
+    FRK4
+    FUP4
+    KZN9
+    CT4Q
+    L9U5
+    LP6E
+    LQZ7
+    Q88A
+    Q9WF
+    QF4Y
+    SBG9
+    UDR7
+    ZF4X
+    87E4
+    WZ62
+    N782
+/;
+my @seq = qw/
+    5C5M
+    3ALJ
+    65WH
+    6JWB
+    735Y
+    7BUB
+    8QBE
+    93JH
+    9U5K
+    AZ63
+    FQ7F
+    J9HZ
+    JQ4R
+    K4SU
+    MXS3
+    PBJ2
+    S4JQ
+    RLU9
+    R4YG
+    6BCT
+    JHB9
+    S3PD
+    W42U
+    YD5X
+/;
+my @sets = qw/
+    2XXW
+/;
+my @tags = qw/
+    2AUY
+    57H4
+    74H7
+    77H8
+    7FWL
+    8MK2
+    F2C7
+    FH7J
+    J7PZ
+    LE5A
+    5TYM
+    C4HZ
+    CC74
+    P76L
+    U3C3
+    Z9M4
+    9WXW
+    6CK3
+    EHF6
 /;
 my @todo = qw/
-
-    RTP8
-    7T8X
-
+/;
+my @misc = qw/
+    DBG4
+    6HB6
+    RZT7
+    UGM3
+    6LVF
+    BEC7
 /;
 my @done = qw/
-    6FWR
+    KMK3
 /;
 my @anchors = qw/
     ZH7C X38W V55R HMQ5 CUP7 BP6S 6M2F
+    2SXE
+    3GZX
+    E76Z
+    JS2J
+    PW8X
 /;
 my @keymap = qw/
     V9D5
+    35KP
+    7W2P
+    8KHE
+    A2M4
+    GH63
+    JTV5
+    RR7F
+    5WE3
+    M5DY
+    S9E8
+    L94M
 /;
-push @skip, @check, @anchors, @keymap;
+push @skip,
+    @check, @anchors, @keymap, @tags, @misc, @sets, @seq, @flow, @quoted,
+    @multiline;
+
+#@skip = ();
 
 if (my $dir = $ENV{YAML_TEST_DIR}) {
     @dirs = ($dir);
@@ -114,7 +233,10 @@ for my $dir (@dirs) {
     else {
         test($dir, $yaml, \@test_events);
     }
+
 }
+my $skipped = @skip;
+diag "Skipped $skipped tests";
 
 sub test {
     my ($name, $yaml, $test_events) = @_;
@@ -123,6 +245,9 @@ sub test {
     my $parser = YAML::PP::Parser->new(
         cb => sub {
             my ($self, $event, $content) = @_;
+            no warnings 'uninitialized';
+            $ENV{YAML_PP_TRACE} and
+                warn __PACKAGE__.':'.__LINE__.": ----------------> EVENT $event $content\n";
             push @events, defined $content ? "$event $content" : $event;
         },
     );
