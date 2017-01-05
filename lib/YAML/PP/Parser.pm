@@ -114,7 +114,7 @@ sub parse_document {
     }
 }
 
-my $key_re = qr{[a-zA-Z]*};
+my $key_re = qr{[a-zA-Z% ]*};
 sub parse_node {
     my ($self) = @_;
     my $yaml = $self->yaml;
@@ -187,6 +187,7 @@ sub parse_node {
             $self->cb->($self, "=VAL", ":$key");
             if ($$yaml =~ s/\A(.+)\n//) {
                 my $value = $1;
+                $value =~ s/ +# .*\z//;
                 $self->cb->($self, "=VAL", ":$value");
             }
 
@@ -228,8 +229,10 @@ sub parse_folded {
     my $got_indent = 0;
     while (length $$yaml) {
 
+#        last if $$yaml =~ m/\A--- /;
+#        last if $$yaml =~ m/\A\.\.\. /;
         my $indent_re = "[ ]{$indent}";
-        my$fold_indent_re = "[ ]{$fold_indent}";
+        my $fold_indent_re = "[ ]{$fold_indent}";
         my $less_indent = $indent + $fold_indent - 1;
         unless ($got_indent) {
             $$yaml =~ s/\A +$//m;
@@ -256,6 +259,8 @@ sub parse_folded {
 
         $$yaml =~ s/^(.*)(\n|\z)//;
         my $line = $1;
+#        $line =~ s/ # .*\z//;
+
         my $end = $2;
         TRACE and warn __PACKAGE__.':'.__LINE__.": =============== LINE: '$line' ('$fold_indent')\n";
         if (not length $line) {

@@ -28,6 +28,7 @@ my @check = qw/
     M9B4
     MJS9
     6ZKB
+    UT92
 /;
 my @skip = qw/
 
@@ -41,11 +42,8 @@ my @skip = qw/
     4ZYM
     229Q
     S4T7
-    UT92
 
     U9NS
-    TE2A
-    SYW4
 
 
 
