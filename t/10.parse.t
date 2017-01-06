@@ -29,23 +29,18 @@ my @check = qw/
     MJS9
     6ZKB
     UT92
+    NHX8
 /;
 my @skip = qw/
 
-    NHX8
+
+
+
     M29M
     J7VC
     HMK4
     A984
-    AZW3
     5NYZ
-    4ZYM
-    229Q
-    S4T7
-
-    U9NS
-
-
 
 /;
 
@@ -75,6 +70,7 @@ my @quoted = qw/
     PRH3
     MZX3
     TL85
+    4ZYM
 /;
 
 my @flow = qw/
@@ -128,6 +124,8 @@ my @seq = qw/
     S3PD
     W42U
     YD5X
+    229Q
+    AZW3
 /;
 my @sets = qw/
     2XXW

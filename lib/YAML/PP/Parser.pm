@@ -61,7 +61,7 @@ sub parse_document {
             next;
         }
 
-        if ($$yaml =~ s/^--- ?//) {
+        if ($$yaml =~ s/\A--- ?//) {
             if ($self->level) {
                 $self->dec_level;
                 $self->pop_events('DOC');
@@ -86,14 +86,15 @@ sub parse_document {
         TRACE and $self->debug_events;
         TRACE and $self->debug_offset;
 
-        if ($$yaml =~ s/^\.\.\. ?//) {
-            $self->pop_events('DOC');
-            $self->cb->($self, "-DOC", "...");
-            $$yaml =~ s/^#.*\n//;
-            $$yaml =~ s/^\n//;
-            $self->dec_level;
+#            $$yaml =~ s/^#.*\n//;
+#            $$yaml =~ s/^\n//;
+        my $doc_end = 0;
+        if ($$yaml =~ s/\A\.\.\. ?//) {
+            $doc_end = 1;
+#            $$yaml =~ s/^#.*\n//;
+#            $$yaml =~ s/^\n//;
         }
-        if (not length $$yaml) {
+        if ($doc_end or not length $$yaml) {
             while (@{ $self->events }) {
                 my $last = $self->events->[-1];
                 if ($last eq 'MAP') {
@@ -105,12 +106,15 @@ sub parse_document {
                     last;
                 }
             }
+            $self->pop_events('DOC');
+            $self->dec_level;
+            if ($doc_end) {
+                $self->cb->($self, "-DOC", "...");
+            }
+            else {
+                $self->cb->($self, "-DOC");
+            }
         }
-    }
-    if ($self->level) {
-        $self->pop_events('DOC');
-        $self->cb->($self, "-DOC");
-        $self->dec_level;
     }
 }
 
