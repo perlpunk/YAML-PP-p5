@@ -45,7 +45,7 @@ push @$skipped,
     @$multiline;
 
 # test all
-if (0) {
+if ($ENV{TEST_ALL}) {
     @todo = @$skipped;
     @$skipped = ();
 }
@@ -67,7 +67,7 @@ for my $dir (@dirs) {
     my $todo = exists $todo{ $dir };
     next if $skip;
 
-    diag "\n------------------------------ $dir";
+    diag "------------------------------ $dir";
     open my $fh, "<", "$datadir/$dir/in.yaml" or die $!;
     my $yaml = do { local $/; <$fh> };
     close $fh;
@@ -102,9 +102,6 @@ sub test {
     my $parser = YAML::PP::Parser->new(
         cb => sub {
             my ($self, $event, $content) = @_;
-            no warnings 'uninitialized';
-            $ENV{YAML_PP_TRACE} and
-                warn __PACKAGE__.':'.__LINE__.": ----------------> EVENT $event $content\n";
             push @events, defined $content ? "$event $content" : $event;
         },
     );

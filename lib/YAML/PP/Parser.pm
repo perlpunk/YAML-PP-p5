@@ -44,17 +44,20 @@ sub pop_events {
 sub begin {
     my ($self, $event, @content) = @_;
     $self->push_events($event);
+    TRACE and warn "---------------------------> BEGIN $event @content\n";
     $self->cb->($self, "+$event", @content);
 }
 
 sub end {
     my ($self, $event, @content) = @_;
     $self->pop_events($event);
+    TRACE and warn "---------------------------> END   $event @content\n";
     $self->cb->($self, "-$event", @content);
 }
 
 sub event {
     my ($self, $event, @content) = @_;
+    TRACE and warn "---------------------------> EVENT $event @content\n";
     $self->cb->($self, $event, @content);
 }
 
@@ -63,13 +66,12 @@ sub parse_document {
     my $yaml = $self->yaml;
 
     while (length $$yaml) {
-        if ($self->level and $$yaml =~ s/^ *# .*\n//) {
+        if ($self->level and $$yaml =~ s/\A *# .*\n//) {
             next;
         }
-        if ($$yaml =~ s/^ *\n//) {
+        if ($$yaml =~ s/\A *\n//) {
             next;
         }
-
         if ($$yaml =~ s/\A *# .*$//m) {
             next;
         }
@@ -84,7 +86,7 @@ sub parse_document {
             $self->begin("DOC", "---");
             $self->offset->[ $self->level ] = 0;
             $$yaml =~ s/^#.*\n//;
-            $$yaml =~ s/^\n//;
+            $$yaml =~ s/\A\n//;
         }
         elsif (not $self->level) {
             $self->begin("DOC");
@@ -92,12 +94,10 @@ sub parse_document {
         }
 
         TRACE and $self->debug_yaml;
-        my $content = $self->parse_node;
+        my $content = $self->parse_next;
         TRACE and $self->debug_events;
         TRACE and $self->debug_offset;
 
-#            $$yaml =~ s/^#.*\n//;
-#            $$yaml =~ s/^\n//;
         my $doc_end = 0;
         if ($$yaml =~ s/\A\.\.\. ?//) {
             $doc_end = 1;
@@ -125,52 +125,69 @@ sub parse_document {
 }
 
 my $key_re = qr{[a-zA-Z0-9% ]*};
-sub parse_node {
+
+sub parse_next {
     my ($self) = @_;
     my $yaml = $self->yaml;
-    {
-#        last if $$yaml =~ m/^--- ?/;
-#        last if $$yaml =~ m/^\.\.\. ?/;
+    my $plus_indent = 0;
+    while (length $$yaml) {
+        if ($$yaml =~ s/\A *\n//) {
+            next;
+        }
+        if ($$yaml =~ s/\A *# .*\n//) {
+            next;
+        }
 
-        my $indent_re = '[ ]' x $self->indent;
-#        last unless $$yaml =~ s/^$indent_re//;
+        if ($$yaml =~ m/\A( *)\S/) {
+            my $ind = length $1;
+            if ($ind < $self->indent) {
+                TRACE and warn "### less spaces\n";
+                $$yaml =~ s/\A( *)//;
+                my $off = $self->offset;
+                my $i = $#$off;
+                while ($i > 1) {
+                    my $test_indent = $off->[ $i ];
+                    if ($test_indent <= $ind) {
+                        last;
+                    }
+                    $self->end('MAP');
+                    $i--;
+                }
+                $self->indent($i);
+                last;
+            }
+        }
+
+        my $indent_re = '[ ]{' . $self->indent . '}';
+        if ($self->indent and $$yaml =~ s/\A$indent_re//) {
+            TRACE and warn "### removed $indent_re\n";
+        }
+        if ($$yaml =~ s/\A( +)//) {
+            TRACE and warn "### more spaces\n";
+            my $spaces = $1;
+            $plus_indent = length $spaces;
+        }
+
+        last;
+    }
+    $self->parse_node($plus_indent);
+}
+
+sub parse_node {
+    my ($self, $plus_indent) = @_;
+    my $yaml = $self->yaml;
+    {
 
         if (defined $self->parse_block_scalar) {
             return;
         }
 
-
-        if ($$yaml =~ s/\A *\n//m) {
-            return;
-        }
-        if ($$yaml =~ s/\A *# .*//) {
-            return;
-        }
-
-
-#        TRACE and $self->debug_events;
-#        TRACE and $self->debug_offset;
-        if ($$yaml =~ m/\A( *)\S/) {
-            my $ind = length $1;
-            if ($ind < $self->indent) {
-                my $last = $self->events->[-1];
-                if ($last ne 'MAP') {
-                    die "Unexpected event $last";
-                }
-                $self->end("MAP");
-                my $i = $self->offset->[ $self->level ];
-                $self->indent($i);
-                $indent_re = '[ ]' x $self->indent;
-            }
-        }
-        if ($$yaml =~ s/\A$indent_re( *)($key_re): *//) {
-            my $spaces = $1;
-            my $key = $2;
-            my $plus = length $spaces;
-            if ($plus or $self->events->[-1] ne 'MAP') {
+        if ($$yaml =~ s/\A($key_re): *//) {
+            my $key = $1;
+            if ($plus_indent or $self->events->[-1] ne 'MAP') {
                 $self->begin("MAP");
-                $self->offset->[ $self->level ] = $self->indent + $plus;
-                $self->inc_indent($plus);
+                $self->offset->[ $self->level ] = $self->indent + $plus_indent;
+                $self->inc_indent($plus_indent);
             }
             $self->event("=VAL", ":$key");
             if (defined $self->parse_block_scalar) {
@@ -340,7 +357,7 @@ sub debug_events {
 }
 
 sub debug_offset {
-    warn "OFFSET: (@{ $_[0]->offset }) (level=@{[ $_[0]->level ]})\n";
+    warn "OFFSET: (@{ $_[0]->offset }) (level=@{[ $_[0]->level ]}) (:@{[ $_[0]->indent ]})\n";
 }
 
 sub debug_yaml {
