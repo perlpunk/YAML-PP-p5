@@ -118,7 +118,7 @@ sub parse_document {
     }
 }
 
-my $key_re = qr{[a-zA-Z% ]*};
+my $key_re = qr{[a-zA-Z0-9% ]*};
 sub parse_node {
     my ($self) = @_;
     my $yaml = $self->yaml;

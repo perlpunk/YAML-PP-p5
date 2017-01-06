@@ -36,8 +36,6 @@ my @skip = qw/
 
 
 
-    M29M
-    J7VC
     A984
     5NYZ
 
@@ -57,6 +55,7 @@ my @multiline = qw/
     P2AD
     P94K
     M5C3
+    M29M
 /;
 my @quoted = qw/
     4CQQ
