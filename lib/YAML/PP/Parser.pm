@@ -122,7 +122,6 @@ my $key_re = qr{[a-zA-Z% ]*};
 sub parse_node {
     my ($self) = @_;
     my $yaml = $self->yaml;
-    my $type = ':';
     {
 #        last if $$yaml =~ m/^--- ?/;
 #        last if $$yaml =~ m/^\.\.\. ?/;
@@ -130,26 +129,8 @@ sub parse_node {
         my $indent_re = '[ ]' x $self->indent;
 #        last unless $$yaml =~ s/^$indent_re//;
 
-        if ($$yaml =~ s/\A([|>])([+-]?)\n//) {
-            my $type = $1;
-            my $chomp = $2;
-            my %args = (block=> 1);
-            if ($type eq '>') {
-                $args{block}= 0;
-                $args{folded}= 1;
-            }
-            if ($chomp eq '+') {
-                $args{keep} = 1;
-            }
-            elsif ($chomp eq '-') {
-                $args{trim} = 1;
-            }
-            my $content = $self->parse_folded(%args);
-            $content =~ s/\\/\\\\/g;
-            $content =~ s/\n/\\n/g;
-            $content =~ s/\t/\\t/g;
-            $self->cb->($self, "=VAL", $type . $content);
-            return $content;
+        if (defined $self->parse_block_scalar) {
+            return;
         }
 
 
@@ -189,7 +170,9 @@ sub parse_node {
                 $self->cb->($self, "+MAP");
             }
             $self->cb->($self, "=VAL", ":$key");
-            if ($$yaml =~ s/\A(.+)\n//) {
+            if (defined $self->parse_block_scalar) {
+            }
+            elsif ($$yaml =~ s/\A(.+)\n//) {
                 my $value = $1;
                 $value =~ s/ +# .*\z//;
                 $self->cb->($self, "=VAL", ":$value");
@@ -217,6 +200,33 @@ sub parse_node {
     return;
 }
 
+sub parse_block_scalar {
+    my ($self) = @_;
+    my $yaml = $self->yaml;
+    if ($$yaml =~ s/\A([|>])([+-]?)\n//) {
+        my $type = $1;
+        my $chomp = $2;
+        my %args = (block=> 1);
+        if ($type eq '>') {
+            $args{block}= 0;
+            $args{folded}= 1;
+        }
+        if ($chomp eq '+') {
+            $args{keep} = 1;
+        }
+        elsif ($chomp eq '-') {
+            $args{trim} = 1;
+        }
+        my $content = $self->parse_folded(%args);
+        $content =~ s/\\/\\\\/g;
+        $content =~ s/\n/\\n/g;
+        $content =~ s/\t/\\t/g;
+        $self->cb->($self, "=VAL", $type . $content);
+        return $content;
+    }
+    return;
+}
+
 sub parse_folded {
     my ($self, %args) = @_;
     my $trim = $args{trim};
@@ -225,7 +235,6 @@ sub parse_folded {
     my $keep = $args{keep};
     my $yaml = $self->yaml;
 #    warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
-#    $self->inc_indent(1);
     my $indent = $self->indent;
     my $content;
     my $fold_indent = 0;
@@ -295,6 +304,7 @@ sub parse_folded {
             }
         }
     }
+    return unless defined $content;
     if ($trim) {
         $content =~ s/\n+\z//;
     }

@@ -38,7 +38,6 @@ my @skip = qw/
 
     M29M
     J7VC
-    HMK4
     A984
     5NYZ
 
