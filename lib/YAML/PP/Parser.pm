@@ -7,7 +7,7 @@ use Moo;
 has cb => ( is => 'rw' );
 has yaml => ( is => 'rw' );
 has indent => ( is => 'rw', default => 0 );
-has level => ( is => 'rw', default => 0 );
+has level => ( is => 'rw', default => -1 );
 has offset => ( is => 'rw', default => sub { [0] } );
 has events => ( is => 'rw', default => sub { [] } );
 
@@ -22,24 +22,40 @@ sub parse {
 sub parse_stream {
     my ($self) = @_;
     my $yaml = $self->yaml;
-    $self->push_events('STR');
-    $self->cb->($self, "+STR");
+    $self->begin("STR");
 
     $self->parse_document;
-    $self->pop_events('STR');
-    $self->cb->($self, "-STR");
-
+    $self->end("STR");
 }
 
 sub push_events {
+    $_[0]->inc_level;
     push @{ $_[0]->events }, $_[1];
 }
 sub pop_events {
+    $_[0]->dec_level;
     my $last = pop @{ $_[0]->events };
     return $last unless $_[1];
     if ($last ne $_[1]) {
         die "Unexpected event '$last', expected $_[1]";
     }
+}
+
+sub begin {
+    my ($self, $event, @content) = @_;
+    $self->push_events($event);
+    $self->cb->($self, "+$event", @content);
+}
+
+sub end {
+    my ($self, $event, @content) = @_;
+    $self->pop_events($event);
+    $self->cb->($self, "-$event", @content);
+}
+
+sub event {
+    my ($self, $event, @content) = @_;
+    $self->cb->($self, $event, @content);
 }
 
 sub parse_document {
@@ -63,21 +79,15 @@ sub parse_document {
 
         if ($$yaml =~ s/\A--- ?//) {
             if ($self->level) {
-                $self->dec_level;
-                $self->pop_events('DOC');
-                $self->cb->($self, "-DOC");
+                $self->end("DOC");
             }
-            $self->push_events('DOC');
-            $self->cb->($self, "+DOC", "---");
-            $self->inc_level;
+            $self->begin("DOC", "---");
             $self->offset->[ $self->level ] = 0;
             $$yaml =~ s/^#.*\n//;
             $$yaml =~ s/^\n//;
         }
         elsif (not $self->level) {
-            $self->push_events('DOC');
-            $self->cb->($self, "+DOC");
-            $self->inc_level;
+            $self->begin("DOC");
             $self->offset->[ $self->level ] = 0;
         }
 
@@ -98,21 +108,17 @@ sub parse_document {
             while (@{ $self->events }) {
                 my $last = $self->events->[-1];
                 if ($last eq 'MAP') {
-                    $self->pop_events;
-                    $self->dec_level;
-                    $self->cb->($self, "-$last");
+                    $self->end($last);
                 }
                 else {
                     last;
                 }
             }
-            $self->pop_events('DOC');
-            $self->dec_level;
             if ($doc_end) {
-                $self->cb->($self, "-DOC", "...");
+                $self->end("DOC", "...");
             }
             else {
-                $self->cb->($self, "-DOC");
+                $self->end("DOC");
             }
         }
     }
@@ -147,12 +153,11 @@ sub parse_node {
         if ($$yaml =~ m/\A( *)\S/) {
             my $ind = length $1;
             if ($ind < $self->indent) {
-                my $last = $self->pop_events;
+                my $last = $self->events->[-1];
                 if ($last ne 'MAP') {
                     die "Unexpected event $last";
                 }
-                $self->cb->($self, "-MAP");
-                $self->dec_level;
+                $self->end("MAP");
                 my $i = $self->offset->[ $self->level ];
                 $self->indent($i);
                 $indent_re = '[ ]' x $self->indent;
@@ -163,19 +168,17 @@ sub parse_node {
             my $key = $2;
             my $plus = length $spaces;
             if ($plus or $self->events->[-1] ne 'MAP') {
-                $self->inc_level;
+                $self->begin("MAP");
                 $self->offset->[ $self->level ] = $self->indent + $plus;
                 $self->inc_indent($plus);
-                $self->push_events('MAP');
-                $self->cb->($self, "+MAP");
             }
-            $self->cb->($self, "=VAL", ":$key");
+            $self->event("=VAL", ":$key");
             if (defined $self->parse_block_scalar) {
             }
             elsif ($$yaml =~ s/\A(.+)\n//) {
                 my $value = $1;
                 $value =~ s/ +# .*\z//;
-                $self->cb->($self, "=VAL", ":$value");
+                $self->event("=VAL", ":$value");
             }
 
             return;
@@ -183,14 +186,14 @@ sub parse_node {
         my $value = $self->parse_folded(folded => 1);
         if ($self->events->[-1] eq 'MAP') {
             $value =~ s/\n\z//;
-            $self->cb->($self, "=VAL", ":$value");
+            $self->event("=VAL", ":$value");
             return $value;
         }
         else {
             $value =~ s/\\/\\\\/g;
             $value =~ s/\n/\\n/g;
             $value =~ s/\t/\\t/g;
-            $self->cb->($self, "=VAL", ":$value");
+            $self->event("=VAL", ":$value");
         }
 
 #            $$yaml =~ s/.*//s;
@@ -221,7 +224,7 @@ sub parse_block_scalar {
         $content =~ s/\\/\\\\/g;
         $content =~ s/\n/\\n/g;
         $content =~ s/\t/\\t/g;
-        $self->cb->($self, "=VAL", $type . $content);
+        $self->event("=VAL", $type . $content);
         return $content;
     }
     return;
