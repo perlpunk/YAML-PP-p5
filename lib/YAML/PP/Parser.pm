@@ -236,11 +236,14 @@ sub parse_node {
             $self->event("=VAL", ":$value");
             return $value;
         }
-        else {
+        elsif (defined $value) {
             $value =~ s/\\/\\\\/g;
             $value =~ s/\n/\\n/g;
             $value =~ s/\t/\\t/g;
             $self->event("=VAL", ":$value");
+        }
+        else {
+            $self->event("=VAL", ":");
         }
 
 #            $$yaml =~ s/.*//s;
@@ -295,7 +298,7 @@ sub parse_folded {
     while (length $$yaml) {
 
 #        last if $$yaml =~ m/\A--- /;
-#        last if $$yaml =~ m/\A\.\.\. /;
+        last if $$yaml =~ m/\A\.\.\. ?/;
         my $indent_re = "[ ]{$indent}";
         my $fold_indent_re = "[ ]{$fold_indent}";
         my $less_indent = $indent + $fold_indent - 1;
