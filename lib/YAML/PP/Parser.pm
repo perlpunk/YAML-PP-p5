@@ -182,14 +182,33 @@ sub parse_node {
             return;
         }
 
-        if ($$yaml =~ s/\A($key_re): *//) {
+        if ($$yaml =~ s/\A($key_re):( |$)//m) {
             my $key = $1;
-            if ($plus_indent or $self->events->[-1] ne 'MAP') {
+            my $end = $2;
+            if ($plus_indent or $self->events->[-1] eq 'DOC') {
                 $self->begin("MAP");
                 $self->offset->[ $self->level ] = $self->indent + $plus_indent;
                 $self->inc_indent($plus_indent);
             }
             $self->event("=VAL", ":$key");
+            if ( $$yaml =~ s/\A +#.*\n// ) {
+            }
+            if ($$yaml =~ s/\A *([^ #\n]+)( +#[^\n]*)?\n//) {
+                my $value = $1;
+                $self->inc_indent(1);
+                if ($value =~ m/^[|>]/) {
+                    $$yaml = "$value\n$$yaml";
+                    $self->parse_block_scalar;
+                }
+                else {
+                    my $text = $self->parse_folded(folded => 1, trim => 1);
+                    $value = "$value $text" if defined $text;
+                    $self->event("=VAL", ":$value");
+                }
+                $self->dec_indent(1);
+            }
+            return;
+
             if (defined $self->parse_block_scalar) {
             }
             elsif ($$yaml =~ s/\A(.+)\n//) {
@@ -323,8 +342,11 @@ sub parse_folded {
                 $content .= $line;
             }
         }
+        if ($indent == 0 and $$yaml =~ m/\A\S/) {
+            last;
+        }
     }
-    return unless defined $content;
+    return unless (defined $content and length $content);
     if ($trim) {
         $content =~ s/\n+\z//;
     }
@@ -334,6 +356,7 @@ sub parse_folded {
     unless ($trim) {
         $content .= "\n" if $content !~ m/\n\z/;
     }
+    return unless (defined $content and length $content);
     return $content;
 }
 
