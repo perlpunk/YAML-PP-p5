@@ -67,10 +67,14 @@ for my $dir (@dirs) {
     my $todo = exists $todo{ $dir };
     next if $skip;
 
-    diag "------------------------------ $dir";
     open my $fh, "<", "$datadir/$dir/in.yaml" or die $!;
     my $yaml = do { local $/; <$fh> };
     close $fh;
+    open $fh, "<", "$datadir/$dir/===" or die $!;
+    chomp(my $title = <$fh>);
+    close $fh;
+    diag "------------------------------ $dir";
+
     open $fh, "<", "$datadir/$dir/test.event" or die $!;
     chomp(my @test_events = <$fh>);
     close $fh;
@@ -78,17 +82,17 @@ for my $dir (@dirs) {
     if ($skip) {
         SKIP: {
             skip "SKIP $dir", 1 if $skip;
-            test($dir, $yaml, \@test_events);
+            test($title, $dir, $yaml, \@test_events);
         }
     }
     elsif ($todo) {
         TODO: {
             local $TODO = $todo;
-            test($dir, $yaml, \@test_events);
+            test($title, $dir, $yaml, \@test_events);
         }
     }
     else {
-        test($dir, $yaml, \@test_events);
+        test($title, $dir, $yaml, \@test_events);
     }
 
 }
@@ -96,7 +100,7 @@ my $skip_count = @$skipped;
 diag "Skipped $skip_count tests";
 
 sub test {
-    my ($name, $yaml, $test_events) = @_;
+    my ($title, $name, $yaml, $test_events) = @_;
 #    @$test_events = grep { m/DOC|STR/ } @$test_events;
     my @events;
     my $parser = YAML::PP::Parser->new(
@@ -122,7 +126,7 @@ sub test {
     }
 
 #    @events = @squashed;
-    my $ok = is_deeply(\@events, $test_events, "$name");
+    my $ok = is_deeply(\@events, $test_events, "$name - $title");
     if (not $ok and not $TODO or $ENV{YAML_PP_TRACE}) {
         diag "YAML:\n$yaml" unless $TODO;
         diag "EVENTS:\n" . join '', map { "$_\n" } @$test_events;
