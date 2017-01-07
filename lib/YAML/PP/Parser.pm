@@ -196,6 +196,7 @@ sub parse_node {
             if ($$yaml =~ s/\A *([^ #\n]+)( +#[^\n]*)?\n//) {
                 my $value = $1;
                 $self->inc_indent(1);
+                my $indent = $self->indent;
                 if ($value =~ m/^[|>]/) {
                     $$yaml = "$value\n$$yaml";
                     $self->parse_block_scalar;
@@ -207,17 +208,27 @@ sub parse_node {
                 }
                 $self->dec_indent(1);
             }
+            else {
+                $$yaml =~ s/\A\n//;
+#                $self->inc_indent(1);
+#                warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
+#                my $value = $self->parse_folded(folded => 1, trim => 1);
+#                if (defined $value) {
+#                    $self->event("=VAL", ":$value");
+#                }
+#                $self->dec_indent(1);
+            }
             return;
 
-            if (defined $self->parse_block_scalar) {
-            }
-            elsif ($$yaml =~ s/\A(.+)\n//) {
-                my $value = $1;
-                $value =~ s/ +# .*\z//;
-                $self->event("=VAL", ":$value");
-            }
-
-            return;
+#            if (defined $self->parse_block_scalar) {
+#            }
+#            elsif ($$yaml =~ s/\A(.+)\n//) {
+#                my $value = $1;
+#                $value =~ s/ +# .*\z//;
+#                $self->event("=VAL", ":$value");
+#            }
+#
+#            return;
         }
         my $value = $self->parse_folded(folded => 1);
         if ($self->events->[-1] eq 'MAP') {
@@ -275,6 +286,8 @@ sub parse_folded {
     my $yaml = $self->yaml;
 #    warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
     my $indent = $self->indent;
+#    warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$indent], ['indent']);
+    TRACE and $self->debug_offset;
     my $content;
     my $fold_indent = 0;
     my $fold_indent_str = '';

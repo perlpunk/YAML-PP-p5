@@ -1,5 +1,4 @@
 skip:
-- A984
 
 check:
 - 27NA
@@ -14,6 +13,7 @@ check:
 - 6ZKB
 - UT92
 - NHX8
+- A984
 
 multiline:
 - 5GBF
