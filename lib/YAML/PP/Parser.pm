@@ -24,56 +24,12 @@ sub parse_stream {
     my $yaml = $self->yaml;
     $self->begin("STR");
 
-    $self->parse_document;
-    $self->end("STR");
-}
-
-sub push_events {
-    $_[0]->inc_level;
-    push @{ $_[0]->events }, $_[1];
-}
-sub pop_events {
-    $_[0]->dec_level;
-    my $last = pop @{ $_[0]->events };
-    return $last unless $_[1];
-    if ($last ne $_[1]) {
-        die "Unexpected event '$last', expected $_[1]";
-    }
-}
-
-sub begin {
-    my ($self, $event, @content) = @_;
-    $self->push_events($event);
-    TRACE and warn "---------------------------> BEGIN $event @content\n";
-    $self->cb->($self, "+$event", @content);
-}
-
-sub end {
-    my ($self, $event, @content) = @_;
-    $self->pop_events($event);
-    TRACE and warn "---------------------------> END   $event @content\n";
-    $self->cb->($self, "-$event", @content);
-}
-
-sub event {
-    my ($self, $event, @content) = @_;
-    TRACE and warn "---------------------------> EVENT $event @content\n";
-    $self->cb->($self, $event, @content);
-}
-
-sub parse_document {
-    my ($self) = @_;
-    my $yaml = $self->yaml;
-    TRACE and $self->debug_yaml;
 
     while (length $$yaml) {
-        if ($self->level and $$yaml =~ s/\A *# .*\n//) {
+        if ($$yaml =~ s/\A *#[^\n]+\n//) {
             next;
         }
         if ($$yaml =~ s/\A *\n//) {
-            next;
-        }
-        if ($$yaml =~ s/\A *#[^\n]+\n//) {
             next;
         }
         if ($$yaml =~ s/\A\s*%YAML ?1\.2\s*//) {
@@ -93,7 +49,7 @@ sub parse_document {
                     $self->parse_block_scalar;
                 }
                 else {
-                    my $text = $self->parse_folded(folded => 1, trim => 1);
+                    my $text = $self->parse_multi(folded => 1, trim => 1);
                     $self->event("=VAL", ":$text");
                 }
             }
@@ -104,10 +60,8 @@ sub parse_document {
             $self->offset->[ $self->level ] = 0;
         }
 
-        TRACE and $self->debug_yaml;
-        my $content = $self->parse_next;
-        TRACE and $self->debug_events;
-        TRACE and $self->debug_offset;
+
+        $self->parse_document;
 
         my $doc_end = 0;
         if ($$yaml =~ s/\A\.\.\. ?//) {
@@ -132,7 +86,30 @@ sub parse_document {
                 $self->end("DOC");
             }
         }
+
+
     }
+
+    $self->end("STR");
+}
+
+sub parse_document {
+    my ($self) = @_;
+    my $yaml = $self->yaml;
+    TRACE and $self->debug_yaml;
+
+#        if ($$yaml =~ s/\A *#[^\n]+\n//) {
+#            next;
+#        }
+#        if ($$yaml =~ s/\A *\n//) {
+#            next;
+#        }
+
+        TRACE and $self->debug_yaml;
+        my $content = $self->parse_next;
+        TRACE and $self->debug_events;
+        TRACE and $self->debug_offset;
+
 }
 
 my $key_re = qr{[a-zA-Z0-9% ]*};
@@ -213,7 +190,7 @@ sub parse_node {
                     $self->parse_block_scalar;
                 }
                 else {
-                    my $text = $self->parse_folded(folded => 1, trim => 1);
+                    my $text = $self->parse_multi(folded => 1, trim => 1);
                     $value = "$value $text" if length $text;
                     $self->event("=VAL", ":$value");
                 }
@@ -223,7 +200,7 @@ sub parse_node {
                 $$yaml =~ s/\A\n//;
 #                $self->inc_indent(1);
 #                warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
-#                my $value = $self->parse_folded(folded => 1, trim => 1);
+#                my $value = $self->parse_multi(folded => 1, trim => 1);
 #                if (defined $value) {
 #                    $self->event("=VAL", ":$value");
 #                }
@@ -241,7 +218,7 @@ sub parse_node {
 #
 #            return;
         }
-        my $value = $self->parse_folded(folded => 1);
+        my $value = $self->parse_multi(folded => 1);
         if ($self->events->[-1] eq 'MAP') {
             $value =~ s/\n\z//;
             $self->event("=VAL", ":$value");
@@ -281,7 +258,7 @@ sub parse_block_scalar {
         elsif ($chomp eq '-') {
             $args{trim} = 1;
         }
-        my $content = $self->parse_folded(%args);
+        my $content = $self->parse_multi(%args);
         $content =~ s/\\/\\\\/g;
         $content =~ s/\n/\\n/g;
         $content =~ s/\t/\\t/g;
@@ -291,7 +268,7 @@ sub parse_block_scalar {
     return;
 }
 
-sub parse_folded {
+sub parse_multi {
     my ($self, %args) = @_;
     my $trim = $args{trim};
     my $block = $args{block};
@@ -396,6 +373,40 @@ sub parse_folded {
     }
     return $content;
 }
+
+sub push_events {
+    $_[0]->inc_level;
+    push @{ $_[0]->events }, $_[1];
+}
+sub pop_events {
+    $_[0]->dec_level;
+    my $last = pop @{ $_[0]->events };
+    return $last unless $_[1];
+    if ($last ne $_[1]) {
+        die "Unexpected event '$last', expected $_[1]";
+    }
+}
+
+sub begin {
+    my ($self, $event, @content) = @_;
+    $self->push_events($event);
+    TRACE and warn "---------------------------> BEGIN $event @content\n";
+    $self->cb->($self, "+$event", @content);
+}
+
+sub end {
+    my ($self, $event, @content) = @_;
+    $self->pop_events($event);
+    TRACE and warn "---------------------------> END   $event @content\n";
+    $self->cb->($self, "-$event", @content);
+}
+
+sub event {
+    my ($self, $event, @content) = @_;
+    TRACE and warn "---------------------------> EVENT $event @content\n";
+    $self->cb->($self, $event, @content);
+}
+
 
 sub inc_indent {
     $_[0]->indent($_[0]->indent + $_[1]);

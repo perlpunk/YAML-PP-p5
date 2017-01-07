@@ -9,7 +9,6 @@ check:
 - RTP8
 - HS5T
 - M7A3
-- M9B4
 - MJS9
 - 6ZKB
 - NHX8
@@ -20,12 +19,10 @@ multiline:
 - 6VJK
 - 9YRD
 - F8F9
-- H2RW
 - K858
 - NP9H
 - P2AD
 - M5C3
-- M29M
 
 quoted:
 - 4CQQ
