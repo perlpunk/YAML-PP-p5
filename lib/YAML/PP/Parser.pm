@@ -64,6 +64,7 @@ sub event {
 sub parse_document {
     my ($self) = @_;
     my $yaml = $self->yaml;
+    TRACE and $self->debug_yaml;
 
     while (length $$yaml) {
         if ($self->level and $$yaml =~ s/\A *# .*\n//) {
@@ -86,6 +87,16 @@ sub parse_document {
             $self->begin("DOC", "---");
             $self->offset->[ $self->level ] = 0;
             $$yaml =~ s/^#.*\n//;
+            if ($$yaml =~ m/\A *([^ \n]+)\n/) {
+                my $value = $1;
+                if ($value =~ m/^[|>]/) {
+                    $self->parse_block_scalar;
+                }
+                else {
+                    my $text = $self->parse_folded(folded => 1, trim => 1);
+                    $self->event("=VAL", ":$text");
+                }
+            }
             $$yaml =~ s/\A\n//;
         }
         elsif (not $self->level) {
@@ -203,7 +214,7 @@ sub parse_node {
                 }
                 else {
                     my $text = $self->parse_folded(folded => 1, trim => 1);
-                    $value = "$value $text" if defined $text;
+                    $value = "$value $text" if length $text;
                     $self->event("=VAL", ":$value");
                 }
                 $self->dec_indent(1);
@@ -236,14 +247,14 @@ sub parse_node {
             $self->event("=VAL", ":$value");
             return $value;
         }
-        elsif (defined $value) {
+        elsif (length $value) {
             $value =~ s/\\/\\\\/g;
             $value =~ s/\n/\\n/g;
             $value =~ s/\t/\\t/g;
             $self->event("=VAL", ":$value");
         }
         else {
-            $self->event("=VAL", ":");
+#            $self->event("=VAL", ":");
         }
 
 #            $$yaml =~ s/.*//s;
@@ -291,7 +302,7 @@ sub parse_folded {
     my $indent = $self->indent;
 #    warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$indent], ['indent']);
     TRACE and $self->debug_offset;
-    my $content;
+    my $content = '';
     my $fold_indent = 0;
     my $fold_indent_str = '';
     my $got_indent = 0;
@@ -362,7 +373,7 @@ sub parse_folded {
             last;
         }
     }
-    return unless (defined $content and length $content);
+    return $content unless (length $content);
     if ($trim) {
         $content =~ s/\n+\z//;
     }
@@ -372,7 +383,6 @@ sub parse_folded {
     unless ($trim) {
         $content .= "\n" if $content !~ m/\n\z/;
     }
-    return unless (defined $content and length $content);
     return $content;
 }
 
@@ -402,6 +412,6 @@ sub debug_offset {
 sub debug_yaml {
     my ($self) = @_;
     my $yaml = $self->yaml;
-    warn "YAML: <<$$yaml>>\n";
+    warn "YAML:\n$$yaml\nEOYAML\n";
 }
 1;

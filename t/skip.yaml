@@ -1,7 +1,9 @@
 skip:
 
 check:
-- 27NA
+- 27NA # why not explicit +DOC ---?
+- W4TN
+- UT92
 - DWX9
 - 7T8X
 - RTP8
