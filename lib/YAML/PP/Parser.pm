@@ -73,7 +73,7 @@ sub parse_document {
         if ($$yaml =~ s/\A *\n//) {
             next;
         }
-        if ($$yaml =~ s/\A *# .*$//m) {
+        if ($$yaml =~ s/\A *#[^\n]+\n//) {
             next;
         }
         if ($$yaml =~ s/\A\s*%YAML ?1\.2\s*//) {
@@ -306,6 +306,7 @@ sub parse_folded {
     my $fold_indent = 0;
     my $fold_indent_str = '';
     my $got_indent = 0;
+    my $trailing_comment = 0;
     while (length $$yaml) {
 
 #        last if $$yaml =~ m/\A--- /;
@@ -313,6 +314,7 @@ sub parse_folded {
         my $indent_re = "[ ]{$indent}";
         my $fold_indent_re = "[ ]{$fold_indent}";
         my $less_indent = $indent + $fold_indent - 1;
+
         unless ($got_indent) {
             $$yaml =~ s/\A +$//m;
             if ($$yaml =~ m/\A$indent_re( *)\S/) {
@@ -324,6 +326,10 @@ sub parse_folded {
         }
         elsif ($less_indent > 0) {
 #            warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$less_indent], ['less_indent']);
+#            if ($$yaml =~ s/\A {1,$less_indent}#.*$//m) {
+#                warn __PACKAGE__.':'.__LINE__.": !!!!!!!!!!!!!!! COMMENT\n";
+#                $trailing_comment = 1;
+#            }
             $$yaml =~ s/\A {1,$less_indent}$//m;
         }
 #        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$indent_re], ['indent_re']);
@@ -345,7 +351,7 @@ sub parse_folded {
         if (not length $line) {
             $content .= "\n";
         }
-        elsif ($line =~ m/^ +\z/ and not $keep) {
+        elsif ($line =~ m/^ +\z/ and not $block) {
             $content .= "\n";
         }
         else {
@@ -374,7 +380,12 @@ sub parse_folded {
         }
     }
     return $content unless (length $content);
-    if ($trim) {
+#    unless ($trailing_comment) {
+#    }
+    if ($block) {
+        $content =~ s/\n+\z//;
+    }
+    elsif ($trim) {
         $content =~ s/\n+\z//;
     }
     elsif ($folded) {
