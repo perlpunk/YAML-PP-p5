@@ -258,11 +258,16 @@ sub parse_seq {
             $self->inc_indent($plus_indent);
         }
         if ($space and $$yaml =~ s/\A#.*\n//) {
+            $self->event("=VAL", ":");
         }
         elsif ($$yaml =~ s/\A( *)//) {
             my $ind = length $1;
             if ($$yaml =~ m/\A./) {
-                $self->parse_node($ind + 2);
+                if (defined $self->parse_block_scalar) {
+                }
+                else {
+                    $self->parse_node($ind + 2);
+                }
             }
         }
         return 1;

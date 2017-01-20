@@ -68,11 +68,9 @@ flow:
 - MXS3
 
 seq:
-- 7BUB
 - AZ63
 - RLU9
 - R4YG
-- W42U
 
 sets:
 - 2XXW
@@ -120,6 +118,7 @@ anchors:
 - E76Z
 - JS2J
 - PW8X
+- 7BUB
 
 keymap:
 - V9D5
