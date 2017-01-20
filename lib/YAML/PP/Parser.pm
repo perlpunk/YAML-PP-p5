@@ -38,7 +38,27 @@ sub parse_stream {
 
         my $doc_end = 0;
         if ($$yaml =~ s/\A--- ?//) {
-            if ($self->level) {
+            if ($self->level > 1) {
+
+                my $off = $self->offset;
+                my $i = $#$off;
+                while ($i > 1) {
+                    my $test_indent = $off->[ $i ];
+                    my $last = $self->events->[-1];
+                    if ($last eq 'MAP' or $last eq 'SEQ') {
+                        $self->end($last);
+                    }
+                    else {
+                        die "Unexpected";
+                    }
+                    $i--;
+                }
+                $self->indent($off->[ $i ]);
+
+                $self->end("DOC");
+
+            }
+            elsif ($self->level) {
                 $self->end("DOC");
             }
             $self->begin("DOC", "---");
@@ -194,8 +214,14 @@ sub parse_node {
             return;
         }
         else {
-            warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
-            die "Unexpected";
+            if ($$yaml =~ s/\A(.+)\n//) {
+                my $value = $1;
+                $self->event("=VAL", ":$value");
+            }
+            else {
+                warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
+                die "Unexpected";
+            }
         }
 #        my $value = $self->parse_multi(folded => 1);
 #        if ($self->events->[-1] eq 'MAP') {
