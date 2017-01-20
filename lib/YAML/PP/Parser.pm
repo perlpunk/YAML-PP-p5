@@ -74,7 +74,7 @@ sub parse_stream {
         if ($doc_end or not length $$yaml) {
             while (@{ $self->events }) {
                 my $last = $self->events->[-1];
-                if ($last eq 'MAP') {
+                if ($last eq 'MAP' or $last eq 'SEQ') {
                     $self->end($last);
                 }
                 else {
@@ -99,7 +99,6 @@ sub parse_document {
     TRACE and warn "=== parse_document()\n";
     my ($self) = @_;
     my $yaml = $self->yaml;
-    TRACE and $self->debug_yaml;
 
 #        if ($$yaml =~ s/\A *#[^\n]+\n//) {
 #            next;
@@ -145,7 +144,7 @@ sub parse_next {
                     $self->end('MAP');
                     $i--;
                 }
-                $self->indent($i);
+                $self->indent($off->[ $i ]);
                 last;
             }
         }
@@ -166,12 +165,21 @@ sub parse_next {
 }
 
 sub parse_node {
-    TRACE and warn "=== parse_node()\n";
     my ($self, $plus_indent) = @_;
+    TRACE and warn "=== parse_node(+$plus_indent)\n";
     my $yaml = $self->yaml;
     {
 
-        if ($$yaml =~ s/\A($key_re):( |$)//m) {
+        if ($$yaml =~ s/\A(-)( |$)//m) {
+            TRACE and warn "### SEC item\n";
+            if ($plus_indent or $self->events->[-1] eq 'DOC') {
+                $self->begin("SEQ");
+                $self->offset->[ $self->level ] = $self->indent + $plus_indent;
+                $self->inc_indent($plus_indent);
+            }
+        }
+        elsif ($$yaml =~ s/\A($key_re):( |$)//m) {
+            TRACE and warn "### MAP item\n";
             my $key = $1;
             my $end = $2;
             if ($plus_indent or $self->events->[-1] eq 'DOC') {
@@ -186,36 +194,31 @@ sub parse_node {
                 my $value = $1;
                 $value =~ s/ +#.*//;
                 $value =~ s/\A *//;
-                $self->inc_indent(1);
-                my $indent = $self->indent;
                 if ($value =~ m/^[|>]/) {
+                    $self->inc_indent(1);
                     $$yaml = "$value\n$$yaml";
                     $self->parse_block_scalar;
+                    $self->dec_indent(1);
                 }
                 else {
+                    $self->inc_indent(1);
                     my $text = $self->parse_multi(folded => 1, trim => 1);
                     $value = "$value $text" if length $text;
                     $self->event("=VAL", ":$value");
+                    $self->dec_indent(1);
                 }
-                $self->dec_indent(1);
             }
-            else {
-                $$yaml =~ s/\A\n//;
-#                $self->inc_indent(1);
-#                warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
-#                my $value = $self->parse_multi(folded => 1, trim => 1);
-#                if (defined $value) {
-#                    $self->event("=VAL", ":$value");
-#                }
-#                $self->dec_indent(1);
-            }
+#            else {
+#                $$yaml =~ s/\A\n//;
+#            }
             return;
 
         }
-        if (defined $self->parse_block_scalar) {
+        elsif (defined $self->parse_block_scalar) {
             return;
         }
         else {
+            warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
             die "Unexpected";
         }
 #        my $value = $self->parse_multi(folded => 1);
@@ -390,7 +393,7 @@ sub pop_events {
     my $last = pop @{ $_[0]->events };
     return $last unless $_[1];
     if ($last ne $_[1]) {
-        die "Unexpected event '$last', expected $_[1]";
+        die "pop_events($_[1]): Unexpected event '$last', expected $_[1]";
     }
 }
 
@@ -427,6 +430,7 @@ sub inc_level {
 sub dec_level {
     $_[0]->level($_[0]->level - 1);
     $_[0]->indent( $_[0]->offset->[ $_[0]->level ] );
+    pop @{ $_[0]->offset };
 }
 
 
