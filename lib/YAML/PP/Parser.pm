@@ -192,22 +192,8 @@ sub parse_node {
     my $yaml = $self->yaml;
     {
 
-        if ($$yaml =~ s/\A(-)( |$)//m) {
-            my $space = length $2;
-            TRACE and warn "### SEC item\n";
-            if ($plus_indent or $self->events->[-1] eq 'DOC') {
-                $self->begin("SEQ");
-                $self->offset->[ $self->level ] = $self->indent + $plus_indent;
-                $self->inc_indent($plus_indent);
-            }
-            if ($space and $$yaml =~ s/#.*\n//) {
-            }
-            elsif ($$yaml =~ s/\A( *)//) {
-                my $ind = length $1;
-                if ($$yaml =~ m/\A./) {
-                    $self->parse_node($ind + 2);
-                }
-            }
+        if ($self->parse_seq($plus_indent)) {
+            return;
         }
         elsif ($self->parse_map($plus_indent)) {
             return;
@@ -248,6 +234,31 @@ sub parse_node {
     }
 
     return;
+}
+
+sub parse_seq {
+    my ($self, $plus_indent) = @_;
+    TRACE and warn "=== parse_seq(+$plus_indent)\n";
+    my $yaml= $self->yaml;
+    if ($$yaml =~ s/\A(-)( |$)//m) {
+        my $space = length $2;
+        TRACE and warn "### SEC item\n";
+        if ($plus_indent or $self->events->[-1] eq 'DOC') {
+            $self->begin("SEQ");
+            $self->offset->[ $self->level ] = $self->indent + $plus_indent;
+            $self->inc_indent($plus_indent);
+        }
+        if ($space and $$yaml =~ s/#.*\n//) {
+        }
+        elsif ($$yaml =~ s/\A( *)//) {
+            my $ind = length $1;
+            if ($$yaml =~ m/\A./) {
+                $self->parse_node($ind + 2);
+            }
+        }
+        return 1;
+    }
+    return 0;
 }
 
 sub parse_map {
