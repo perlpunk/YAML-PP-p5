@@ -114,7 +114,9 @@ sub parse_document {
 
 }
 
-my $key_re = qr{[a-zA-Z0-9% ]*};
+my $key_start_re = '[a-zA-Z0-9%]';
+my $key_content_re = '[a-zA-Z0-9%\]" ]';
+my $key_re = qr{(?:$key_start_re$key_content_re*|$key_start_re?)};
 
 sub parse_next {
     TRACE and warn "=== parse_next()\n";
@@ -177,42 +179,16 @@ sub parse_node {
                 $self->offset->[ $self->level ] = $self->indent + $plus_indent;
                 $self->inc_indent($plus_indent);
             }
+            $$yaml =~ s/ #.*\n//;
+            if ($$yaml =~ s/\A( *)//) {
+                my $ind = length $1;
+                if ($$yaml =~ m/\A./) {
+                    $self->parse_node($ind + 2);
+                }
+            }
         }
-        elsif ($$yaml =~ s/\A($key_re):( |$)//m) {
-            TRACE and warn "### MAP item\n";
-            my $key = $1;
-            my $end = $2;
-            if ($plus_indent or $self->events->[-1] eq 'DOC') {
-                $self->begin("MAP");
-                $self->offset->[ $self->level ] = $self->indent + $plus_indent;
-                $self->inc_indent($plus_indent);
-            }
-            $self->event("=VAL", ":$key");
-            while ( $$yaml =~ s/\A +#.*\n// ) {
-            }
-            if ($$yaml =~ s/\A( *.+)\n//) {
-                my $value = $1;
-                $value =~ s/ +#.*//;
-                $value =~ s/\A *//;
-                if ($value =~ m/^[|>]/) {
-                    $self->inc_indent(1);
-                    $$yaml = "$value\n$$yaml";
-                    $self->parse_block_scalar;
-                    $self->dec_indent(1);
-                }
-                else {
-                    $self->inc_indent(1);
-                    my $text = $self->parse_multi(folded => 1, trim => 1);
-                    $value = "$value $text" if length $text;
-                    $self->event("=VAL", ":$value");
-                    $self->dec_indent(1);
-                }
-            }
-#            else {
-#                $$yaml =~ s/\A\n//;
-#            }
+        elsif ($self->parse_map($plus_indent)) {
             return;
-
         }
         elsif (defined $self->parse_block_scalar) {
             return;
@@ -242,6 +218,49 @@ sub parse_node {
     }
 
     return;
+}
+
+sub parse_map {
+    my ($self, $plus_indent) = @_;
+    my $yaml = $self->yaml;
+    TRACE and warn "=== parse_map(+$plus_indent)\n";
+    if ($$yaml =~ s/\A($key_re):( |$)//m) {
+        TRACE and warn "### MAP item\n";
+        my $key = $1;
+        my $end = $2;
+        if ($plus_indent or $self->events->[-1] eq 'DOC') {
+            $self->begin("MAP");
+            $self->offset->[ $self->level ] = $self->indent + $plus_indent;
+            $self->inc_indent($plus_indent);
+        }
+        $self->event("=VAL", ":$key");
+        while ( $$yaml =~ s/\A +#.*\n// ) {
+        }
+        if ($$yaml =~ s/\A( *.+)\n//) {
+            my $value = $1;
+            $value =~ s/ +#.*//;
+            $value =~ s/\A *//;
+            if ($value =~ m/^[|>]/) {
+                $self->inc_indent(1);
+                $$yaml = "$value\n$$yaml";
+                $self->parse_block_scalar;
+                $self->dec_indent(1);
+            }
+            else {
+                $self->inc_indent(1);
+                my $text = $self->parse_multi(folded => 1, trim => 1);
+                $value = "$value $text" if length $text;
+                $self->event("=VAL", ":$value");
+                $self->dec_indent(1);
+            }
+        }
+#            else {
+#                $$yaml =~ s/\A\n//;
+#            }
+        return 1;
+    }
+    return 0;
+
 }
 
 sub parse_block_scalar {
