@@ -307,6 +307,11 @@ sub parse_multi {
 #                warn __PACKAGE__.':'.__LINE__.": !!!!!!!!!!!!!!! COMMENT\n";
 #                $trailing_comment = 1;
 #            }
+            # strip less indented comments
+            # might need more work
+            if ($$yaml =~ s/\A {1,$less_indent}#.*\n//) {
+                next;
+            }
             $$yaml =~ s/\A {1,$less_indent}$//m;
         }
 #        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$indent_re], ['indent_re']);
