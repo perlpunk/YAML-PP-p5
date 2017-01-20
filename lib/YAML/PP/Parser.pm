@@ -244,11 +244,12 @@ sub parse_node {
     return;
 }
 
+my $WS = '[\t ]';
 sub parse_seq {
     my ($self, $plus_indent) = @_;
     TRACE and warn "=== parse_seq(+$plus_indent)\n";
     my $yaml= $self->yaml;
-    if ($$yaml =~ s/\A(-)( |$)//m) {
+    if ($$yaml =~ s/\A(-)($WS|$)//m) {
         my $space = length $2;
         TRACE and warn "### SEC item\n";
         if ($plus_indent or $self->events->[-1] eq 'DOC') {
@@ -273,7 +274,7 @@ sub parse_map {
     my ($self, $plus_indent) = @_;
     my $yaml = $self->yaml;
     TRACE and warn "=== parse_map(+$plus_indent)\n";
-    if ($$yaml =~ s/\A($key_re) *:( |$)//m) {
+    if ($$yaml =~ s/\A($key_re) *:($WS|$)//m) {
         TRACE and warn "### MAP item\n";
         my $key = $1;
         my $space = length $2;
