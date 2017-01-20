@@ -135,8 +135,8 @@ sub parse_document {
 }
 
 my $key_start_re = '[a-zA-Z0-9%]';
-my $key_content_re = '[a-zA-Z0-9%\]" ]';
-my $key_re = qr{(?:$key_start_re$key_content_re*|$key_start_re?)};
+my $key_content_re = '[a-zA-Z0-9%\]" -]';
+my $key_re = qr{(?:$key_start_re$key_content_re*$key_start_re|$key_start_re?)};
 
 sub parse_next {
     TRACE and warn "=== parse_next()\n";
@@ -216,6 +216,7 @@ sub parse_node {
         else {
             if ($$yaml =~ s/\A(.+)\n//) {
                 my $value = $1;
+                $value =~ s/ +$//;
                 $self->event("=VAL", ":$value");
             }
             else {
@@ -250,7 +251,7 @@ sub parse_map {
     my ($self, $plus_indent) = @_;
     my $yaml = $self->yaml;
     TRACE and warn "=== parse_map(+$plus_indent)\n";
-    if ($$yaml =~ s/\A($key_re):( |$)//m) {
+    if ($$yaml =~ s/\A($key_re) *:( |$)//m) {
         TRACE and warn "### MAP item\n";
         my $key = $1;
         my $end = $2;
