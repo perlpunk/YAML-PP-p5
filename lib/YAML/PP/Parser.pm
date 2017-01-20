@@ -44,13 +44,7 @@ sub parse_stream {
                 my $i = $#$off;
                 while ($i > 1) {
                     my $test_indent = $off->[ $i ];
-                    my $last = $self->events->[-1];
-                    if ($last eq 'MAP' or $last eq 'SEQ') {
-                        $self->end($last);
-                    }
-                    else {
-                        die "Unexpected";
-                    }
+                    die "Unexpected" unless $self->pop_last_allowed;
                     $i--;
                 }
                 $self->indent($off->[ $i ]);
@@ -93,13 +87,7 @@ sub parse_stream {
         }
         if ($doc_end or not length $$yaml) {
             while (@{ $self->events }) {
-                my $last = $self->events->[-1];
-                if ($last eq 'MAP' or $last eq 'SEQ') {
-                    $self->end($last);
-                }
-                else {
-                    last;
-                }
+                last unless $self->pop_last_allowed;
             }
             if ($doc_end_explicit) {
                 $self->end("DOC", "...");
@@ -113,6 +101,18 @@ sub parse_stream {
     }
 
     $self->end("STR");
+}
+
+sub pop_last_allowed {
+    my ($self) = @_;
+    my $last = $self->events->[-1];
+    if ($last eq 'MAP' or $last eq 'SEQ') {
+        $self->end($last);
+    }
+    else {
+        return;
+    }
+    return 1;
 }
 
 sub parse_document {
@@ -163,7 +163,7 @@ sub parse_next {
                     if ($test_indent <= $ind) {
                         last;
                     }
-                    $self->end('MAP');
+                    die "Unexpected" unless $self->pop_last_allowed;
                     $i--;
                 }
                 $self->indent($off->[ $i ]);
