@@ -36,6 +36,7 @@ sub parse_stream {
             next;
         }
 
+        my $doc_end = 0;
         if ($$yaml =~ s/\A--- ?//) {
             if ($self->level) {
                 $self->end("DOC");
@@ -47,6 +48,7 @@ sub parse_stream {
                 my $value = $1;
                 if ($value =~ m/^[|>]/) {
                     $self->parse_block_scalar;
+                    $doc_end = 1;
                 }
                 else {
                     my $text = $self->parse_multi(folded => 1, trim => 1);
@@ -60,12 +62,12 @@ sub parse_stream {
             $self->offset->[ $self->level ] = 0;
         }
 
+        $self->parse_document unless $doc_end;
+        my $doc_end_explicit = 0;
 
-        $self->parse_document;
-
-        my $doc_end = 0;
         if ($$yaml =~ s/\A\.\.\. ?//) {
             $doc_end = 1;
+            $doc_end_explicit = 1;
 #            $$yaml =~ s/^#.*\n//;
 #            $$yaml =~ s/^\n//;
         }
@@ -79,7 +81,7 @@ sub parse_stream {
                     last;
                 }
             }
-            if ($doc_end) {
+            if ($doc_end_explicit) {
                 $self->end("DOC", "...");
             }
             else {
@@ -94,6 +96,7 @@ sub parse_stream {
 }
 
 sub parse_document {
+    TRACE and warn "=== parse_document()\n";
     my ($self) = @_;
     my $yaml = $self->yaml;
     TRACE and $self->debug_yaml;
@@ -115,6 +118,7 @@ sub parse_document {
 my $key_re = qr{[a-zA-Z0-9% ]*};
 
 sub parse_next {
+    TRACE and warn "=== parse_next()\n";
     my ($self) = @_;
     my $yaml = $self->yaml;
     my $plus_indent = 0;
@@ -162,13 +166,10 @@ sub parse_next {
 }
 
 sub parse_node {
+    TRACE and warn "=== parse_node()\n";
     my ($self, $plus_indent) = @_;
     my $yaml = $self->yaml;
     {
-
-        if (defined $self->parse_block_scalar) {
-            return;
-        }
 
         if ($$yaml =~ s/\A($key_re):( |$)//m) {
             my $key = $1;
@@ -179,10 +180,12 @@ sub parse_node {
                 $self->inc_indent($plus_indent);
             }
             $self->event("=VAL", ":$key");
-            if ( $$yaml =~ s/\A +#.*\n// ) {
+            while ( $$yaml =~ s/\A +#.*\n// ) {
             }
-            if ($$yaml =~ s/\A *([^ #\n]+)( +#[^\n]*)?\n//) {
+            if ($$yaml =~ s/\A( *.+)\n//) {
                 my $value = $1;
+                $value =~ s/ +#.*//;
+                $value =~ s/\A *//;
                 $self->inc_indent(1);
                 my $indent = $self->indent;
                 if ($value =~ m/^[|>]/) {
@@ -208,31 +211,28 @@ sub parse_node {
             }
             return;
 
-#            if (defined $self->parse_block_scalar) {
-#            }
-#            elsif ($$yaml =~ s/\A(.+)\n//) {
-#                my $value = $1;
-#                $value =~ s/ +# .*\z//;
-#                $self->event("=VAL", ":$value");
-#            }
-#
-#            return;
         }
-        my $value = $self->parse_multi(folded => 1);
-        if ($self->events->[-1] eq 'MAP') {
-            $value =~ s/\n\z//;
-            $self->event("=VAL", ":$value");
-            return $value;
-        }
-        elsif (length $value) {
-            $value =~ s/\\/\\\\/g;
-            $value =~ s/\n/\\n/g;
-            $value =~ s/\t/\\t/g;
-            $self->event("=VAL", ":$value");
+        if (defined $self->parse_block_scalar) {
+            return;
         }
         else {
-#            $self->event("=VAL", ":");
+            die "Unexpected";
         }
+#        my $value = $self->parse_multi(folded => 1);
+#        if ($self->events->[-1] eq 'MAP') {
+#            $value =~ s/\n\z//;
+#            $self->event("=VAL", ":$value");
+#            return $value;
+#        }
+#        elsif (length $value) {
+#            $value =~ s/\\/\\\\/g;
+#            $value =~ s/\n/\\n/g;
+#            $value =~ s/\t/\\t/g;
+#            $self->event("=VAL", ":$value");
+#        }
+#        else {
+##            $self->event("=VAL", ":");
+#        }
 
 #            $$yaml =~ s/.*//s;
 
@@ -242,6 +242,7 @@ sub parse_node {
 }
 
 sub parse_block_scalar {
+    TRACE and warn "=== parse_block_scalar()\n";
     my ($self) = @_;
     my $yaml = $self->yaml;
     if ($$yaml =~ s/\A([|>])([+-]?)\n//) {
@@ -269,6 +270,7 @@ sub parse_block_scalar {
 }
 
 sub parse_multi {
+    TRACE and warn "=== parse_multi()\n";
     my ($self, %args) = @_;
     my $trim = $args{trim};
     my $block = $args{block};
