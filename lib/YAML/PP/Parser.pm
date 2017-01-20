@@ -25,6 +25,7 @@ sub parse_stream {
     $self->begin("STR");
 
 
+    my $close = 1;
     while (length $$yaml) {
         if ($$yaml =~ s/\A *#[^\n]+\n//) {
             next;
@@ -95,9 +96,16 @@ sub parse_stream {
             else {
                 $self->end("DOC");
             }
+            $close = 0;
         }
 
 
+    }
+    if ($close) {
+        while (@{ $self->events }) {
+            last unless $self->pop_last_allowed;
+        }
+        $self->end("DOC") if $self->events->[-1] eq 'DOC';
     }
 
     $self->end("STR");
@@ -248,7 +256,7 @@ sub parse_seq {
             $self->offset->[ $self->level ] = $self->indent + $plus_indent;
             $self->inc_indent($plus_indent);
         }
-        if ($space and $$yaml =~ s/#.*\n//) {
+        if ($space and $$yaml =~ s/\A#.*\n//) {
         }
         elsif ($$yaml =~ s/\A( *)//) {
             my $ind = length $1;
@@ -278,8 +286,12 @@ sub parse_map {
         if ($space and $$yaml =~ s/\A *#.*\n//) {
             while ( $$yaml =~ s/\A +#.*\n// ) {
             }
+            if ($$yaml =~ s/\A( *)//) {
+                my $space = length $1;
+                $self->parse_node($space);
+            }
         }
-        if ($$yaml =~ s/\A( *.+)\n//) {
+        elsif ($$yaml =~ s/\A( *.+)\n//) {
             my $value = $1;
             $value =~ s/ +#.*//;
             $value =~ s/\A *//;
