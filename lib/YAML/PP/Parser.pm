@@ -193,14 +193,16 @@ sub parse_node {
     {
 
         if ($$yaml =~ s/\A(-)( |$)//m) {
+            my $space = length $2;
             TRACE and warn "### SEC item\n";
             if ($plus_indent or $self->events->[-1] eq 'DOC') {
                 $self->begin("SEQ");
                 $self->offset->[ $self->level ] = $self->indent + $plus_indent;
                 $self->inc_indent($plus_indent);
             }
-            $$yaml =~ s/ #.*\n//;
-            if ($$yaml =~ s/\A( *)//) {
+            if ($space and $$yaml =~ s/#.*\n//) {
+            }
+            elsif ($$yaml =~ s/\A( *)//) {
                 my $ind = length $1;
                 if ($$yaml =~ m/\A./) {
                     $self->parse_node($ind + 2);
@@ -217,6 +219,7 @@ sub parse_node {
             if ($$yaml =~ s/\A(.+)\n//) {
                 my $value = $1;
                 $value =~ s/ +$//;
+                $value =~ s/ #.*$//;
                 $self->event("=VAL", ":$value");
             }
             else {
@@ -254,14 +257,16 @@ sub parse_map {
     if ($$yaml =~ s/\A($key_re) *:( |$)//m) {
         TRACE and warn "### MAP item\n";
         my $key = $1;
-        my $end = $2;
+        my $space = length $2;
         if ($plus_indent or $self->events->[-1] eq 'DOC') {
             $self->begin("MAP");
             $self->offset->[ $self->level ] = $self->indent + $plus_indent;
             $self->inc_indent($plus_indent);
         }
         $self->event("=VAL", ":$key");
-        while ( $$yaml =~ s/\A +#.*\n// ) {
+        if ($space and $$yaml =~ s/\A *#.*\n//) {
+            while ( $$yaml =~ s/\A +#.*\n// ) {
+            }
         }
         if ($$yaml =~ s/\A( *.+)\n//) {
             my $value = $1;
