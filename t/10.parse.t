@@ -73,7 +73,7 @@ for my $dir (@dirs) {
     open $fh, "<", "$datadir/$dir/===" or die $!;
     chomp(my $title = <$fh>);
     close $fh;
-    diag "------------------------------ $dir";
+#    diag "------------------------------ $dir";
 
     open $fh, "<", "$datadir/$dir/test.event" or die $!;
     chomp(my @test_events = <$fh>);

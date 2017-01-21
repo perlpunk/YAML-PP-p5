@@ -11,6 +11,10 @@ has level => ( is => 'rw', default => -1 );
 has offset => ( is => 'rw', default => sub { [0] } );
 has events => ( is => 'rw', default => sub { [] } );
 has anchor => ( is => 'rw' );
+has tag => ( is => 'rw' );
+has tagmap => ( is => 'rw', default => sub { +{
+    '!!' => "tag:yaml.org,2002:",
+} } );
 
 use constant TRACE => $ENV{YAML_PP_TRACE};
 
@@ -36,6 +40,11 @@ sub parse_stream {
         }
         if ($$yaml =~ s/\A\s*%YAML ?1\.2\s*//) {
             next;
+        }
+        if ($$yaml =~ s/\A\s*%TAG +(![a-z]*!) +(tag:\S+)\s*//) {
+            my $tag_alias = $1;
+            my $tag_url = $2;
+            $self->tagmap->{ $tag_alias } = $tag_url;
         }
 
         my $doc_end = 0;
@@ -67,7 +76,11 @@ sub parse_stream {
                     $doc_end = 1;
                 }
                 else {
-                    die "Needed?";
+                    if ($self->parse_tag) {
+                    }
+                    else {
+                        die "Needed?";
+                    }
 #                    my $text = $self->parse_multi(folded => 1, trim => 1);
 #                    $self->event_value(":$text");
                 }
@@ -242,6 +255,8 @@ sub parse_node {
             return;
         }
         else {
+            if ($self->parse_tag) {
+            }
             my $alias = $self->parse_alias;
             if ($alias) {
                 return;
@@ -283,12 +298,35 @@ sub parse_node {
 sub event_value {
     my ($self, $value) = @_;
     my $anchor = $self->anchor;
+    my $tag = $self->tag;
     my $event = $value;
+
+    if (defined $tag) {
+        my $tag_str = $self->tag_str($tag);
+        $event = "$tag_str $event";
+        $self->tag(undef);
+    }
     if (defined $anchor) {
         $event = "&$anchor $event";
+        $self->anchor(undef);
     }
     $self->event("=VAL", "$event");
-    $self->anchor(undef);
+}
+
+my $tag_re = '[a-zA-Z]+';
+sub tag_str {
+    my ($self, $tag) = @_;
+    if ($tag eq '!') {
+        return "<!>";
+    }
+    elsif ($tag =~ m/^(![a-z]*!)($tag_re)/) {
+        my $alias = $1;
+        my $name = $2;
+        my $map = $self->tagmap;
+        if (exists $map->{ $alias }) {
+            $tag = "<" . $map->{ $alias }. $name . ">";
+        }
+    }
 }
 
 my $anchor_start_re = '[a-zA-Z]';
@@ -342,6 +380,8 @@ sub parse_seq {
             return 1;
         }
 
+        if ($self->parse_tag) {
+        }
 
         if ($space and $$yaml =~ s/\A#.*\n//) {
             $self->event_value(":");
@@ -356,6 +396,17 @@ sub parse_seq {
                 }
             }
         }
+        return 1;
+    }
+    return 0;
+}
+
+sub parse_tag {
+    my ($self) = @_;
+    my $yaml = $self->yaml;
+    if ($$yaml =~ s/\A(![a-z]*!$tag_re|!)( |$)//m) {
+        my $tag = $1;
+        $self->tag($tag);
         return 1;
     }
     return 0;
@@ -409,6 +460,8 @@ sub parse_map {
             if ($self->parse_alias) {
             }
             else {
+                if ($self->parse_tag) {
+                }
                 if ($$yaml =~ s/\A( *.+)\n//) {
                     my $value = $1;
                     $value =~ s/ +#.*//;
@@ -591,6 +644,14 @@ sub pop_events {
 
 sub begin {
     my ($self, $event, @content) = @_;
+    if ($event eq 'SEQ' or $event eq 'MAP') {
+        my $tag = $self->tag;
+        if (defined $tag) {
+            $self->tag(undef);
+            my $tag_str = $self->tag_str($tag);
+            unshift @content, $tag_str;
+        }
+    }
     $self->push_events($event);
     TRACE and warn "---------------------------> BEGIN $event @content\n";
     $self->cb->($self, "+$event", @content);
@@ -601,6 +662,11 @@ sub end {
     $self->pop_events($event);
     TRACE and warn "---------------------------> END   $event @content\n";
     $self->cb->($self, "-$event", @content);
+    if ($event eq 'DOC') {
+        $self->tagmap({
+            '!!' => "tag:yaml.org,2002:",
+        });
+    }
 }
 
 sub event {
