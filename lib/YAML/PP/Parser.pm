@@ -67,7 +67,7 @@ sub parse_stream {
                 }
                 else {
                     my $text = $self->parse_multi(folded => 1, trim => 1);
-                    $self->event("=VAL", ":$text");
+                    $self->event_value(":$text");
                 }
             }
             $$yaml =~ s/\A\n//;
@@ -242,7 +242,7 @@ sub parse_node {
                 my $value = $1;
                 $value =~ s/ +$//;
                 $value =~ s/ #.*$//;
-                $self->event("=VAL", ":$value");
+                $self->event_value(":$value");
             }
             else {
                 warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
@@ -272,6 +272,12 @@ sub parse_node {
     return;
 }
 
+sub event_value {
+    my ($self, $value) = @_;
+    $self->event("=VAL", "$value");
+}
+
+
 my $WS = '[\t ]';
 sub parse_seq {
     my ($self, $plus_indent, $seq_indent) = @_;
@@ -286,7 +292,7 @@ sub parse_seq {
             $self->inc_indent($plus_indent);
         }
         if ($space and $$yaml =~ s/\A#.*\n//) {
-            $self->event("=VAL", ":");
+            $self->event_value(":");
         }
         elsif ($$yaml =~ s/\A( *)//) {
             my $ind = length $1;
@@ -321,7 +327,7 @@ sub parse_map {
             $self->offset->[ $self->level ] = $self->indent + $plus_indent;
             $self->inc_indent($plus_indent);
         }
-        $self->event("=VAL", ":$key");
+        $self->event_value(":$key");
         if ($space and $$yaml =~ s/\A *#.*\n//) {
             while ( $$yaml =~ s/\A +#.*\n// ) {
             }
@@ -344,7 +350,7 @@ sub parse_map {
                 $self->inc_indent(1);
                 my $text = $self->parse_multi(folded => 1, trim => 1);
                 $value = "$value $text" if length $text;
-                $self->event("=VAL", ":$value");
+                $self->event_value(":$value");
                 $self->dec_indent(1);
             }
         }
@@ -379,7 +385,7 @@ sub parse_block_scalar {
         $content =~ s/\\/\\\\/g;
         $content =~ s/\n/\\n/g;
         $content =~ s/\t/\\t/g;
-        $self->event("=VAL", $type . $content);
+        $self->event_value($type . $content);
         return $content;
     }
     return;
