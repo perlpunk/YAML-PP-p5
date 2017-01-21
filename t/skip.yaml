@@ -67,6 +67,7 @@ flow:
 - YD5X
 - 5C5M
 - MXS3
+- X38W
 
 seq:
 
@@ -94,6 +95,9 @@ tags:
 - 9WXW
 - 6CK3
 - EHF6
+- HMQ5
+- CUP7
+- BP6S # duplicate of CUP7?
 
 misc:
 - DBG4
@@ -104,19 +108,6 @@ misc:
 - BEC7
 
 anchors:
-- ZH7C
-- X38W
-- V55R
-- HMQ5
-- CUP7
-- BP6S
-- 6M2F
-- 2SXE
-- 3GZX
-- E76Z
-- JS2J
-- PW8X
-- 7BUB
 
 keymap:
 - V9D5
@@ -131,3 +122,5 @@ keymap:
 - M5DY
 - S9E8
 - L94M
+- 6M2F
+- PW8X

@@ -10,6 +10,7 @@ has indent => ( is => 'rw', default => 0 );
 has level => ( is => 'rw', default => -1 );
 has offset => ( is => 'rw', default => sub { [0] } );
 has events => ( is => 'rw', default => sub { [] } );
+has anchor => ( is => 'rw' );
 
 use constant TRACE => $ENV{YAML_PP_TRACE};
 
@@ -66,8 +67,9 @@ sub parse_stream {
                     $doc_end = 1;
                 }
                 else {
-                    my $text = $self->parse_multi(folded => 1, trim => 1);
-                    $self->event_value(":$text");
+                    die "Needed?";
+#                    my $text = $self->parse_multi(folded => 1, trim => 1);
+#                    $self->event_value(":$text");
                 }
             }
             $$yaml =~ s/\A\n//;
@@ -228,6 +230,8 @@ sub parse_node {
     my $yaml = $self->yaml;
     {
 
+        if ($self->parse_anchor) {
+        }
         if ($self->parse_seq($plus_indent, $seq_indent)) {
             return;
         }
@@ -238,6 +242,10 @@ sub parse_node {
             return;
         }
         else {
+            my $alias = $self->parse_alias;
+            if ($alias) {
+                return;
+            }
             if ($$yaml =~ s/\A(.+)\n//) {
                 my $value = $1;
                 $value =~ s/ +$//;
@@ -274,9 +282,43 @@ sub parse_node {
 
 sub event_value {
     my ($self, $value) = @_;
-    $self->event("=VAL", "$value");
+    my $anchor = $self->anchor;
+    my $event = $value;
+    if (defined $anchor) {
+        $event = "&$anchor $event";
+    }
+    $self->event("=VAL", "$event");
+    $self->anchor(undef);
 }
 
+my $anchor_start_re = '[a-zA-Z]';
+my $anchor_content_re = '[a-zA-Z:]';
+my $anchor_re = qr{(?:$anchor_start_re$anchor_content_re*|$anchor_start_re?)};
+
+sub parse_anchor {
+    TRACE and warn "=== parse_anchor()\n";
+    my ($self) = @_;
+    my $yaml = $self->yaml;
+    if ($$yaml =~ s/\A&($anchor_re) +//) {
+        my $anchor = $1;
+        $self->anchor($anchor);
+        return 1;
+    }
+    return 0;
+}
+
+sub parse_alias {
+    TRACE and warn "=== parse_alias()\n";
+    my ($self) = @_;
+    my $yaml = $self->yaml;
+    if ($$yaml =~ s/\A\*($anchor_re)//m) {
+        my $alias = $1;
+        my $space = length $2;
+        $self->event("=ALI", "*$alias");
+        return 1;
+    }
+    return 0;
+}
 
 my $WS = '[\t ]';
 sub parse_seq {
@@ -286,11 +328,21 @@ sub parse_seq {
     if ($$yaml =~ s/\A(-)($WS|$)//m) {
         my $space = length $2;
         TRACE and warn "### SEC item\n";
+
+
         if ($plus_indent or ($seq_indent and $self->in('MAP') ) or $self->events->[-1] eq 'DOC') {
             $self->begin("SEQ");
             $self->offset->[ $self->level ] = $self->indent + $plus_indent;
             $self->inc_indent($plus_indent);
         }
+
+        if ($self->parse_alias) {
+            $$yaml =~ s/\A +#.*//;
+            $$yaml =~ s/\A *\n//;
+            return 1;
+        }
+
+
         if ($space and $$yaml =~ s/\A#.*\n//) {
             $self->event_value(":");
         }
@@ -318,16 +370,31 @@ sub parse_map {
     my ($self, $plus_indent, $seq_indent) = @_;
     my $yaml = $self->yaml;
     TRACE and warn "=== parse_map(+$plus_indent,+$seq_indent)\n";
-    if ($$yaml =~ s/\A($key_re) *:($WS|$)//m) {
+    my $key;
+    my $alias;
+    my $space;
+
+    if ($$yaml =~ s/\A\*($anchor_re) +:($WS|$)//m) {
+        $alias = $1;
+        $space = length $2;
+    }
+    elsif ($$yaml =~ s/\A($key_re) *:($WS|$)//m) {
         TRACE and warn "### MAP item\n";
-        my $key = $1;
-        my $space = length $2;
+        $key = $1;
+        $space = length $2;
+    }
+    if (defined $alias or defined $key) {
         if ($plus_indent or $self->events->[-1] eq 'DOC') {
             $self->begin("MAP");
             $self->offset->[ $self->level ] = $self->indent + $plus_indent;
             $self->inc_indent($plus_indent);
         }
-        $self->event_value(":$key");
+        if (defined $alias) {
+            $self->event("=ALI", "*$alias");
+        }
+        else {
+            $self->event_value(":$key");
+        }
         if ($space and $$yaml =~ s/\A *#.*\n//) {
             while ( $$yaml =~ s/\A +#.*\n// ) {
             }
@@ -336,27 +403,33 @@ sub parse_map {
                 $self->parse_node($space, 0);
             }
         }
-        elsif ($$yaml =~ s/\A( *.+)\n//) {
-            my $value = $1;
-            $value =~ s/ +#.*//;
-            $value =~ s/\A *//;
-            if ($value =~ m/^[|>]/) {
-                $self->inc_indent(1);
-                $$yaml = "$value\n$$yaml";
-                $self->parse_block_scalar;
-                $self->dec_indent(1);
+        else {
+            my $anchor = $self->parse_anchor;
+
+            if ($self->parse_alias) {
             }
             else {
-                $self->inc_indent(1);
-                my $text = $self->parse_multi(folded => 1, trim => 1);
-                $value = "$value $text" if length $text;
-                $self->event_value(":$value");
-                $self->dec_indent(1);
+                if ($$yaml =~ s/\A( *.+)\n//) {
+                    my $value = $1;
+                    $value =~ s/ +#.*//;
+                    $value =~ s/\A *//;
+                    if ($value =~ m/^[|>]/) {
+                        $self->inc_indent(1);
+                        $$yaml = "$value\n$$yaml";
+                        $self->parse_block_scalar;
+                        $self->dec_indent(1);
+                    }
+                    else {
+                        $self->inc_indent(1);
+                        my $text = $self->parse_multi(folded => 1, trim => 1);
+                        $value = "$value $text" if length $text;
+                        $self->event_value(":$value");
+                        $self->dec_indent(1);
+                    }
+                }
             }
+
         }
-#            else {
-#                $$yaml =~ s/\A\n//;
-#            }
         return 1;
     }
     return 0;
