@@ -151,6 +151,7 @@ sub parse_next {
     my ($self) = @_;
     my $yaml = $self->yaml;
     my $plus_indent = 0;
+    my $seq_indent = 0;
     while (length $$yaml) {
         if ($$yaml =~ s/\A *\n//) {
             next;
@@ -183,27 +184,54 @@ sub parse_next {
         if ($self->indent and $$yaml =~ s/\A$indent_re//) {
             TRACE and warn "### removed $indent_re\n";
         }
+        elsif ($self->indent) {
+            die "Unexpected indentation";
+        }
         if ($$yaml =~ s/\A( +)//) {
             TRACE and warn "### more spaces\n";
             my $spaces = $1;
             $plus_indent = length $spaces;
         }
+        elsif ($$yaml =~ m/\A- /) {
+            $seq_indent = 2;
+        }
+        else {
+            TRACE and warn "### same indent\n";
+            if ($self->in_unindented_seq) {
+                # we are at the end of the unindented sequence
+                $self->end('SEQ');
+            }
+        }
 
         last;
     }
-    $self->parse_node($plus_indent);
+    $self->parse_node($plus_indent, $seq_indent);
+}
+
+sub in_unindented_seq {
+    my ($self) = @_;
+    if ($self->in('SEQ')) {
+        my $indent = $self->indent;
+        my $level = $self->level;
+        my $seq_indent = $self->offset->[ $level ];
+        my $prev_indent = $self->offset->[ $level - 1];
+        if ($prev_indent == $seq_indent) {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 sub parse_node {
-    my ($self, $plus_indent) = @_;
-    TRACE and warn "=== parse_node(+$plus_indent)\n";
+    my ($self, $plus_indent, $seq_indent) = @_;
+    TRACE and warn "=== parse_node(+$plus_indent,+$seq_indent)\n";
     my $yaml = $self->yaml;
     {
 
-        if ($self->parse_seq($plus_indent)) {
+        if ($self->parse_seq($plus_indent, $seq_indent)) {
             return;
         }
-        elsif ($self->parse_map($plus_indent)) {
+        elsif ($self->parse_map($plus_indent, $seq_indent)) {
             return;
         }
         elsif (defined $self->parse_block_scalar) {
@@ -246,13 +274,13 @@ sub parse_node {
 
 my $WS = '[\t ]';
 sub parse_seq {
-    my ($self, $plus_indent) = @_;
-    TRACE and warn "=== parse_seq(+$plus_indent)\n";
+    my ($self, $plus_indent, $seq_indent) = @_;
+    TRACE and warn "=== parse_seq(+$plus_indent,+$seq_indent)\n";
     my $yaml= $self->yaml;
     if ($$yaml =~ s/\A(-)($WS|$)//m) {
         my $space = length $2;
         TRACE and warn "### SEC item\n";
-        if ($plus_indent or $self->events->[-1] eq 'DOC') {
+        if ($plus_indent or ($seq_indent and $self->in('MAP') ) or $self->events->[-1] eq 'DOC') {
             $self->begin("SEQ");
             $self->offset->[ $self->level ] = $self->indent + $plus_indent;
             $self->inc_indent($plus_indent);
@@ -266,7 +294,7 @@ sub parse_seq {
                 if (defined $self->parse_block_scalar) {
                 }
                 else {
-                    $self->parse_node($ind + 2);
+                    $self->parse_node($ind + 2, 0);
                 }
             }
         }
@@ -275,10 +303,15 @@ sub parse_seq {
     return 0;
 }
 
+sub in {
+    my ($self, $event) = @_;
+    return $self->events->[-1] eq $event;
+}
+
 sub parse_map {
-    my ($self, $plus_indent) = @_;
+    my ($self, $plus_indent, $seq_indent) = @_;
     my $yaml = $self->yaml;
-    TRACE and warn "=== parse_map(+$plus_indent)\n";
+    TRACE and warn "=== parse_map(+$plus_indent,+$seq_indent)\n";
     if ($$yaml =~ s/\A($key_re) *:($WS|$)//m) {
         TRACE and warn "### MAP item\n";
         my $key = $1;
@@ -294,7 +327,7 @@ sub parse_map {
             }
             if ($$yaml =~ s/\A( *)//) {
                 my $space = length $1;
-                $self->parse_node($space);
+                $self->parse_node($space, 0);
             }
         }
         elsif ($$yaml =~ s/\A( *.+)\n//) {

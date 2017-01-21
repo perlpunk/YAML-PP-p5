@@ -21,6 +21,7 @@ multiline:
 - NP9H
 - P2AD
 - M5C3
+- R4YG
 
 quoted:
 - 4CQQ
@@ -68,9 +69,6 @@ flow:
 - MXS3
 
 seq:
-- AZ63
-- RLU9
-- R4YG
 
 sets:
 - 2XXW

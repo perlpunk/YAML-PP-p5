@@ -21,15 +21,15 @@ my $check = $skip_info->{check};
 
 my $skipped = $skip_info->{skip};
 
-my $multiline = $skip_info->{multiline};
-my $quoted = $skip_info->{quoted};
-my $flow = $skip_info->{flow};
-my $seq = $skip_info->{seq};
-my $sets = $skip_info->{sets};
-my $tags = $skip_info->{tags};
-my $misc = $skip_info->{misc};
-my $anchors = $skip_info->{anchors};
-my $keymap = $skip_info->{keymap};
+my $multiline = $skip_info->{multiline} || [];
+my $quoted = $skip_info->{quoted} || [];
+my $flow = $skip_info->{flow} || [];
+my $seq = $skip_info->{seq} || [];
+my $sets = $skip_info->{sets} || [];
+my $tags = $skip_info->{tags} || [];
+my $misc = $skip_info->{misc} || [];
+my $anchors = $skip_info->{anchors} || [];
+my $keymap = $skip_info->{keymap} || [];
 
 my @todo = ();
 push @$skipped,
