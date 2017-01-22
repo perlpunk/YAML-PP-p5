@@ -504,11 +504,13 @@ sub parse_quoted {
     my ($self) = @_;
     my $yaml = $self->yaml;
     if ($$yaml =~ s/\A"//) {
-        if ($$yaml =~ s/\A([^"]+)"//) {
+        if ($$yaml =~ s/\A((?:\\"|[^"])*?)"//) {
             my $quoted = $1;
-            $quoted =~ s/\\/\\\\/g;
-            $quoted =~ s/\n/\\n/g;
+            $quoted =~ s/\\"/"/g;
             $quoted =~ s/\t/\\t/g;
+            my $indent = $self->indent;
+            $quoted =~ s/^ +//gm;
+            $quoted =~ s/\n+/ /g;
             $self->event_value('"' . $quoted);
             return 1;
         }
@@ -517,8 +519,9 @@ sub parse_quoted {
         }
     }
     elsif ($$yaml =~ s/\A'//) {
-        if ($$yaml =~ s/\A([^']+)'//) {
+        if ($$yaml =~ s/\A((?:''|[^'])*)'//) {
             my $quoted = $1;
+            $quoted =~ s/''/'/g;
             $quoted =~ s/\\/\\\\/g;
             $quoted =~ s/\n/\\n/g;
             $quoted =~ s/\t/\\t/g;
