@@ -382,13 +382,15 @@ sub parse_seq {
             return 1;
         }
 
-        if ($self->parse_tag) {
+        if ($space and $self->parse_tag) {
+            # space is already used
+            $$yaml=~ s/\A *#.*\n//;
         }
-
-        if ($space and $$yaml =~ s/\A#.*\n//) {
+        elsif ($space and $$yaml =~ s/\A#.*\n//) {
             $self->event_value(":");
+            return 1;
         }
-        elsif ($$yaml =~ s/\A( *)//) {
+        if ($$yaml =~ s/\A( *)//) {
             my $ind = length $1;
             if ($$yaml =~ m/\A./) {
                 if ($self->parse_quoted) {
@@ -406,6 +408,7 @@ sub parse_seq {
 }
 
 sub parse_tag {
+    TRACE and warn "=== parse_tag()\n";
     my ($self) = @_;
     my $yaml = $self->yaml;
     if ($$yaml =~ s/\A(![a-z]*!$tag_re|!)( |$)//m) {
