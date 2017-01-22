@@ -6,6 +6,7 @@ use FindBin '$Bin';
 use Data::Dumper;
 use YAML::PP::Parser;
 use YAML::XS ();
+use Encode;
 
 $|++;
 
@@ -115,17 +116,8 @@ sub test {
     if ($@) {
         diag "ERROR: $@";
     }
-    my @squashed;
-    for (my $i = 0; $i < @events; $i++) {
-        my $event = $events[ $i ];
-        if ($event =~ m/^=VAL /) {
-            next;
-        }
 
-        push @squashed, $event;
-    }
-
-#    @events = @squashed;
+    $_ = encode_utf8 $_ for @events;
     my $ok = is_deeply(\@events, $test_events, "$name - $title");
     if (not $ok and not $TODO or $ENV{YAML_PP_TRACE}) {
         diag "YAML:\n$yaml" unless $TODO;

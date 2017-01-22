@@ -506,6 +506,7 @@ sub parse_quoted {
     if ($$yaml =~ s/\A"//) {
         if ($$yaml =~ s/\A((?:\\"|[^"])*?)"//) {
             my $quoted = $1;
+            $quoted =~ s/\\u([A-Fa-f0-9]+)/chr(oct("x$1"))/eg;
             $quoted =~ s/\\"/"/g;
             $quoted =~ s/\t/\\t/g;
             my $indent = $self->indent;
