@@ -29,7 +29,6 @@ sub parse_stream {
     my $yaml = $self->yaml;
     $self->begin("STR");
 
-
     my $close = 1;
     while (length $$yaml) {
         if ($$yaml =~ s/\A *#[^\n]+\n//) {
@@ -45,6 +44,7 @@ sub parse_stream {
             my $tag_alias = $1;
             my $tag_url = $2;
             $self->tagmap->{ $tag_alias } = $tag_url;
+            next;
         }
 
         my $doc_end = 0;
@@ -55,7 +55,7 @@ sub parse_stream {
                 my $i = $#$off;
                 while ($i > 1) {
                     my $test_indent = $off->[ $i ];
-                    die "Unexpected" unless $self->pop_last_allowed;
+                    die "Unexpected" unless $self->end_node;
                     $i--;
                 }
                 $self->indent($off->[ $i ]);
@@ -101,41 +101,49 @@ sub parse_stream {
 #            $$yaml =~ s/^#.*\n//;
 #            $$yaml =~ s/^\n//;
         }
+#        elsif (length $$yaml and $self->in('DOC')) {
+#            die "Unexpected content";
+#        }
         if ($doc_end or not length $$yaml) {
-            while (@{ $self->events }) {
-                last unless $self->pop_last_allowed;
-            }
-            if ($doc_end_explicit) {
-                $self->end("DOC", "...");
-            }
-            else {
-                $self->end("DOC");
-            }
+            $self->end_document(explicit => $doc_end_explicit);
             $close = 0;
         }
 
 
     }
     if ($close) {
-        while (@{ $self->events }) {
-            last unless $self->pop_last_allowed;
-        }
-        $self->end("DOC") if $self->events->[-1] eq 'DOC';
+        $self->end_document( explicit => 0, empty => 1 );
     }
 
     $self->end("STR");
 }
 
-sub pop_last_allowed {
+sub end_document {
+    my ($self, %args) = @_;
+    my $explicit = $args{explicit};
+    my $empty = $args{empty};
+    while (@{ $self->events }) {
+        last unless $self->end_node;
+    }
+    if ($empty and not $self->in('DOC')) {
+        return;
+    }
+    if ($explicit) {
+        $self->end("DOC", "...");
+    }
+    else {
+        $self->end("DOC");
+    }
+}
+
+sub end_node {
     my ($self) = @_;
     my $last = $self->events->[-1];
     if ($last eq 'MAP' or $last eq 'SEQ') {
         $self->end($last);
+        return $last;
     }
-    else {
-        return;
-    }
-    return 1;
+    return;
 }
 
 sub parse_document {
@@ -187,7 +195,7 @@ sub parse_next {
                     if ($test_indent <= $ind) {
                         last;
                     }
-                    die "Unexpected" unless $self->pop_last_allowed;
+                    die "Unexpected" unless $self->end_node;
                     $i--;
                 }
                 $self->indent($off->[ $i ]);
