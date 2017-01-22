@@ -261,7 +261,9 @@ sub parse_node {
             if ($alias) {
                 return;
             }
-            if ($$yaml =~ s/\A(.+)\n//) {
+            if ($self->parse_quoted) {
+            }
+            elsif ($$yaml =~ s/\A(.+)\n//) {
                 my $value = $1;
                 $value =~ s/ +$//;
                 $value =~ s/ #.*$//;
@@ -389,7 +391,9 @@ sub parse_seq {
         elsif ($$yaml =~ s/\A( *)//) {
             my $ind = length $1;
             if ($$yaml =~ m/\A./) {
-                if (defined $self->parse_block_scalar) {
+                if ($self->parse_quoted) {
+                }
+                elsif (defined $self->parse_block_scalar) {
                 }
                 else {
                     $self->parse_node($ind + 2, 0);
@@ -446,6 +450,7 @@ sub parse_map {
         else {
             $self->event_value(":$key");
         }
+
         if ($space and $$yaml =~ s/\A *#.*\n//) {
             while ( $$yaml =~ s/\A +#.*\n// ) {
             }
@@ -462,7 +467,9 @@ sub parse_map {
             else {
                 if ($self->parse_tag) {
                 }
-                if ($$yaml =~ s/\A( *.+)\n//) {
+                if ($self->parse_quoted) {
+                }
+                elsif ($$yaml =~ s/\A( *.+)\n//) {
                     my $value = $1;
                     $value =~ s/ +#.*//;
                     $value =~ s/\A *//;
@@ -487,6 +494,39 @@ sub parse_map {
     }
     return 0;
 
+}
+
+sub parse_quoted {
+    TRACE and warn "=== parse_quoted()\n";
+    my ($self) = @_;
+    my $yaml = $self->yaml;
+    if ($$yaml =~ s/\A"//) {
+        if ($$yaml =~ s/\A([^"]+)"//) {
+            my $quoted = $1;
+            $quoted =~ s/\\/\\\\/g;
+            $quoted =~ s/\n/\\n/g;
+            $quoted =~ s/\t/\\t/g;
+            $self->event_value('"' . $quoted);
+            return 1;
+        }
+        else {
+            die "Couldn't parse quoted string";
+        }
+    }
+    elsif ($$yaml =~ s/\A'//) {
+        if ($$yaml =~ s/\A([^']+)'//) {
+            my $quoted = $1;
+            $quoted =~ s/\\/\\\\/g;
+            $quoted =~ s/\n/\\n/g;
+            $quoted =~ s/\t/\\t/g;
+            $self->event_value("'" . $quoted);
+            return 1;
+        }
+        else {
+            die "Couldn't parse quoted string";
+        }
+    }
+    return 0;
 }
 
 sub parse_block_scalar {
