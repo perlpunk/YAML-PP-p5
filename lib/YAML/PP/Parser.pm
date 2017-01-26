@@ -5,7 +5,7 @@ package YAML::PP::Parser;
 
 use Moo;
 
-has cb => ( is => 'rw' );
+has receiver => ( is => 'rw' );
 has yaml => ( is => 'rw' );
 has indent => ( is => 'rw', default => 0 );
 has level => ( is => 'rw', default => -1 );
@@ -710,14 +710,14 @@ sub begin {
     }
     $self->push_events($event);
     TRACE and warn "---------------------------> BEGIN $event @content\n";
-    $self->cb->($self, "+$event", @content);
+    $self->receiver->($self, "+$event", @content);
 }
 
 sub end {
     my ($self, $event, @content) = @_;
     $self->pop_events($event);
     TRACE and warn "---------------------------> END   $event @content\n";
-    $self->cb->($self, "-$event", @content);
+    $self->receiver->($self, "-$event", @content);
     if ($event eq 'DOC') {
         $self->tagmap({
             '!!' => "tag:yaml.org,2002:",
@@ -728,7 +728,7 @@ sub end {
 sub event {
     my ($self, $event, @content) = @_;
     TRACE and warn "---------------------------> EVENT $event @content\n";
-    $self->cb->($self, $event, @content);
+    $self->receiver->($self, $event, @content);
 }
 
 

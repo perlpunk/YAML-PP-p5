@@ -105,7 +105,7 @@ sub test {
 #    @$test_events = grep { m/DOC|STR/ } @$test_events;
     my @events;
     my $parser = YAML::PP::Parser->new(
-        cb => sub {
+        receiver => sub {
             my ($self, $event, $content) = @_;
             push @events, defined $content ? "$event $content" : $event;
         },
