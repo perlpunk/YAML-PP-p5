@@ -1,3 +1,4 @@
+# ABSTRACT: YAML Parser
 use strict;
 use warnings;
 package YAML::PP::Parser;
