@@ -22,6 +22,14 @@ use constant TRACE => $ENV{YAML_PP_TRACE};
 sub parse {
     my ($self, $yaml) = @_;
     $self->yaml(\$yaml);
+    $self->level(-1);
+    $self->offset([0]);
+    $self->events([]);
+    $self->anchor(undef);
+    $self->tag(undef);
+    $self->tagmap({
+        '!!' => "tag:yaml.org,2002:",
+    });
     $self->parse_stream;
 }
 
