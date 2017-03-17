@@ -523,6 +523,7 @@ sub parse_quoted {
     if ($$yaml =~ s/\A"//) {
         if ($$yaml =~ s/\A((?:\\"|[^"])*?)"//) {
             my $quoted = $1;
+            $quoted =~ s/\\\n +//g;
             $quoted =~ s/\\u([A-Fa-f0-9]+)/chr(oct("x$1"))/eg;
             $quoted =~ s/\\"/"/g;
             $quoted =~ s/\t/\\t/g;
