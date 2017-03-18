@@ -40,13 +40,15 @@ sub parse {
 }
 
 sub parse_stream {
+    TRACE and warn "=== parse_stream()\n";
     my ($self) = @_;
     my $yaml = $self->yaml;
     $self->begin("STR");
 
     my $close = 1;
+    my $need_explicit_start = 0;
     while (length $$yaml) {
-        my $head = $self->parse_document_head;
+        my $head = $self->parse_document_head(explicit => $need_explicit_start);
         last unless length $$yaml;
 
         my $doc_end = 0;
@@ -58,20 +60,26 @@ sub parse_stream {
             $self->offset->[ $self->level ] = 0;
         }
 
-        unless ($doc_end) {
-            $self->parse_document;
-        }
         my $doc_end_explicit = 0;
+        if ($doc_end) {
+            my $end = $self->parse_document_end;
+            if ($end) {
+                $doc_end_explicit = 1;
+                $self->end_document(explicit => $doc_end_explicit);
+                $close = 0;
+            }
+            else {
+                $need_explicit_start = 1;
+            }
+            next;
+        }
 
-        if ($$yaml =~ s/\A\.\.\. ?//) {
+        my $end = $self->parse_document;
+        if ($end) {
             $doc_end = 1;
             $doc_end_explicit = 1;
-#            $$yaml =~ s/^#.*\n//;
-#            $$yaml =~ s/^\n//;
         }
-#        elsif (length $$yaml and $self->in('DOC')) {
-#            die "Unexpected content";
-#        }
+
         if ($doc_end or not length $$yaml) {
             $self->end_document(explicit => $doc_end_explicit);
             $close = 0;
@@ -86,12 +94,24 @@ sub parse_stream {
     $self->end("STR");
 }
 
+sub parse_document_end {
+    TRACE and warn "=== parse_document_end()\n";
+    my ($self) = @_;
+    my $yaml = $self->yaml;
+    if ($$yaml =~ s/\A\.\.\.(?= |$)//m) {
+        $self->eol(space => 1) or die "Unexpected";
+        return 1;
+    }
+    return 0;
+}
+
 sub parse_document_start {
+    TRACE and warn "=== parse_document_start()\n";
     my ($self) = @_;
     my $yaml = $self->yaml;
     my $end = 0;
     if ($$yaml =~ s/\A---(?= |$)//m) {
-        my $eol = $self->eol;
+        my $eol = $self->eol(space => 1);
         if ($self->level > 1) {
 
             my $off = $self->offset;
@@ -129,10 +149,11 @@ sub parse_document_start {
 }
 
 sub parse_document_head {
-    my ($self) = @_;
+    TRACE and warn "=== parse_document_head()\n";
+    my ($self, %args) = @_;
     my $yaml = $self->yaml;
     my $head;
-    my $need_explicit = 0;
+    my $need_explicit = $args{explicit};
     while (length $$yaml) {
         if ($$yaml =~ s/\A *#[^\n]+\n//) {
             next;
@@ -196,18 +217,21 @@ sub parse_document {
     TRACE and warn "=== parse_document()\n";
     my ($self) = @_;
     my $yaml = $self->yaml;
+    while ($self->eol(space => 0)) {
+    }
+    if ($self->parse_document_end) {
+        $self->event_value(':');
+        return 1;
+    }
 
-#        if ($$yaml =~ s/\A *#[^\n]+\n//) {
-#            next;
-#        }
-#        if ($$yaml =~ s/\A *\n//) {
-#            next;
-#        }
+    TRACE and $self->debug_yaml;
+    my $content = $self->parse_next;
+    TRACE and $self->debug_events;
+    TRACE and $self->debug_offset;
 
-        TRACE and $self->debug_yaml;
-        my $content = $self->parse_next;
-        TRACE and $self->debug_events;
-        TRACE and $self->debug_offset;
+    if ($self->parse_document_end) {
+        return 1;
+    }
 
 }
 
@@ -276,10 +300,9 @@ sub parse_next {
     }
     my $node = $self->parse_node_tag_anchor(chomp => 1);
     if ($node) {
-        $self->parse_next;
-        return;
+        return $self->parse_next;
     }
-    $self->parse_node($plus_indent, $seq_indent);
+    return $self->parse_node($plus_indent, $seq_indent);
 }
 
 sub in_unindented_seq {
@@ -329,23 +352,6 @@ sub parse_node {
                 die "Unexpected";
             }
         }
-#        my $value = $self->parse_multi(folded => 1);
-#        if ($self->events->[-1] eq 'MAP') {
-#            $value =~ s/\n\z//;
-#            $self->event("=VAL", ":$value");
-#            return $value;
-#        }
-#        elsif (length $value) {
-#            $value =~ s/\\/\\\\/g;
-#            $value =~ s/\n/\\n/g;
-#            $value =~ s/\t/\\t/g;
-#            $self->event("=VAL", ":$value");
-#        }
-#        else {
-##            $self->event("=VAL", ":");
-#        }
-
-#            $$yaml =~ s/.*//s;
 
     }
 
@@ -622,7 +628,7 @@ sub parse_quoted {
             $quoted =~ s/^ +//gm;
             $quoted =~ s/\n+/ /g;
             $self->event_value('"' . $quoted);
-            $self->eol;
+            $self->eol(space => 0);
             return 1;
         }
         else {
@@ -637,7 +643,7 @@ sub parse_quoted {
             $quoted =~ s/\n/\\n/g;
             $quoted =~ s/\t/\\t/g;
             $self->event_value("'" . $quoted);
-            $self->eol;
+            $self->eol(space => 0);
             return 1;
         }
         else {
@@ -648,9 +654,10 @@ sub parse_quoted {
 }
 
 sub eol {
-    my ($self) = @_;
+    my ($self, %args) = @_;
     my $yaml = $self->yaml;
-    $$yaml =~ s/\A #.*//;
+    my $space = $args{space} ? " +" : " *";
+    $$yaml =~ s/\A$space#.*//;
     return $$yaml =~ s/\A\n// ? 1 : 0;
 }
 
