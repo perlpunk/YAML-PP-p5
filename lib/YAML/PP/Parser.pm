@@ -237,7 +237,12 @@ sub parse_document {
 
 my $key_start_re = '[a-zA-Z0-9%]';
 my $key_content_re = '[a-zA-Z0-9%\]" -]';
+my $key_content_re_dq = '[^"\n\\\\]';
+my $key_content_re_sq = q{[^'\n\\\\]};
 my $key_re = qr{(?:$key_start_re$key_content_re*$key_start_re|$key_start_re?)};
+my $key_re_double_quotes = qr{"(?:\\\\|\\"|$key_content_re_dq)*"};
+my $key_re_single_quotes = qr{'(?:\\\\|''|$key_content_re_sq)*'};
+my $key_full_re = qr{(?:$key_re_double_quotes|$key_re_single_quotes|$key_re)};
 
 sub parse_next {
     TRACE and warn "=== parse_next()\n";
@@ -539,6 +544,7 @@ sub parse_map {
     my $yaml = $self->yaml;
     TRACE and warn "=== parse_map(+$plus_indent,+$seq_indent)\n";
     my $key;
+    my $key_style = ':';
     my $alias;
     my $space;
 
@@ -547,10 +553,13 @@ sub parse_map {
         $alias = $1;
         $space = length $2;
     }
-    elsif ($$yaml =~ s/\A($key_re) *:($WS|$)//m) {
+    elsif ($$yaml =~ s/\A($key_full_re) *:($WS|$)//m) {
         TRACE and warn "### MAP item\n";
         $key = $1;
         $space = length $2;
+        if ($key =~ s/^(["'])(.*)\1$/$2/) {
+            $key_style = $1;
+        }
     }
     if (defined $alias or defined $key) {
         if ($plus_indent or $self->events->[-1] eq 'DOC') {
@@ -562,7 +571,7 @@ sub parse_map {
             $self->event("=ALI", "*$alias");
         }
         else {
-            $self->event_value(":$key");
+            $self->event_value("$key_style$key");
         }
 
         if ($space and $$yaml =~ s/\A *#.*\n//) {
