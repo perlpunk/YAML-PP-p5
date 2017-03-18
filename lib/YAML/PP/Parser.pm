@@ -15,6 +15,7 @@ has anchor => ( is => 'rw' );
 has node_anchor => ( is => 'rw' );
 has tag => ( is => 'rw' );
 has node_tag => ( is => 'rw' );
+has value => ( is => 'rw' );
 has tagmap => ( is => 'rw', default => sub { +{
     '!!' => "tag:yaml.org,2002:",
 } } );
@@ -31,6 +32,7 @@ sub parse {
     $self->node_anchor(undef);
     $self->tag(undef);
     $self->node_tag(undef);
+    $self->value(undef);
     $self->tagmap({
         '!!' => "tag:yaml.org,2002:",
     });
@@ -451,7 +453,7 @@ sub parse_seq {
     my $yaml= $self->yaml;
     if ($$yaml =~ s/\A(-)($WS|$)//m) {
         my $space = length $2;
-        TRACE and warn "### SEC item\n";
+        TRACE and warn "### SEQ item\n";
 
 
         if ($plus_indent or ($seq_indent and $self->in('MAP') ) or $self->events->[-1] eq 'DOC') {
@@ -459,6 +461,7 @@ sub parse_seq {
             $self->offset->[ $self->level ] = $self->indent + $plus_indent;
             $self->inc_indent($plus_indent);
         }
+        $self->empty_event(1);
 
         if ($self->parse_alias) {
             $$yaml =~ s/\A +#.*//;
@@ -466,12 +469,13 @@ sub parse_seq {
             return 1;
         }
 
+        $space and $$yaml =~ s/\A#.*//;
         my $node = $self->parse_node_tag_anchor(chomp => 1);
-        return 1 if $node;
-        if ($space and $$yaml =~ s/\A#.*\n//) {
-            $self->event_value(":");
+        if ($node or $$yaml =~ s/\A\n//) {
+            $self->value('SEQ');
             return 1;
         }
+
         if ($$yaml =~ s/\A( *)//) {
             my $ind = length $1;
             if ($$yaml =~ m/\A./) {
@@ -539,7 +543,10 @@ sub parse_map {
                 return 1;
             }
             my $node = $self->parse_node_tag_anchor(chomp => 1);
-            return 1 if $node;
+            if ($node) {
+                $self->value('MAPVAL');
+                return 1;
+            }
 
             if ($self->parse_quoted) {
                 return 1;
@@ -794,6 +801,7 @@ sub begin {
 
 sub end {
     my ($self, $event, @content) = @_;
+    $self->empty_event(1);
     $self->pop_events($event);
     TRACE and warn "---------------------------> END   $event @content\n";
     $self->receiver->($self, "-$event", @content);
@@ -804,8 +812,24 @@ sub end {
     }
 }
 
+sub empty_event {
+    my ($self, $output) = @_;
+    if (defined(my $value = $self->value)) {
+        $self->value(undef);
+        if ($self->in('MAP')) {
+        }
+        elsif ($self->in('SEQ')) {
+            if ($value ne 'SEQ') {
+                $output &&= 0;
+            }
+        }
+        $self->event_value(':') if $output;
+    }
+}
+
 sub event {
     my ($self, $event, @content) = @_;
+    $self->empty_event;
     TRACE and warn "---------------------------> EVENT $event @content\n";
     $self->receiver->($self, $event, @content);
 }
