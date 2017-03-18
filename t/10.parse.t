@@ -64,6 +64,7 @@ my %todo;
 #plan tests => scalar @dirs;
 
 my %results;
+my @errors;
 @results{qw/ OK DIFF ERROR TODO /} = (0) x 4;
 for my $dir (@dirs) {
     my $skip = exists $skip{ $dir };
@@ -119,12 +120,16 @@ sub test {
     if ($@) {
         diag "ERROR: $@";
         $results{ERROR}++;
+        push @errors, $name;
         $ok = 0;
     }
 
     $_ = encode_utf8 $_ for @events;
     if ($ok) {
         $ok = is_deeply(\@events, $test_events, "$name - $title");
+    }
+    else {
+        ok(0, "$name - $title ERROR");
     }
     if ($ok) {
         $results{OK}++;
@@ -142,5 +147,6 @@ sub test {
     }
 }
 diag "OK: $results{OK} DIFF: $results{DIFF} ERROR: $results{ERROR} TODO: $results{TODO}";
+diag "ERRORS: (@errors)";
 
 done_testing;
