@@ -12,7 +12,9 @@ has level => ( is => 'rw', default => -1 );
 has offset => ( is => 'rw', default => sub { [0] } );
 has events => ( is => 'rw', default => sub { [] } );
 has anchor => ( is => 'rw' );
+has node_anchor => ( is => 'rw' );
 has tag => ( is => 'rw' );
+has node_tag => ( is => 'rw' );
 has tagmap => ( is => 'rw', default => sub { +{
     '!!' => "tag:yaml.org,2002:",
 } } );
@@ -26,7 +28,9 @@ sub parse {
     $self->offset([0]);
     $self->events([]);
     $self->anchor(undef);
+    $self->node_anchor(undef);
     $self->tag(undef);
+    $self->node_tag(undef);
     $self->tagmap({
         '!!' => "tag:yaml.org,2002:",
     });
@@ -85,10 +89,11 @@ sub parse_stream {
                     $doc_end = 1;
                 }
                 else {
-                    if ($self->parse_tag) {
+                    my $node = $self->parse_node_tag_anchor(chomp => 1);
+                    if ($node) {
                     }
                     else {
-                        die "Needed?";
+                        die "Unexpected";
                     }
 #                    my $text = $self->parse_multi(folded => 1, trim => 1);
 #                    $self->event_value(":$text");
@@ -237,6 +242,11 @@ sub parse_next {
 
         last;
     }
+    my $node = $self->parse_node_tag_anchor(chomp => 1);
+    if ($node) {
+        $self->parse_next;
+        return;
+    }
     $self->parse_node($plus_indent, $seq_indent);
 }
 
@@ -260,8 +270,6 @@ sub parse_node {
     my $yaml = $self->yaml;
     {
 
-        if ($self->parse_anchor) {
-        }
         if ($self->parse_seq($plus_indent, $seq_indent)) {
             return;
         }
@@ -272,8 +280,6 @@ sub parse_node {
             return;
         }
         else {
-            if ($self->parse_tag) {
-            }
             my $alias = $self->parse_alias;
             if ($alias) {
                 return;
@@ -317,22 +323,34 @@ sub parse_node {
 sub event_value {
     my ($self, $value) = @_;
     my $anchor = $self->anchor;
+    my $node_anchor = $self->node_anchor;
     my $tag = $self->tag;
+    my $node_tag = $self->node_tag;
     my $event = $value;
 
-    if (defined $tag) {
+    if (defined $node_tag) {
+        my $tag_str = $self->tag_str($node_tag);
+        $event = "$tag_str $event";
+        $self->node_tag(undef);
+    }
+    elsif (defined $tag) {
         my $tag_str = $self->tag_str($tag);
         $event = "$tag_str $event";
         $self->tag(undef);
     }
-    if (defined $anchor) {
-        $event = "&$anchor $event";
+    if (defined $node_anchor) {
+        $self->node_anchor(undef);
+        $event = "&$node_anchor $event";
+    }
+    elsif (defined $anchor) {
         $self->anchor(undef);
+        $event = "&$anchor $event";
     }
     $self->event("=VAL", "$event");
 }
 
 my $tag_re = '[a-zA-Z]+';
+my $full_tag_re = "![a-z]*!$tag_re|!";
 sub tag_str {
     my ($self, $tag) = @_;
     if ($tag eq '!') {
@@ -348,20 +366,53 @@ sub tag_str {
     }
 }
 
-my $anchor_start_re = '[a-zA-Z]';
-my $anchor_content_re = '[a-zA-Z:]';
+my $anchor_start_re = '[a-zA-Z0-9]';
+my $anchor_content_re = '[a-zA-Z0-9:]';
 my $anchor_re = qr{(?:$anchor_start_re$anchor_content_re*|$anchor_start_re?)};
 
-sub parse_anchor {
-    TRACE and warn "=== parse_anchor()\n";
-    my ($self) = @_;
+sub parse_node_tag_anchor {
+    TRACE and warn "=== parse_node_tag_anchor()\n";
+    my ($self, %args) = @_;
     my $yaml = $self->yaml;
-    if ($$yaml =~ s/\A&($anchor_re) +//) {
-        my $anchor = $1;
-        $self->anchor($anchor);
-        return 1;
+    my ($tag, $anchor);
+    if ($$yaml =~ s/\A&($anchor_re)(?: +($full_tag_re))?(?= |\n)//) {
+        $anchor = $1;
+        $tag = $2;
     }
-    return 0;
+    elsif ($$yaml =~ s/\A($full_tag_re)(?: +&($anchor_re))?(?= |\n)//) {
+        $tag = $1;
+        $anchor = $2;
+    }
+    else {
+        return;
+    }
+    $$yaml =~ s/\A +(?:#.*)?//;
+    my $node = 0;
+    if ($$yaml =~ m/\A\n/) {
+        $node = 1;
+    }
+    if ($args{chomp}) {
+        $$yaml =~ s/\A\n//;
+    }
+    if (defined $anchor) {
+        TRACE and warn "ANCHOR $anchor (node $node)\n";
+        if ($node) {
+            $self->node_anchor($anchor);
+        }
+        else {
+            $self->anchor($anchor);
+        }
+    }
+    if (defined $tag) {
+        TRACE and warn "TAG $tag (node $node)\n";
+        if ($node) {
+            $self->node_tag($tag);
+        }
+        else {
+            $self->tag($tag);
+        }
+    }
+    return $node;
 }
 
 sub parse_alias {
@@ -370,6 +421,7 @@ sub parse_alias {
     my $yaml = $self->yaml;
     if ($$yaml =~ s/\A\*($anchor_re)//m) {
         my $alias = $1;
+        TRACE and warn "ALIAS $alias\n";
         my $space = length $2;
         $self->event("=ALI", "*$alias");
         return 1;
@@ -399,11 +451,9 @@ sub parse_seq {
             return 1;
         }
 
-        if ($space and $self->parse_tag) {
-            # space is already used
-            $$yaml=~ s/\A *#.*\n//;
-        }
-        elsif ($space and $$yaml =~ s/\A#.*\n//) {
+        my $node = $self->parse_node_tag_anchor(chomp => 1);
+        return 1 if $node;
+        if ($space and $$yaml =~ s/\A#.*\n//) {
             $self->event_value(":");
             return 1;
         }
@@ -424,18 +474,6 @@ sub parse_seq {
     return 0;
 }
 
-sub parse_tag {
-    TRACE and warn "=== parse_tag()\n";
-    my ($self) = @_;
-    my $yaml = $self->yaml;
-    if ($$yaml =~ s/\A(![a-z]*!$tag_re|!)( |$)//m) {
-        my $tag = $1;
-        $self->tag($tag);
-        return 1;
-    }
-    return 0;
-}
-
 sub in {
     my ($self, $event) = @_;
     return $self->events->[-1] eq $event;
@@ -449,6 +487,7 @@ sub parse_map {
     my $alias;
     my $space;
 
+    $self->parse_node_tag_anchor;
     if ($$yaml =~ s/\A\*($anchor_re) +:($WS|$)//m) {
         $alias = $1;
         $space = length $2;
@@ -480,32 +519,32 @@ sub parse_map {
             }
         }
         else {
-            my $anchor = $self->parse_anchor;
 
             if ($self->parse_alias) {
+                return 1;
             }
-            else {
-                if ($self->parse_tag) {
+            my $node = $self->parse_node_tag_anchor(chomp => 1);
+            return 1 if $node;
+
+            if ($self->parse_quoted) {
+                return 1;
+            }
+            if ($$yaml =~ s/\A( *.+)\n//) {
+                my $value = $1;
+                $value =~ s/ +#.*//;
+                $value =~ s/\A *//;
+                if ($value =~ m/^[|>]/) {
+                    $self->inc_indent(1);
+                    $$yaml = "$value\n$$yaml";
+                    $self->parse_block_scalar;
+                    $self->dec_indent(1);
                 }
-                if ($self->parse_quoted) {
-                }
-                elsif ($$yaml =~ s/\A( *.+)\n//) {
-                    my $value = $1;
-                    $value =~ s/ +#.*//;
-                    $value =~ s/\A *//;
-                    if ($value =~ m/^[|>]/) {
-                        $self->inc_indent(1);
-                        $$yaml = "$value\n$$yaml";
-                        $self->parse_block_scalar;
-                        $self->dec_indent(1);
-                    }
-                    else {
-                        $self->inc_indent(1);
-                        my $text = $self->parse_multi(folded => 1, trim => 1);
-                        $value = "$value $text" if length $text;
-                        $self->event_value(":$value");
-                        $self->dec_indent(1);
-                    }
+                else {
+                    $self->inc_indent(1);
+                    my $text = $self->parse_multi(folded => 1, trim => 1);
+                    $value = "$value $text" if length $text;
+                    $self->event_value(":$value");
+                    $self->dec_indent(1);
                 }
             }
 
@@ -710,11 +749,18 @@ sub pop_events {
 sub begin {
     my ($self, $event, @content) = @_;
     if ($event eq 'SEQ' or $event eq 'MAP') {
+        my $anchor = $self->anchor;
+        my $node_anchor = $self->node_anchor;
         my $tag = $self->tag;
-        if (defined $tag) {
-            $self->tag(undef);
-            my $tag_str = $self->tag_str($tag);
+        my $node_tag = $self->node_tag;
+        if (defined $node_tag) {
+            $self->node_tag(undef);
+            my $tag_str = $self->tag_str($node_tag);
             unshift @content, $tag_str;
+        }
+        if (defined $node_anchor) {
+            $self->node_anchor(undef);
+            unshift @content, "&$node_anchor";
         }
     }
     $self->push_events($event);
