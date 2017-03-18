@@ -585,6 +585,7 @@ sub parse_quoted {
             $quoted =~ s/^ +//gm;
             $quoted =~ s/\n+/ /g;
             $self->event_value('"' . $quoted);
+            $self->eol;
             return 1;
         }
         else {
@@ -599,6 +600,7 @@ sub parse_quoted {
             $quoted =~ s/\n/\\n/g;
             $quoted =~ s/\t/\\t/g;
             $self->event_value("'" . $quoted);
+            $self->eol;
             return 1;
         }
         else {
@@ -606,6 +608,13 @@ sub parse_quoted {
         }
     }
     return 0;
+}
+
+sub eol {
+    my ($self) = @_;
+    my $yaml = $self->yaml;
+    $$yaml =~ s/\A #.*//;
+    $$yaml =~ s/\A\n//;
 }
 
 sub parse_block_scalar {
