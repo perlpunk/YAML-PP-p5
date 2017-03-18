@@ -63,6 +63,8 @@ my %todo;
 
 #plan tests => scalar @dirs;
 
+my %results;
+@results{qw/ OK DIFF ERROR TODO /} = (0) x 4;
 for my $dir (@dirs) {
     my $skip = exists $skip{ $dir };
     my $todo = exists $todo{ $dir };
@@ -110,20 +112,35 @@ sub test {
             push @events, defined $content ? "$event $content" : $event;
         },
     );
+    my $ok = 1;
     eval {
         $parser->parse($yaml);
     };
     if ($@) {
         diag "ERROR: $@";
+        $results{ERROR}++;
+        $ok = 0;
     }
 
     $_ = encode_utf8 $_ for @events;
-    my $ok = is_deeply(\@events, $test_events, "$name - $title");
-    if (not $ok and not $TODO or $ENV{YAML_PP_TRACE}) {
-        diag "YAML:\n$yaml" unless $TODO;
-        diag "EVENTS:\n" . join '', map { "$_\n" } @$test_events;
-        diag "GOT EVENTS:\n" . join '', map { "$_\n" } @events;
+    if ($ok) {
+        $ok = is_deeply(\@events, $test_events, "$name - $title");
+    }
+    if ($ok) {
+        $results{OK}++;
+    }
+    else {
+        $results{DIFF}++;
+        if ($TODO) {
+            $results{TODO}++;
+        }
+        if (not $TODO or $ENV{YAML_PP_TRACE}) {
+            diag "YAML:\n$yaml" unless $TODO;
+            diag "EVENTS:\n" . join '', map { "$_\n" } @$test_events;
+            diag "GOT EVENTS:\n" . join '', map { "$_\n" } @events;
+        }
     }
 }
+diag "OK: $results{OK} DIFF: $results{DIFF} ERROR: $results{ERROR} TODO: $results{TODO}";
 
 done_testing;
