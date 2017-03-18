@@ -229,7 +229,7 @@ sub parse_next {
             my $spaces = $1;
             $plus_indent = length $spaces;
         }
-        elsif ($$yaml =~ m/\A- /) {
+        elsif ($$yaml =~ m/\A-(?: |$)/m) {
             $seq_indent = 2;
         }
         else {
