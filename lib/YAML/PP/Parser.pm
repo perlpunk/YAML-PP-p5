@@ -46,69 +46,21 @@ sub parse_stream {
 
     my $close = 1;
     while (length $$yaml) {
-        if ($$yaml =~ s/\A *#[^\n]+\n//) {
-            next;
-        }
-        if ($$yaml =~ s/\A *\n//) {
-            next;
-        }
-        if ($$yaml =~ s/\A\s*%YAML ?1\.2\s*//) {
-            next;
-        }
-        if ($$yaml =~ s/\A\s*%TAG +(![a-z]*!|!) +(tag:\S+|![a-z][a-z-]*)\s*//) {
-            my $tag_alias = $1;
-            my $tag_url = $2;
-            $self->tagmap->{ $tag_alias } = $tag_url;
-            next;
-        }
+        my $head = $self->parse_document_head;
+        last unless length $$yaml;
 
         my $doc_end = 0;
-        if ($$yaml =~ s/\A--- ?//) {
-            if ($self->level > 1) {
-
-                my $off = $self->offset;
-                my $i = $#$off;
-                while ($i > 1) {
-                    my $test_indent = $off->[ $i ];
-                    die "Unexpected" unless $self->end_node;
-                    $i--;
-                }
-                $self->indent($off->[ $i ]);
-
-                $self->end("DOC");
-
-            }
-            elsif ($self->level) {
-                $self->end("DOC");
-            }
-            $self->begin("DOC", "---");
-            $self->offset->[ $self->level ] = 0;
-            $$yaml =~ s/^#.*\n//;
-            if ($$yaml =~ m/\A *([^ \n]+)\n/) {
-                my $value = $1;
-                if ($value =~ m/^[|>]/) {
-                    $self->parse_block_scalar;
-                    $doc_end = 1;
-                }
-                else {
-                    my $node = $self->parse_node_tag_anchor(chomp => 1);
-                    if ($node) {
-                    }
-                    else {
-                        die "Unexpected";
-                    }
-#                    my $text = $self->parse_multi(folded => 1, trim => 1);
-#                    $self->event_value(":$text");
-                }
-            }
-            $$yaml =~ s/\A\n//;
+        if ($head) {
+            $doc_end = $self->parse_document_start;
         }
         elsif (not $self->level) {
             $self->begin("DOC");
             $self->offset->[ $self->level ] = 0;
         }
 
-        $self->parse_document unless $doc_end;
+        unless ($doc_end) {
+            $self->parse_document;
+        }
         my $doc_end_explicit = 0;
 
         if ($$yaml =~ s/\A\.\.\. ?//) {
@@ -133,6 +85,84 @@ sub parse_stream {
 
     $self->end("STR");
 }
+
+sub parse_document_start {
+    my ($self) = @_;
+    my $yaml = $self->yaml;
+    my $end = 0;
+    if ($$yaml =~ s/\A---(?= |$)//m) {
+        my $eol = $self->eol;
+        if ($self->level > 1) {
+
+            my $off = $self->offset;
+            my $i = $#$off;
+            while ($i > 1) {
+                my $test_indent = $off->[ $i ];
+                die "Unexpected" unless $self->end_node;
+                $i--;
+            }
+            $self->indent($off->[ $i ]);
+
+            $self->end("DOC");
+        }
+        elsif ($self->level) {
+            $self->end("DOC");
+        }
+        $self->begin("DOC", "---");
+        $self->offset->[ $self->level ] = 0;
+        unless ($eol) {
+            if ($$yaml =~ s/\A +//) {
+                if (defined $self->parse_block_scalar) {
+                    $end = 1;
+                }
+                else {
+                    my $node = $self->parse_node_tag_anchor(chomp => 1);
+                }
+            }
+            else {
+                warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
+                die "Unexpected";
+            }
+        }
+    }
+    return $end;
+}
+
+sub parse_document_head {
+    my ($self) = @_;
+    my $yaml = $self->yaml;
+    my $head;
+    my $need_explicit = 0;
+    while (length $$yaml) {
+        if ($$yaml =~ s/\A *#[^\n]+\n//) {
+            next;
+        }
+        if ($$yaml =~ s/\A *\n//) {
+            next;
+        }
+        if ($$yaml =~ s/\A\s*%YAML ?1\.2\s*//) {
+            $need_explicit = 1;
+            next;
+        }
+        if ($$yaml =~ s/\A\s*%TAG +(![a-z]*!|!) +(tag:\S+|![a-z][a-z-]*)\s*//) {
+            $need_explicit = 1;
+            my $tag_alias = $1;
+            my $tag_url = $2;
+            $self->tagmap->{ $tag_alias } = $tag_url;
+            next;
+        }
+        if ($$yaml =~ m/\A--- ?/) {
+            $head = "---";
+            last;
+        }
+        last;
+    }
+    if ($need_explicit and not $head) {
+        die "Expected  ---";
+    }
+    return $head;
+}
+
 
 sub end_document {
     my ($self, %args) = @_;
@@ -621,7 +651,7 @@ sub eol {
     my ($self) = @_;
     my $yaml = $self->yaml;
     $$yaml =~ s/\A #.*//;
-    $$yaml =~ s/\A\n//;
+    return $$yaml =~ s/\A\n// ? 1 : 0;
 }
 
 sub parse_block_scalar {
