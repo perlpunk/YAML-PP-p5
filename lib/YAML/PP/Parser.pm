@@ -53,7 +53,7 @@ sub parse_stream {
         if ($$yaml =~ s/\A\s*%YAML ?1\.2\s*//) {
             next;
         }
-        if ($$yaml =~ s/\A\s*%TAG +(![a-z]*!) +(tag:\S+)\s*//) {
+        if ($$yaml =~ s/\A\s*%TAG +(![a-z]*!) +(tag:\S+|![a-z][a-z-]*)\s*//) {
             my $tag_alias = $1;
             my $tag_url = $2;
             $self->tagmap->{ $tag_alias } = $tag_url;
@@ -350,7 +350,7 @@ sub event_value {
 }
 
 my $tag_re = '[a-zA-Z]+';
-my $full_tag_re = "![a-z]*!$tag_re|!";
+my $full_tag_re = "![a-z]*!$tag_re|!$tag_re|!";
 sub tag_str {
     my ($self, $tag) = @_;
     if ($tag eq '!') {
@@ -363,6 +363,13 @@ sub tag_str {
         if (exists $map->{ $alias }) {
             $tag = "<" . $map->{ $alias }. $name . ">";
         }
+    }
+    elsif ($tag =~ m/^(!$tag_re)/) {
+        my $name = $1;
+        $tag = "<$name>";
+    }
+    else {
+        die "Invalid tag";
     }
 }
 
