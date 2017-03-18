@@ -53,7 +53,7 @@ sub parse_stream {
         if ($$yaml =~ s/\A\s*%YAML ?1\.2\s*//) {
             next;
         }
-        if ($$yaml =~ s/\A\s*%TAG +(![a-z]*!) +(tag:\S+|![a-z][a-z-]*)\s*//) {
+        if ($$yaml =~ s/\A\s*%TAG +(![a-z]*!|!) +(tag:\S+|![a-z][a-z-]*)\s*//) {
             my $tag_alias = $1;
             my $tag_url = $2;
             $self->tagmap->{ $tag_alias } = $tag_url;
@@ -364,13 +364,21 @@ sub tag_str {
             $tag = "<" . $map->{ $alias }. $name . ">";
         }
     }
-    elsif ($tag =~ m/^(!$tag_re)/) {
-        my $name = $1;
-        $tag = "<$name>";
+    elsif ($tag =~ m/^(!)($tag_re)/) {
+        my $alias = $1;
+        my $name = $2;
+        my $map = $self->tagmap;
+        if (exists $map->{ $alias }) {
+            $tag = "<" . $map->{ $alias }. $name . ">";
+        }
+        else {
+            $tag = "<!$name>";
+        }
     }
     else {
         die "Invalid tag";
     }
+    return $tag;
 }
 
 my $anchor_start_re = '[a-zA-Z0-9]';
