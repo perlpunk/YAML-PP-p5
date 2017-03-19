@@ -518,7 +518,9 @@ sub parse_seq {
             $self->offset->[ $self->level ] = $self->indent + $plus_indent;
             $self->inc_indent($plus_indent);
         }
-        $self->empty_event(1);
+        else {
+            $self->empty_event(1);
+        }
 
         if ($self->parse_alias) {
             $$yaml =~ s/\A +#.*//;
