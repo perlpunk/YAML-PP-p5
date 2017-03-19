@@ -51,19 +51,21 @@ sub parse_stream {
         my $head = $self->parse_document_head(explicit => $need_explicit_start);
         last unless length $$yaml;
 
-        my $doc_end = 0;
+        my $parse_end = 0;
         if ($head) {
-            $doc_end = $self->parse_document_start;
+            $parse_end = $self->parse_document_start;
         }
         elsif (not $self->level) {
             $self->begin("DOC");
             $self->offset->[ $self->level ] = 0;
         }
 
+        my $doc_end = 0;
         my $doc_end_explicit = 0;
-        if ($doc_end) {
+        if ($parse_end) {
             my $end = $self->parse_document_end;
             if ($end) {
+                $doc_end = 1;
                 $doc_end_explicit = 1;
                 $self->end_document(explicit => $doc_end_explicit);
                 $close = 0;
@@ -79,8 +81,22 @@ sub parse_stream {
             $doc_end = 1;
             $doc_end_explicit = 1;
         }
+        elsif ($self->in('DOC')) {
+            if (length $$yaml) {
+                $self->end_document(explicit => 0);
+                $close = 0;
+                $need_explicit_start = 1;
+                1 while $self->eol(space => 0);
+                next;
+            }
+            $doc_end = 1;
+        }
 
-        if ($doc_end or not length $$yaml) {
+        if ($doc_end) {
+            $self->end_document(explicit => $doc_end_explicit);
+            $close = 0;
+        }
+        elsif (not length $$yaml) {
             $self->end_document(explicit => $doc_end_explicit);
             $close = 0;
         }
