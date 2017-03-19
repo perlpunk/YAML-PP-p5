@@ -64,7 +64,7 @@ my %todo;
 #plan tests => scalar @dirs;
 
 my %results;
-my @errors;
+my %errors;
 @results{qw/ OK DIFF ERROR TODO /} = (0) x 4;
 for my $dir (@dirs) {
     my $skip = exists $skip{ $dir };
@@ -113,29 +113,34 @@ sub test {
             push @events, defined $content ? "$event $content" : $event;
         },
     );
-    my $ok = 1;
+    my $ok = 0;
+    my $error = 0;
     eval {
         $parser->parse($yaml);
     };
     if ($@) {
         diag "ERROR: $@";
         $results{ERROR}++;
-        push @errors, $name;
-        $ok = 0;
+        my $error_type = 'unknown';
+        if ($@ =~ m/Expected/) {
+            $error_type = 'Expected';
+        }
+        push @{ $errors{ $error_type } }, $name;
+        $error = 1;
     }
 
     $_ = encode_utf8 $_ for @events;
-    if ($ok) {
-        $ok = is_deeply(\@events, $test_events, "$name - $title");
+    if ($error) {
+        ok(0, "$name - $title ERROR");
     }
     else {
-        ok(0, "$name - $title ERROR");
+        $ok = is_deeply(\@events, $test_events, "$name - $title");
     }
     if ($ok) {
         $results{OK}++;
     }
     else {
-        $results{DIFF}++;
+        $results{DIFF}++ unless $error;
         if ($TODO) {
             $results{TODO}++;
         }
@@ -147,6 +152,8 @@ sub test {
     }
 }
 diag "OK: $results{OK} DIFF: $results{DIFF} ERROR: $results{ERROR} TODO: $results{TODO}";
-diag "ERRORS: (@errors)";
+for my $type (sort keys %errors) {
+    diag "ERRORS($type): (@{ $errors{ $type } })";
+}
 
 done_testing;
