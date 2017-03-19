@@ -370,9 +370,13 @@ sub parse_node {
             }
             elsif ($$yaml =~ s/\A(.+)\n//) {
                 my $value = $1;
-                $value =~ s/ +$//;
-                $value =~ s/ #.*$//;
+
+                $self->inc_indent(1);
+                my $text = $self->parse_multi(folded => 1, trim => 1);
+                $value = "$value $text" if length $text;
+                $value =~ s/ #.*$//mg;
                 $self->event_value(":$value");
+                $self->dec_indent(1);
             }
             else {
                 warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
