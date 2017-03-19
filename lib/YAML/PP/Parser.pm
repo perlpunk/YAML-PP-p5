@@ -290,6 +290,12 @@ sub parse_next {
                     $i--;
                 }
                 $self->indent($off->[ $i ]);
+                if ($self->in_unindented_seq) {
+                    if ($$yaml !~ m/\A-(?: |$)/m) {
+                        # we are at the end of the unindented sequence
+                        $self->end('SEQ');
+                    }
+                }
                 last;
             }
         }
