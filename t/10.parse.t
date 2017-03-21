@@ -7,12 +7,17 @@ use Data::Dumper;
 use YAML::PP::Parser;
 use YAML::XS ();
 use Encode;
+use File::Basename qw/ dirname basename /;
 
 $|++;
 
 my $datadir = "$Bin/../yaml-test-suite";
 opendir my $dh, $datadir or die $!;
-my @dirs = grep { m/^[A-Z0-9]{4}\z/ } readdir $dh;
+my @dirs = map { "$datadir/$_" } grep { m/^[A-Z0-9]{4}\z/ } readdir $dh;
+closedir $dh;
+my $extradir = "$Bin/valid";
+opendir $dh, $extradir or die $!;
+push @dirs, map { "$extradir/$_" } grep { m/^[A-Z0-9]{3,4}\z/ } readdir $dh;
 closedir $dh;
 
 @dirs = sort @dirs;
@@ -66,37 +71,39 @@ my %todo;
 my %results;
 my %errors;
 @results{qw/ OK DIFF ERROR TODO /} = (0) x 4;
-for my $dir (@dirs) {
-    my $skip = exists $skip{ $dir };
-    my $todo = exists $todo{ $dir };
+for my $item (@dirs) {
+    my $dir = dirname $item;
+    my $id = basename $item;
+    my $skip = exists $skip{ $id };
+    my $todo = exists $todo{ $id };
     next if $skip;
 
-    open my $fh, "<", "$datadir/$dir/in.yaml" or die $!;
+    open my $fh, "<", "$dir/$id/in.yaml" or die $!;
     my $yaml = do { local $/; <$fh> };
     close $fh;
-    open $fh, "<", "$datadir/$dir/===" or die $!;
+    open $fh, "<", "$dir/$id/===" or die $!;
     chomp(my $title = <$fh>);
     close $fh;
-#    diag "------------------------------ $dir";
+#    diag "------------------------------ $id";
 
-    open $fh, "<", "$datadir/$dir/test.event" or die $!;
+    open $fh, "<", "$dir/$id/test.event" or die $!;
     chomp(my @test_events = <$fh>);
     close $fh;
 
     if ($skip) {
         SKIP: {
-            skip "SKIP $dir", 1 if $skip;
-            test($title, $dir, $yaml, \@test_events);
+            skip "SKIP $id", 1 if $skip;
+            test($title, $id, $yaml, \@test_events);
         }
     }
     elsif ($todo) {
         TODO: {
             local $TODO = $todo;
-            test($title, $dir, $yaml, \@test_events);
+            test($title, $id, $yaml, \@test_events);
         }
     }
     else {
-        test($title, $dir, $yaml, \@test_events);
+        test($title, $id, $yaml, \@test_events);
     }
 
 }

@@ -1,0 +1,17 @@
+---
+foo1: &node1
+  &k1 key1: one
+foo2: &node2 # comment
+  key2: two
+foo3:
+  &k3 key3: three
+foo4:
+  &node4
+  &k4 key4: four
+foo5:
+  &node5
+  key5: five
+foo6: &val6
+  six
+foo7:
+  &val7 seven
