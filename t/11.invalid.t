@@ -22,10 +22,12 @@ my $skip_info = YAML::XS::LoadFile("t/skip_invalid.yaml");
 my $skipped = $skip_info->{skip} || [];
 
 my $anchors = $skip_info->{anchors} || [];
+my $mappings = $skip_info->{mappings} || [];
 
 my @todo = ();
 push @$skipped,
-    @$anchors;
+    @$anchors,
+    @$mappings;
 
 # test all
 if ($ENV{TEST_ALL}) {
