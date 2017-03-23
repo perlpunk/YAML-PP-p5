@@ -1,0 +1,2 @@
+foo1: &a value
+foo2: &b *a
