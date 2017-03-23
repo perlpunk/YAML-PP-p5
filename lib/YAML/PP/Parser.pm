@@ -254,9 +254,9 @@ sub parse_document {
 my $key_start_re = '[a-zA-Z0-9%]';
 my $key_content_re = '[a-zA-Z0-9%\]" -]';
 my $key_content_re_dq = '[^"\n\\\\]';
-my $key_content_re_sq = q{[^'\n\\\\]};
+my $key_content_re_sq = q{[^'\n]};
 my $key_re = qr{(?:$key_start_re$key_content_re*$key_start_re|$key_start_re?)};
-my $key_re_double_quotes = qr{"(?:\\\\|\\"|$key_content_re_dq)*"};
+my $key_re_double_quotes = qr{"(?:\\\\|\\[^\n]|$key_content_re_dq)*"};
 my $key_re_single_quotes = qr{'(?:\\\\|''|$key_content_re_sq)*'};
 my $key_full_re = qr{(?:$key_re_double_quotes|$key_re_single_quotes|$key_re)};
 
@@ -587,6 +587,9 @@ sub parse_map {
         $space = length $2;
         if ($key =~ s/^(["'])(.*)\1$/$2/) {
             $key_style = $1;
+        }
+        if ($key_style eq "'") {
+            $key =~ s/\\/\\\\/g;
         }
     }
     if (defined $alias or defined $key) {
