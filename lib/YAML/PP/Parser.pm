@@ -86,7 +86,7 @@ sub parse_stream {
                 $self->end_document(explicit => 0);
                 $close = 0;
                 $need_explicit_start = 1;
-                1 while $self->eol(space => 0);
+                $self->parse_empty;
                 next;
             }
             $doc_end = 1;
@@ -115,7 +115,7 @@ sub parse_document_end {
     my ($self) = @_;
     my $yaml = $self->yaml;
     if ($$yaml =~ s/\A\.\.\.(?= |$)//m) {
-        $self->eol(space => 1) or die "Unexpected";
+        $self->parse_eol or die "Unexpected";
         return 1;
     }
     return 0;
@@ -127,7 +127,7 @@ sub parse_document_start {
     my $yaml = $self->yaml;
     my $end = 0;
     if ($$yaml =~ s/\A---(?= |$)//m) {
-        my $eol = $self->eol(space => 1);
+        my $eol = $self->parse_eol;
         if ($self->level > 1) {
 
             my $off = $self->offset;
@@ -233,8 +233,7 @@ sub parse_document {
     TRACE and warn "=== parse_document()\n";
     my ($self) = @_;
     my $yaml = $self->yaml;
-    while ($self->eol(space => 0)) {
-    }
+    $self->parse_empty;
     if ($self->parse_document_end) {
         $self->event_value(':');
         return 1;
@@ -266,65 +265,48 @@ sub parse_next {
     my $yaml = $self->yaml;
     my $plus_indent = 0;
     my $seq_indent = 0;
-    while (length $$yaml) {
-        if ($$yaml =~ s/\A *\n//) {
-            next;
-        }
-        if ($$yaml =~ s/\A *# .*\n//) {
-            next;
-        }
+    $self->parse_empty;
 
-        if ($$yaml =~ m/\A( *)\S/) {
-            my $ind = length $1;
-            if ($ind < $self->indent) {
-                TRACE and warn "### less spaces\n";
-                $$yaml =~ s/\A( *)//;
-                my $off = $self->offset;
-                my $i = $#$off;
-                while ($i > 1) {
-                    my $test_indent = $off->[ $i ];
-                    if ($test_indent <= $ind) {
-                        last;
-                    }
-                    die "Unexpected" unless $self->end_node;
-                    $i--;
-                }
-                $self->indent($off->[ $i ]);
-                if ($self->in_unindented_seq) {
-                    if ($$yaml !~ m/\A-(?: |$)/m) {
-                        # we are at the end of the unindented sequence
-                        $self->end('SEQ');
-                    }
-                }
+    my $indent = $self->indent;
+
+    my $space = 0;
+    if ($$yaml =~ s/\A( *)//m) {
+        $space = length $1;
+    }
+    if ($indent and $space < $indent) {
+
+        $plus_indent = $space - $indent;
+        TRACE and warn "### INDENT CHANGE: $plus_indent\n";
+
+        my $off = $self->offset;
+        my $i = $#$off;
+        while ($i > 1) {
+            my $test_indent = $off->[ $i ];
+            if ($test_indent <= $space) {
                 last;
             }
+            die "Unexpected" unless $self->end_node;
+            $i--;
         }
+        $self->indent($off->[ $i ]);
 
-        my $indent_re = '[ ]{' . $self->indent . '}';
-        if ($self->indent and $$yaml =~ s/\A$indent_re//) {
-            TRACE and warn "### removed $indent_re\n";
-        }
-        elsif ($self->indent) {
-            die "Unexpected indentation";
-        }
-        if ($$yaml =~ s/\A( +)//) {
-            TRACE and warn "### more spaces\n";
-            my $spaces = $1;
-            $plus_indent = length $spaces;
-        }
-        elsif ($$yaml =~ m/\A-(?: |$)/m) {
-            $seq_indent = 2;
-        }
-        else {
-            TRACE and warn "### same indent\n";
-            if ($self->in_unindented_seq) {
-                # we are at the end of the unindented sequence
-                $self->end('SEQ');
-            }
-        }
-
-        last;
     }
+    elsif ($space > $indent) {
+        $plus_indent = $space - $indent;
+        TRACE and warn "### INDENT CHANGE: $plus_indent\n";
+    }
+    else {
+        TRACE and warn "### INDENT CHANGE: $plus_indent\n";
+    }
+
+    if ($$yaml =~ m/\A-(?: |$)/m) {
+        $seq_indent = 2;
+    }
+    elsif ($plus_indent <= 0 and $self->in_unindented_seq) {
+        # we are at the end of the unindented sequence
+        $self->end('SEQ');
+    }
+
     my $node = $self->parse_node_tag_anchor(chomp => 1);
     if ($node) {
         return $self->parse_next;
@@ -355,7 +337,7 @@ sub parse_node {
         if ($self->parse_seq($plus_indent, $seq_indent)) {
             return;
         }
-        elsif ($self->parse_map($plus_indent, $seq_indent)) {
+        elsif ($self->parse_map($plus_indent)) {
             return;
         }
         elsif (defined $self->parse_block_scalar) {
@@ -523,7 +505,7 @@ sub parse_seq {
         TRACE and warn "### SEQ item\n";
 
 
-        if ($plus_indent or ($seq_indent and $self->in('MAP') ) or $self->events->[-1] eq 'DOC') {
+        if ($plus_indent > 0 or ($seq_indent and $self->in('MAP') ) or $self->events->[-1] eq 'DOC') {
             $self->begin("SEQ");
             $self->offset->[ $self->level ] = $self->indent + $plus_indent;
             $self->inc_indent($plus_indent);
@@ -568,9 +550,9 @@ sub in {
 }
 
 sub parse_map {
-    my ($self, $plus_indent, $seq_indent) = @_;
+    my ($self, $plus_indent) = @_;
     my $yaml = $self->yaml;
-    TRACE and warn "=== parse_map(+$plus_indent,+$seq_indent)\n";
+    TRACE and warn "=== parse_map(+$plus_indent)\n";
     my $key;
     my $key_style = ':';
     my $alias;
@@ -593,7 +575,7 @@ sub parse_map {
         }
     }
     if (defined $alias or defined $key) {
-        if ($plus_indent or $self->events->[-1] eq 'DOC') {
+        if ($plus_indent > 0 or $self->events->[-1] eq 'DOC') {
             $self->begin("MAP");
             $self->offset->[ $self->level ] = $self->indent + $plus_indent;
             $self->inc_indent($plus_indent);
@@ -668,7 +650,7 @@ sub parse_quoted {
             $quoted =~ s/^ +//gm;
             $quoted =~ s/\n+/ /g;
             $self->event_value('"' . $quoted);
-            $self->eol(space => 0);
+            $self->parse_eol;
             return 1;
         }
         else {
@@ -683,7 +665,7 @@ sub parse_quoted {
             $quoted =~ s/\n/\\n/g;
             $quoted =~ s/\t/\\t/g;
             $self->event_value("'" . $quoted);
-            $self->eol(space => 0);
+            $self->parse_eol;
             return 1;
         }
         else {
@@ -693,11 +675,20 @@ sub parse_quoted {
     return 0;
 }
 
-sub eol {
-    my ($self, %args) = @_;
+sub parse_empty {
+    TRACE and warn "=== parse_empty()\n";
+    my ($self) = @_;
     my $yaml = $self->yaml;
-    my $space = $args{space} ? " +" : " *";
-    $$yaml =~ s/\A$space#.*//;
+    while (length $$yaml) {
+        $$yaml =~ s/\A *#.*//;
+        last unless $$yaml =~ s/\A\n//;
+    }
+}
+
+sub parse_eol {
+    my ($self) = @_;
+    my $yaml = $self->yaml;
+    $$yaml =~ s/\A +#.*//;
     return $$yaml =~ s/\A\n// ? 1 : 0;
 }
 
