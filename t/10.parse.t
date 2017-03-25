@@ -129,8 +129,8 @@ sub test {
         diag "ERROR: $@";
         $results{ERROR}++;
         my $error_type = 'unknown';
-        if ($@ =~ m/Expected/) {
-            $error_type = 'Expected';
+        if ($@ =~ m/Expected (.*?) at/) {
+            $error_type = "Expected $1";
         }
         push @{ $errors{ $error_type } }, $name;
         $error = 1;

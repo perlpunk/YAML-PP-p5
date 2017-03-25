@@ -104,11 +104,11 @@ sub test {
         $parser->parse($yaml);
     };
     if ($@) {
-        diag "ERROR: $@";
+        diag "ERROR: $@" if $ENV{YAML_PP_TRACE};
         $results{ERROR}++;
         my $error_type = 'unknown';
-        if ($@ =~ m/Expected/) {
-            $error_type = 'Expected';
+        if ($@ =~ m/Expected (.*?) at/) {
+            $error_type = "Expected $1";
         }
         push @{ $errors{ $error_type } }, $name;
         $error = 1;

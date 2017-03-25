@@ -311,6 +311,27 @@ sub parse_next {
     if ($node) {
         return $self->parse_next;
     }
+    my $exp = "ANY";
+    if ($plus_indent == 0 and $seq_indent == 0) {
+        if ($self->in('MAP')) {
+            if ($self->parse_map($plus_indent)) {
+                return 1;
+            }
+            else {
+                die "Expected Mapping Key";
+            }
+        }
+    }
+    elsif ($plus_indent < 0) {
+        if ($self->in('MAP')) {
+            if ($self->parse_map($plus_indent)) {
+                return 1;
+            }
+            else {
+                die "Expected Mapping Key";
+            }
+        }
+    }
     return $self->parse_node($plus_indent, $seq_indent);
 }
 
@@ -344,8 +365,7 @@ sub parse_node {
             return;
         }
         else {
-            my $alias = $self->parse_alias;
-            if ($alias) {
+            if ($self->parse_alias) {
                 return;
             }
             if ($self->parse_quoted) {
