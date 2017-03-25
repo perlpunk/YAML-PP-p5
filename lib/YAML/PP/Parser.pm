@@ -180,7 +180,7 @@ sub parse_document_head {
             $self->tagmap->{ $tag_alias } = $tag_url;
             next;
         }
-        if ($$yaml =~ m/\A--- ?/) {
+        if ($$yaml =~ m/\A---(?= |$)/m) {
             $head = "---";
             last;
         }
