@@ -49,6 +49,7 @@ sub parse_stream {
     my $need_explicit_start = 0;
     while (length $$yaml) {
         my $head = $self->parse_document_head(explicit => $need_explicit_start);
+        $need_explicit_start = 0;
         last unless length $$yaml;
 
         my $parse_end = 0;
@@ -60,15 +61,11 @@ sub parse_stream {
             $self->offset->[ $self->level ] = 0;
         }
 
-        my $doc_end = 0;
-        my $doc_end_explicit = 0;
         if ($parse_end) {
+            # we found a node on the --- line
             my $end = $self->parse_document_end;
             if ($end) {
-                $doc_end = 1;
-                $doc_end_explicit = 1;
-                $self->end_document(explicit => $doc_end_explicit);
-                $close = 0;
+                $self->end_document(explicit => 1);
             }
             else {
                 $need_explicit_start = 1;
@@ -76,36 +73,35 @@ sub parse_stream {
             next;
         }
 
-        my $end = $self->parse_document;
+        my ($end, $need_end) = $self->parse_document;
         if ($end) {
-            $doc_end = 1;
-            $doc_end_explicit = 1;
+            $self->end_document(explicit => 1);
+            next;
         }
-        elsif ($self->in('DOC')) {
+        if ($self->in('DOC')) {
+
             if (length $$yaml) {
-                $self->end_document(explicit => 0);
-                $close = 0;
                 $need_explicit_start = 1;
-                $self->parse_empty;
+                unless ($need_end) {
+                    $self->end_document(explicit => 0);
+                    $self->parse_empty;
+                }
                 next;
             }
-            $doc_end = 1;
+            $self->end_document(explicit => 0);
+            last;
         }
 
-        if ($doc_end) {
-            $self->end_document(explicit => $doc_end_explicit);
-            $close = 0;
+        if (not length $$yaml) {
+            $self->end_document(explicit => 0);
+            last;
         }
-        elsif (not length $$yaml) {
-            $self->end_document(explicit => $doc_end_explicit);
-            $close = 0;
-        }
-
 
     }
-    if ($close) {
-        $self->end_document( explicit => 0, empty => 1 );
+    if (length $$yaml) {
+        die "Unexpected";
     }
+    $self->end_document( explicit => 0, empty => 1 );
 
     $self->end("STR");
 }
@@ -125,7 +121,7 @@ sub parse_document_start {
     TRACE and warn "=== parse_document_start()\n";
     my ($self) = @_;
     my $yaml = $self->yaml;
-    my $end = 0;
+
     if ($$yaml =~ s/\A---(?= |$)//m) {
         my $eol = $self->parse_eol;
         if ($self->level > 1) {
@@ -148,23 +144,16 @@ sub parse_document_start {
         $self->offset->[ $self->level ] = 0;
         unless ($eol) {
             if ($$yaml =~ s/\A +//) {
-                if ($self->parse_flow) {
-                    $end = 1;
-                }
-                elsif (defined $self->parse_block_scalar) {
-                    $end = 1;
-                }
-                else {
-                    my $node = $self->parse_node_tag_anchor(chomp => 1);
-                }
+                return 1 if $self->parse_flow;
+                return 1 if $self->parse_block_scalar;
+                my $node = $self->parse_node_tag_anchor(chomp => 1);
+                return;
             }
-            else {
-                warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
-                die "Unexpected";
-            }
+            warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
+            die "Unexpected";
         }
     }
-    return $end;
+    return;
 }
 
 sub parse_document_head {
@@ -239,17 +228,27 @@ sub parse_document {
     $self->parse_empty;
     if ($self->parse_document_end) {
         $self->event_value(':');
-        return 1;
+        return (1,0);
     }
 
     TRACE and $self->debug_yaml;
-    my $content = $self->parse_next;
+    my $res = $self->next_line;
+    TRACE and warn "---------- GOT $res";
+    if ($res !~ m/NODE|SEQITEM|MAPKEY|SEQSTART|MAPVAL/) {
+        warn __PACKAGE__.':'.__LINE__.": !!!!!!!!!!! $res\n";
+    }
     TRACE and $self->debug_events;
     TRACE and $self->debug_offset;
 
-    if ($self->parse_document_end) {
-        return 1;
+    my $end = 0;
+    my $need_end = 0;
+    if ($res eq "NODE") {
+        $need_end = 1;
     }
+    if ($self->parse_document_end) {
+        $end = 1;
+    }
+    return ($end, $need_end);
 
 }
 
@@ -262,8 +261,8 @@ my $key_re_double_quotes = qr{"(?:\\\\|\\[^\n]|$key_content_re_dq)*"};
 my $key_re_single_quotes = qr{'(?:\\\\|''|$key_content_re_sq)*'};
 my $key_full_re = qr{(?:$key_re_double_quotes|$key_re_single_quotes|$key_re)};
 
-sub parse_next {
-    TRACE and warn "=== parse_next()\n";
+sub next_line {
+    TRACE and warn "=== next_line()\n";
     my ($self) = @_;
     my $yaml = $self->yaml;
     my $plus_indent = 0;
@@ -273,7 +272,6 @@ sub parse_next {
     return unless length $$yaml;
     my $indent = $self->indent;
 
-    my $end = 0;
     my $space = 0;
     if ($$yaml =~ s/\A( *)//m) {
         $space = length $1;
@@ -286,7 +284,6 @@ sub parse_next {
         my $off = $self->offset;
         my $i = $#$off;
         while ($i > 1) {
-            $end = 1;
             my $test_indent = $off->[ $i ];
             if ($test_indent <= $space) {
                 last;
@@ -312,16 +309,13 @@ sub parse_next {
         $seq_indent = -2;
         # we are at the end of the unindented sequence
         $self->end('SEQ');
-        $end = 1;
+        return "NODE";
     }
 
-    if ($end and $self->in('DOC')) {
+    if (($plus_indent < 0 or $seq_indent < 0) and $self->in('DOC')) {
         die "Expected ---";
     }
-    my $node = $self->parse_node_tag_anchor(chomp => 1);
-    if ($node) {
-        return $self->parse_next;
-    }
+
     my $exp = "ANY";
     if ($plus_indent == 0 and $seq_indent == 0) {
         if ($self->in('MAP')) {
@@ -338,15 +332,22 @@ sub parse_next {
             $exp = "KEY";
         }
     }
+
+    my $node_anchor = $self->parse_node_tag_anchor(chomp => 1);
+    if ($node_anchor) {
+        my $node = $self->next_line;
+        return $node;
+    }
     if ($exp ne "ANY") {
-        if ($self->parse_map($plus_indent)) {
-            return 1;
+        if (my $res = $self->parse_map($plus_indent)) {
+            return $res;
         }
         else {
             die "Expected Mapping Key";
         }
     }
-    return $self->parse_node($plus_indent, $seq_indent);
+    my $res = $self->parse_node($plus_indent, $seq_indent);
+    return $res;
 }
 
 sub in_unindented_seq {
@@ -369,23 +370,26 @@ sub parse_node {
     my $yaml = $self->yaml;
     {
 
-        if ($self->parse_seq($plus_indent, $seq_indent)) {
-            return;
+        my $res;
+        if ($res = $self->parse_seq($plus_indent, $seq_indent)) {
+            return $res;
         }
-        elsif ($self->parse_map($plus_indent)) {
-            return;
+        elsif ($res = $self->parse_map($plus_indent)) {
+            return $res;
         }
-        elsif ($self->parse_flow) {
-            return;
+        elsif ($res = $self->parse_flow) {
+            return $res;
         }
-        elsif (defined $self->parse_block_scalar) {
-            return;
+        elsif ($self->parse_block_scalar) {
+            return "NODE";
         }
         else {
             if ($self->parse_alias) {
-                return;
+                $self->parse_eol;
+                return "NODE";
             }
             if ($self->parse_quoted) {
+                return "NODE";
             }
             elsif ($$yaml =~ s/\A(.+)\n//) {
                 my $value = $1;
@@ -396,6 +400,7 @@ sub parse_node {
                 $value =~ s/ #.*$//mg;
                 $self->event_value(":$value");
                 $self->dec_indent(1);
+                return "NODE";
             }
             else {
                 warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
@@ -564,31 +569,37 @@ sub parse_seq {
         if ($self->parse_alias) {
             $$yaml =~ s/\A +#.*//;
             $$yaml =~ s/\A *\n//;
-            return 1;
+            return "SEQITEM";
         }
 
         $space and $$yaml =~ s/\A#.*//;
         my $node = $self->parse_node_tag_anchor(chomp => 1);
         if ($node or $$yaml =~ s/\A\n//) {
             $self->value('SEQ');
-            return 1;
+            return "SEQSTART";
         }
 
         if ($$yaml =~ s/\A( *)//) {
             my $ind = length $1;
             if ($$yaml =~ m/\A./) {
                 if ($self->parse_quoted) {
+                    return "SEQITEM";
                 }
-                elsif ($self->parse_flow) {
+                if ($self->parse_flow) {
+                    return "SEQITEM";
                 }
-                elsif (defined $self->parse_block_scalar) {
+                if ($self->parse_block_scalar) {
+                    return "SEQITEM";
                 }
-                else {
-                    $self->parse_node($ind + 2, 0);
+
+                my $node = $self->parse_node($ind + 2, 0);
+                if ($node) {
+                    return "SEQITEM";
                 }
+                die "Unexpected";
             }
         }
-        return 1;
+        die "Unexpected";
     }
     return 0;
 }
@@ -605,21 +616,18 @@ sub parse_map {
     my $key;
     my $key_style = ':';
     my $alias;
-    my $space;
 
     if ($$yaml =~ m/\A\?/) {
         die "Not Implemented: Explicit Key ?";
     }
 
     $self->parse_node_tag_anchor;
-    if ($$yaml =~ s/\A\*($anchor_re) +:($WS|$)//m) {
+    if ($$yaml =~ s/\A\*($anchor_re) +:(?=$WS|$)//m) {
         $alias = $1;
-        $space = length $2;
     }
-    elsif ($$yaml =~ s/\A($key_full_re) *:($WS|$)//m) {
+    elsif ($$yaml =~ s/\A($key_full_re) *:(?=$WS|$)//m) {
         TRACE and warn "### MAP item\n";
         $key = $1;
-        $space = length $2;
         if ($key =~ s/^(["'])(.*)\1$/$2/) {
             $key_style = $1;
         }
@@ -640,53 +648,44 @@ sub parse_map {
             $self->event_value("$key_style$key");
         }
 
-        if ($space and $$yaml =~ s/\A *#.*\n//) {
-            while ( $$yaml =~ s/\A +#.*\n// ) {
-            }
-            if ($$yaml =~ s/\A( *)//) {
-                my $space = length $1;
-                $self->parse_node($space, 0);
-            }
+        if ($self->parse_eol) {
+            return "MAPKEY";
         }
-        else {
 
-            if ($self->parse_alias) {
-                return 1;
-            }
-            my $node = $self->parse_node_tag_anchor(chomp => 1);
-            if ($node) {
-                $self->value('MAPVAL');
-                return 1;
-            }
+        $$yaml =~ s/\A$WS+//;
 
-            if ($self->parse_quoted) {
-                return 1;
-            }
-            if ($$yaml =~ s/\A( *.+)\n//) {
-                my $value = $1;
-                $value =~ s/ +#.*//;
-                $value =~ s/\A *//;
-                if ($value =~ m/^[|>]/) {
-                    $self->inc_indent(1);
-                    $$yaml = "$value\n$$yaml";
-                    $self->parse_block_scalar;
-                    $self->dec_indent(1);
-                }
-                elsif ($value =~ m/^[\{\[]/) {
-                    $$yaml = "$value\n$$yaml";
-                    $self->parse_flow;
-                }
-                else {
-                    $self->inc_indent(1);
-                    my $text = $self->parse_multi(folded => 1, trim => 1);
-                    $value = "$value $text" if length $text;
-                    $self->event_value(":$value");
-                    $self->dec_indent(1);
-                }
-            }
-
+        if ($self->parse_alias) {
+            return "MAPVAL";
         }
-        return 1;
+        my $node = $self->parse_node_tag_anchor(chomp => 1);
+        if ($node) {
+            $self->value('MAPVAL');
+            return "MAPKEY";
+        }
+
+        if ($self->parse_quoted) {
+            return "MAPVAL";
+        }
+        if ($self->parse_flow) {
+            return "MAPVAL";
+        }
+        if ($self->parse_block_scalar) {
+            return "MAPVAL";
+        }
+
+        if ($$yaml =~ s/\A(.+)\n//) {
+            my $value = $1;
+            $value =~ s/ +#.*//;
+            $value =~ s/\A *//;
+            $self->inc_indent(1);
+            my $text = $self->parse_multi(folded => 1, trim => 1);
+            $value = "$value $text" if length $text;
+            $self->event_value(":$value");
+            $self->dec_indent(1);
+            return "MAPVAL";
+        }
+
+        return "MAPKEY";
     }
     return 0;
 
@@ -776,9 +775,9 @@ sub parse_block_scalar {
         $content =~ s/\n/\\n/g;
         $content =~ s/\t/\\t/g;
         $self->event_value($type . $content);
-        return $content;
+        return 1;
     }
-    return;
+    return 0;
 }
 
 sub parse_multi {
