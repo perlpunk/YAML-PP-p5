@@ -267,8 +267,10 @@ sub parse_next {
     my $seq_indent = 0;
     $self->parse_empty;
 
+    return unless length $$yaml;
     my $indent = $self->indent;
 
+    my $end = 0;
     my $space = 0;
     if ($$yaml =~ s/\A( *)//m) {
         $space = length $1;
@@ -281,6 +283,7 @@ sub parse_next {
         my $off = $self->offset;
         my $i = $#$off;
         while ($i > 1) {
+            $end = 1;
             my $test_indent = $off->[ $i ];
             if ($test_indent <= $space) {
                 last;
@@ -303,10 +306,15 @@ sub parse_next {
         $seq_indent = 2;
     }
     elsif ($plus_indent <= 0 and $self->in_unindented_seq) {
+        $seq_indent = -2;
         # we are at the end of the unindented sequence
         $self->end('SEQ');
+        $end = 1;
     }
 
+    if ($end and $self->in('DOC')) {
+        die "Expected ---";
+    }
     my $node = $self->parse_node_tag_anchor(chomp => 1);
     if ($node) {
         return $self->parse_next;
@@ -314,22 +322,25 @@ sub parse_next {
     my $exp = "ANY";
     if ($plus_indent == 0 and $seq_indent == 0) {
         if ($self->in('MAP')) {
-            if ($self->parse_map($plus_indent)) {
-                return 1;
-            }
-            else {
-                die "Expected Mapping Key";
-            }
+            $exp = "KEY";
+        }
+    }
+    elsif ($plus_indent == 0 and $seq_indent == -2) {
+        if ($self->in('MAP')) {
+            $exp = "KEY";
         }
     }
     elsif ($plus_indent < 0) {
         if ($self->in('MAP')) {
-            if ($self->parse_map($plus_indent)) {
-                return 1;
-            }
-            else {
-                die "Expected Mapping Key";
-            }
+            $exp = "KEY";
+        }
+    }
+    if ($exp ne "ANY") {
+        if ($self->parse_map($plus_indent)) {
+            return 1;
+        }
+        else {
+            die "Expected Mapping Key";
         }
     }
     return $self->parse_node($plus_indent, $seq_indent);
@@ -525,7 +536,7 @@ sub parse_seq {
         TRACE and warn "### SEQ item\n";
 
 
-        if ($plus_indent > 0 or ($seq_indent and $self->in('MAP') ) or $self->events->[-1] eq 'DOC') {
+        if ($plus_indent > 0 or ($seq_indent > 0 and $self->in('MAP') ) or $self->events->[-1] eq 'DOC') {
             $self->begin("SEQ");
             $self->offset->[ $self->level ] = $self->indent + $plus_indent;
             $self->inc_indent($plus_indent);
