@@ -261,6 +261,8 @@ my $key_re_double_quotes = qr{"(?:\\\\|\\[^\n]|$key_content_re_dq)*"};
 my $key_re_single_quotes = qr{'(?:\\\\|''|$key_content_re_sq)*'};
 my $key_full_re = qr{(?:$key_re_double_quotes|$key_re_single_quotes|$key_re)};
 
+my $plain_value_start_re = '[^\s*!&]';
+
 sub next_line {
     TRACE and warn "=== next_line()\n";
     my ($self) = @_;
@@ -623,6 +625,9 @@ sub parse_map {
 
     $self->parse_node_tag_anchor;
     if ($$yaml =~ s/\A\*($anchor_re) +:(?=$WS|$)//m) {
+        if (defined $self->anchor or defined $self->tag) {
+            die "TODO";
+        }
         $alias = $1;
     }
     elsif ($$yaml =~ s/\A($key_full_re) *:(?=$WS|$)//m) {
@@ -673,7 +678,7 @@ sub parse_map {
             return "MAPVAL";
         }
 
-        if ($$yaml =~ s/\A(.+)\n//) {
+        if ($$yaml =~ s/\A($plain_value_start_re.*)\n//) {
             my $value = $1;
             $value =~ s/ +#.*//;
             $value =~ s/\A *//;
@@ -684,8 +689,9 @@ sub parse_map {
             $self->dec_indent(1);
             return "MAPVAL";
         }
+        $self->event_value(":");
+        return "MAPVAL";
 
-        return "MAPKEY";
     }
     return 0;
 
