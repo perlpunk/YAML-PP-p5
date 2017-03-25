@@ -148,7 +148,10 @@ sub parse_document_start {
         $self->offset->[ $self->level ] = 0;
         unless ($eol) {
             if ($$yaml =~ s/\A +//) {
-                if (defined $self->parse_block_scalar) {
+                if ($self->parse_flow) {
+                    $end = 1;
+                }
+                elsif (defined $self->parse_block_scalar) {
                     $end = 1;
                 }
                 else {
@@ -195,7 +198,7 @@ sub parse_document_head {
         last;
     }
     if ($need_explicit and not $head) {
-        die "Expected  ---";
+        die "Expected ---";
     }
     return $head;
 }
@@ -372,6 +375,9 @@ sub parse_node {
         elsif ($self->parse_map($plus_indent)) {
             return;
         }
+        elsif ($self->parse_flow) {
+            return;
+        }
         elsif (defined $self->parse_block_scalar) {
             return;
         }
@@ -400,6 +406,16 @@ sub parse_node {
     }
 
     return;
+}
+
+sub parse_flow {
+    my ($self) = @_;
+    my $yaml= $self->yaml;
+    TRACE and warn "=== parse_flow()\n";
+    if ($$yaml =~ m/\A[\{\[]/) {
+        die "Not Implemented: Flow Style";
+    }
+    return 0;
 }
 
 sub event_value {
@@ -563,6 +579,8 @@ sub parse_seq {
             if ($$yaml =~ m/\A./) {
                 if ($self->parse_quoted) {
                 }
+                elsif ($self->parse_flow) {
+                }
                 elsif (defined $self->parse_block_scalar) {
                 }
                 else {
@@ -588,6 +606,10 @@ sub parse_map {
     my $key_style = ':';
     my $alias;
     my $space;
+
+    if ($$yaml =~ m/\A\?/) {
+        die "Not Implemented: Explicit Key ?";
+    }
 
     $self->parse_node_tag_anchor;
     if ($$yaml =~ s/\A\*($anchor_re) +:($WS|$)//m) {
@@ -649,6 +671,10 @@ sub parse_map {
                     $$yaml = "$value\n$$yaml";
                     $self->parse_block_scalar;
                     $self->dec_indent(1);
+                }
+                elsif ($value =~ m/^[\{\[]/) {
+                    $$yaml = "$value\n$$yaml";
+                    $self->parse_flow;
                 }
                 else {
                     $self->inc_indent(1);
@@ -727,9 +753,13 @@ sub parse_block_scalar {
     TRACE and warn "=== parse_block_scalar()\n";
     my ($self) = @_;
     my $yaml = $self->yaml;
-    if ($$yaml =~ s/\A([|>])([+-]?)\n//) {
+    if ($$yaml =~ s/\A([|>])([1-9]\d*)?([+-]?)\n//) {
         my $type = $1;
-        my $chomp = $2;
+        my $indent = $2;
+        if (defined $indent) {
+            die "Not Implemented: Block Scalar Explicit Indent";
+        }
+        my $chomp = $3;
         my %args = (block=> 1);
         if ($type eq '>') {
             $args{block}= 0;
