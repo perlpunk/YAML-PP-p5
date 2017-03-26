@@ -22,6 +22,26 @@ has tagmap => ( is => 'rw', default => sub { +{
 
 use constant TRACE => $ENV{YAML_PP_TRACE};
 
+my $WS = '[\t ]';
+
+my $key_start_re = '[a-zA-Z0-9%]';
+my $key_content_re = '[a-zA-Z0-9%\]" -]';
+my $key_content_re_dq = '[^"\n\\\\]';
+my $key_content_re_sq = q{[^'\n]};
+my $key_re = qr{(?:$key_start_re$key_content_re*$key_start_re|$key_start_re?)};
+my $key_re_double_quotes = qr{"(?:\\\\|\\[^\n]|$key_content_re_dq)*"};
+my $key_re_single_quotes = qr{'(?:\\\\|''|$key_content_re_sq)*'};
+my $key_full_re = qr{(?:$key_re_double_quotes|$key_re_single_quotes|$key_re)};
+
+my $plain_value_start_re = '[^\s*!&]';
+
+my $tag_re = '[a-zA-Z]+';
+my $full_tag_re = "![a-z]*!$tag_re|!$tag_re|!";
+
+my $anchor_start_re = '[a-zA-Z0-9]';
+my $anchor_content_re = '[a-zA-Z0-9:]';
+my $anchor_re = qr{(?:$anchor_start_re$anchor_content_re*|$anchor_start_re?)};
+
 sub parse {
     my ($self, $yaml) = @_;
     $self->yaml(\$yaml);
@@ -106,17 +126,6 @@ sub parse_stream {
     $self->end("STR");
 }
 
-sub parse_document_end {
-    TRACE and warn "=== parse_document_end()\n";
-    my ($self) = @_;
-    my $yaml = $self->yaml;
-    if ($$yaml =~ s/\A\.\.\.(?= |$)//m) {
-        $self->parse_eol or die "Unexpected";
-        return 1;
-    }
-    return 0;
-}
-
 sub parse_document_start {
     TRACE and warn "=== parse_document_start()\n";
     my ($self) = @_;
@@ -192,33 +201,15 @@ sub parse_document_head {
     return $head;
 }
 
-
-sub end_document {
-    my ($self, %args) = @_;
-    my $explicit = $args{explicit};
-    my $empty = $args{empty};
-    while (@{ $self->events }) {
-        last unless $self->end_node;
-    }
-    if ($empty and not $self->in('DOC')) {
-        return;
-    }
-    if ($explicit) {
-        $self->end("DOC", "...");
-    }
-    else {
-        $self->end("DOC");
-    }
-}
-
-sub end_node {
+sub parse_document_end {
+    TRACE and warn "=== parse_document_end()\n";
     my ($self) = @_;
-    my $last = $self->events->[-1];
-    if ($last eq 'MAP' or $last eq 'SEQ') {
-        $self->end($last);
-        return $last;
+    my $yaml = $self->yaml;
+    if ($$yaml =~ s/\A\.\.\.(?= |$)//m) {
+        $self->parse_eol or die "Unexpected";
+        return 1;
     }
-    return;
+    return 0;
 }
 
 sub parse_document {
@@ -251,17 +242,6 @@ sub parse_document {
     return ($end, $need_end);
 
 }
-
-my $key_start_re = '[a-zA-Z0-9%]';
-my $key_content_re = '[a-zA-Z0-9%\]" -]';
-my $key_content_re_dq = '[^"\n\\\\]';
-my $key_content_re_sq = q{[^'\n]};
-my $key_re = qr{(?:$key_start_re$key_content_re*$key_start_re|$key_start_re?)};
-my $key_re_double_quotes = qr{"(?:\\\\|\\[^\n]|$key_content_re_dq)*"};
-my $key_re_single_quotes = qr{'(?:\\\\|''|$key_content_re_sq)*'};
-my $key_full_re = qr{(?:$key_re_double_quotes|$key_re_single_quotes|$key_re)};
-
-my $plain_value_start_re = '[^\s*!&]';
 
 sub next_line {
     TRACE and warn "=== next_line()\n";
@@ -352,20 +332,6 @@ sub next_line {
     return $res;
 }
 
-sub in_unindented_seq {
-    my ($self) = @_;
-    if ($self->in('SEQ')) {
-        my $indent = $self->indent;
-        my $level = $self->level;
-        my $seq_indent = $self->offset->[ $level ];
-        my $prev_indent = $self->offset->[ $level - 1];
-        if ($prev_indent == $seq_indent) {
-            return 1;
-        }
-    }
-    return 0;
-}
-
 sub parse_node {
     my ($self, $plus_indent, $seq_indent) = @_;
     TRACE and warn "=== parse_node(+$plus_indent,+$seq_indent)\n";
@@ -424,71 +390,6 @@ sub parse_flow {
     }
     return 0;
 }
-
-sub event_value {
-    my ($self, $value) = @_;
-    my $anchor = $self->anchor;
-    my $node_anchor = $self->node_anchor;
-    my $tag = $self->tag;
-    my $node_tag = $self->node_tag;
-    my $event = $value;
-
-    if (defined $node_tag) {
-        my $tag_str = $self->tag_str($node_tag);
-        $event = "$tag_str $event";
-        $self->node_tag(undef);
-    }
-    elsif (defined $tag) {
-        my $tag_str = $self->tag_str($tag);
-        $event = "$tag_str $event";
-        $self->tag(undef);
-    }
-    if (defined $node_anchor) {
-        $self->node_anchor(undef);
-        $event = "&$node_anchor $event";
-    }
-    elsif (defined $anchor) {
-        $self->anchor(undef);
-        $event = "&$anchor $event";
-    }
-    $self->event("=VAL", "$event");
-}
-
-my $tag_re = '[a-zA-Z]+';
-my $full_tag_re = "![a-z]*!$tag_re|!$tag_re|!";
-sub tag_str {
-    my ($self, $tag) = @_;
-    if ($tag eq '!') {
-        return "<!>";
-    }
-    elsif ($tag =~ m/^(![a-z]*!)($tag_re)/) {
-        my $alias = $1;
-        my $name = $2;
-        my $map = $self->tagmap;
-        if (exists $map->{ $alias }) {
-            $tag = "<" . $map->{ $alias }. $name . ">";
-        }
-    }
-    elsif ($tag =~ m/^(!)($tag_re)/) {
-        my $alias = $1;
-        my $name = $2;
-        my $map = $self->tagmap;
-        if (exists $map->{ $alias }) {
-            $tag = "<" . $map->{ $alias }. $name . ">";
-        }
-        else {
-            $tag = "<!$name>";
-        }
-    }
-    else {
-        die "Invalid tag";
-    }
-    return $tag;
-}
-
-my $anchor_start_re = '[a-zA-Z0-9]';
-my $anchor_content_re = '[a-zA-Z0-9:]';
-my $anchor_re = qr{(?:$anchor_start_re$anchor_content_re*|$anchor_start_re?)};
 
 sub parse_node_tag_anchor {
     TRACE and warn "=== parse_node_tag_anchor()\n";
@@ -549,7 +450,6 @@ sub parse_alias {
     return 0;
 }
 
-my $WS = '[\t ]';
 sub parse_seq {
     my ($self, $plus_indent, $seq_indent) = @_;
     TRACE and warn "=== parse_seq(+$plus_indent,+$seq_indent)\n";
@@ -606,10 +506,6 @@ sub parse_seq {
     return 0;
 }
 
-sub in {
-    my ($self, $event) = @_;
-    return $self->events->[-1] eq $event;
-}
 
 sub parse_map {
     my ($self, $plus_indent) = @_;
@@ -745,13 +641,6 @@ sub parse_empty {
         $$yaml =~ s/\A *#.*//;
         last unless $$yaml =~ s/\A\n//;
     }
-}
-
-sub parse_eol {
-    my ($self) = @_;
-    my $yaml = $self->yaml;
-    $$yaml =~ s/\A +#.*//;
-    return $$yaml =~ s/\A\n// ? 1 : 0;
 }
 
 sub parse_block_scalar {
@@ -898,10 +787,124 @@ sub parse_multi {
     return $content;
 }
 
+sub parse_eol {
+    my ($self) = @_;
+    my $yaml = $self->yaml;
+    $$yaml =~ s/\A +#.*//;
+    return $$yaml =~ s/\A\n// ? 1 : 0;
+}
+
+sub in_unindented_seq {
+    my ($self) = @_;
+    if ($self->in('SEQ')) {
+        my $indent = $self->indent;
+        my $level = $self->level;
+        my $seq_indent = $self->offset->[ $level ];
+        my $prev_indent = $self->offset->[ $level - 1];
+        if ($prev_indent == $seq_indent) {
+            return 1;
+        }
+    }
+    return 0;
+}
+
+sub in {
+    my ($self, $event) = @_;
+    return $self->events->[-1] eq $event;
+}
+
+sub tag_str {
+    my ($self, $tag) = @_;
+    if ($tag eq '!') {
+        return "<!>";
+    }
+    elsif ($tag =~ m/^(![a-z]*!)($tag_re)/) {
+        my $alias = $1;
+        my $name = $2;
+        my $map = $self->tagmap;
+        if (exists $map->{ $alias }) {
+            $tag = "<" . $map->{ $alias }. $name . ">";
+        }
+    }
+    elsif ($tag =~ m/^(!)($tag_re)/) {
+        my $alias = $1;
+        my $name = $2;
+        my $map = $self->tagmap;
+        if (exists $map->{ $alias }) {
+            $tag = "<" . $map->{ $alias }. $name . ">";
+        }
+        else {
+            $tag = "<!$name>";
+        }
+    }
+    else {
+        die "Invalid tag";
+    }
+    return $tag;
+}
+
+sub event_value {
+    my ($self, $value) = @_;
+    my $anchor = $self->anchor;
+    my $node_anchor = $self->node_anchor;
+    my $tag = $self->tag;
+    my $node_tag = $self->node_tag;
+    my $event = $value;
+
+    if (defined $node_tag) {
+        my $tag_str = $self->tag_str($node_tag);
+        $event = "$tag_str $event";
+        $self->node_tag(undef);
+    }
+    elsif (defined $tag) {
+        my $tag_str = $self->tag_str($tag);
+        $event = "$tag_str $event";
+        $self->tag(undef);
+    }
+    if (defined $node_anchor) {
+        $self->node_anchor(undef);
+        $event = "&$node_anchor $event";
+    }
+    elsif (defined $anchor) {
+        $self->anchor(undef);
+        $event = "&$anchor $event";
+    }
+    $self->event("=VAL", "$event");
+}
+
+sub end_node {
+    my ($self) = @_;
+    my $last = $self->events->[-1];
+    if ($last eq 'MAP' or $last eq 'SEQ') {
+        $self->end($last);
+        return $last;
+    }
+    return;
+}
+
+sub end_document {
+    my ($self, %args) = @_;
+    my $explicit = $args{explicit};
+    my $empty = $args{empty};
+    while (@{ $self->events }) {
+        last unless $self->end_node;
+    }
+    if ($empty and not $self->in('DOC')) {
+        return;
+    }
+    if ($explicit) {
+        $self->end("DOC", "...");
+    }
+    else {
+        $self->end("DOC");
+    }
+}
+
 sub push_events {
     $_[0]->inc_level;
     push @{ $_[0]->events }, $_[1];
 }
+
 sub pop_events {
     $_[0]->dec_level;
     my $last = pop @{ $_[0]->events };
@@ -968,22 +971,23 @@ sub event {
     $self->receiver->($self, $event, @content);
 }
 
-
 sub inc_indent {
     $_[0]->indent($_[0]->indent + $_[1]);
 }
+
 sub dec_indent {
     $_[0]->indent($_[0]->indent - $_[1]);
 }
+
 sub inc_level {
     $_[0]->level($_[0]->level + 1);
 }
+
 sub dec_level {
     $_[0]->level($_[0]->level - 1);
     $_[0]->indent( $_[0]->offset->[ $_[0]->level ] );
     pop @{ $_[0]->offset };
 }
-
 
 sub debug_events {
     warn "EVENTS: (@{ $_[0]->events })\n";
@@ -998,4 +1002,5 @@ sub debug_yaml {
     my $yaml = $self->yaml;
     warn "YAML:\n$$yaml\nEOYAML\n";
 }
+
 1;
