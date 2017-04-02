@@ -1,31 +1,20 @@
 skip:
-- 005
 
 check:
 - 7T8X
 - HS5T
 - M7A3
 - MJS9
-- NHX8
 
 multiline:
-- 5GBF
 - 6VJK
-- 9YRD
 - F8F9
 - K858
-- NP9H
 - P2AD
 - M5C3
 - R4YG
 
 quoted:
-- 7A4E
-- G4RS
-- PRH3
-- TL85
-- 4ZYM
-- S3PD
 
 flow:
 - 4ABK

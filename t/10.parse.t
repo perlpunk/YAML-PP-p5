@@ -70,7 +70,7 @@ my %todo;
 
 my %results;
 my %errors;
-@results{qw/ OK DIFF ERROR TODO /} = (0) x 4;
+@results{qw/ DIFF OK ERROR TODO /} = ([], (0) x 3);
 for my $item (@dirs) {
     my $dir = dirname $item;
     my $id = basename $item;
@@ -112,6 +112,7 @@ diag "Skipped $skip_count tests";
 
 sub test {
     my ($title, $name, $yaml, $test_events) = @_;
+#    warn __PACKAGE__.':'.__LINE__.": ================================ $name\n";
 #    @$test_events = grep { m/DOC|STR/ } @$test_events;
     my @events;
     my $parser = YAML::PP::Parser->new(
@@ -135,6 +136,9 @@ sub test {
         elsif ($@ =~ m/(Not Implemented: .*?) at/) {
             $error_type = "$1";
         }
+        elsif ($@ =~ m/(Unexpected .*?) at/) {
+            $error_type = "$1";
+        }
         push @{ $errors{ $error_type } }, $name;
         $error = 1;
     }
@@ -150,7 +154,7 @@ sub test {
         $results{OK}++;
     }
     else {
-        $results{DIFF}++ unless $error;
+        push @{ $results{DIFF} }, $name unless $error;
         if ($TODO) {
             $results{TODO}++;
         }
@@ -161,7 +165,9 @@ sub test {
         }
     }
 }
-diag "OK: $results{OK} DIFF: $results{DIFF} ERROR: $results{ERROR} TODO: $results{TODO}";
+my $diff_count = @{ $results{DIFF} };
+diag "OK: $results{OK} DIFF: $diff_count ERROR: $results{ERROR} TODO: $results{TODO}";
+diag "DIFF: (@{ $results{DIFF} })";
 for my $type (sort keys %errors) {
     diag "ERRORS($type): (@{ $errors{ $type } })";
 }
