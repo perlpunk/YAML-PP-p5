@@ -1,0 +1,11 @@
++STR
++DOC
++MAP
+=VAL :foo
++MAP &x <!y>
+=VAL :foo
+=VAL :bar
+-MAP
+-MAP
+-DOC
+-STR
