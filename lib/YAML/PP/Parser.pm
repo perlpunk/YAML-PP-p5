@@ -21,8 +21,8 @@ use constant TRACE => $ENV{YAML_PP_TRACE};
 
 my $WS = '[\t ]';
 
-my $key_start_re = '[a-zA-Z0-9%]';
-my $key_content_re = '[a-zA-Z0-9%\\]"\\\\ -]';
+my $key_start_re = '[a-zA-Z0-9%.]';
+my $key_content_re = '[a-zA-Z0-9%.\\]"\\\\ -]';
 my $key_content_re_dq = '[^"\n\\\\]';
 my $key_content_re_sq = q{[^'\n]};
 my $key_re = qr{(?:$key_start_re$key_content_re*$key_start_re|$key_start_re?)};
