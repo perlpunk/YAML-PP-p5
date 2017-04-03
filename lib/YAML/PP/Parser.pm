@@ -202,6 +202,7 @@ sub parse_document {
         TRACE and $self->debug_yaml;
         TRACE and $self->debug_events;
 
+        my $exp = $self->events->[-1];
         my ($space, $plus_indent);
         if ($next_full_line) {
             $self->parse_empty;
@@ -210,14 +211,15 @@ sub parse_document {
                 # end of YAML
                 while ($self->level > 1) {
                     TRACE and $self->debug_events;
-                    if ($self->in('NODE')) {
+                    if ($exp eq 'NODE') {
                         $self->event_value(':');
                     }
-                    elsif ($self->in('COMPLEX')) {
+                    elsif ($exp eq 'COMPLEX') {
                         $self->event_value(':');
                     }
                     TRACE and $self->debug_events;
                     die "Unexpected" unless $self->end_node;
+                    $exp = $self->events->[-1];
                 }
                 last;
             }
@@ -248,7 +250,6 @@ sub parse_document {
         }
         TRACE and $self->info("space=$space plus_indent=$plus_indent seq_start=$seq_start");
 
-        my $exp;
         my $indent = $self->indent;
         my $start_space = $space;
         if ($full_line) {
@@ -259,7 +260,7 @@ sub parse_document {
             TRACE and $self->info("ON SAME LINE: INDENT +$plus_indent");
             $start_space = $self->indent;
         }
-        my $last = $self->events->[-1];
+
         if ($plus_indent > 0) {
         }
         elsif ($plus_indent < 0) {
@@ -268,41 +269,36 @@ sub parse_document {
                 $count--;
             }
             for (1 .. $count) {
-                if ($self->in('NODE')) {
+                if ($exp eq 'NODE') {
                     $self->event_value(':');
                 }
                 die "Unexpected" unless $self->end_node;
+                $exp = $self->events->[-1];
                 TRACE and $self->debug_events;
                 $got_tag_anchor = 0;
             }
             TRACE and $self->info("Removed $count nodes");
-
-            $last = $self->events->[-1];
         }
         else {
-            my $last = $self->events->[-1];
             my $last2 = $self->events->[-2];
             if ($full_line) {
-                if ($last =~ m/NODE/ and $last2 eq 'SEQ') {
+                if ($exp eq 'NODE' and $last2 eq 'SEQ') {
                     $self->event_value(':');
                     die "Unexpected" unless $self->end_node;
                     TRACE and $self->debug_events;
                     $got_tag_anchor = 0;
                 }
-                $last = $self->events->[-1];
+                $exp = $self->events->[-1];
             }
         }
 
-        $exp = $last;
         if ($exp eq 'SEQ' and not $seq_start) {
             my $ui = $self->in_unindented_seq;
             if ($ui) {
                 TRACE and $self->info("In unindented sequence");
                 $self->end('SEQ');
                 TRACE and $self->debug_events;
-                if ($self->in('MAP')) {
-                    $exp = 'MAP';
-                }
+                $exp = $self->events->[-1];
             }
             else {
                 die "Expected sequence item";
@@ -315,7 +311,7 @@ sub parse_document {
         }
 
         my $found_tag_anchor;
-        if ($self->in('NODE') and $got_tag_anchor < 3) {
+        if ($exp eq 'NODE' and $got_tag_anchor < 3) {
             my ($tag, $anchor) = $self->parse_tag_anchor(
                 tag => (not defined $self->tag),
                 anchor => (not defined $self->anchor),
@@ -374,10 +370,10 @@ sub parse_document {
         }
 
         if ($got eq "MAPKEY") {
-            if ($self->in('MAP')) {
+            if ($exp eq 'MAP') {
                 TRACE and $self->info("Already in MAP");
             }
-            elsif ($self->in('COMPLEX')) {
+            elsif ($exp eq 'COMPLEX') {
                 $self->events->[-1] = 'MAP';
                 $self->event_value(':');
             }
@@ -398,7 +394,7 @@ sub parse_document {
             $self->begin('NODE', $offset + 1);
         }
         elsif ($got eq 'SEQSTART') {
-            if ($self->in('SEQ')) {
+            if ($exp eq 'SEQ') {
                 TRACE and $self->info("Already in SEQ");
             }
             else {
@@ -409,11 +405,11 @@ sub parse_document {
             $self->begin('NODE', $offset + $seq_start);
         }
         elsif ($got eq 'COMPLEX') {
-            if ($self->in('MAP')) {
+            if ($exp eq 'MAP') {
                 TRACE and $self->info("Already in MAP/COMPLEX");
                 $self->events->[-1] = 'COMPLEX';
             }
-            elsif ($self->in('COMPLEX')) {
+            elsif ($exp eq 'COMPLEX') {
                 TRACE and $self->info("Already in COMPLEX");
                 $self->event_value(':');
             }
@@ -1141,11 +1137,10 @@ sub end_node {
         return $last;
     }
     elsif ($last eq 'COMPLEX') {
-#        $self->end($last);
         $self->events->[-1] = 'MAP';
         return $last;
     }
-    elsif ($last =~ m/NODE/) {
+    elsif ($last eq 'NODE') {
         $self->pop_events;
         return $last;
     }
@@ -1186,9 +1181,9 @@ sub pop_events {
 
 sub begin {
     my ($self, $event, $offset, @content) = @_;
-    my $event_orig = $event;
-    $event =~ s/^COMPLEX/MAP/;
-    if ($event eq 'SEQ' or $event eq 'MAP') {
+    my $event_name = $event;
+    $event_name =~ s/^COMPLEX/MAP/;
+    if ($event_name eq 'SEQ' or $event_name eq 'MAP') {
         my $anchor = $self->anchor;
         my $tag = $self->tag;
         if (defined $tag) {
@@ -1203,34 +1198,25 @@ sub begin {
     }
     TRACE and $self->debug_event("------------->> BEGIN $event ($offset) @content");
     TRACE and $self->debug_events;
-    if ($event =~ m/NODE/) {
+    if ($event eq 'NODE') {
+        # a new node begins but we don't know what it is yet
         $self->push_events($event);
         $self->offset->[ $self->level ] = $offset;
         return;
     }
-    $self->receiver->($self, "+$event", @content ? "@content" : undef);
+    $self->receiver->($self, "+$event_name", @content ? "@content" : undef);
     if ($event eq 'STR') {
         $self->push_events($event);
-        $self->offset->[ $self->level ] = $offset;
     }
-    elsif ($event =~ m/DOC/) {
+    elsif ($event eq 'DOC') {
         $self->push_events('DOC');
         $self->offset->[ $self->level ] = $offset;
         $self->push_events('NODE');
-        $self->offset->[ $self->level ] = 0;
     }
-    elsif ($event =~ m/SEQ/) {
-        $self->offset->[ $self->level ] = $offset;
+    elsif ($event eq 'SEQ' or $event eq 'COMPLEX' or $event eq 'MAP') {
         $self->events->[ $self->level ] = $event;
     }
-    elsif ($event_orig =~ m/COMPLEX/) {
-        $self->offset->[ $self->level ] = $offset;
-        $self->events->[ $self->level ] = $event_orig;
-    }
-    elsif ($event =~ m/MAP/) {
-        $self->offset->[ $self->level ] = $offset;
-        $self->events->[ $self->level ] = $event;
-    }
+    $self->offset->[ $self->level ] = $offset;
 }
 
 sub end {
@@ -1249,13 +1235,7 @@ sub end {
 sub event {
     my ($self, $event, @content) = @_;
     TRACE and $self->debug_event("------------- EVENT $event @content");
-    if ($self->in('NODE')) {
-    }
-    elsif ($self->in('MAP')) {
-    }
-    elsif ($self->in('COMPLEX')) {
-    }
-    else {
+    if ($self->events->[-1] !~ m/NODE|MAP|COMPLEX/) {
         TRACE and $self->debug_events;
         die "Expected to be in NODE or MAP event";
     }
