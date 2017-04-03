@@ -213,6 +213,10 @@ sub parse_document {
                     if ($self->in('NODE')) {
                         $self->event_value(':');
                     }
+                    elsif ($self->in('COMPLEX')) {
+                        $self->event_value(':');
+                    }
+                    TRACE and $self->debug_events;
                     die "Unexpected" unless $self->end_node;
                 }
                 last;
@@ -339,12 +343,25 @@ sub parse_document {
             );
         }
         elsif ($exp eq 'MAP') {
-            $res = $self->parse_map()
-                or die "Expected map item";
+            $res = $self->parse_map();
+            unless ($res) {
+                $res = $self->parse_complex();
+            }
+            $res or die "Expected map item";
         }
         elsif ($exp eq 'SEQ') {
             $res ||= $res = $self->parse_seq()
                 or die "Expected sequence item";
+        }
+        elsif ($exp eq 'COMPLEX') {
+            $res = $self->parse_complex_colon();
+            unless ($res) {
+                $res = $self->parse_complex();
+            }
+            unless ($res) {
+                $res = $self->parse_map();
+            }
+            $res or die "Expected : or ? or map item";
         }
         else {
             die "Unexpected exp $exp";
@@ -359,6 +376,10 @@ sub parse_document {
         if ($got eq "MAPKEY") {
             if ($self->in('MAP')) {
                 TRACE and $self->info("Already in MAP");
+            }
+            elsif ($self->in('COMPLEX')) {
+                $self->events->[-1] = 'MAP';
+                $self->event_value(':');
             }
             else {
                 $self->begin("MAP", $offset);
@@ -386,6 +407,27 @@ sub parse_document {
             }
             $self->inc_indent($seq_start);
             $self->begin('NODE', $offset + $seq_start);
+        }
+        elsif ($got eq 'COMPLEX') {
+            if ($self->in('MAP')) {
+                TRACE and $self->info("Already in MAP/COMPLEX");
+                $self->events->[-1] = 'COMPLEX';
+            }
+            elsif ($self->in('COMPLEX')) {
+                TRACE and $self->info("Already in COMPLEX");
+                $self->event_value(':');
+            }
+            else {
+                $self->begin("COMPLEX", $offset);
+                $got_tag_anchor = 0;
+            }
+            $self->inc_indent($res->{eol} ? 1 : 2);
+            $self->begin('NODE', $offset + ($res->{eol} ? 1 : 2));
+        }
+        elsif ($got eq 'COMPLEXCOLON') {
+            $self->events->[-1] = 'MAP';
+            $self->inc_indent($res->{eol} ? 1 : 2);
+            $self->begin('NODE', $offset + ($res->{eol} ? 1 : 2));
         }
         elsif ($got eq 'NODE') {
             $next_full_line = 1;
@@ -502,6 +544,9 @@ sub parse_node {
     $args{map} //= 1;
     my $yaml = $self->yaml;
     my $res;
+    if (not $args{start_line} and $res = $self->parse_complex) {
+        return $res;
+    }
     if (not $args{start_line} and $res = $self->parse_seq) {
         return $res;
     }
@@ -622,6 +667,44 @@ sub parse_seq {
 
 }
 
+sub parse_complex {
+    TRACE and warn "=== parse_complex()\n";
+    my ($self) = @_;
+    my $yaml = $self->yaml;
+    return unless $$yaml =~ s/\A(\?)(?=$WS|$)//m;
+    my $res = {
+        name => "COMPLEX",
+        eol => 0,
+    };
+    if ($$yaml =~ s/\A *\n//) {
+        $res->{eol} = 1;
+    }
+    else {
+        $$yaml =~ s/\A$WS//;
+    }
+    return $res;
+
+}
+
+sub parse_complex_colon {
+    TRACE and warn "=== parse_complex_colon()\n";
+    my ($self) = @_;
+    my $yaml = $self->yaml;
+    return unless $$yaml =~ s/\A(:)(?=$WS|$)//m;
+    my $res = {
+        name => "COMPLEXCOLON",
+        eol => 0,
+    };
+    if ($$yaml =~ s/\A *\n//) {
+        $res->{eol} = 1;
+    }
+    else {
+        $$yaml =~ s/\A$WS//;
+    }
+    return $res;
+
+}
+
 sub parse_plain_multi {
     TRACE and warn "=== parse_plain_multi()\n";
     my ($self) = @_;
@@ -682,10 +765,6 @@ sub parse_map {
     my $key;
     my $key_style = ':';
     my $alias;
-
-    if ($$yaml =~ m/\A\?/) {
-        die "Not Implemented: Explicit Key ?";
-    }
 
     my ($tag, $anchor);
 
@@ -1061,6 +1140,11 @@ sub end_node {
         $self->end($last);
         return $last;
     }
+    elsif ($last eq 'COMPLEX') {
+#        $self->end($last);
+        $self->events->[-1] = 'MAP';
+        return $last;
+    }
     elsif ($last =~ m/NODE/) {
         $self->pop_events;
         return $last;
@@ -1102,6 +1186,8 @@ sub pop_events {
 
 sub begin {
     my ($self, $event, $offset, @content) = @_;
+    my $event_orig = $event;
+    $event =~ s/^COMPLEX/MAP/;
     if ($event eq 'SEQ' or $event eq 'MAP') {
         my $anchor = $self->anchor;
         my $tag = $self->tag;
@@ -1137,6 +1223,10 @@ sub begin {
         $self->offset->[ $self->level ] = $offset;
         $self->events->[ $self->level ] = $event;
     }
+    elsif ($event_orig =~ m/COMPLEX/) {
+        $self->offset->[ $self->level ] = $offset;
+        $self->events->[ $self->level ] = $event_orig;
+    }
     elsif ($event =~ m/MAP/) {
         $self->offset->[ $self->level ] = $offset;
         $self->events->[ $self->level ] = $event;
@@ -1162,6 +1252,8 @@ sub event {
     if ($self->in('NODE')) {
     }
     elsif ($self->in('MAP')) {
+    }
+    elsif ($self->in('COMPLEX')) {
     }
     else {
         TRACE and $self->debug_events;

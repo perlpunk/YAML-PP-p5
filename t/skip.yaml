@@ -46,11 +46,11 @@ flow:
 - MXS3
 - X38W
 - C4HZ
+- M5DY
 
 seq:
 
 sets:
-- 2XXW
 
 tags:
 - 7FWL
@@ -67,17 +67,3 @@ misc:
 anchors:
 
 keymap:
-- V9D5
-- 35KP
-- 7W2P
-- 8KHE
-- A2M4
-- GH63
-- JTV5
-- RR7F
-- 5WE3
-- M5DY
-- S9E8
-- L94M
-- 6M2F
-- PW8X
