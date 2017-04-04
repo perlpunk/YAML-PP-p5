@@ -129,12 +129,7 @@ sub parse_document_head {
     my $head;
     my $need_explicit = $args{explicit};
     while (length $$yaml) {
-        if ($$yaml =~ s/\A *#[^\n]+\n//) {
-            next;
-        }
-        if ($$yaml =~ s/\A *\n//) {
-            next;
-        }
+        $self->parse_empty;
         if ($$yaml =~ s/\A\s*%YAML ?1\.2\s*//) {
             $need_explicit = 1;
             next;
@@ -346,7 +341,7 @@ sub parse_document {
             $res or die "Expected map item";
         }
         elsif ($exp eq 'SEQ') {
-            $res ||= $res = $self->parse_seq()
+            $res = $res = $self->parse_seq()
                 or die "Expected sequence item";
         }
         elsif ($exp eq 'COMPLEX') {
@@ -361,6 +356,14 @@ sub parse_document {
         }
         else {
             die "Unexpected exp $exp";
+        }
+
+        unless (exists $res->{eol}) {
+            my $eol = $self->parse_eol;
+            $res->{eol} = $eol;
+            unless ($eol) {
+                $$yaml =~ s/\A$WS//;
+            }
         }
         my $got = $res->{name};
         TRACE and $self->got("GOT $got");
@@ -550,11 +553,10 @@ sub parse_node {
         return $res;
     }
     if (not $args{tag_anchor} and $res = $self->parse_alias) {
-        $self->parse_eol;
         return $res;
     }
-    if ($self->parse_scalar) {
-        return { name => 'NODE' };
+    if ($res = $self->parse_scalar) {
+        return $res;
     }
     if ($res = $self->parse_plain_multi(%args)) {
         return $res;
@@ -576,9 +578,8 @@ sub parse_scalar {
     my $yaml = $self->yaml;
     if ($$yaml =~ m/\A([\[\{>|'"])/) {
         my $method = $scalar_methods{ $1 };
-        $self->$method;
-        $self->parse_eol;
-        return { name => 'NODE' };
+        my $res = $self->$method;
+        return $res;
     }
     return 0;
 }
@@ -651,14 +652,7 @@ sub parse_seq {
     return unless $$yaml =~ s/\A(-)(?=$WS|$)//m;
     my $res = {
         name => "SEQSTART",
-        eol => 0,
     };
-    if ($$yaml =~ s/\A *\n//) {
-        $res->{eol} = 1;
-    }
-    else {
-        $$yaml =~ s/\A$WS//;
-    }
     return $res;
 
 }
@@ -670,14 +664,7 @@ sub parse_complex {
     return unless $$yaml =~ s/\A(\?)(?=$WS|$)//m;
     my $res = {
         name => "COMPLEX",
-        eol => 0,
     };
-    if ($$yaml =~ s/\A *\n//) {
-        $res->{eol} = 1;
-    }
-    else {
-        $$yaml =~ s/\A$WS//;
-    }
     return $res;
 
 }
@@ -689,14 +676,7 @@ sub parse_complex_colon {
     return unless $$yaml =~ s/\A(:)(?=$WS|$)//m;
     my $res = {
         name => "COMPLEXCOLON",
-        eol => 0,
     };
-    if ($$yaml =~ s/\A *\n//) {
-        $res->{eol} = 1;
-    }
-    else {
-        $$yaml =~ s/\A$WS//;
-    }
     return $res;
 
 }
@@ -711,6 +691,7 @@ sub parse_plain_multi {
     {
         my $res = {
             name => 'NODE',
+            eol => 1,
         };
         my $re = $plain_value_start_re;
         while (1) {
@@ -791,7 +772,6 @@ sub parse_map {
 
     my $res = {
         name => "MAPKEY",
-        eol => 0,
     };
     if ($alias) {
         $res->{alias} = $alias;
@@ -810,12 +790,6 @@ sub parse_map {
         $res->{value} = "$key_style$key";
         $res->{tag} = $tag,
         $res->{anchor} = $anchor;
-    }
-    if ($self->parse_eol) {
-        $res->{eol} = 1;
-    }
-    else {
-        $$yaml =~ s/\A$WS//;
     }
     return $res;
 }
@@ -893,7 +867,7 @@ sub parse_quoted {
             last if $last;
         }
         $self->event_value($quote . $quoted);
-        return 1;
+        return { name => 'NODE' };
     }
     return 0;
 }
@@ -935,7 +909,7 @@ sub parse_block_scalar {
         $content =~ s/\n/\\n/g;
         $content =~ s/\t/\\t/g;
         $self->event_value($type . $content);
-        return 1;
+        return { name => 'NODE', eol => 1 };
     }
     return 0;
 }
