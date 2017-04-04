@@ -32,7 +32,7 @@ my $key_full_re = qr{(?:$key_re_double_quotes|$key_re_single_quotes|$key_re)};
 
 my $plain_value_start_re = '[^\s*!&].*';
 
-my $tag_re = '[a-zA-Z]+';
+my $tag_re = '(?:[a-zA-Z]|%[0-9a-fA-F]{2})+';
 my $full_tag_re = "![a-z]*!$tag_re|!$tag_re|!";
 
 my $anchor_start_re = '[a-zA-Z0-9]';
@@ -1063,6 +1063,7 @@ sub tag_str {
     elsif ($tag =~ m/^(![a-z]*!)($tag_re)/) {
         my $alias = $1;
         my $name = $2;
+        $name =~ s/%([0-9a-fA-F]{2})/chr hex $1/eg;
         my $map = $self->tagmap;
         if (exists $map->{ $alias }) {
             $tag = "<" . $map->{ $alias }. $name . ">";
@@ -1071,6 +1072,7 @@ sub tag_str {
     elsif ($tag =~ m/^(!)($tag_re)/) {
         my $alias = $1;
         my $name = $2;
+        $name =~ s/%([0-9a-fA-F]{2})/chr hex $1/eg;
         my $map = $self->tagmap;
         if (exists $map->{ $alias }) {
             $tag = "<" . $map->{ $alias }. $name . ">";
