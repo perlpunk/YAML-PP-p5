@@ -7,7 +7,7 @@ use Moo;
 
 has receiver => ( is => 'rw' );
 has yaml => ( is => 'rw' );
-has indent => ( is => 'rw', default => 0 );
+#has indent => ( is => 'rw', default => 0 );
 has level => ( is => 'rw', default => -1 );
 has offset => ( is => 'rw', default => sub { [0] } );
 has events => ( is => 'rw', default => sub { [] } );
@@ -191,11 +191,17 @@ sub parse_document {
                 $space = length $1;
             }
 
-            my $indent = $self->offset->[ $self->level ];
+            my $indent;
             if ($self->in('NODE')) {
                 if ($self->events->[-2] eq 'SEQ') {
                     $indent = $self->offset->[-2];
                 }
+                else {
+                    $indent = $self->offset->[-2] + 1;
+                }
+            }
+            else {
+                $indent = $self->offset->[ $self->level ];
             }
 
             my $plus_indent = $space - $indent;
@@ -204,7 +210,7 @@ sub parse_document {
             if ($$yaml =~ m/\A-($WS|$)/m) {
                 $seq_start = length $1 ? 2 : 1;
             }
-            TRACE and $self->info("INDENT: PLUS $plus_indent space=$space seq_start=$seq_start");
+            TRACE and $self->info("INDENT: PLUS $plus_indent space=$space seq_start=$seq_start indent=$indent");
 
             if ($plus_indent > 0) {
                 if ($exp ne 'NODE') {
@@ -248,18 +254,16 @@ sub parse_document {
                 }
             }
 
-            my $test = $self->indent;
-            if ($test != $space) {
-                if ($exp ne 'NODE') {
+            if ($exp ne 'NODE') {
+                if ($self->offset->[-1] != $space) {
                     die "Expected $exp";
                 }
             }
-            $self->indent($space);
             $offset = $space;
         }
         else {
             TRACE and $self->info("ON SAME LINE: INDENT");
-            $offset = $self->indent;
+            $offset = $self->offset->[-1];
         }
 
         TRACE and $self->info("Expecting $exp");
@@ -317,30 +321,22 @@ sub parse_document {
             die "Unexpected exp $exp";
         }
 
-        my $new_offset = $offset;
-#        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$offset], ['offset']);
+        my $got = $res->{name};
+        TRACE and $self->got("GOT $got");
+        my $ws = 0;
         unless (exists $res->{eol}) {
             my $eol = $self->parse_eol;
             $res->{eol} = $eol;
-            unless ($eol) {
+            if ($eol) {
+            }
+            else {
                 $$yaml =~ s/\A($WS+)//
-                    and $new_offset = $offset + length $1;
+                    and $ws = length $1
             }
         }
-#        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$new_offset], ['new_offset']);
-        my $got = $res->{name};
-        TRACE and $self->got("GOT $got");
-        if ($res->{eol}) {
-            $next_full_line = 1;
-        }
-        else {
-            $next_full_line = 0;
-            if ($got ne 'NODE') {
-                $new_offset += 1;
-            }
-        }
+        $next_full_line = $res->{eol} ? 1 : 0;
 
-        $self->indent($new_offset);
+        my $new_offset = $offset + 1;
         if ($got eq "MAPKEY") {
             if ($exp eq 'MAP') {
                 TRACE and $self->info("Already in MAP");
@@ -353,9 +349,7 @@ sub parse_document {
                 $self->begin('MAP', $offset);
             }
             $self->res_to_event($res);
-#            warn __PACKAGE__.':'.__LINE__.": !!!!! $new_offset === $offset + 1 ?\n";
-#            $self->begin('NODE', $new_offset);
-            $self->begin('NODE', $offset + 1);
+            $self->begin('NODE', $new_offset);
         }
         elsif ($got eq 'SEQSTART') {
             if ($exp eq 'SEQ') {
@@ -364,7 +358,7 @@ sub parse_document {
             else {
                 $self->begin('SEQ', $offset);
             }
-            $self->begin('NODE', $new_offset);
+            $self->begin('NODE', $new_offset + $ws);
         }
         elsif ($got eq 'COMPLEX') {
             if ($exp eq 'MAP') {
@@ -378,11 +372,11 @@ sub parse_document {
             else {
                 $self->begin('COMPLEX', $offset);
             }
-            $self->begin('NODE', $new_offset);
+            $self->begin('NODE', $new_offset + $ws);
         }
         elsif ($got eq 'COMPLEXCOLON') {
             $self->events->[-1] = 'MAP';
-            $self->begin('NODE', $new_offset);
+            $self->begin('NODE', $new_offset + $ws);
         }
         elsif ($got eq 'NODE') {
             $self->res_to_event($res);
@@ -981,7 +975,6 @@ sub parse_eol {
 sub in_unindented_seq {
     my ($self) = @_;
     if ($self->in('SEQ') and $self->level > 2) {
-        my $indent = $self->indent;
         my $level = $self->level;
         my $seq_indent = $self->offset->[ $level ];
         my $prev_indent = $self->offset->[ $level - 1];
@@ -1143,21 +1136,12 @@ sub event {
     $self->receiver->($self, $event, @content);
 }
 
-sub inc_indent {
-    $_[0]->indent($_[0]->indent + $_[1]);
-}
-
-sub dec_indent {
-    $_[0]->indent($_[0]->indent - $_[1]);
-}
-
 sub inc_level {
     $_[0]->level($_[0]->level + 1);
 }
 
 sub dec_level {
     $_[0]->level($_[0]->level - 1);
-    $_[0]->indent( $_[0]->offset->[ $_[0]->level ] );
     pop @{ $_[0]->offset };
 }
 
@@ -1174,7 +1158,7 @@ sub debug_offset {
     $self->note(
         qq{OFFSET: (}
         . join (' | ', map { defined ? sprintf "%-3d", $_ : '?' } @{ $_[0]->offset })
-        . qq/) level=@{[ $_[0]->level ]} indent=@{[ $_[0]->indent ]}/
+        . qq/) level=@{[ $_[0]->level ]}]}/
     );
 }
 
