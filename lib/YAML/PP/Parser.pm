@@ -59,6 +59,8 @@ sub parse_stream {
     my $yaml = $self->yaml;
     $self->begin("STR", -1);
 
+    TRACE and $self->debug_yaml;
+
     my $need_explicit_start = 0;
     while (length $$yaml) {
         my $head = $self->parse_document_head(explicit => $need_explicit_start);
@@ -83,7 +85,6 @@ sub parse_stream {
         $self->parse_empty;
 
     }
-    $self->end_document( explicit => 0, empty => 1 );
 
     $self->end("STR");
 }
@@ -172,23 +173,10 @@ sub parse_document {
     my $yaml = $self->yaml;
 
     my $start_line = $args{start_line};
-    $self->parse_empty;
-    if ($self->parse_document_end) {
-        $self->event_value(':');
-        return 1;
-    }
 
-    TRACE and $self->debug_yaml;
-
-    my $end = 0;
-
-    my @exp = qw/ STR DOC NODE /;
-    my $current = $self->level;# + 1;
-    my $space = 0;
     my $next_full_line = 1;
-    my $last_level = $current;
     my $got_tag_anchor = 0;
-    while (defined $space) {
+    while (1) {
         if ($ENV{YAML_PP_DELAY}) {
             select undef, undef, undef, $ENV{YAML_PP_DELAY};
         }
@@ -198,11 +186,16 @@ sub parse_document {
         TRACE and $self->debug_events;
 
         my $exp = $self->events->[-1];
-        my ($space, $plus_indent);
-        if ($next_full_line) {
+        my $offset;
+        my $full_line = $next_full_line;
+        $next_full_line = 1;
+        if ($full_line) {
             $self->parse_empty;
 
-            unless (length $$yaml) {
+            my $eoyaml = not length $$yaml;
+            my $end = $eoyaml ? 0 : $self->parse_document_end;
+            my $start = ($eoyaml or $end) ? 0 : $$yaml =~ m/\A---(?= |$)/m;
+            if ($eoyaml or $end or $start) {
                 # end of YAML
                 while ($self->level > 1) {
                     TRACE and $self->debug_events;
@@ -216,67 +209,57 @@ sub parse_document {
                     die "Unexpected" unless $self->end_node;
                     $exp = $self->events->[-1];
                 }
-                last;
+                return $end ? 1 : 0;
             }
 
-            if ($self->parse_document_end) {
-                $end = 1;
-                last;
-            }
-            if ($$yaml =~ m/\A---(?= |$)/m) {
-                last;
-            }
             if ($self->level < 2) {
-                last;
+                return 0;
             }
 
-            ($space, $plus_indent) = $self->next_indent_line();
-        }
-        else {
-            ($space) = $self->next_indent();
-            $plus_indent = $space;
-        }
-
-        my $seq_start = 0;
-        my $full_line = $next_full_line;
-        $next_full_line = 1;
-        if ($$yaml =~ m/\A-($WS|$)/m) {
-            $seq_start = length $1 ? 2 : 1;
-        }
-        TRACE and $self->info("space=$space plus_indent=$plus_indent seq_start=$seq_start");
-
-        my $indent = $self->indent;
-        my $start_space = $space;
-        if ($full_line) {
-            TRACE and $self->info("INDENT: PLUS $plus_indent (:$indent)");
-
-        }
-        else {
-            TRACE and $self->info("ON SAME LINE: INDENT +$plus_indent");
-            $start_space = $self->indent;
-        }
-
-        if ($plus_indent > 0) {
-        }
-        elsif ($plus_indent < 0) {
-            my $count = $self->reset_indent($space);
-            if ($seq_start and $self->events->[-($count+1)] eq 'MAP') {
-                $count--;
+            my $space = 0;
+            if ($$yaml =~ s/\A($WS+)//) {
+                $space = length $1;
             }
-            for (1 .. $count) {
-                if ($exp eq 'NODE') {
-                    $self->event_value(':');
+
+            my $indent = $self->offset->[ $self->level ];
+            if ($self->in('NODE')) {
+                if ($self->events->[-2] eq 'SEQ') {
+                    $indent = $self->offset->[-2];
                 }
-                die "Unexpected" unless $self->end_node;
-                $exp = $self->events->[-1];
-                TRACE and $self->debug_events;
-                $got_tag_anchor = 0;
             }
-            TRACE and $self->info("Removed $count nodes");
-        }
-        else {
-            my $last2 = $self->events->[-2];
-            if ($full_line) {
+
+            my $plus_indent = $space - $indent;
+
+            my $seq_start = 0;
+            if ($$yaml =~ m/\A-($WS|$)/m) {
+                $seq_start = length $1 ? 2 : 1;
+            }
+            TRACE and $self->info("INDENT: PLUS $plus_indent space=$space seq_start=$seq_start");
+
+            if ($plus_indent > 0) {
+                if ($exp ne 'NODE') {
+                    # wrong indentation
+                    die "Expected $exp";
+                }
+            }
+            elsif ($plus_indent < 0) {
+                my $count = $self->reset_indent($space);
+                if ($exp eq 'NODE' and $count == 1 and $seq_start and $self->events->[-2] eq 'MAP') {
+                    $count--;
+                }
+                for (1 .. $count) {
+                    if ($exp eq 'NODE') {
+                        $self->event_value(':');
+                    }
+                    die "Unexpected" unless $self->end_node;
+                    $exp = $self->events->[-1];
+                    TRACE and $self->debug_events;
+                    $got_tag_anchor = 0;
+                }
+                TRACE and $self->info("Removed $count nodes");
+            }
+            else {
+                my $last2 = $self->events->[-2];
                 if ($exp eq 'NODE' and $last2 eq 'SEQ') {
                     $self->event_value(':');
                     die "Unexpected" unless $self->end_node;
@@ -285,25 +268,29 @@ sub parse_document {
                 }
                 $exp = $self->events->[-1];
             }
-        }
 
-        if ($exp eq 'SEQ' and not $seq_start) {
-            my $ui = $self->in_unindented_seq;
-            if ($ui) {
-                TRACE and $self->info("In unindented sequence");
-                $self->end('SEQ');
-                TRACE and $self->debug_events;
-                $exp = $self->events->[-1];
+            if ($exp eq 'SEQ' and not $seq_start) {
+                my $ui = $self->in_unindented_seq;
+                if ($ui) {
+                    TRACE and $self->info("In unindented sequence");
+                    $self->end('SEQ');
+                    TRACE and $self->debug_events;
+                    $exp = $self->events->[-1];
+                }
+                else {
+                    die "Expected sequence item";
+                }
             }
-            else {
-                die "Expected sequence item";
-            }
-        }
-        TRACE and $self->info("Expecting $exp");
 
-        if ($full_line) {
             $self->indent($space);
+            $offset = $space;
         }
+        else {
+            TRACE and $self->info("ON SAME LINE: INDENT");
+            $offset = $self->indent;
+        }
+
+        TRACE and $self->info("Expecting $exp");
 
         my $found_tag_anchor;
         if ($exp eq 'NODE' and $got_tag_anchor < 3) {
@@ -318,19 +305,19 @@ sub parse_document {
                     $start_line = 0;
                     next;
                 }
-                elsif ($$yaml =~ s/\A //) {
+                elsif ($$yaml =~ s/\A$WS+//) {
                     # expect map key or scalar on same line
                     $found_tag_anchor = 1;
                 }
             }
         }
 
-        my $offset = $full_line ? $space : $self->indent + $space;
         my $res;
         if ($exp eq 'NODE') {
             $res = $self->parse_node(
                 start_line => $start_line,
                 tag_anchor => $found_tag_anchor,
+#                map => ($full_line or $self->events->[-2] ne 'MAP'),
             );
         }
         elsif ($exp eq 'MAP') {
@@ -341,7 +328,7 @@ sub parse_document {
             $res or die "Expected map item";
         }
         elsif ($exp eq 'SEQ') {
-            $res = $res = $self->parse_seq()
+            $res = $self->parse_seq()
                 or die "Expected sequence item";
         }
         elsif ($exp eq 'COMPLEX') {
@@ -358,20 +345,30 @@ sub parse_document {
             die "Unexpected exp $exp";
         }
 
+        my $new_offset = $offset;
+#        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$offset], ['offset']);
         unless (exists $res->{eol}) {
             my $eol = $self->parse_eol;
             $res->{eol} = $eol;
             unless ($eol) {
-                $$yaml =~ s/\A$WS//;
+                $$yaml =~ s/\A($WS+)//
+                    and $new_offset = $offset + length $1;
             }
         }
+#        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$new_offset], ['new_offset']);
         my $got = $res->{name};
         TRACE and $self->got("GOT $got");
-        $next_full_line = 0;
         if ($res->{eol}) {
             $next_full_line = 1;
         }
+        else {
+            $next_full_line = 0;
+            if ($got ne 'NODE') {
+                $new_offset += 1;
+            }
+        }
 
+        $self->indent($new_offset);
         if ($got eq "MAPKEY") {
             if ($exp eq 'MAP') {
                 TRACE and $self->info("Already in MAP");
@@ -382,18 +379,10 @@ sub parse_document {
             }
             else {
                 $self->begin("MAP", $offset);
-                $got_tag_anchor = 0;
             }
-            $self->inc_indent(1);
-            if (defined(my $alias = $res->{alias})) {
-                $self->event('=ALI', "*$alias");
-            }
-            elsif (defined(my $value = $res->{value})) {
-                $self->event_value($value,
-                    tag => $res->{tag},
-                    anchor => $res->{anchor},
-                );
-            }
+            $self->res_to_event($res);
+#            warn __PACKAGE__.':'.__LINE__.": !!!!! $new_offset === $offset + 1 ?\n";
+#            $self->begin('NODE', $new_offset);
             $self->begin('NODE', $offset + 1);
         }
         elsif ($got eq 'SEQSTART') {
@@ -402,10 +391,8 @@ sub parse_document {
             }
             else {
                 $self->begin("SEQ", $offset);
-                $got_tag_anchor = 0;
             }
-            $self->inc_indent($seq_start);
-            $self->begin('NODE', $offset + $seq_start);
+            $self->begin('NODE', $new_offset);
         }
         elsif ($got eq 'COMPLEX') {
             if ($exp eq 'MAP') {
@@ -418,39 +405,41 @@ sub parse_document {
             }
             else {
                 $self->begin("COMPLEX", $offset);
-                $got_tag_anchor = 0;
             }
-            $self->inc_indent($res->{eol} ? 1 : 2);
-            $self->begin('NODE', $offset + ($res->{eol} ? 1 : 2));
+            $self->begin('NODE', $new_offset);
         }
         elsif ($got eq 'COMPLEXCOLON') {
             $self->events->[-1] = 'MAP';
-            $self->inc_indent($res->{eol} ? 1 : 2);
-            $self->begin('NODE', $offset + ($res->{eol} ? 1 : 2));
+            $self->begin('NODE', $new_offset);
         }
         elsif ($got eq 'NODE') {
-            $next_full_line = 1;
-            if (defined(my $alias = $res->{alias})) {
-                $self->event('=ALI', "*$alias");
-            }
-            elsif (defined(my $value = $res->{value})) {
-                $self->event_value($value,
-                    tag => $res->{tag},
-                    anchor => $res->{anchor},
-                );
-            }
-            $got_tag_anchor = 0;
+            $self->res_to_event($res);
             $self->pop_events;
         }
         else {
             die "Unexpected res $got";
         }
+        $got_tag_anchor = 0;
 
     }
 
     TRACE and $self->debug_events;
 
-    return $end;
+    return 0;
+}
+
+sub res_to_event {
+    my ($self, $res) = @_;
+    if (defined(my $alias = $res->{alias})) {
+        $self->event('=ALI', "*$alias");
+    }
+    elsif (defined(my $value = $res->{value})) {
+        my $style = $res->{style} // ':';
+        $self->event_value($style . $value,
+            tag => $res->{tag},
+            anchor => $res->{anchor},
+        );
+    }
 }
 
 sub multi_val {
@@ -500,40 +489,6 @@ sub reset_indent {
         $i--;
     }
     return $count;
-}
-
-sub next_indent {
-    my ($self, %args) = @_;
-    TRACE and warn "=== next_indent()\n";
-    my $yaml = $self->yaml;
-
-    my $space = 0;
-    if ($$yaml =~ s/\A( *)//m) {
-        $space = length $1;
-    }
-
-    return $space;
-}
-
-sub next_indent_line {
-    my ($self, %args) = @_;
-    TRACE and warn "=== next_indent_line()\n";
-    my $yaml = $self->yaml;
-
-    my $indent = $self->offset->[ $self->level ];
-    if ($self->in('NODE')) {
-        if ($self->events->[-2] eq 'SEQ') {
-            $indent = $self->offset->[-2];
-        }
-    }
-
-    my $space = 0;
-    if ($$yaml =~ s/\A( *)//m) {
-        $space = length $1;
-    }
-    my $plus_indent = $space - $indent;
-
-    return ($space, $plus_indent);
 }
 
 sub parse_node {
@@ -602,22 +557,22 @@ sub parse_tag_anchor {
     my $check_tag = $args{tag} // 1;
     my ($tag, $anchor);
     if ($check_anchor and $check_tag) {
-        if ($$yaml =~ s/\A($full_tag_re)(?: +&($anchor_re))?(?= |\n)//) {
+        if ($$yaml =~ s/\A($full_tag_re)(?:$WS+&($anchor_re))?(?=$WS|\n)//) {
             $tag = $1;
             $anchor = $2;
         }
-        elsif ($$yaml =~ s/\A&($anchor_re)(?: +($full_tag_re))?(?= |\n)//) {
+        elsif ($$yaml =~ s/\A&($anchor_re)(?:$WS+($full_tag_re))?(?=$WS|\n)//) {
             $anchor = $1;
             $tag = $2;
         }
     }
     elsif ($check_tag) {
-        if ($$yaml =~ s/\A($full_tag_re)(?= |\n)//) {
+        if ($$yaml =~ s/\A($full_tag_re)(?=$WS|\n)//) {
             $tag = $1;
         }
     }
     elsif ($check_anchor) {
-        if ($$yaml =~ s/\A&($anchor_re)(?= |\n)//) {
+        if ($$yaml =~ s/\A&($anchor_re)(?=$WS|\n)//) {
             $anchor = $1;
         }
     }
@@ -686,12 +641,13 @@ sub parse_plain_multi {
     my ($self) = @_;
     my $yaml = $self->yaml;
     my @multi;
-    my $last_offset = $self->offset->[ $self->level ];
-    my $start_space = $last_offset;
+    my $indent = $self->offset->[ -2 ] + 1;
+    my $start_space = $indent;
     {
         my $res = {
             name => 'NODE',
             eol => 1,
+            style => ':',
         };
         my $re = $plain_value_start_re;
         while (1) {
@@ -706,7 +662,7 @@ sub parse_plain_multi {
             if ($$yaml =~ s/\A#.*//) {
                 last;
             }
-            last if $space < $last_offset;
+            last if $space < $indent;
             $$yaml =~ s/\A *//;
             my $end;
             if ($$yaml =~ s/\A\n//) {
@@ -728,7 +684,7 @@ sub parse_plain_multi {
             last if $end;
         }
         my $string = $self->multi_val(\@multi);
-        $res->{value} = ":$string";
+        $res->{value} = $string;
         return $res;
     }
 }
@@ -787,7 +743,8 @@ sub parse_map {
             $anchor = $self->anchor and $self->anchor(undef);
             $tag = $self->tag and $self->tag(undef);
         }
-        $res->{value} = "$key_style$key";
+        $res->{value} = $key;
+        $res->{style} = $key_style;
         $res->{tag} = $tag,
         $res->{anchor} = $anchor;
     }
@@ -866,8 +823,7 @@ sub parse_quoted {
             $first = 0;
             last if $last;
         }
-        $self->event_value($quote . $quoted);
-        return { name => 'NODE' };
+        return { name => 'NODE', style => $quote, value => $quoted };
     }
     return 0;
 }
@@ -908,8 +864,7 @@ sub parse_block_scalar {
         $content =~ s/\\/\\\\/g;
         $content =~ s/\n/\\n/g;
         $content =~ s/\t/\\t/g;
-        $self->event_value($type . $content);
-        return { name => 'NODE', eol => 1 };
+        return { name => 'NODE', eol => 1, value => $content, style => $type };
     }
     return 0;
 }
@@ -1032,8 +987,8 @@ sub parse_multi {
 sub parse_eol {
     my ($self) = @_;
     my $yaml = $self->yaml;
-    $$yaml =~ s/\A +#.*//;
-    return $$yaml =~ s/\A\n// ? 1 : 0;
+    $$yaml =~ s/\A$WS+#.*//;
+    return $$yaml =~ s/\A$WS*\n// ? 1 : 0;
 }
 
 sub in_unindented_seq {
@@ -1126,13 +1081,6 @@ sub end_node {
 sub end_document {
     my ($self, %args) = @_;
     my $explicit = $args{explicit};
-    my $empty = $args{empty};
-    while (@{ $self->events }) {
-        last unless $self->end_node;
-    }
-    if ($empty and not $self->in('DOC')) {
-        return;
-    }
     if ($explicit) {
         $self->end("DOC", "...");
     }
