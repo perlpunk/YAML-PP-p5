@@ -57,36 +57,41 @@ sub parse_stream {
     TRACE and warn "=== parse_stream()\n";
     my ($self) = @_;
     my $yaml = $self->yaml;
-    $self->begin("STR", -1);
+    $self->begin('STR', -1);
 
     TRACE and $self->debug_yaml;
 
-    my $need_explicit_start = 0;
+    my $exp_start = 0;
     while (length $$yaml) {
-        my $head = $self->parse_document_head(explicit => $need_explicit_start);
-        $need_explicit_start = 0;
+        $self->parse_empty;
+        my $head = $self->parse_document_head();
+        my ($start, $start_line) = $self->parse_document_start;
+        if (($head or $exp_start) and not $start) {
+            die "Expected ---";
+        }
+        $exp_start = 0;
+        $self->parse_empty;
         last unless length $$yaml;
 
-        my $start_line = 0;
-        if ($head) {
-            $start_line = $self->parse_document_start;
+        if ($start) {
+            $self->begin('DOC', -1, "---");
         }
-        elsif (not $self->level) {
-            $self->begin("DOC", -1);
+        else {
+            $self->begin('DOC', -1);
         }
 
         if ($self->parse_document(start_line => $start_line)) {
-            $self->end_document(explicit => 1);
-            next;
+            $self->end('DOC', "...");
+        }
+        else {
+            $exp_start = 1;
+            $self->end('DOC');
         }
 
-        $need_explicit_start = 1;
-        $self->end_document(explicit => 0);
-        $self->parse_empty;
-
     }
+    $self->parse_empty;
 
-    $self->end("STR");
+    $self->end('STR');
 }
 
 sub parse_document_start {
@@ -94,62 +99,42 @@ sub parse_document_start {
     my ($self) = @_;
     my $yaml = $self->yaml;
 
-    if ($$yaml =~ s/\A---(?= |$)//m) {
+    my ($start, $start_line) = (0, 0);
+    if ($$yaml =~ s/\A---(?=$WS|$)//m) {
+        $start = 1;
         my $eol = $self->parse_eol;
-        if ($self->level > 1) {
-
-            my $off = $self->offset;
-            my $i = $#$off;
-            while ($i > 1) {
-                die "Unexpected" unless $self->end_node;
-                $i--;
-            }
-            $self->indent($off->[ $i ]);
-
-            $self->end("DOC");
-        }
-        elsif ($self->level) {
-            $self->end("DOC");
-        }
-        $self->begin("DOC", -1, "---");
         unless ($eol) {
-            if ($$yaml =~ s/\A +//) {
-                return 1;
+            if ($$yaml =~ s/\A$WS+//) {
+                $start_line = 1;
             }
-            warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
-            die "Unexpected content after ---";
+            else {
+                warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
+                die "Unexpected content after ---";
+            }
         }
     }
-    return;
+    return ($start, $start_line);
 }
 
 sub parse_document_head {
     TRACE and warn "=== parse_document_head()\n";
-    my ($self, %args) = @_;
+    my ($self) = @_;
     my $yaml = $self->yaml;
     my $head;
-    my $need_explicit = $args{explicit};
     while (length $$yaml) {
         $self->parse_empty;
         if ($$yaml =~ s/\A\s*%YAML ?1\.2\s*//) {
-            $need_explicit = 1;
+            $head = 1;
             next;
         }
         if ($$yaml =~ s/\A\s*%TAG +(![a-z]*!|!) +(tag:\S+|![a-z][a-z-]*)\s*//) {
-            $need_explicit = 1;
+            $head = 1;
             my $tag_alias = $1;
             my $tag_url = $2;
             $self->tagmap->{ $tag_alias } = $tag_url;
             next;
         }
-        if ($$yaml =~ m/\A---(?= |$)/m) {
-            $head = "---";
-            last;
-        }
         last;
-    }
-    if ($need_explicit and not $head) {
-        die "Expected ---";
     }
     return $head;
 }
@@ -192,10 +177,11 @@ sub parse_document {
         if ($full_line) {
             $self->parse_empty;
 
+            my $level = $self->level;
             my $eoyaml = not length $$yaml;
             my $end = $eoyaml ? 0 : $self->parse_document_end;
             my $start = ($eoyaml or $end) ? 0 : $$yaml =~ m/\A---(?= |$)/m;
-            if ($eoyaml or $end or $start) {
+            if ($eoyaml or $end or $start or $level < 2) {
                 # end of YAML
                 while ($self->level > 1) {
                     TRACE and $self->debug_events;
@@ -210,10 +196,6 @@ sub parse_document {
                     $exp = $self->events->[-1];
                 }
                 return $end ? 1 : 0;
-            }
-
-            if ($self->level < 2) {
-                return 0;
             }
 
             my $space = 0;
@@ -378,7 +360,7 @@ sub parse_document {
                 $self->event_value(':');
             }
             else {
-                $self->begin("MAP", $offset);
+                $self->begin('MAP', $offset);
             }
             $self->res_to_event($res);
 #            warn __PACKAGE__.':'.__LINE__.": !!!!! $new_offset === $offset + 1 ?\n";
@@ -390,7 +372,7 @@ sub parse_document {
                 TRACE and $self->info("Already in SEQ");
             }
             else {
-                $self->begin("SEQ", $offset);
+                $self->begin('SEQ', $offset);
             }
             $self->begin('NODE', $new_offset);
         }
@@ -404,7 +386,7 @@ sub parse_document {
                 $self->event_value(':');
             }
             else {
-                $self->begin("COMPLEX", $offset);
+                $self->begin('COMPLEX', $offset);
             }
             $self->begin('NODE', $new_offset);
         }
@@ -1076,17 +1058,6 @@ sub end_node {
         return $last;
     }
     return;
-}
-
-sub end_document {
-    my ($self, %args) = @_;
-    my $explicit = $args{explicit};
-    if ($explicit) {
-        $self->end("DOC", "...");
-    }
-    else {
-        $self->end("DOC");
-    }
 }
 
 sub push_events {
