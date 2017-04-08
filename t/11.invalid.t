@@ -13,7 +13,7 @@ $|++;
 
 my $extradir = "$Bin/invalid";
 opendir my $dh, $extradir or die $!;
-my @dirs = map { "$extradir/$_" } grep { m/^[A-Z0-9]{3,4}\z/ } readdir $dh;
+my @dirs = map { "$extradir/$_" } grep { m/^i[A-Z0-9]{3}\z/ } readdir $dh;
 closedir $dh;
 
 @dirs = sort @dirs;

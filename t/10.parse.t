@@ -17,7 +17,7 @@ my @dirs = map { "$datadir/$_" } grep { m/^[A-Z0-9]{4}\z/ } readdir $dh;
 closedir $dh;
 my $extradir = "$Bin/valid";
 opendir $dh, $extradir or die $!;
-push @dirs, map { "$extradir/$_" } grep { m/^[A-Z0-9]{3,4}\z/ } readdir $dh;
+push @dirs, map { "$extradir/$_" } grep { m/^v[A-Z0-9]{3}\z/ } readdir $dh;
 closedir $dh;
 
 @dirs = sort @dirs;
