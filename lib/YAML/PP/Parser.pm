@@ -182,19 +182,7 @@ sub parse_document {
             my $end = $eoyaml ? 0 : $self->parse_document_end;
             my $start = ($eoyaml or $end) ? 0 : $$yaml =~ m/\A---(?= |$)/m;
             if ($eoyaml or $end or $start or $level < 2) {
-                # end of YAML
-                while ($self->level > 1) {
-                    TRACE and $self->debug_events;
-                    if ($exp eq 'NODE') {
-                        $self->event_value(':');
-                    }
-                    elsif ($exp eq 'COMPLEX') {
-                        $self->event_value(':');
-                    }
-                    TRACE and $self->debug_events;
-                    die "Unexpected" unless $self->end_node;
-                    $exp = $self->events->[-1];
-                }
+                $self->remove_nodes($self->level);
                 return $end ? 1 : 0;
             }
 
@@ -224,31 +212,27 @@ sub parse_document {
                     die "Expected $exp";
                 }
             }
-            elsif ($plus_indent < 0) {
-                my $count = $self->reset_indent($space);
-                if ($exp eq 'NODE' and $count == 1 and $seq_start and $self->events->[-2] eq 'MAP') {
-                    $count--;
-                }
-                for (1 .. $count) {
-                    if ($exp eq 'NODE') {
-                        $self->event_value(':');
-                    }
-                    die "Unexpected" unless $self->end_node;
-                    $exp = $self->events->[-1];
-                    TRACE and $self->debug_events;
-                    $got_tag_anchor = 0;
-                }
-                TRACE and $self->info("Removed $count nodes");
-            }
             else {
-                my $last2 = $self->events->[-2];
-                if ($exp eq 'NODE' and $last2 eq 'SEQ') {
-                    $self->event_value(':');
-                    die "Unexpected" unless $self->end_node;
-                    TRACE and $self->debug_events;
+                my $remove_nodes = 0;
+                if ($plus_indent < 0) {
+                    my $count = $self->reset_indent($space);
+                    # unindented sequence starts
+                    if ($exp eq 'NODE' and $count == 1 and $seq_start and $self->events->[-2] eq 'MAP') {
+                    }
+                    else {
+                        $remove_nodes = $count;
+                    }
+                }
+                else {
+                    my $last2 = $self->events->[-2];
+                    if ($exp eq 'NODE' and $last2 eq 'SEQ') {
+                        $remove_nodes = 1;
+                    }
+                }
+                if ($remove_nodes) {
+                    $exp = $self->remove_nodes($remove_nodes);
                     $got_tag_anchor = 0;
                 }
-                $exp = $self->events->[-1];
             }
 
             if ($exp eq 'SEQ' and not $seq_start) {
@@ -264,6 +248,12 @@ sub parse_document {
                 }
             }
 
+            my $test = $self->indent;
+            if ($test != $space) {
+                if ($exp ne 'NODE') {
+                    die "Expected $exp";
+                }
+            }
             $self->indent($space);
             $offset = $space;
         }
@@ -422,6 +412,21 @@ sub res_to_event {
             anchor => $res->{anchor},
         );
     }
+}
+
+sub remove_nodes {
+    my ($self, $count) = @_;
+    my $exp = $self->events->[-1];
+    for (1 .. $count) {
+        if ($exp eq 'NODE' or $exp eq 'COMPLEX') {
+            $self->event_value(':');
+        }
+        $self->end_node;
+        $exp = $self->events->[-1];
+        TRACE and $self->debug_events;
+    }
+    TRACE and $self->info("Removed $count nodes");
+    return $exp;
 }
 
 sub multi_val {
