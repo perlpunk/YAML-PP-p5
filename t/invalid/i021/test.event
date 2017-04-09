@@ -3,5 +3,5 @@
 +MAP
 =VAL :foo
 +SEQ
-=VAL bar
-=VAL baz
+=VAL :bar
+=VAL :baz
