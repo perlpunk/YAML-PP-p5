@@ -161,18 +161,18 @@ sub parse_document {
 
     my $next_full_line = 1;
     my $got_tag_anchor = 0;
-    my @expected = ([ 'NODE' => 0 ]);
+    my $new_node = [ 'NODE' => 0 ];
     while (1) {
         if ($ENV{YAML_PP_DELAY}) {
             select undef, undef, undef, $ENV{YAML_PP_DELAY};
         }
 
         TRACE and $self->info("----------------------- LOOP");
-        TRACE and $self->info("EXPECTED: $#expected ($expected[0]->[0] $expected[0]->[1])") if @expected;
+        TRACE and $self->info("EXPECTED: (@$new_node)") if $new_node;
         TRACE and $self->debug_yaml;
         TRACE and $self->debug_events;
 
-        my $exp = @expected ? $expected[0]->[0] : $self->events->[-1];
+        my $exp = $self->events->[-1];
         my $offset;
         my $full_line = $next_full_line;
         $next_full_line = 1;
@@ -183,9 +183,9 @@ sub parse_document {
             my $eoyaml = not length $$yaml;
             my $end = $eoyaml ? 0 : $self->parse_document_end;
             my $start = ($eoyaml or $end) ? 0 : $$yaml =~ m/\A---(?= |$)/m;
-            if ($eoyaml or $end or $start or ($level < 2 and not @expected)) {
-                if (@expected) {
-                    pop @expected;
+            if ($eoyaml or $end or $start or ($level < 2 and not $new_node)) {
+                if ($new_node) {
+                    undef $new_node;
                     $self->event_value(':');
                 }
                 $self->remove_nodes($self->level);
@@ -198,7 +198,7 @@ sub parse_document {
             }
 
             my $indent;
-            if (@expected) {
+            if ($new_node) {
                 if ($self->events->[-1] eq 'SEQ') {
                     $indent = $self->offset->[-1];
                 }
@@ -219,43 +219,41 @@ sub parse_document {
             TRACE and $self->info("INDENT: PLUS $plus_indent space=$space seq_start=$seq_start indent=$indent");
 
             if ($plus_indent > 0) {
-                if ($exp ne 'NODE') {
+                if (not $new_node) {
                     # wrong indentation
                     die "Expected $exp";
                 }
             }
             else {
                 my $remove_nodes = 0;
+                my $remove_new_node = 0;
                 if ($plus_indent < 0) {
-                    my $count = $self->reset_indent($space);
-                    $remove_nodes = $count;
+                    $remove_nodes = $self->reset_indent($space);
                     # unindented sequence starts
-                    if ($exp eq 'NODE' and $count == 0 and $seq_start and $self->events->[-1] eq 'MAP') {
-                    }
-                    else {
-                        if ($exp eq 'NODE') {
-                            $remove_nodes++;
+                    if ($new_node) {
+                        if ($remove_nodes == 0 and $seq_start and $self->events->[-1] eq 'MAP') {
+                        }
+                        else {
+                            $remove_new_node = 1;
                         }
                     }
                 }
                 else {
-                    my $last2 = $self->events->[-1];
-                    if ($exp eq 'NODE' and $last2 eq 'SEQ') {
-                        $remove_nodes = 1;
+                    if ($new_node and $exp eq 'SEQ') {
+                        $remove_new_node = 1;
                     }
                 }
-                if ($remove_nodes) {
-                    if ($exp eq 'NODE') {
-                        pop @expected;
+                if ($remove_new_node) {
+                        undef $new_node;
                         $self->event_value(':');
-                        $remove_nodes--;
-                    }
+                        $got_tag_anchor = 0;
+                }
+                if ($remove_nodes) {
                     $exp = $self->remove_nodes($remove_nodes);
-                    $got_tag_anchor = 0;
                 }
             }
 
-            if ($exp eq 'SEQ' and not $seq_start) {
+            if (not $new_node and $exp eq 'SEQ' and not $seq_start) {
                 my $ui = $self->in_unindented_seq;
                 if ($ui) {
                     TRACE and $self->info("In unindented sequence");
@@ -268,7 +266,7 @@ sub parse_document {
                 }
             }
 
-            if ($exp ne 'NODE') {
+            if (not $new_node) {
                 if ($self->offset->[-1] != $space) {
                     die "Expected $exp";
                 }
@@ -277,17 +275,17 @@ sub parse_document {
         }
         else {
             TRACE and $self->info("ON SAME LINE: INDENT");
-            unless (@expected) {
-                die "Unexpected \@expected is empty";
+            unless ($new_node) {
+                die "Unexpected $new_node is undef";
             }
-            $offset = $expected[0]->[1];
+            $offset = $new_node->[1];
             TRACE and $self->debug_events;
         }
 
         TRACE and $self->info("Expecting $exp");
 
         my $found_tag_anchor;
-        if ($exp eq 'NODE' and $got_tag_anchor < 3) {
+        if ($new_node and $got_tag_anchor < 3) {
             my ($tag, $anchor) = $self->parse_tag_anchor(
                 tag => (not defined $self->tag),
                 anchor => (not defined $self->anchor),
@@ -307,7 +305,7 @@ sub parse_document {
         }
 
         my $res;
-        if ($exp eq 'NODE') {
+        if ($new_node) {
             $res = $self->parse_node(
                 start_line => $start_line,
                 tag_anchor => $found_tag_anchor,
@@ -354,54 +352,43 @@ sub parse_document {
         }
         $next_full_line = $res->{eol} ? 1 : 0;
 
-        my $new_offset = $offset + 1;
+        my $new_offset = $offset + 1 + $ws;
         if ($got eq "MAPKEY") {
-            if ($exp eq 'MAP') {
-                TRACE and $self->info("Already in MAP");
+            if ($new_node) {
+                $self->begin('MAP', $offset);
             }
             elsif ($exp eq 'COMPLEX') {
                 $self->events->[-1] = 'MAP';
                 $self->event_value(':');
             }
-            else {
-                pop @expected;
-                $self->begin('MAP', $offset);
-            }
             $self->res_to_event($res);
-            push @expected, [ 'NODE' => $new_offset ];
+            $new_node = [ 'NODE' => $new_offset ];
         }
         elsif ($got eq 'SEQSTART') {
-            if ($exp eq 'SEQ') {
-                TRACE and $self->info("Already in SEQ");
-            }
-            else {
-                pop @expected;
+            if ($new_node) {
                 $self->begin('SEQ', $offset);
             }
-            push @expected, [ 'NODE' => $new_offset + $ws ];
+            $new_node = [ 'NODE' => $new_offset ];
         }
         elsif ($got eq 'COMPLEX') {
-            if ($exp eq 'MAP') {
-                TRACE and $self->info("Already in MAP/COMPLEX");
+            if ($new_node) {
+                $self->begin('COMPLEX', $offset);
+            }
+            elsif ($exp eq 'MAP') {
                 $self->events->[-1] = 'COMPLEX';
             }
             elsif ($exp eq 'COMPLEX') {
-                TRACE and $self->info("Already in COMPLEX");
                 $self->event_value(':');
             }
-            else {
-                pop @expected;
-                $self->begin('COMPLEX', $offset);
-            }
-            push @expected, [ 'NODE' => $new_offset + $ws ];
+            $new_node = [ 'NODE' => $new_offset ];
         }
         elsif ($got eq 'COMPLEXCOLON') {
             $self->events->[-1] = 'MAP';
-            push @expected, [ 'NODE' => $new_offset + $ws ];
+            $new_node = [ 'NODE' => $new_offset ];
         }
         elsif ($got eq 'NODE') {
             $self->res_to_event($res);
-            pop @expected;
+            undef $new_node;
         }
         else {
             die "Unexpected res $got";
