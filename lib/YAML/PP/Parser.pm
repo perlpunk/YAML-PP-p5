@@ -842,146 +842,140 @@ sub parse_block_scalar {
     TRACE and warn "=== parse_block_scalar()\n";
     my ($self) = @_;
     my $yaml = $self->yaml;
-    if ($$yaml =~ s/\A([|>])([1-9]\d*)?([+-]?)( +#.*)?\n//) {
-        my $type = $1;
-        my $indent = $2;
-        if (defined $indent) {
-            die "Not Implemented: Block Scalar Explicit Indent";
-        }
-        my $chomp = $3;
-        my %args = (block=> 1);
-        if ($type eq '>') {
-            $args{block}= 0;
-            $args{folded}= 1;
-        }
-        if ($chomp eq '+') {
-            $args{keep} = 1;
-        }
-        elsif ($chomp eq '-') {
-            $args{trim} = 1;
-        }
-        my $content = $self->parse_multi(%args);
-        $content =~ s/\\/\\\\/g;
-        $content =~ s/\n/\\n/g;
-        $content =~ s/\t/\\t/g;
-        return { name => 'NODE', eol => 1, value => $content, style => $type };
+    unless ($$yaml =~ s/\A([|>])([1-9]\d*)?([+-]?)( +#.*)?\n//) {
+        return 0;
     }
-    return 0;
-}
+    my $block_type = $1;
+    my $exp_indent = $2;
+    my $chomp = $3;
+    if (defined $exp_indent) {
+        die "Not Implemented: Block Scalar Explicit Indent";
+    }
+    my ($folded, $keep, $trim);
+    if ($block_type eq '>') {
+        $folded = 1;
+    }
+    if ($chomp eq '+') {
+        $keep = 1;
+    }
+    elsif ($chomp eq '-') {
+        $trim = 1;
+    }
 
-sub parse_multi {
-    TRACE and warn "=== parse_multi()\n";
-    my ($self, %args) = @_;
-    my $trim = $args{trim};
-    my $block = $args{block};
-    my $folded = $args{folded};
-    my $keep = $args{keep};
-    my $yaml = $self->yaml;
-#    warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
-    my $indent = $self->offset->[-1];
-#    warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$indent], ['indent']);
-    if ($indent < 0) {
-        $indent = 0;
-    }
-    TRACE and $self->debug_events;
-    my $content = '';
-    my $fold_indent = 0;
-    my $fold_indent_str = '';
+    my $indent = $self->offset->[-1] + 1;
+    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$indent], ['indent']);
+    my $indent_re = $WS ."{$indent}";
+    my @lines;
     my $got_indent = 0;
-    my $trailing_comment = 0;
+    TRACE and local $Data::Dumper::Useqq = 1;
+    my $type;
     while (length $$yaml) {
-
-#        last if $$yaml =~ m/\A--- /;
-        last if $$yaml =~ m/\A\.\.\. ?/;
-        my $indent_re = "[ ]{$indent}";
-        my $fold_indent_re = "[ ]{$fold_indent}";
-        my $less_indent = $indent + $fold_indent - 1;
-
-        unless ($got_indent) {
-            $$yaml =~ s/\A +$//m;
-            if ($$yaml =~ m/\A$indent_re( *)\S/) {
-                $fold_indent += length $1;
-                $got_indent = 1;
-                $fold_indent_re = "[ ]{$fold_indent}";
-                $less_indent = $indent + $fold_indent - 1;
-            }
+        TRACE and warn __PACKAGE__.':'.__LINE__.": RE: $indent_re\n";
+        TRACE and $self->debug_yaml;
+        my $pre;
+        my $space;
+        my $length;
+        last if $$yaml =~ m/\A---(?= |$)/m;
+        last if $$yaml =~ m/\A\.\.\.(?= |$)/m;
+        if ($$yaml =~ s/\A($indent_re)($WS*)//) {
+            $pre = $1;
+            $space = $2;
+            $length = length $space;
         }
-        elsif ($less_indent > 0) {
-#            warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$less_indent], ['less_indent']);
-#            if ($$yaml =~ s/\A {1,$less_indent}#.*$//m) {
-#                warn __PACKAGE__.':'.__LINE__.": !!!!!!!!!!!!!!! COMMENT\n";
-#                $trailing_comment = 1;
-#            }
-            # strip less indented comments
-            # might need more work
-            if ($$yaml =~ s/\A {1,$less_indent}#.*\n//) {
-                next;
-            }
-            $$yaml =~ s/\A {1,$less_indent}$//m;
-        }
-#        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$indent_re], ['indent_re']);
-#        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$fold_indent_re], ['fold_indent_re']);
-        unless ($$yaml =~ s/\A$indent_re$fold_indent_re//) {
-            unless ($$yaml =~ m/\A *$/m) {
-#                warn __PACKAGE__.':'.__LINE__.": !!! END\n";
-                last;
-            }
-        }
-
-
-        $$yaml =~ s/^(.*)(\n|\z)//;
-        my $line = $1;
-#        $line =~ s/ # .*\z//;
-
-        my $end = $2;
-        TRACE and warn __PACKAGE__.':'.__LINE__.": =============== LINE: '$line' ('$fold_indent')\n";
-        if (not length $line) {
-            $content .= "\n";
-        }
-        elsif ($line =~ m/^ +\z/ and not $block) {
-            $content .= "\n";
-        }
-        else {
-
-            my $change = 0;
-            my $local_indent;
-            if ($line =~ m/^( +)/) {
-                $local_indent = length $1;
-            }
-
-            if ($block) {
-                $content .= $line . $end;
-            }
-            else {
-                if ($local_indent) {
-                    $content .= "\n";
-                }
-                elsif (length $content and $content !~ m/\n\z/) {
-                    $content .= ' ';
-                }
-                $content .= $line;
-            }
-        }
-        if ($indent == 0 and $$yaml =~ m/\A\S/) {
+        elsif ($$yaml =~ m/\A$WS*#.*\n/) {
             last;
         }
+        elsif ($$yaml =~ s/\A($WS*)\n//) {
+            $pre = $1;
+            $space = '';
+            $type = 'EMPTY';
+            push @lines, [$type => $pre, $space];
+            next;
+        }
+        else {
+            last;
+        }
+        if ($$yaml =~ s/\A\n//) {
+            $type = 'EMPTY';
+            if ($got_indent) {
+                push @lines, [$type => $pre, $space];
+            }
+            else {
+                push @lines, [$type => $pre . $space, ''];
+            }
+            next;
+        }
+        if ($length and not $got_indent) {
+            $indent += $length;
+            $indent_re = $WS . "{$indent}";
+            $pre = $space;
+            $space = '';
+            $got_indent = 1;
+        }
+        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
+        if ($$yaml =~ s/\A(.*)\n//) {
+            my $value = $1;
+            $type = length $space ? 'MORE' : 'CONTENT';
+            push @lines, [ $type => $pre, $space . $value ];
+        }
+
     }
-    return $content unless (length $content);
-#    unless ($trailing_comment) {
-#    }
-    if ($block) {
-        $content =~ s/\n+\z//;
+    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@lines], ['lines']);
+    my $string = '';
+    if (not $keep) {
+        # remove trailing empty lines
+        while (@lines) {
+            if ($lines[-1]->[0] ne 'EMPTY') {
+                last;
+            }
+            pop @lines;
+        }
     }
-    elsif ($trim) {
-        $content =~ s/\n+\z//;
+    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@lines], ['lines']);
+    my $prev = 'START';
+    for my $i (0 .. $#lines) {
+        my $item = $lines[ $i ];
+        my ($type, $indent, $line) = @$item;
+        TRACE and printf STDERR "=========== %7s '%s' '%s'\n", @$item;
+        if ($folded) {
+
+            if ($type eq 'EMPTY') {
+                if ($prev eq 'MORE') {
+                    $type = 'PARAGRAPH';
+                }
+                $string .= "\n";
+            }
+            elsif ($type eq 'CONTENT') {
+                if ($prev eq 'CONTENT') {
+                    $string .= ' ';
+                }
+                $string .= $line;
+                if ($i == $#lines) {
+                    $string .= "\n";
+                }
+            }
+            elsif ($type eq 'MORE') {
+                if ($prev eq 'EMPTY' or $prev eq 'CONTENT') {
+                    $string .= "\n";
+                }
+                $string .=  $line . "\n";
+            }
+            $prev = $type;
+
+        }
+        else {
+            $string .= $line . "\n";
+        }
+        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$string], ['string']);
     }
-    elsif ($folded) {
-        $content =~ s/\n\z//;
+    if ($trim) {
+        $string =~ s/\n$//;
     }
-    unless ($trim) {
-        $content .= "\n" if $content !~ m/\n\z/;
-    }
-    return $content;
+    $string =~ s/\\/\\\\/g;
+    $string =~ s/\n/\\n/g;
+    $string =~ s/\t/\\t/g;
+
+    return { name => 'NODE', eol => 1, value => $string, style => $block_type };
 }
 
 sub parse_eol {
@@ -1169,7 +1163,10 @@ sub debug_yaml {
     my ($self) = @_;
     my $yaml = $self->yaml;
     if (length $$yaml) {
-        $self->note("YAML:\n$$yaml\nEOYAML");
+        my $output = $$yaml;
+        $output =~ s/( +)$/'·' x length $1/gem;
+        $output =~ s/\t/▸/g;
+        $self->note("YAML:\n$output\nEOYAML");
     }
     else {
         $self->note("YAML: EMPTY");
