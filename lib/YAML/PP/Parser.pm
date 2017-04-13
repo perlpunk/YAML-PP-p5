@@ -30,7 +30,8 @@ my $key_re_double_quotes = qr{"(?:\\\\|\\[^\n]|$key_content_re_dq)*"};
 my $key_re_single_quotes = qr{'(?:\\\\|''|$key_content_re_sq)*'};
 my $key_full_re = qr{(?:$key_re_double_quotes|$key_re_single_quotes|$key_re)};
 
-my $plain_value_start_re = '[^\s*!&].*';
+my $plain_start_word_re = '[^*!&\s#][^\n\s]*';
+my $plain_word_re = '[^#\n\s][^\n\s]*';
 
 my $tag_re = '(?:[a-zA-Z]|%[0-9a-fA-F]{2})+';
 my $full_tag_re = "![a-z]*!$tag_re|!$tag_re|!";
@@ -632,50 +633,60 @@ sub parse_plain_multi {
     my @multi;
     my $indent = $self->offset->[ -1 ] + 1;
     my $start_space = $indent;
-    {
-        my $res = {
-            name => 'NODE',
-            eol => 1,
-            style => ':',
-        };
-        my $re = $plain_value_start_re;
-        while (1) {
-            my $space = $start_space;
-            $start_space = 0;
-            last if $$yaml =~ m/\A\.\.\.(?= |$)/m;
-            last if $$yaml =~ m/\A---(?= |$)/m;
-            last if not length $$yaml;
-            if ($$yaml =~ m/\A($WS+)/) {
-                $space += length $1;
-            }
-            if ($$yaml =~ s/\A#.*//) {
+
+    my $indent_re = $WS . '{' . $indent . '}';
+    my $re = $plain_start_word_re;
+    while (1) {
+        my $space = $start_space;
+        $start_space = 0;
+        last if not length $$yaml;
+        if ($space == 0) {
+            unless ($$yaml =~ s/\A$indent_re//) {
                 last;
             }
-            last if $space < $indent;
-            $$yaml =~ s/\A *//;
-            my $end;
-            if ($$yaml =~ s/\A\n//) {
-                push @multi, '';
+        }
+        last if $$yaml =~ m/\A\.\.\.(?= |$)/m;
+        last if $$yaml =~ m/\A---(?= |$)/m;
+        if ($$yaml =~ s/\A$WS*#.*//) {
+            last;
+        }
+
+        if ($$yaml =~ s/\A$WS*\n//) {
+            push @multi, '';
+        }
+        elsif ($$yaml =~ s/\A$WS*($re)//) {
+            my $string = $1;
+            if ($string =~ m/:$/) {
+                die "Unexpected content: '$string'";
             }
-            elsif ($$yaml =~ s/\A *($re)//) {
+            $re = $plain_word_re;
+            while ($$yaml =~ s/\A($WS+$re)//) {
                 my $value = $1;
-                $value =~ s/ +#.*// and $end = 1;
-                $value =~ s/ +$//;
-                push @multi, $value;
-                $re = '(?::[^\n ]|[^:\n])+';
-                unless ($$yaml =~ s/\A\n//) {
-                    die "Unexpected content";
+                if ($value =~ m/:$/) {
+                    die "Unexpected content: '$value'";
                 }
+                $string .= $value;
             }
-            else {
+            push @multi, $string;
+            if ($$yaml =~ s/\A$WS+(#.*)//) {
+                last;
+            }
+            unless ($$yaml =~ s/\A$WS*\n//) {
+                warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
                 die "Unexpected content";
             }
-            last if $end;
         }
-        my $string = $self->multi_val(\@multi);
-        $res->{value} = $string;
-        return $res;
+        else {
+            die "Unexpected content";
+        }
     }
+    my $string = $self->multi_val(\@multi);
+    return {
+        name => 'NODE',
+        eol => 1,
+        style => ':',
+        value => $string,
+    };
 }
 
 sub parse_map {
