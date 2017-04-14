@@ -849,7 +849,7 @@ sub parse_block_scalar {
     my $exp_indent = $2;
     my $chomp = $3;
     if (defined $exp_indent) {
-        die "Not Implemented: Block Scalar Explicit Indent";
+        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$exp_indent], ['exp_indent']);
     }
     my ($folded, $keep, $trim);
     if ($block_type eq '>') {
@@ -862,11 +862,16 @@ sub parse_block_scalar {
         $trim = 1;
     }
 
+    my @lines;
+
     my $indent = $self->offset->[-1] + 1;
+    my $got_indent = 0;
+    if ($exp_indent) {
+        $indent = $exp_indent;
+        $got_indent = 1;
+    }
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$indent], ['indent']);
     my $indent_re = $WS ."{$indent}";
-    my @lines;
-    my $got_indent = 0;
     TRACE and local $Data::Dumper::Useqq = 1;
     my $type;
     while (length $$yaml) {
