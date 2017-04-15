@@ -200,80 +200,59 @@ sub parse_document {
                 $space = length $1;
             }
 
-            my $indent;
-            if ($new_node) {
-                if ($self->events->[-1] eq 'SEQ') {
-                    $indent = $self->offset->[-1];
-                }
-                else {
-                    $indent = $self->offset->[-1] + 1;
-                }
-            }
-            else {
-                $indent = $self->offset->[ $self->level ];
-            }
+            my $indent = $self->offset->[ -1 ];
 
-            my $plus_indent = $space - $indent;
+            TRACE and $self->info("INDENT: space=$space indent=$indent");
 
-            my $seq_start = 0;
-            if ($$yaml =~ m/\A-($WS|$)/m) {
-                $seq_start = length $1 ? 2 : 1;
-            }
-            TRACE and $self->info("INDENT: PLUS $plus_indent space=$space seq_start=$seq_start indent=$indent");
-
-            if ($plus_indent > 0) {
-                if (not $new_node) {
-                    # wrong indentation
-                    die "Expected $exp";
+            if ($space > $indent) {
+                unless ($new_node) {
+                    die "Bad indendation in $exp";
                 }
             }
             else {
-                my $remove_nodes = 0;
-                my $remove_new_node = 0;
-                if ($plus_indent < 0) {
-                    $remove_nodes = $self->reset_indent($space);
+                my $seq_start = 0;
+                if ($$yaml =~ m/\A-($WS|$)/m) {
+                    $seq_start = length $1 ? 2 : 1;
+                }
+                TRACE and $self->info("SEQSTART: $seq_start");
+
+                my $remove = $self->reset_indent($space);
+                if ($new_node) {
                     # unindented sequence starts
-                    if ($new_node) {
-                        if ($remove_nodes == 0 and $seq_start and $self->events->[-1] eq 'MAP') {
-                        }
-                        else {
-                            $remove_new_node = 1;
-                        }
+                    if ($remove == 0 and $seq_start and $exp eq 'MAP') {
                     }
-                }
-                else {
-                    if ($new_node and $exp eq 'SEQ') {
-                        $remove_new_node = 1;
-                    }
-                }
-                if ($remove_new_node) {
+                    else {
                         undef $new_node;
                         $self->event_value(':');
                         $got_tag_anchor = 0;
+                    }
                 }
-                if ($remove_nodes) {
-                    $exp = $self->remove_nodes($remove_nodes);
+
+                if ($remove) {
+                    $exp = $self->remove_nodes($remove);
+                }
+
+                unless ($new_node) {
+                    if ($exp eq 'SEQ' and not $seq_start) {
+                        my $ui = $self->in_unindented_seq;
+                        if ($ui) {
+                            TRACE and $self->info("In unindented sequence");
+                            $self->end('SEQ');
+                            TRACE and $self->debug_events;
+                            $exp = $self->events->[-1];
+                        }
+                        else {
+                            die "Expected sequence item";
+                        }
+                    }
+
+
+                    if ($self->offset->[-1] != $space) {
+                        die "Expected $exp";
+                    }
                 }
             }
 
-            if (not $new_node and $exp eq 'SEQ' and not $seq_start) {
-                my $ui = $self->in_unindented_seq;
-                if ($ui) {
-                    TRACE and $self->info("In unindented sequence");
-                    $self->end('SEQ');
-                    TRACE and $self->debug_events;
-                    $exp = $self->events->[-1];
-                }
-                else {
-                    die "Expected sequence item";
-                }
-            }
-
-            if (not $new_node) {
-                if ($self->offset->[-1] != $space) {
-                    die "Expected $exp";
-                }
-            }
             $offset = $space;
         }
         else {
@@ -282,7 +261,6 @@ sub parse_document {
                 die "Unexpected $new_node is undef";
             }
             $offset = $new_node->[1];
-            TRACE and $self->debug_events;
         }
 
         TRACE and $self->info("Expecting $exp");
@@ -881,10 +859,9 @@ sub parse_eol {
 
 sub in_unindented_seq {
     my ($self) = @_;
-    if ($self->in('SEQ') and $self->level > 2) {
-        my $level = $self->level;
-        my $seq_indent = $self->offset->[ $level ];
-        my $prev_indent = $self->offset->[ $level - 1];
+    if ($self->level > 2) {
+        my $seq_indent = $self->offset->[ -1 ];
+        my $prev_indent = $self->offset->[ -2 ];
         if ($prev_indent == $seq_indent) {
             return 1;
         }
