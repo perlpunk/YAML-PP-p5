@@ -3,6 +3,8 @@ use strict;
 use warnings;
 package YAML::PP::Parser;
 
+use YAML::PP::Render;
+
 use Moo;
 
 has receiver => ( is => 'rw' );
@@ -851,17 +853,6 @@ sub parse_block_scalar {
     if (defined $exp_indent) {
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$exp_indent], ['exp_indent']);
     }
-    my ($folded, $keep, $trim);
-    if ($block_type eq '>') {
-        $folded = 1;
-    }
-    if ($chomp eq '+') {
-        $keep = 1;
-    }
-    elsif ($chomp eq '-') {
-        $trim = 1;
-    }
-
     my @lines;
 
     my $indent = $self->offset->[-1] + 1;
@@ -926,62 +917,16 @@ sub parse_block_scalar {
 
     }
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@lines], ['lines']);
-    my $string = '';
-    if (not $keep) {
-        # remove trailing empty lines
-        while (@lines) {
-            if ($lines[-1]->[0] ne 'EMPTY') {
-                last;
-            }
-            pop @lines;
-        }
-    }
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@lines], ['lines']);
-    my $prev = 'START';
-    for my $i (0 .. $#lines) {
-        my $item = $lines[ $i ];
-        my ($type, $indent, $line) = @$item;
-        TRACE and printf STDERR "=========== %7s '%s' '%s'\n", @$item;
-        if ($folded) {
 
-            if ($type eq 'EMPTY') {
-                if ($prev eq 'MORE') {
-                    $type = 'PARAGRAPH';
-                }
-                $string .= "\n";
-            }
-            elsif ($type eq 'CONTENT') {
-                if ($prev eq 'CONTENT') {
-                    $string .= ' ';
-                }
-                $string .= $line;
-                if ($i == $#lines) {
-                    $string .= "\n";
-                }
-            }
-            elsif ($type eq 'MORE') {
-                if ($prev eq 'EMPTY' or $prev eq 'CONTENT') {
-                    $string .= "\n";
-                }
-                $string .=  $line . "\n";
-            }
-            $prev = $type;
-
-        }
-        else {
-            $string .= $line . "\n";
-        }
-        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$string], ['string']);
-    }
-    if ($trim) {
-        $string =~ s/\n$//;
-    }
-    $string =~ s/\\/\\\\/g;
-    $string =~ s/\n/\\n/g;
-    $string =~ s/\t/\\t/g;
+    my $string = YAML::PP::Render::render_block_scalar(
+        block_type => $block_type,
+        chomp => $chomp,
+        lines => \@lines,
+    );
 
     return { name => 'NODE', eol => 1, value => $string, style => $block_type };
 }
+
 
 sub parse_eol {
     my ($self) = @_;
@@ -1008,38 +953,6 @@ sub in {
     return $self->events->[-1] eq $event;
 }
 
-sub tag_str {
-    my ($self, $tag) = @_;
-    if ($tag eq '!') {
-        return "<!>";
-    }
-    elsif ($tag =~ m/^(![a-z]*!)($tag_re)/) {
-        my $alias = $1;
-        my $name = $2;
-        $name =~ s/%([0-9a-fA-F]{2})/chr hex $1/eg;
-        my $map = $self->tagmap;
-        if (exists $map->{ $alias }) {
-            $tag = "<" . $map->{ $alias }. $name . ">";
-        }
-    }
-    elsif ($tag =~ m/^(!)($tag_re)/) {
-        my $alias = $1;
-        my $name = $2;
-        $name =~ s/%([0-9a-fA-F]{2})/chr hex $1/eg;
-        my $map = $self->tagmap;
-        if (exists $map->{ $alias }) {
-            $tag = "<" . $map->{ $alias }. $name . ">";
-        }
-        else {
-            $tag = "<!$name>";
-        }
-    }
-    else {
-        die "Invalid tag";
-    }
-    return $tag;
-}
-
 sub event_value {
     my ($self, $value, %args) = @_;
     my $anchor = $self->anchor // $args{anchor};
@@ -1047,7 +960,7 @@ sub event_value {
     my $event = $value;
 
     if (defined $tag) {
-        my $tag_str = $self->tag_str($tag);
+        my $tag_str = YAML::PP::Render::render_tag($tag, $self->tagmap);
         $event = "$tag_str $event";
         $self->tag(undef);
     }
@@ -1095,7 +1008,7 @@ sub begin {
         my $tag = $self->tag;
         if (defined $tag) {
             $self->tag(undef);
-            my $tag_str = $self->tag_str($tag);
+            my $tag_str = YAML::PP::Render::render_tag($tag, $self->tagmap);
             unshift @content, $tag_str;
         }
         if (defined $anchor) {
