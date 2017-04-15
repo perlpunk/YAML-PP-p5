@@ -4,6 +4,7 @@ use warnings;
 package YAML::PP::Render;
 
 use constant TRACE => $ENV{YAML_PP_TRACE};
+my $WS = '[\t ]';
 
 sub render_tag {
     my ($tag, $map) = @_;
@@ -25,6 +26,59 @@ sub render_tag {
         die "Invalid tag";
     }
     return $tag;
+}
+
+sub render_quoted {
+    my (%args) = @_;
+    my $double = $args{double};
+    my $lines = $args{lines};
+    my $quoted = '';
+    my $addspace = 0;
+    for my $i (0 .. $#$lines) {
+        my $line = $lines->[ $i ];
+        my $last = $i == $#$lines;
+        my $first = $i == 0;
+        if ($line =~ s/^$WS*$/\\n/) {
+            $addspace = 0;
+            if ($first or $last) {
+                $quoted .= " ";
+            }
+            else {
+                $quoted .= "\\n";
+            }
+        }
+        else {
+            $quoted .= ' ' if $addspace;
+            $addspace = 1;
+            if ($first) {
+            }
+            else {
+                $line =~ s/^$WS+//;
+            }
+            if ($last) {
+            }
+            else {
+                $line =~ s/$WS+$//;
+            }
+            if ($double) {
+                $line =~ s/\\"/"/g;
+            }
+            else {
+                $line =~ s/''/'/g;
+                $line =~ s/\\/\\\\/g;
+            }
+            if ($line =~ s/\\$//) {
+                $addspace = 0;
+            }
+            $line =~ s/^\\ / /;
+            $line =~ s/\t/\\t/g;
+            $line =~ s/\\x0d/\\r/g;
+            $line =~ s/\\x0a/\\n/g;
+            $line =~ s/\\u([A-Fa-f0-9]+)/chr(oct("x$1"))/eg;
+            $quoted .= $line;
+        }
+    }
+    return $quoted;
 }
 
 sub render_block_scalar {

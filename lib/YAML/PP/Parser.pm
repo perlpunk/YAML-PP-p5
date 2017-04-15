@@ -785,52 +785,11 @@ sub parse_quoted {
             last if $last;
         }
 
-        my $quoted = '';
-        my $addspace = 0;
-        for my $i (0 .. $#lines) {
-            my $line = $lines[ $i ];
-            my $last = $i == $#lines;
-            my $first = $i == 0;
-            if ($line =~ s/^$WS*$/\\n/) {
-                $addspace = 0;
-                if ($first or $last) {
-                    $quoted .= " ";
-                }
-                else {
-                    $quoted .= "\\n";
-                }
-            }
-            else {
-                $quoted .= ' ' if $addspace;
-                $addspace = 1;
-                if ($first) {
-                }
-                else {
-                    $line =~ s/^$WS+//;
-                }
-                if ($last) {
-                }
-                else {
-                    $line =~ s/$WS+$//;
-                }
-                if ($double) {
-                    $line =~ s/\\"/"/g;
-                }
-                else {
-                    $line =~ s/''/'/g;
-                    $line =~ s/\\/\\\\/g;
-                }
-                if ($line =~ s/\\$//) {
-                    $addspace = 0;
-                }
-                $line =~ s/^\\ / /;
-                $line =~ s/\t/\\t/g;
-                $line =~ s/\\x0d/\\r/g;
-                $line =~ s/\\x0a/\\n/g;
-                $line =~ s/\\u([A-Fa-f0-9]+)/chr(oct("x$1"))/eg;
-                $quoted .= $line;
-            }
-        }
+        my $quoted = YAML::PP::Render::render_quoted(
+            double => $double,
+            lines => \@lines,
+        );
+
         return { name => 'NODE', style => $quote, value => $quoted };
     }
     return 0;
