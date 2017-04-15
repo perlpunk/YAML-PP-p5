@@ -154,6 +154,34 @@ sub render_block_scalar {
     return $string;
 }
 
+sub render_multi_val {
+    my ($multi) = @_;
+    # remove empty lines at beginning and end
+    while (@$multi and $multi->[0] eq '') {
+        shift @$multi;
+    }
+    while (@$multi and $multi->[-1] eq '') {
+        pop @$multi;
+    }
+    my $string = '';
+    my $start = 1;
+    for my $line (@$multi) {
+        if (not $start) {
+            if ($line eq '') {
+                $string .= "\\n";
+                $start = 1;
+            }
+            else {
+                $string .= " $line";
+            }
+        }
+        else {
+            $string .= $line;
+            $start = 0;
+        }
+    }
+    return $string;
+}
 
 
 1;

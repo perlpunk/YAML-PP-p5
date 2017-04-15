@@ -434,35 +434,6 @@ sub remove_nodes {
     return $exp;
 }
 
-sub multi_val {
-    my ($self, $multi) = @_;
-    while (@$multi and $multi->[-1] eq '') {
-        pop @$multi;
-    }
-    my $string = '';
-    my $start = 1;
-    for my $line (@$multi) {
-        if (not $start) {
-            if ($line eq '') {
-                $string .= "\\n";
-                $start = 1;
-            }
-            else {
-                $string .= " $line";
-            }
-        }
-        else {
-            if ($line eq '') {
-            }
-            else {
-                $string .= "$line";
-            }
-            $start = 0;
-        }
-    }
-    return $string;
-}
-
 sub reset_indent {
     my ($self, $space) = @_;
     TRACE and warn "=== reset_indent($space)\n";
@@ -488,7 +459,6 @@ sub parse_node {
     my ($self, %args) = @_;
     my $start_line = $args{start_line};
     $args{map} //= 1;
-    my $yaml = $self->yaml;
     my $res;
     if (not $args{start_line} and $res = $self->parse_complex) {
         return $res;
@@ -503,9 +473,6 @@ sub parse_node {
         return $res;
     }
     if ($res = $self->parse_scalar) {
-        return $res;
-    }
-    if ($res = $self->parse_plain_multi(%args)) {
         return $res;
     }
     TRACE and $self->debug_yaml;
@@ -526,6 +493,9 @@ sub parse_scalar {
     if ($$yaml =~ m/\A([\[\{>|'"])/) {
         my $method = $scalar_methods{ $1 };
         my $res = $self->$method;
+        return $res;
+    }
+    elsif (my $res = $self->parse_plain_multi) {
         return $res;
     }
     return 0;
@@ -682,7 +652,7 @@ sub parse_plain_multi {
             die "Unexpected content";
         }
     }
-    my $string = $self->multi_val(\@multi);
+    my $string = YAML::PP::Render::render_multi_val(\@multi);
     return {
         name => 'NODE',
         eol => 1,
