@@ -307,55 +307,20 @@ sub parse_document {
             }
         }
 
-        my $res;
-        if ($new_node) {
-            $res = $self->parse_node(
-                start_line => $start_line,
-                tag_anchor => $found_tag_anchor,
-#                map => ($full_line or $self->events->[-2] ne 'MAP'),
-            );
-        }
-        elsif ($exp eq 'MAP') {
-            $res = $self->parse_map();
-            unless ($res) {
-                $res = $self->parse_complex();
-            }
-            $res or die "Expected map item";
-        }
-        elsif ($exp eq 'SEQ') {
-            $res = $self->parse_seq()
-                or die "Expected sequence item";
-        }
-        elsif ($exp eq 'COMPLEX') {
-            $res = $self->parse_complex_colon();
-            unless ($res) {
-                $res = $self->parse_complex();
-            }
-            unless ($res) {
-                $res = $self->parse_map();
-            }
-            $res or die "Expected : or ? or map item";
-        }
-        else {
-            die "Unexpected exp $exp";
-        }
+        my $res = $self->parse_next(
+            start_line => $start_line,
+            tag_anchor => $found_tag_anchor,
+#            map => ($full_line or $self->events->[-2] ne 'MAP'),
+            expected => $exp,
+            new_node => $new_node,
+        );
+
+        $next_full_line = $res->{eol} ? 1 : 0;
 
         my $got = $res->{name};
         TRACE and $self->got("GOT $got");
-        my $ws = 0;
-        unless (exists $res->{eol}) {
-            my $eol = $self->parse_eol;
-            $res->{eol} = $eol;
-            if ($eol) {
-            }
-            else {
-                $$yaml =~ s/\A($WS+)//
-                    and $ws = length $1
-            }
-        }
-        $next_full_line = $res->{eol} ? 1 : 0;
 
-        my $new_offset = $offset + 1 + $ws;
+        my $new_offset = $offset + 1 + ($res->{ws} || 0);
         if ($got eq "MAPKEY") {
             if ($new_node) {
                 $self->begin('MAP', $offset);
@@ -405,6 +370,47 @@ sub parse_document {
     return 0;
 }
 
+sub parse_next {
+    my ($self, %args) = @_;
+    my $new_node = $args{new_node};
+    my $exp = $args{expected};
+    my $res;
+    if ($new_node) {
+        $res = $self->parse_node(
+            %args,
+        );
+    }
+    elsif ($exp eq 'MAP') {
+        $res = $self->parse_map()
+            || $self->parse_complex();
+        $res or die "Expected map item";
+    }
+    elsif ($exp eq 'SEQ') {
+        $res = $self->parse_seq()
+            or die "Expected sequence item";
+    }
+    elsif ($exp eq 'COMPLEX') {
+        $res = $self->parse_complex_colon()
+            || $self->parse_complex()
+            || $self->parse_map();
+        $res or die "Expected : or ? or map item";
+    }
+    else {
+        die "Unexpected exp $exp";
+    }
+
+    unless (exists $res->{eol}) {
+        my $eol = $self->parse_eol;
+        $res->{eol} = $eol;
+        unless ($eol) {
+            my $yaml = $self->yaml;
+            $$yaml =~ s/\A($WS+)//
+                and $res->{ws} = length $1;
+        }
+    }
+    return $res;
+}
+
 sub res_to_event {
     my ($self, $res) = @_;
     if (defined(my $alias = $res->{alias})) {
@@ -425,8 +431,11 @@ sub remove_nodes {
     for (1 .. $count) {
         if ($exp eq 'COMPLEX') {
             $self->event_value(':');
+            $self->events->[-1] = 'MAP';
         }
-        $self->end_node;
+        elsif ($exp eq 'MAP' or $exp eq 'SEQ' or $exp eq 'END') {
+            $self->end($exp);
+        }
         $exp = $self->events->[-1];
         TRACE and $self->debug_events;
     }
@@ -906,31 +915,23 @@ sub event_value {
     $self->event("=VAL", "$event");
 }
 
-sub end_node {
-    my ($self) = @_;
-    my $last = $self->events->[-1];
-    if ($last eq 'MAP' or $last eq 'SEQ' or $last eq 'END') {
-        $self->end($last);
-        return $last;
-    }
-    elsif ($last eq 'COMPLEX') {
-        $self->events->[-1] = 'MAP';
-        return $last;
-    }
-    return;
-}
-
 sub push_events {
-    $_[0]->inc_level;
-    push @{ $_[0]->events }, $_[1];
+    my ($self, $event, $offset) = @_;
+    my $level = $self->level;
+    $self->level( ++$level );
+    push @{ $self->events }, $event;
+    $self->offset->[ $level ] = $offset;
 }
 
 sub pop_events {
-    $_[0]->dec_level;
-    my $last = pop @{ $_[0]->events };
-    return $last unless $_[1];
-    if ($last ne $_[1]) {
-        die "pop_events($_[1]): Unexpected event '$last', expected $_[1]";
+    my ($self, $event) = @_;
+    $self->level($self->level - 1);
+    pop @{ $self->offset };
+
+    my $last = pop @{ $self->events };
+    return $last unless $event;
+    if ($last ne $event) {
+        die "pop_events($event): Unexpected event '$last', expected $event";
     }
 }
 
@@ -952,18 +953,9 @@ sub begin {
         }
     }
     TRACE and $self->debug_event("------------->> BEGIN $event ($offset) @content");
-    TRACE and $self->debug_events;
     $self->receiver->($self, "+$event_name", @content ? "@content" : undef);
-    if ($event eq 'STR') {
-        $self->push_events($event);
-    }
-    elsif ($event eq 'DOC') {
-        $self->push_events('DOC');
-    }
-    elsif ($event eq 'SEQ' or $event eq 'COMPLEX' or $event eq 'MAP') {
-        $self->push_events($event);
-    }
-    $self->offset->[ $self->level ] = $offset;
+    $self->push_events($event, $offset);
+    TRACE and $self->debug_events;
 }
 
 sub end {
@@ -984,15 +976,6 @@ sub event {
     TRACE and $self->debug_event("------------- EVENT $event @content");
 
     $self->receiver->($self, $event, @content);
-}
-
-sub inc_level {
-    $_[0]->level($_[0]->level + 1);
-}
-
-sub dec_level {
-    $_[0]->level($_[0]->level - 1);
-    pop @{ $_[0]->offset };
 }
 
 sub debug_events {
