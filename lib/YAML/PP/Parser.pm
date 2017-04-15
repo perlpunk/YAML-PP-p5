@@ -760,10 +760,8 @@ sub parse_quoted {
     if ($$yaml =~ s/\A(["'])//) {
         my $quote = $1;
         my $double = $quote eq '"';
-        my $quoted = '';
-        my $addspace = 0;
         my $last = 0;
-        my $first = 1;
+        my @lines;
         while (1) {
             my $line;
             if ($double) {
@@ -783,6 +781,16 @@ sub parse_quoted {
             else {
                 die "Couldn't parse $quote quoted string";
             }
+            push @lines, $line;
+            last if $last;
+        }
+
+        my $quoted = '';
+        my $addspace = 0;
+        for my $i (0 .. $#lines) {
+            my $line = $lines[ $i ];
+            my $last = $i == $#lines;
+            my $first = $i == 0;
             if ($line =~ s/^$WS*$/\\n/) {
                 $addspace = 0;
                 if ($first or $last) {
@@ -822,8 +830,6 @@ sub parse_quoted {
                 $line =~ s/\\u([A-Fa-f0-9]+)/chr(oct("x$1"))/eg;
                 $quoted .= $line;
             }
-            $first = 0;
-            last if $last;
         }
         return { name => 'NODE', style => $quote, value => $quoted };
     }
