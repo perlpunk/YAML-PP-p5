@@ -955,6 +955,11 @@ sub event {
     $self->receiver->($self, $event, @content);
 }
 
+sub event_to_test_suite {
+    my ($self, $event, $content) = @_;
+    return defined $content ? "$event $content" : $event;
+}
+
 sub debug_events {
     my ($self) = @_;
     $self->note("EVENTS: ("

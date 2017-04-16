@@ -94,8 +94,8 @@ sub test {
     my @events;
     my $parser = YAML::PP::Parser->new(
         receiver => sub {
-            my ($self, $event, $content) = @_;
-            push @events, defined $content ? "$event $content" : $event;
+            my ($self, @args) = @_;
+            push @events, YAML::PP::Parser->event_to_test_suite(@args);
         },
     );
     my $ok = 0;
