@@ -23,6 +23,8 @@ use constant TRACE => $ENV{YAML_PP_TRACE};
 
 my $WS = '[\t ]';
 
+my $RE_URI_CHAR = '%[0-9a-fA-F]{2}' .'|'. q{[0-9A-Za-z#;/?:@&=+$,_.!*'\(\)\[\]]};
+
 my $key_start_re = '[a-zA-Z0-9%.]';
 my $key_content_re = '[a-zA-Z0-9%.\\]"\\\\ -]';
 my $key_content_re_dq = '[^"\n\\\\]';
@@ -36,7 +38,7 @@ my $plain_start_word_re = '[^*!&\s#][^\n\s]*';
 my $plain_word_re = '[^#\n\s][^\n\s]*';
 
 my $tag_re = '(?:[a-zA-Z]|%[0-9a-fA-F]{2})+';
-my $full_tag_re = "![a-z]*!$tag_re|!$tag_re|!";
+my $full_tag_re = "![a-z]*!$tag_re|!$tag_re|!<(?:$RE_URI_CHAR)+>|!";
 
 my $anchor_start_re = '[a-zA-Z0-9]';
 my $anchor_content_re = '[a-zA-Z0-9:]';

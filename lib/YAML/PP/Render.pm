@@ -11,6 +11,9 @@ sub render_tag {
     if ($tag eq '!') {
         return "<!>";
     }
+    elsif ($tag =~ m/^!(<.*)/) {
+        return $1;
+    }
     elsif ($tag =~ m/^(![a-z]*!|!)(.+)/) {
         my $alias = $1;
         my $name = $2;
