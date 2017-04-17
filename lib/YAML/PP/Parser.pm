@@ -194,25 +194,22 @@ sub parse_document {
         if ($full_line) {
             $self->parse_empty;
 
-            my $level = $self->level;
-            my $eoyaml = not length $$yaml;
-            my $end = $eoyaml ? 0 : $self->parse_document_end;
-            my $start = ($eoyaml or $end) ? 0 : $$yaml =~ m/\A---(?= |$)/m;
-            if ($eoyaml or $end or $start or ($level < 2 and not $new_node)) {
-                if ($new_node) {
-                    undef $new_node;
-                    $self->event_value(':');
-                }
-                $self->remove_nodes($self->level);
-                return $end ? 1 : 0;
-            }
-
             my $space = 0;
-            if ($$yaml =~ s/\A( +)//) {
-                $space = length $1;
+            my $indent = 0;
+            my $eoyaml = not length $$yaml;
+            if ($eoyaml) {
+                $space = -1;
             }
+            else {
+                if ($$yaml =~ s/\A( +)//) {
+                    $space = length $1;
+                }
 
-            my $indent = $self->offset->[ -1 ];
+                $indent = $self->offset->[ -1 ];
+                if ($indent == -1 and $space == 0 and not $new_node) {
+                    $space = -1;
+                }
+            }
 
             TRACE and $self->info("INDENT: space=$space indent=$indent");
 
@@ -222,6 +219,19 @@ sub parse_document {
                 }
             }
             else {
+
+                my ($end, $start);
+                if ($space <= 0) {
+                    $end = $self->parse_document_end;
+                    $start = ($end) ? 0 : $$yaml =~ m/\A---(?= |$)/m;
+                    if ($end or $start) {
+                        $space = -1;
+                    }
+                    elsif ($self->level < 2 and not $new_node) {
+                        $start = 1;
+                    }
+                }
+
                 my $seq_start = 0;
                 if ($$yaml =~ m/\A-($WS|$)/m) {
                     $seq_start = length $1 ? 2 : 1;
@@ -229,6 +239,7 @@ sub parse_document {
                 TRACE and $self->info("SEQSTART: $seq_start");
 
                 my $remove = $self->reset_indent($space);
+
                 if ($new_node) {
                     # unindented sequence starts
                     if ($remove == 0 and $seq_start and $exp eq 'MAP') {
@@ -242,6 +253,10 @@ sub parse_document {
 
                 if ($remove) {
                     $exp = $self->remove_nodes($remove);
+                }
+
+                if ($end or $start or $eoyaml) {
+                    return $end ? 1 : 0;
                 }
 
                 unless ($new_node) {
@@ -269,9 +284,6 @@ sub parse_document {
         }
         else {
             TRACE and $self->info("ON SAME LINE: INDENT");
-            unless ($new_node) {
-                die "Unexpected $new_node is undef";
-            }
             $offset = $new_node->[1];
         }
 
@@ -347,6 +359,9 @@ sub parse_document {
         elsif ($got eq 'NODE') {
             $self->res_to_event($res);
             undef $new_node;
+            if (not $res->{eol}) {
+                die "Expected EOL";
+            }
         }
         else {
             die "Unexpected res $got";
@@ -361,32 +376,46 @@ sub parse_document {
 }
 
 sub parse_next {
+    TRACE and warn "=== parse_next()\n";
     my ($self, %args) = @_;
-    my $new_node = $args{new_node};
-    my $exp = $args{expected};
+    my $new_node = delete $args{new_node};
+    my $exp = delete $args{expected};
     my $res;
+    my @possible;
     if ($new_node) {
-        $res = $self->parse_node(
-            %args,
-        );
+        $args{map} //= 1;
+        if (not $args{start_line}) {
+            push @possible, 'parse_seq';
+            push @possible, 'parse_complex';
+            push @possible, 'parse_map' if $args{map};
+        }
+        if (not $args{tag_anchor}) {
+            push @possible, 'parse_alias';
+        }
+        push @possible, 'parse_scalar';
     }
     elsif ($exp eq 'MAP') {
-        $res = $self->parse_map()
-            || $self->parse_complex();
-        $res or die "Expected map item";
+        push @possible, 'parse_complex';
+        push @possible, 'parse_map';
     }
     elsif ($exp eq 'SEQ') {
-        $res = $self->parse_seq()
-            or die "Expected sequence item";
+        push @possible, 'parse_seq';
     }
     elsif ($exp eq 'COMPLEX') {
-        $res = $self->parse_complex_colon()
-            || $self->parse_complex()
-            || $self->parse_map();
-        $res or die "Expected : or ? or map item";
+        push @possible, 'parse_complex_colon';
+        push @possible, 'parse_complex';
+        push @possible, 'parse_map';
     }
     else {
         die "Unexpected exp $exp";
+    }
+
+    for my $method (@possible) {
+        $res = $self->$method(%args) and last;
+    }
+    unless ($res) {
+        TRACE and $self->debug_yaml;
+        die "Expected " . ($new_node ? "new node" : $exp);
     }
 
     unless (exists $res->{eol}) {
@@ -422,6 +451,7 @@ sub remove_nodes {
         if ($exp eq 'COMPLEX') {
             $self->event_value(':');
             $self->events->[-1] = 'MAP';
+            $self->end('MAP');
         }
         elsif ($exp eq 'MAP' or $exp eq 'SEQ' or $exp eq 'END') {
             $self->end($exp);
@@ -451,31 +481,6 @@ sub reset_indent {
         $i--;
     }
     return $count;
-}
-
-sub parse_node {
-    TRACE and warn "=== parse_node()\n";
-    my ($self, %args) = @_;
-    my $start_line = $args{start_line};
-    $args{map} //= 1;
-    my $res;
-    if (not $args{start_line} and $res = $self->parse_complex) {
-        return $res;
-    }
-    if (not $args{start_line} and $res = $self->parse_seq) {
-        return $res;
-    }
-    if (not $args{start_line} and $args{map} and $res = $self->parse_map(%args)) {
-        return $res;
-    }
-    if (not $args{tag_anchor} and $res = $self->parse_alias) {
-        return $res;
-    }
-    if ($res = $self->parse_scalar) {
-        return $res;
-    }
-    TRACE and $self->debug_yaml;
-    die "Unexpected";
 }
 
 my %scalar_methods = (
