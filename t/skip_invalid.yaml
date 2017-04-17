@@ -1,9 +1,7 @@
 anchors:
 
 mappings:
-- i017
 - i019
 
 skip:
 - i023
-- i024

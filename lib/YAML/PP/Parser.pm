@@ -176,7 +176,7 @@ sub parse_document {
 
     my $next_full_line = 1;
     my $got_tag_anchor = 0;
-    my $new_node = [ 'NODE' => 0 ];
+    my $new_node = [ ($start_line ? 'STARTNODE' : 'NODE') => 0 ];
     while (1) {
         if ($ENV{YAML_PP_DELAY}) {
             select undef, undef, undef, $ENV{YAML_PP_DELAY};
@@ -281,6 +281,11 @@ sub parse_document {
             }
 
             $offset = $space;
+            if ($new_node) {
+                if ($new_node->[0] eq 'MAPVALUE') {
+                    $new_node->[0] = 'NODE';
+                }
+            }
         }
         else {
             TRACE and $self->info("ON SAME LINE: INDENT");
@@ -299,7 +304,9 @@ sub parse_document {
                 $got_tag_anchor += GOT_TAG if $tag;
                 $got_tag_anchor += GOT_ANCHOR if $anchor;
                 if ($self->parse_eol) {
-                    $start_line = 0;
+                    if ($new_node->[0] eq 'STARTNODE') {
+                        $new_node->[0] = 'NODE';
+                    }
                     next;
                 }
                 elsif ($$yaml =~ s/\A$WS+//) {
@@ -310,9 +317,7 @@ sub parse_document {
         }
 
         my $res = $self->parse_next(
-            start_line => $start_line,
             tag_anchor => $found_tag_anchor,
-#            map => ($full_line or $self->events->[-2] ne 'MAP'),
             expected => $exp,
             new_node => $new_node,
         );
@@ -332,7 +337,7 @@ sub parse_document {
                 $self->event_value(':');
             }
             $self->res_to_event($res);
-            $new_node = [ 'NODE' => $new_offset ];
+            $new_node = [ 'MAPVALUE' => $new_offset ];
         }
         elsif ($got eq 'SEQSTART') {
             if ($new_node) {
@@ -382,12 +387,13 @@ sub parse_next {
     my $exp = delete $args{expected};
     my $res;
     my @possible;
+    my $in_map;
     if ($new_node) {
-        $args{map} //= 1;
-        if (not $args{start_line}) {
+        $in_map = $new_node->[0] eq 'MAPVALUE' ? 1 : 0;
+        if ($new_node->[0] ne 'STARTNODE') {
             push @possible, 'parse_seq';
             push @possible, 'parse_complex';
-            push @possible, 'parse_map' if $args{map};
+            push @possible, 'parse_map';
         }
         if (not $args{tag_anchor}) {
             push @possible, 'parse_alias';
@@ -416,6 +422,9 @@ sub parse_next {
     unless ($res) {
         TRACE and $self->debug_yaml;
         die "Expected " . ($new_node ? "new node" : $exp);
+    }
+    if ($in_map and $res->{name} =~ m/MAP|SEQ|COMPLEX/) {
+        die "Parse error: $res->{name} not allowed in this context";
     }
 
     unless (exists $res->{eol}) {
