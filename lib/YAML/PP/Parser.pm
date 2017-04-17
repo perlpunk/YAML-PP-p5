@@ -5,19 +5,29 @@ package YAML::PP::Parser;
 
 use YAML::PP::Render;
 
-use Moo;
-
-has receiver => ( is => 'rw' );
-has yaml => ( is => 'rw' );
-#has indent => ( is => 'rw', default => 0 );
-has level => ( is => 'rw', default => -1 );
-has offset => ( is => 'rw', default => sub { [0] } );
-has events => ( is => 'rw', default => sub { [] } );
-has anchor => ( is => 'rw' );
-has tag => ( is => 'rw' );
-has tagmap => ( is => 'rw', default => sub { +{
-    '!!' => "tag:yaml.org,2002:",
-} } );
+sub new {
+    my ($class, %args) = @_;
+    my $self = bless {
+        receiver => $args{receiver},
+    }, $class;
+    return $self;
+}
+sub receiver { return $_[0]->{receiver} }
+sub set_receiver { $_[0]->{receiver} = $_[1] }
+sub yaml { return $_[0]->{yaml} }
+sub set_yaml { $_[0]->{yaml} = $_[1] }
+sub level { return $_[0]->{level} }
+sub set_level { $_[0]->{level} = $_[1] }
+sub offset { return $_[0]->{offset} }
+sub set_offset { $_[0]->{offset} = $_[1] }
+sub events { return $_[0]->{events} }
+sub set_events { $_[0]->{events} = $_[1] }
+sub anchor { return $_[0]->{anchor} }
+sub set_anchor { $_[0]->{anchor} = $_[1] }
+sub tag { return $_[0]->{tag} }
+sub set_tag { $_[0]->{tag} = $_[1] }
+sub tagmap { return $_[0]->{tagmap} }
+sub set_tagmap { $_[0]->{tagmap} = $_[1] }
 
 use constant TRACE => $ENV{YAML_PP_TRACE};
 
@@ -46,13 +56,13 @@ my $anchor_re = qr{(?:$anchor_start_re$anchor_content_re*|$anchor_start_re?)};
 
 sub parse {
     my ($self, $yaml) = @_;
-    $self->yaml(\$yaml);
-    $self->level(-1);
-    $self->offset([0]);
-    $self->events([]);
-    $self->anchor(undef);
-    $self->tag(undef);
-    $self->tagmap({
+    $self->set_yaml(\$yaml);
+    $self->set_level(-1);
+    $self->set_offset([0]);
+    $self->set_events([]);
+    $self->set_anchor(undef);
+    $self->set_tag(undef);
+    $self->set_tagmap({
         '!!' => "tag:yaml.org,2002:",
     });
     $self->parse_stream;
@@ -529,11 +539,11 @@ sub parse_tag_anchor {
     }
     if (defined $tag) {
         TRACE and $self->got("GOT TAG $tag");
-        $self->tag($tag);
+        $self->set_tag($tag);
     }
     if (defined $anchor) {
         TRACE and $self->got("GOT ANCHOR $anchor");
-        $self->anchor($anchor);
+        $self->set_anchor($anchor);
     }
     return (defined $tag, defined $anchor);
 
@@ -701,8 +711,8 @@ sub parse_map {
             $key =~ s/\\/\\\\/g;
         }
         if ($tag_anchor) {
-            $anchor = $self->anchor and $self->anchor(undef);
-            $tag = $self->tag and $self->tag(undef);
+            $anchor = $self->anchor and $self->set_anchor(undef);
+            $tag = $self->tag and $self->set_tag(undef);
         }
         $res->{value} = $key;
         $res->{style} = $key_style;
@@ -885,10 +895,10 @@ sub event_value {
     if (defined $tag) {
         my $tag_str = YAML::PP::Render::render_tag($tag, $self->tagmap);
         $event = "$tag_str $event";
-        $self->tag(undef);
+        $self->set_tag(undef);
     }
     if (defined $anchor) {
-        $self->anchor(undef);
+        $self->set_anchor(undef);
         $event = "&$anchor $event";
     }
     $self->event("=VAL", "$event");
@@ -897,14 +907,14 @@ sub event_value {
 sub push_events {
     my ($self, $event, $offset) = @_;
     my $level = $self->level;
-    $self->level( ++$level );
+    $self->set_level( ++$level );
     push @{ $self->events }, $event;
     $self->offset->[ $level ] = $offset;
 }
 
 sub pop_events {
     my ($self, $event) = @_;
-    $self->level($self->level - 1);
+    $self->set_level($self->level - 1);
     pop @{ $self->offset };
 
     my $last = pop @{ $self->events };
@@ -922,12 +932,12 @@ sub begin {
         my $anchor = $self->anchor;
         my $tag = $self->tag;
         if (defined $tag) {
-            $self->tag(undef);
+            $self->set_tag(undef);
             my $tag_str = YAML::PP::Render::render_tag($tag, $self->tagmap);
             unshift @content, $tag_str;
         }
         if (defined $anchor) {
-            $self->anchor(undef);
+            $self->set_anchor(undef);
             unshift @content, "&$anchor";
         }
     }
@@ -944,7 +954,7 @@ sub end {
     return if $event eq 'END';
     $self->receiver->($self, "-$event", @content);
     if ($event eq 'DOC') {
-        $self->tagmap({
+        $self->set_tagmap({
             '!!' => "tag:yaml.org,2002:",
         });
     }
