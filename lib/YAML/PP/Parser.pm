@@ -198,7 +198,7 @@ sub parse_document {
             }
 
             my $space = 0;
-            if ($$yaml =~ s/\A($WS+)//) {
+            if ($$yaml =~ s/\A( +)//) {
                 $space = length $1;
             }
 
