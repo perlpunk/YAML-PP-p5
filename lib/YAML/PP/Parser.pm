@@ -246,7 +246,7 @@ sub parse_document {
                     }
                     else {
                         undef $new_node;
-                        $self->event_value(':');
+                        $self->event_value(style => ':');
                         $got_tag_anchor = 0;
                     }
                 }
@@ -334,7 +334,7 @@ sub parse_document {
             }
             elsif ($exp eq 'COMPLEX') {
                 $self->events->[-1] = 'MAP';
-                $self->event_value(':');
+                $self->event_value(style => ':');
             }
             $self->res_to_event($res);
             $new_node = [ 'MAPVALUE' => $new_offset ];
@@ -353,7 +353,7 @@ sub parse_document {
                 $self->events->[-1] = 'COMPLEX';
             }
             elsif ($exp eq 'COMPLEX') {
-                $self->event_value(':');
+                $self->event_value(style => ':');
             }
             $new_node = [ 'NODE' => $new_offset ];
         }
@@ -442,11 +442,13 @@ sub parse_next {
 sub res_to_event {
     my ($self, $res) = @_;
     if (defined(my $alias = $res->{alias})) {
-        $self->event('=ALI', "*$alias");
+        $self->event([ ALIAS => { content => $alias }]);
     }
     elsif (defined(my $value = $res->{value})) {
         my $style = $res->{style} // ':';
-        $self->event_value($style . $value,
+        $self->event_value(
+            content => $value,
+            style => $style,
             tag => $res->{tag},
             anchor => $res->{anchor},
         );
@@ -458,7 +460,7 @@ sub remove_nodes {
     my $exp = $self->events->[-1];
     for (1 .. $count) {
         if ($exp eq 'COMPLEX') {
-            $self->event_value(':');
+            $self->event_value(style => ':');
             $self->events->[-1] = 'MAP';
             $self->end('MAP');
         }
@@ -901,21 +903,23 @@ sub in {
 }
 
 sub event_value {
-    my ($self, $value, %args) = @_;
+    my ($self, %args) = @_;
+    my $value = $args{content};
     my $anchor = $self->anchor // $args{anchor};
     my $tag = $self->tag // $args{tag};
-    my $event = $value;
+    my $style = $args{style};
 
+    my %info = ( style => $style );
     if (defined $tag) {
         my $tag_str = YAML::PP::Render::render_tag($tag, $self->tagmap);
-        $event = "$tag_str $event";
+        $info{tag} = $tag_str;
         $self->set_tag(undef);
     }
     if (defined $anchor) {
         $self->set_anchor(undef);
-        $event = "&$anchor $event";
+        $info{anchor} = $anchor;
     }
-    $self->event("=VAL", "$event");
+    $self->event([ VALUE => { content => $value, %info, }]);
 }
 
 sub push_events {
@@ -942,31 +946,32 @@ sub begin {
     my ($self, $event, $offset, @content) = @_;
     my $event_name = $event;
     $event_name =~ s/^COMPLEX/MAP/;
+    my %info = ( type => $event_name );
     if ($event_name eq 'SEQ' or $event_name eq 'MAP') {
         my $anchor = $self->anchor;
         my $tag = $self->tag;
         if (defined $tag) {
             $self->set_tag(undef);
             my $tag_str = YAML::PP::Render::render_tag($tag, $self->tagmap);
-            unshift @content, $tag_str;
+            $info{tag} = $tag_str;
         }
         if (defined $anchor) {
             $self->set_anchor(undef);
-            unshift @content, "&$anchor";
+            $info{anchor} = $anchor;
         }
     }
     TRACE and $self->debug_event("------------->> BEGIN $event ($offset) @content");
-    $self->receiver->($self, "+$event_name", @content ? "@content" : undef);
+    $self->receiver->($self, [ BEGIN => { %info, content => $content[0] } ]);
     $self->push_events($event, $offset);
     TRACE and $self->debug_events;
 }
 
 sub end {
-    my ($self, $event, @content) = @_;
+    my ($self, $event, $content) = @_;
     $self->pop_events($event);
-    TRACE and $self->debug_event("-------------<< END   $event @content");
+    TRACE and $self->debug_event("-------------<< END   $event @{[$content//'']}");
     return if $event eq 'END';
-    $self->receiver->($self, "-$event", @content);
+    $self->receiver->($self, [ END => { type => $event, content => $content } ]);
     if ($event eq 'DOC') {
         $self->set_tagmap({
             '!!' => "tag:yaml.org,2002:",
@@ -975,15 +980,48 @@ sub end {
 }
 
 sub event {
-    my ($self, $event, @content) = @_;
-    TRACE and $self->debug_event("------------- EVENT $event @content");
+    my ($self, $event) = @_;
+    TRACE and $self->debug_event("------------- EVENT @{[ $self->event_to_test_suite($event)]}");
 
-    $self->receiver->($self, $event, @content);
+    $self->receiver->($self, $event);
 }
 
 sub event_to_test_suite {
-    my ($self, $event, $content) = @_;
-    return defined $content ? "$event $content" : $event;
+    my ($self, $event) = @_;
+    if (ref $event) {
+        my ($ev, $info) = @$event;
+        my $string;
+        my $type = $info->{type};
+        my $content = $info->{content};
+        if ($ev eq 'BEGIN') {
+            $string = "+$type";
+            if (defined $info->{anchor}) {
+                $string .= " &$info->{anchor}";
+            }
+            if (defined $info->{tag}) {
+                $string .= " $info->{tag}";
+            }
+            $string .= " $content" if defined $content;
+        }
+        elsif ($ev eq 'END') {
+            $string = "-$type";
+            $string .= " $content" if defined $content;
+        }
+        elsif ($ev eq 'VALUE') {
+            $string = '=VAL';
+            if (defined $info->{anchor}) {
+                $string .= " &$info->{anchor}";
+            }
+            if (defined $info->{tag}) {
+                $string .= " $info->{tag}";
+            }
+            $string .= ' ' . $info->{style} . ($content // '');
+        }
+        elsif ($ev eq 'ALIAS') {
+            $string = "=ALI *$content";
+        }
+        return $string;
+    }
 }
 
 sub debug_events {
