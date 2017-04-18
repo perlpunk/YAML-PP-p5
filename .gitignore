@@ -1,2 +1,4 @@
 yaml-test-suite
-cover_db/
+cover_db
+nytprof
+nytprof.out

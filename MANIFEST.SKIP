@@ -1,3 +1,5 @@
 cover_db
 local
 dev.sh
+nytprof
+nytprof.out
