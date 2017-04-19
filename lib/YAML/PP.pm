@@ -3,14 +3,20 @@ use strict;
 use warnings;
 package YAML::PP;
 
-use YAML::PP::Parser;
+sub new {
+    my ($class, %args) = @_;
+    my $self = bless {
+    }, $class;
+    return $self;
+}
+
+sub loader { return $_[0]->{loader} }
 
 sub Load {
-    my ($yaml) = @_;
-    my $parser = YAML::PP::Parser->new(
-        receiver => \&event,
-    );
-    $parser->parse($yaml);
+    require YAML::PP::Loader;
+    my ($self, $yaml) = @_;
+    $self->{loader} = YAML::PP::Loader->new;
+    return $self->loader->Load($yaml);
 }
 
 1;

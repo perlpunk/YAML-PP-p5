@@ -1,0 +1,24 @@
+#!/usr/bin/env perl
+use strict;
+use warnings;
+use 5.010;
+
+use FindBin;
+use lib "$FindBin::Bin/../lib";
+use YAML::PP;
+use Data::Dumper;
+
+my ($file) = @ARGV;
+my $yaml;
+
+if ($file) {
+    $yaml = do { open my $fh, '<', $file or die $!; local $/; <$fh> };
+}
+else {
+    $yaml = do { local $/; <STDIN> };
+}
+
+my $ypp = YAML::PP->new;
+my @data = $ypp->Load($yaml);
+
+print Data::Dumper->Dump([\@data], ['data']);
