@@ -646,34 +646,38 @@ sub parse_plain_multi {
             unless ($$yaml =~ s/\A$indent_re//) {
                 last;
             }
+            last if $$yaml =~ $RE_DOC_END;
+            last if $$yaml =~ $RE_DOC_START;
         }
-        last if $$yaml =~ $RE_DOC_END;
-        last if $$yaml =~ $RE_DOC_START;
-        if ($$yaml =~ s/\A$RE_WS*#.*//) {
-            last;
+        if ($$yaml =~ s/\A$RE_WS+//) {
+            if ($$yaml =~ s/\A#.*//) {
+                last;
+            }
         }
 
-        if ($$yaml =~ s/\A$RE_WS*\n//) {
+        if ($$yaml =~ s/\A\n//) {
             push @multi, '';
         }
-        elsif ($$yaml =~ s/\A$RE_WS*($re)//) {
+        elsif ($$yaml =~ s/\A($re)//) {
             my $string = $1;
             if ($string =~ m/:$/) {
                 die "Unexpected content: '$string'";
             }
             $re = $plain_word_re;
-            while ($$yaml =~ s/\A($RE_WS+$re)//) {
-                my $value = $1;
+            while ($$yaml =~ s/\A($RE_WS+)//) {
+                my $sp = $1;
+                $$yaml =~ s/\A($re)// or last;
+                my $value = $sp . $1;
                 if ($value =~ m/:$/) {
                     die "Unexpected content: '$value'";
                 }
                 $string .= $value;
             }
             push @multi, $string;
-            if ($$yaml =~ s/\A$RE_WS+(#.*)//) {
+            if ($$yaml =~ s/\A(#.*)//) {
                 last;
             }
-            unless ($$yaml =~ s/\A$RE_WS*\n//) {
+            unless ($$yaml =~ s/\A\n//) {
                 warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
                 die "Unexpected content";
             }
