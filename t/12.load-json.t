@@ -4,7 +4,7 @@ use warnings;
 use Test::More;
 use FindBin '$Bin';
 use Data::Dumper;
-use YAML::PP;
+use YAML::PP::Loader;
 use YAML::XS ();
 use Encode;
 use File::Basename qw/ dirname basename /;
@@ -89,7 +89,7 @@ for my $item (@dirs) {
     close $fh;
 
 #    diag "------------------------------ $id";
-    my $ypp = YAML::PP->new;
+    my $ypp = YAML::PP::Loader->new(boolean => 'JSON::PP');
     my $data = eval { $ypp->Load($yaml) };
 #    warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$data], ['data']);
     if ($@) {

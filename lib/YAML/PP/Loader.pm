@@ -9,7 +9,22 @@ use constant TRACE => $ENV{YAML_PP_LOAD_TRACE} ? 1 : 0;
 
 sub new {
     my ($class, %args) = @_;
+    my $bool = delete $args{boolean} // 'perl';
+    my $truefalse;
+    if ($bool eq 'JSON::PP') {
+        require JSON::PP;
+        $truefalse = \&bool_jsonpp;
+    }
+    elsif ($bool eq 'boolean') {
+        require boolean;
+        $truefalse = \&bool_booleanpm;
+    }
+    elsif ($bool eq 'perl') {
+        $truefalse = \&bool_perl;
+    }
     my $self = bless {
+        boolean => $bool,
+        truefalse => $truefalse,
     }, $class;
     return $self;
 }
@@ -20,6 +35,8 @@ sub anchors { return $_[0]->{anchors} }
 sub set_data { $_[0]->{data} = $_[1] }
 sub set_refs { $_[0]->{refs} = $_[1] }
 sub set_anchors { $_[0]->{anchors} = $_[1] }
+sub boolean { return $_[0]->{boolean} }
+sub truefalse { return $_[0]->{truefalse} }
 
 sub Load {
     my ($self, $yaml) = @_;
@@ -129,13 +146,9 @@ sub render_plain_scalar {
     if ($content =~ m/^([1-9]\d*|\d+\.\d+)$/){
         $value = 0 + $1;
     }
-    elsif ($content eq 'true') {
-        require JSON::PP;
-        $value = JSON::PP::true();
-    }
-    elsif ($content eq 'false') {
-        require JSON::PP;
-        $value = JSON::PP::false();
+    elsif ($content eq 'true' or $content eq 'false') {
+    my $tf = $self->truefalse;
+        $value = $self->truefalse->($content);
     }
     else {
         $value = $content;
@@ -143,6 +156,18 @@ sub render_plain_scalar {
         $value =~ s/\\t/\t/g;
     }
     return $value;
+}
+
+sub bool_jsonpp {
+    $_[0] eq 'true' ? JSON::PP::true() : JSON::PP::false()
+}
+
+sub bool_booleanpm {
+    $_[0] eq 'true' ? boolean::true() : boolean::false()
+}
+
+sub bool_perl {
+    $_[0] eq 'true' ? 1 : 0
 }
 
 1;
