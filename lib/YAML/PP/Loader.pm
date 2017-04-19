@@ -16,6 +16,10 @@ sub new {
 
 sub data { return $_[0]->{data} }
 sub refs { return $_[0]->{refs} }
+sub anchors { return $_[0]->{anchors} }
+sub set_data { $_[0]->{data} = $_[1] }
+sub set_refs { $_[0]->{refs} = $_[1] }
+sub set_anchors { $_[0]->{anchors} = $_[1] }
 
 sub Load {
     my ($self, $yaml) = @_;
@@ -23,9 +27,13 @@ sub Load {
     my $parser = YAML::PP::Parser->new(
         receiver => sub { $self->event(@_, \@documents) },
     );
-    $self->{data} = undef;
-    $self->{refs} = [];
+    $self->set_data(undef);
+    $self->set_refs([]);
+    $self->set_anchors({});
     $parser->parse($yaml);
+    $self->set_data(undef);
+    $self->set_refs([]);
+    $self->set_anchors({});
     return wantarray ? @documents : $documents[0];
 }
 
@@ -39,8 +47,9 @@ sub event {
 
         my $type = $info->{type};
         if ($type eq 'DOC') {
-            $self->{data} = undef;
-            $self->{refs} = [ \$self->{data} ];
+            $self->set_data(undef);
+            $self->set_refs([ \$self->{data} ]);
+            $self->set_anchors({});
         }
         elsif ($type eq 'MAP' or $type eq 'SEQ') {
             my $data = $type eq 'MAP' ? {} : [];
@@ -48,26 +57,36 @@ sub event {
             my $ref = $refs->[-1];
             if (not defined $$ref) {
                 $$ref = $data;
-                return;
             }
-
-            if (ref $$ref eq 'ARRAY') {
+            elsif (ref $$ref eq 'ARRAY') {
                 push @$$ref, $data;
                 push @$refs, \$data;
-                return;
             }
-
-            die "Unexpected";
+            else {
+                die "Unexpected";
+            }
+            if (defined(my $anchor = $info->{anchor})) {
+                $self->anchors->{ $anchor } = \$data;
+            }
         }
     }
     elsif ($name eq 'END') {
         if ($info->{type} eq 'DOC') {
-            push @$docs, $self->{data};
+            push @$docs, $self->data;
         }
         pop @$refs if @$refs;
     }
-    elsif ($name eq 'VALUE') {
-        my $value = $self->render_value($info);
+    elsif ($name eq 'VALUE' or $name eq 'ALIAS') {
+        my $value;
+        if ($name eq 'VALUE') {
+            $value = $self->render_value($info);
+        }
+        else {
+            my $name = $info->{content};
+            if (my $anchor = $self->anchors->{ $name }) {
+                $value = $$anchor;
+            }
+        }
 
         my $ref = $refs->[-1];
         if (not defined $$ref) {
