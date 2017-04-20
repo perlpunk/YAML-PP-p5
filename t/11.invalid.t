@@ -5,7 +5,7 @@ use Test::More;
 use FindBin '$Bin';
 use Data::Dumper;
 use YAML::PP::Parser;
-use YAML::XS ();
+use YAML::PP::Loader;
 use Encode;
 use File::Basename qw/ dirname basename /;
 
@@ -18,7 +18,8 @@ closedir $dh;
 
 @dirs = sort @dirs;
 
-my $skip_info = YAML::XS::LoadFile("t/skip_invalid.yaml");
+my $skipyaml = do { open my $fh, '<', "$Bin/skip_invalid.yaml" or die $!; local $/; <$fh> };
+my $skip_info = YAML::PP::Loader->new->Load($skipyaml);
 my $skipped = $skip_info->{skip} || [];
 
 my $anchors = $skip_info->{anchors} || [];

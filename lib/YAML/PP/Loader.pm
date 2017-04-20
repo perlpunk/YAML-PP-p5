@@ -1,6 +1,9 @@
+# ABSTRACT: Load YAML into data with YAML::PP
 use strict;
 use warnings;
 package YAML::PP::Loader;
+
+our $VERSION = '0.000'; # VERSION
 
 use YAML::PP::Parser;
 

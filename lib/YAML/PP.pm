@@ -1,7 +1,9 @@
-# ABSTRACT: YAML Parser
+# ABSTRACT: YAML Parser and Loader
 use strict;
 use warnings;
 package YAML::PP;
+
+our $VERSION = '0.000'; # VERSION
 
 sub new {
     my ($class, %args) = @_;

@@ -1,4 +1,7 @@
+YAML-PP-*
 yaml-test-suite
 cover_db
 nytprof
 nytprof.out
+.build
+pod2htmd.tmp

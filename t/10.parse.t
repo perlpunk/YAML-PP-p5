@@ -5,24 +5,28 @@ use Test::More;
 use FindBin '$Bin';
 use Data::Dumper;
 use YAML::PP::Parser;
-use YAML::XS ();
+use YAML::PP::Loader;
 use Encode;
 use File::Basename qw/ dirname basename /;
 
 $|++;
 
+my @dirs;
+if (-f "$Bin/../yaml-test-suite") {
 my $datadir = "$Bin/../yaml-test-suite";
-opendir my $dh, $datadir or die $!;
-my @dirs = map { "$datadir/$_" } grep { m/^[A-Z0-9]{4}\z/ } readdir $dh;
-closedir $dh;
+    opendir my $dh, $datadir or die $!;
+    push @dirs, map { "$datadir/$_" } grep { m/^[A-Z0-9]{4}\z/ } readdir $dh;
+    closedir $dh;
+}
 my $extradir = "$Bin/valid";
-opendir $dh, $extradir or die $!;
+opendir my $dh, $extradir or die $!;
 push @dirs, map { "$extradir/$_" } grep { m/^v[A-Z0-9]{3}\z/ } readdir $dh;
 closedir $dh;
 
 @dirs = sort @dirs;
 
-my $skip_info = YAML::XS::LoadFile("t/skip.yaml");
+my $skipyaml = do { open my $fh, '<', "$Bin/skip.yaml" or die $!; local $/; <$fh> };
+my $skip_info = YAML::PP::Loader->new->Load($skipyaml);
 my $check = $skip_info->{check};
 
 my $skipped = $skip_info->{skip};

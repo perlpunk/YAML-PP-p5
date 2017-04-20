@@ -1,5 +1,9 @@
+yaml-test-suite
 cover_db
 local
 dev.sh
 nytprof
 nytprof.out
+pod2htmd.tmp
+^valid.*.yaml
+^invalid.*.yaml

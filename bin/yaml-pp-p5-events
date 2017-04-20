@@ -4,14 +4,23 @@ use warnings;
 use 5.010;
 
 use Encode;
-
 use YAML::PP::Parser;
+
+my ($file) = @ARGV;
+my $yaml;
+
+if ($file) {
+    $yaml = do { open my $fh, '<', $file or die $!; local $/; <$fh> };
+}
+else {
+    $yaml = do { local $/; <STDIN> };
+}
+
 my $parser = YAML::PP::Parser->new(
   receiver => sub {
-    my ($self, $event, $content) = @_;
-    $content = encode_utf8($content) if defined $content;
-    say defined $content ? "$event $content" : $event;
+    my ($self, @args) = @_;
+    say encode_utf8(YAML::PP::Parser->event_to_test_suite(@args));
   },
 );
 
-$parser->parse(do { local $/; <> });
+$parser->parse($yaml);

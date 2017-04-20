@@ -3,6 +3,8 @@ use strict;
 use warnings;
 package YAML::PP::Render;
 
+our $VERSION = '0.000'; # VERSION
+
 use constant TRACE => $ENV{YAML_PP_TRACE};
 my $WS = '[\t ]';
 

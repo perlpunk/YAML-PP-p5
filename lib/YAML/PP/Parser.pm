@@ -3,6 +3,8 @@ use strict;
 use warnings;
 package YAML::PP::Parser;
 
+our $VERSION = '0.000'; # VERSION
+
 use YAML::PP::Render;
 
 sub new {

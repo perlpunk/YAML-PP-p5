@@ -1,12 +1,10 @@
-#!/usr/bin/env perl
+#!/usr/bin/perl
 use strict;
 use warnings;
 use 5.010;
 
-use FindBin;
-use lib "$FindBin::Bin/../lib";
-use YAML::PP;
 use Data::Dumper;
+use YAML::PP::Loader;
 
 my ($file) = @ARGV;
 my $yaml;
@@ -18,7 +16,8 @@ else {
     $yaml = do { local $/; <STDIN> };
 }
 
-my $ypp = YAML::PP->new;
+my $ypp = YAML::PP::Loader->new;
 my @data = $ypp->Load($yaml);
 
+local $Data::Dumper::Useqq = 1;
 print Data::Dumper->Dump([\@data], ['data']);

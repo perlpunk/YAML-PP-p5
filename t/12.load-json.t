@@ -5,11 +5,9 @@ use Test::More;
 use FindBin '$Bin';
 use Data::Dumper;
 use YAML::PP::Loader;
-use YAML::XS ();
 use Encode;
 use File::Basename qw/ dirname basename /;
-use JSON::XS;
-my $coder = JSON::XS->new->ascii->pretty->allow_nonref->canonical;
+my $json_xs = eval "use JSON::XS; 1";
 
 $|++;
 
@@ -54,24 +52,35 @@ my @skip = qw/
 /;
 my %skip;
 @skip{ @skip }= ();
+my @dirs;
 my $datadir = "$Bin/../yaml-test-suite";
-opendir my $dh, $datadir or die $!;
-my @dirs = map {
-    "$datadir/$_"
-} grep {
-    not exists $skip{ $_ }
-} grep {
-    -f "$datadir/$_/in.json"
-} grep {
-    m/^[A-Z0-9]{4}\z/
-} readdir $dh;
-closedir $dh;
+if (-d "$datadir") {
+    opendir my $dh, $datadir or die $!;
+    @dirs = map {
+        "$datadir/$_"
+    } grep {
+        not exists $skip{ $_ }
+    } grep {
+        -f "$datadir/$_/in.json"
+    } grep {
+        m/^[A-Z0-9]{4}\z/
+    } readdir $dh;
+    closedir $dh;
+}
+else {
+    diag "Skipping tests, no yaml-test-suite directory";
+    ok(1);
+}
 
 @dirs = sort @dirs;
 
 if (my $dir = $ENV{YAML_TEST_DIR}) {
     @dirs = ($dir);
 }
+
+SKIP: {
+    skip "JSON::XS not nstalled", scalar(@dirs) unless $json_xs;
+    my $coder = JSON::XS->new->ascii->pretty->allow_nonref->canonical;
 
 for my $item (@dirs) {
     my $dir = dirname $item;
@@ -105,6 +114,7 @@ for my $item (@dirs) {
     my $json = $coder->encode($data);
 
     cmp_ok($json, 'eq', $exp_json, "$id");
+}
 }
 
 done_testing;
