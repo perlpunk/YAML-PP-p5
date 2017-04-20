@@ -1050,7 +1050,7 @@ sub debug_offset {
     my ($self) = @_;
     $self->note(
         qq{OFFSET: (}
-        . join (' | ', map { defined ? sprintf "%-3d", $_ : '?' } @{ $_[0]->offset })
+        . join (' | ', map { defined $_ ? sprintf "%-3d", $_ : '?' } @{ $_[0]->offset })
         . qq/) level=@{[ $_[0]->level ]}]}/
     );
 }
