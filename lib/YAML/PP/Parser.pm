@@ -156,15 +156,20 @@ sub parse_document_head {
     my $head;
     while (length $$yaml) {
         $self->parse_empty;
-        if ($$yaml =~ s/\A\s*%YAML ?1\.2\s*//) {
+        if ($$yaml =~ s/\A\s*%YAML ?1\.2$RE_WS*//) {
             $head = 1;
             next;
         }
-        if ($$yaml =~ s/\A\s*%TAG +(![a-z]*!|!) +(tag:\S+|![a-z][a-z-]*)\s*//) {
+        if ($$yaml =~ s/\A\s*%TAG +(![a-z]*!|!) +(tag:\S+|![a-z][a-z-]*)$RE_WS*//) {
             $head = 1;
             my $tag_alias = $1;
             my $tag_url = $2;
             $self->tagmap->{ $tag_alias } = $tag_url;
+            next;
+        }
+        if ($$yaml =~ s/\s*\A%(\w+).*//) {
+            warn "Found reserved directive '$1'";
+            $head = 1;
             next;
         }
         last;
