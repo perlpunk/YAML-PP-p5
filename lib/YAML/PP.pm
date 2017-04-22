@@ -93,10 +93,6 @@ The error messages in general aren't often very informative
 
 I would like to support a lexer that can be used for highlighting.
 
-=item Numbers
-
-Only integers are supported so far.
-
 =item Possibly more
 
 =back
