@@ -34,9 +34,10 @@ sub set_tagmap { $_[0]->{tagmap} = $_[1] }
 use constant TRACE => $ENV{YAML_PP_TRACE};
 
 my $RE_WS = '[\t ]';
+my $RE_LB = '[\r\n]';
 my $RE_DOC_END = qr/\A\.\.\.(?=$RE_WS|$)/m;
 my $RE_DOC_START = qr/\A---(?=$RE_WS|$)/m;
-my $RE_EOL = qr/\A($RE_WS+#.*)?\n/;
+my $RE_EOL = qr/\A($RE_WS+#.*)?$RE_LB/;
 
 my $RE_URI_CHAR = '%[0-9a-fA-F]{2}' .'|'. q{[0-9A-Za-z#;/?:@&=+$,_.!*'\(\)\[\]]};
 
@@ -48,15 +49,15 @@ our $RE_NUMBER ="'(?:$RE_INT|$RE_OCT|$RE_HEX|$RE_FLOAT)";
 
 my $key_start_re = '[a-zA-Z0-9%.]';
 my $key_content_re = '[a-zA-Z0-9%.\\]"\\\\ -]';
-my $key_content_re_dq = '[^"\n\\\\]';
-my $key_content_re_sq = q{[^'\n]};
+my $key_content_re_dq = '[^"\r\n\\\\]';
+my $key_content_re_sq = q{[^'\r\n]};
 my $key_re = qr{(?:$key_start_re$key_content_re*$key_start_re|$key_start_re?)};
-my $key_re_double_quotes = qr{"(?:\\\\|\\[^\n]|$key_content_re_dq)*"};
+my $key_re_double_quotes = qr{"(?:\\\\|\\[^\r\n]|$key_content_re_dq)*"};
 my $key_re_single_quotes = qr{'(?:\\\\|''|$key_content_re_sq)*'};
 my $key_full_re = qr{(?:$key_re_double_quotes|$key_re_single_quotes|$key_re)};
 
-my $plain_start_word_re = '[^*!&\s#][^\n\s]*';
-my $plain_word_re = '[^#\n\s][^\n\s]*';
+my $plain_start_word_re = '[^*!&\s#][^\r\n\s]*';
+my $plain_word_re = '[^#\r\n\s][^\r\n\s]*';
 
 my $tag_re = '(?:[a-zA-Z]|%[0-9a-fA-F]{2})+';
 my $full_tag_re = "![a-z]*!$tag_re|!$tag_re|!<(?:$RE_URI_CHAR)+>|!";
@@ -599,22 +600,23 @@ sub parse_tag_anchor {
     my $check_tag = $args{tag} // 1;
     my ($tag, $anchor);
     if ($check_anchor and $check_tag) {
-        if ($$yaml =~ s/\A($full_tag_re)(?:$RE_WS+&($anchor_re))?(?=$RE_WS|\n)//) {
+        if ($$yaml =~
+        s/\A($full_tag_re)(?:$RE_WS+&($anchor_re))?(?=$RE_WS|$RE_LB)//) {
             $tag = $1;
             $anchor = $2;
         }
-        elsif ($$yaml =~ s/\A&($anchor_re)(?:$RE_WS+($full_tag_re))?(?=$RE_WS|\n)//) {
+        elsif ($$yaml =~ s/\A&($anchor_re)(?:$RE_WS+($full_tag_re))?(?=$RE_WS|$RE_LB)//) {
             $anchor = $1;
             $tag = $2;
         }
     }
     elsif ($check_tag) {
-        if ($$yaml =~ s/\A($full_tag_re)(?=$RE_WS|\n)//) {
+        if ($$yaml =~ s/\A($full_tag_re)(?=$RE_WS|$RE_LB)//) {
             $tag = $1;
         }
     }
     elsif ($check_anchor) {
-        if ($$yaml =~ s/\A&($anchor_re)(?=$RE_WS|\n)//) {
+        if ($$yaml =~ s/\A&($anchor_re)(?=$RE_WS|$RE_LB)//) {
             $anchor = $1;
         }
     }
@@ -668,7 +670,7 @@ sub parse_plain_multi {
             }
         }
 
-        if ($$yaml =~ s/\A\n//) {
+        if ($$yaml =~ s/\A$RE_LB//) {
             push @multi, '';
         }
         elsif ($$yaml =~ s/\A($re)//) {
@@ -690,7 +692,7 @@ sub parse_plain_multi {
             if ($$yaml =~ s/\A(#.*)//) {
                 last;
             }
-            unless ($$yaml =~ s/\A\n//) {
+            unless ($$yaml =~ s/\A$RE_LB//) {
                 warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
                 die "Unexpected content";
             }
@@ -782,14 +784,14 @@ sub parse_quoted {
         while (1) {
             my $line;
             if ($double) {
-                last unless $$yaml =~ s/\A((?:\\"|[^"\n])*)//;
+                last unless $$yaml =~ s/\A((?:\\"|[^"\r\n])*)//;
                 $line = $1;
             }
             else {
-                last unless $$yaml =~ s/\A((?:''|[^'\n])*)//;
+                last unless $$yaml =~ s/\A((?:''|[^'\r\n])*)//;
                 $line = $1;
             }
-            if ($$yaml =~ s/\A\n//) {
+            if ($$yaml =~ s/\A$RE_LB//) {
                 # next line
             }
             elsif ($$yaml =~ s/\A$quote//) {
@@ -818,7 +820,7 @@ sub parse_empty {
     my $yaml = $self->yaml;
     while (length $$yaml) {
         $$yaml =~ s/\A *#.*//;
-        last unless $$yaml =~ s/\A *\n//;
+        last unless $$yaml =~ s/\A$RE_WS*$RE_LB//;
     }
 }
 
@@ -826,7 +828,7 @@ sub parse_block_scalar {
     TRACE and warn "=== parse_block_scalar()\n";
     my ($self) = @_;
     my $yaml = $self->yaml;
-    unless ($$yaml =~ s/\A([|>])([1-9]\d*)?([+-]?)( +#.*)?\n//) {
+    unless ($$yaml =~ s/\A([|>])([1-9]\d*)?([+-]?)( +#.*)?$RE_LB//) {
         return 0;
     }
     my $block_type = $1;
@@ -860,10 +862,10 @@ sub parse_block_scalar {
             $space = $2;
             $length = length $space;
         }
-        elsif ($$yaml =~ m/\A$RE_WS*#.*\n/) {
+        elsif ($$yaml =~ m/\A$RE_WS*#.*$RE_LB/) {
             last;
         }
-        elsif ($$yaml =~ s/\A($RE_WS*)\n//) {
+        elsif ($$yaml =~ s/\A($RE_WS*)$RE_LB//) {
             $pre = $1;
             $space = '';
             $type = 'EMPTY';
@@ -873,7 +875,7 @@ sub parse_block_scalar {
         else {
             last;
         }
-        if ($$yaml =~ s/\A\n//) {
+        if ($$yaml =~ s/\A$RE_LB//) {
             $type = 'EMPTY';
             if ($got_indent) {
                 push @lines, [$type => $pre, $space];
@@ -891,7 +893,7 @@ sub parse_block_scalar {
             $got_indent = 1;
         }
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
-        if ($$yaml =~ s/\A(.*)\n//) {
+        if ($$yaml =~ s/\A(.*)$RE_LB//) {
             my $value = $1;
             $type = length $space ? 'MORE' : 'CONTENT';
             push @lines, [ $type => $pre, $space . $value ];
