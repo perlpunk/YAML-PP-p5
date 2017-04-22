@@ -18,31 +18,26 @@ closedir $dh;
 
 @dirs = sort @dirs;
 
-my $skipyaml = do { open my $fh, '<', "$Bin/skip_invalid.yaml" or die $!; local $/; <$fh> };
-my $skip_info = YAML::PP::Loader->new->Load($skipyaml);
-my $skipped = $skip_info->{skip} || [];
+my @skip = qw/
+    i019 i023
+/;
 
-my $anchors = $skip_info->{anchors} || [];
-my $mappings = $skip_info->{mappings} || [];
 
 my @todo = ();
-push @$skipped,
-    @$anchors,
-    @$mappings;
 
 # test all
 if ($ENV{TEST_ALL}) {
-    @todo = @$skipped;
-    @$skipped = ();
+    @todo = @skip;
+    @skip = ();
 }
 
 if (my $dir = $ENV{YAML_TEST_DIR}) {
     @dirs = ($dir);
     @todo = ();
-    @$skipped = ();
+    @skip = ();
 }
 my %skip;
-@skip{ @$skipped } = ();
+@skip{ @skip } = ();
 my %todo;
 @todo{ @todo } = ();
 
@@ -86,7 +81,7 @@ for my $item (@dirs) {
     }
 
 }
-my $skip_count = @$skipped;
+my $skip_count = @skip;
 diag "Skipped $skip_count tests";
 
 sub test {

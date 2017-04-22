@@ -37,7 +37,7 @@ my $RE_WS = '[\t ]';
 my $RE_LB = '[\r\n]';
 my $RE_DOC_END = qr/\A\.\.\.(?=$RE_WS|$)/m;
 my $RE_DOC_START = qr/\A---(?=$RE_WS|$)/m;
-my $RE_EOL = qr/\A($RE_WS+#.*)?$RE_LB/;
+my $RE_EOL = qr/\A($RE_WS+#.*|$RE_WS+)?$RE_LB/;
 
 my $RE_URI_CHAR = '%[0-9a-fA-F]{2}' .'|'. q{[0-9A-Za-z#;/?:@&=+$,_.!*'\(\)\[\]]};
 
@@ -136,7 +136,7 @@ sub parse_document_start {
     my ($start, $start_line) = (0, 0);
     if ($$yaml =~ s/$RE_DOC_START//) {
         $start = 1;
-        my $eol = $$yaml =~ s/$RE_EOL//;
+        my $eol = $$yaml =~ s/\A($RE_EOL|\z)//;
         unless ($eol) {
             if ($$yaml =~ s/\A$RE_WS+//) {
                 $start_line = 1;
@@ -307,7 +307,7 @@ sub check_indent {
         if ($space <= 0) {
             unless ($end) {
                 if ($$yaml =~ s/$RE_DOC_END//) {
-                    $$yaml =~ s/$RE_EOL// or die "Unexpected";
+                    $$yaml =~ s/$RE_EOL|\z// or die "Unexpected";
                     $end = 1;
                     $explicit_end = 1;
                 }
@@ -495,7 +495,7 @@ sub parse_next {
 
     unless (exists $res->{eol}) {
         my $yaml = $self->yaml;
-        my $eol = $$yaml =~ s/\A($RE_EOL|\z)//;
+        my $eol = $$yaml =~ s/\A($RE_EOL|$RE_WS*\z)//;
         $res->{eol} = $eol;
         unless ($eol) {
             $$yaml =~ s/\A($RE_WS+)//

@@ -18,11 +18,19 @@ my @yaml = (
     ">\nfoo",
     "|",
     '"foo"',
-    'foo:',
+    '"foo" ',
 
+    'foo:',
+    'foo: ',
     '&foo',
+    '&foo ',
     '!foo',
+
     "foo\n ",
+    '---',
+    '--- ',
+    '...',
+    '... ',
 );
 
 my $ypp = YAML::PP::Parser->new(
