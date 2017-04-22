@@ -495,7 +495,7 @@ sub parse_next {
 
     unless (exists $res->{eol}) {
         my $yaml = $self->yaml;
-        my $eol = $$yaml =~ s/$RE_EOL//;
+        my $eol = $$yaml =~ s/\A($RE_EOL|\z)//;
         $res->{eol} = $eol;
         unless ($eol) {
             $$yaml =~ s/\A($RE_WS+)//
@@ -601,22 +601,23 @@ sub parse_tag_anchor {
     my ($tag, $anchor);
     if ($check_anchor and $check_tag) {
         if ($$yaml =~
-        s/\A($full_tag_re)(?:$RE_WS+&($anchor_re))?(?=$RE_WS|$RE_LB)//) {
+        s/\A($full_tag_re)(?:$RE_WS+&($anchor_re))?(?=$RE_WS|$RE_LB|\z)//) {
             $tag = $1;
             $anchor = $2;
         }
-        elsif ($$yaml =~ s/\A&($anchor_re)(?:$RE_WS+($full_tag_re))?(?=$RE_WS|$RE_LB)//) {
+        elsif ($$yaml =~
+        s/\A&($anchor_re)(?:$RE_WS+($full_tag_re))?(?=$RE_WS|$RE_LB|\z)//) {
             $anchor = $1;
             $tag = $2;
         }
     }
     elsif ($check_tag) {
-        if ($$yaml =~ s/\A($full_tag_re)(?=$RE_WS|$RE_LB)//) {
+        if ($$yaml =~ s/\A($full_tag_re)(?=$RE_WS|$RE_LB|\z)//) {
             $tag = $1;
         }
     }
     elsif ($check_anchor) {
-        if ($$yaml =~ s/\A&($anchor_re)(?=$RE_WS|$RE_LB)//) {
+        if ($$yaml =~ s/\A&($anchor_re)(?=$RE_WS|$RE_LB|\z)//) {
             $anchor = $1;
         }
     }
@@ -692,7 +693,7 @@ sub parse_plain_multi {
             if ($$yaml =~ s/\A(#.*)//) {
                 last;
             }
-            unless ($$yaml =~ s/\A$RE_LB//) {
+            unless ($$yaml =~ s/\A($RE_LB|\z)//) {
                 warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
                 die "Unexpected content";
             }
@@ -820,7 +821,7 @@ sub parse_empty {
     my $yaml = $self->yaml;
     while (length $$yaml) {
         $$yaml =~ s/\A *#.*//;
-        last unless $$yaml =~ s/\A$RE_WS*$RE_LB//;
+        last unless $$yaml =~ s/\A$RE_WS*(?:$RE_LB|\z)//;
     }
 }
 
@@ -828,7 +829,7 @@ sub parse_block_scalar {
     TRACE and warn "=== parse_block_scalar()\n";
     my ($self) = @_;
     my $yaml = $self->yaml;
-    unless ($$yaml =~ s/\A([|>])([1-9]\d*)?([+-]?)( +#.*)?$RE_LB//) {
+    unless ($$yaml =~ s/\A([|>])([1-9]\d*)?([+-]?)( +#.*)?($RE_LB|\z)//) {
         return 0;
     }
     my $block_type = $1;
@@ -893,7 +894,7 @@ sub parse_block_scalar {
             $got_indent = 1;
         }
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
-        if ($$yaml =~ s/\A(.*)$RE_LB//) {
+        if ($$yaml =~ s/\A(.*)($RE_LB|\z)//) {
             my $value = $1;
             $type = length $space ? 'MORE' : 'CONTENT';
             push @lines, [ $type => $pre, $space . $value ];
