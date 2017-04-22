@@ -75,11 +75,6 @@ Flow style is not implemented yet, you will get an appropriate error message.
 The regexes are not complete. It will not accept characters that should be
 valid, and it will accept characters that should be invalid.
 
-=item Directive Handling
-
-Only C<%TAG ...> and C<%YAML 1.2> are parsed as directives. Anything else
-is parsed as content.
-
 =item Line Numbers
 
 The parser currently doesn't keep track of the line numbers, so the error
