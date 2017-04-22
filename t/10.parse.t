@@ -25,34 +25,19 @@ closedir $dh;
 
 @dirs = sort @dirs;
 
-my $skipyaml = do { open my $fh, '<', "$Bin/skip.yaml" or die $!; local $/; <$fh> };
-my $skip_info = YAML::PP::Loader->new->Load($skipyaml);
-my $check = $skip_info->{check};
+my @skip = qw/
+    4ABK 54T7 5C5M 5KJE 6HB6 87E4 8UDB
+    C2DT C4HZ CT4Q D88J DBG4 DFF7 DHP8
+    EHF6 FRK4 FUP4
+    KZN9 L9U5 LP6E LQZ7
+    M5DY M7A3 MXS3 N782
+    Q88A Q9WF QF4Y
+    R4YG SBG9 UDR7 WZ62 X38W YD5X ZF4X
+/;
 
-my $skipped = $skip_info->{skip};
-
-my $multiline = $skip_info->{multiline} || [];
-my $quoted = $skip_info->{quoted} || [];
-my $flow = $skip_info->{flow} || [];
-my $seq = $skip_info->{seq} || [];
-my $sets = $skip_info->{sets} || [];
-my $tags = $skip_info->{tags} || [];
-my $misc = $skip_info->{misc} || [];
-my $anchors = $skip_info->{anchors} || [];
-my $keymap = $skip_info->{keymap} || [];
+my $skipped = \@skip;
 
 my @todo = ();
-push @$skipped,
-    @$check,
-    @$anchors,
-    @$keymap,
-    @$tags,
-    @$misc,
-    @$sets,
-    @$seq,
-    @$flow,
-    @$quoted,
-    @$multiline;
 
 # test all
 if ($ENV{TEST_ALL}) {
