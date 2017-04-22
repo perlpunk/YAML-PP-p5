@@ -163,24 +163,29 @@ Compare the output of the following YAML Loaders and JSON::XS dump:
 
     use YAML::Syck ();
 
+    use YAML::Tiny ();
+
     use YAML::PP::Loader;
 
-    my $yaml = "foo: 23\n";
+    my $yaml = "foo: 23";
 
     my $d1 = YAML::XS::Load($yaml);
     my $d2 = YAML::Load($yaml);
     my $d3 = YAML::Syck::Load($yaml);
-    my $d4 = YAML::PP::Loader->new->Load($yaml);
+    my $d4 = YAML::Tiny->read_string($yaml);
+    my $d5 = YAML::PP::Loader->new->Load($yaml);
 
     Dump $d1->{foo};
     Dump $d2->{foo};
     Dump $d3->{foo};
     Dump $d4->{foo};
+    Dump $d5->{foo};
 
     say encode_json($d1);
     say encode_json($d2);
     say encode_json($d3);
     say encode_json($d4);
+    say encode_json($d5);
 
     SV = PVIV(0x564f09465c00) at 0x564f09460780
       REFCNT = 1
@@ -204,6 +209,15 @@ Compare the output of the following YAML Loaders and JSON::XS dump:
       CUR = 2
       LEN = 10
 
+    SV = PVMG(0x5640b45a42a0) at 0x5640b4594250
+      REFCNT = 1
+      FLAGS = (POK,pPOK,UTF8)
+      IV = 0
+      NV = 0
+      PV = 0x5640b45a21f0 "23"\0 [UTF8 "23"]
+      CUR = 2
+      LEN = 10
+
     SV = PVMG(0x564f09b5cbc0) at 0x564f09d473c0
       REFCNT = 1
       FLAGS = (IOK,pIOK)
@@ -213,6 +227,7 @@ Compare the output of the following YAML Loaders and JSON::XS dump:
 
     {"foo":"23"}
     {"foo":23}
+    {"foo":"23"}
     {"foo":"23"}
     {"foo":23}
 
