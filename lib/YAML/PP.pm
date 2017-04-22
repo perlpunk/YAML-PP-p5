@@ -31,7 +31,7 @@ __END__
 
 =head1 NAME
 
-YAML Parser and Loader
+YAML::PP - YAML Parser and Loader
 
 =head1 SYNOPSIS
 
