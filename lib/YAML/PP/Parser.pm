@@ -671,7 +671,7 @@ sub parse_plain_multi {
             }
         }
 
-        if ($$yaml =~ s/\A$RE_LB//) {
+        if ($$yaml =~ s/\A($RE_LB|\z)//) {
             push @multi, '';
         }
         elsif ($$yaml =~ s/\A($re)//) {

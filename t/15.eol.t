@@ -22,6 +22,7 @@ my @yaml = (
 
     '&foo',
     '!foo',
+    "foo\n ",
 );
 
 my $ypp = YAML::PP::Parser->new(
