@@ -1,0 +1,10 @@
+0.001_001 2017-04-22 20:33:04+02:00
+    - Make JSON::PP optional in test
+    - Fix bug for perl <= 5.22
+    - Improve number support (int, float, oct, hex)
+    - Reserved directives generate a warning now
+    - Support Carriage Return as line break
+    - Support missing final line break
+
+0.001 Thu Apr 20 20:46:43 2017 +0200
+    - First Release
