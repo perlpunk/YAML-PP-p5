@@ -1,0 +1,5 @@
+int: -42
+float1: +3.14
+float2: 0.3e3
+hex: 0xc0ffee
+oct: 0o27

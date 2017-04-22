@@ -40,6 +40,12 @@ my $RE_EOL = qr/\A($RE_WS+#.*)?\n/;
 
 my $RE_URI_CHAR = '%[0-9a-fA-F]{2}' .'|'. q{[0-9A-Za-z#;/?:@&=+$,_.!*'\(\)\[\]]};
 
+our $RE_INT = '[+-]?[1-9]\d*';
+our $RE_OCT = '0o[1-7][0-7]*';
+our $RE_HEX = '0x[1-9a-fA-F][0-9a-fA-F]*';
+our $RE_FLOAT = '[+-]?(?:\.\d+|\d+\.\d*)(?:[eE][+-]?\d+)?';
+our $RE_NUMBER ="'(?:$RE_INT|$RE_OCT|$RE_HEX|$RE_FLOAT)";
+
 my $key_start_re = '[a-zA-Z0-9%.]';
 my $key_content_re = '[a-zA-Z0-9%.\\]"\\\\ -]';
 my $key_content_re_dq = '[^"\n\\\\]';

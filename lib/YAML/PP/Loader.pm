@@ -146,11 +146,17 @@ sub render_plain_scalar {
     my ($self, $content) = @_;
     return unless defined $content;
     my $value;
-    if ($content =~ m/^([1-9]\d*|\d+\.\d+)$/){
+    if ($content =~ m/^($YAML::PP::Parser::RE_INT|$YAML::PP::Parser::RE_FLOAT)$/){
         $value = 0 + $1;
     }
+    elsif ($content =~ m/^($YAML::PP::Parser::RE_HEX)/) {
+        $value = hex $content;
+    }
+    elsif ($content =~ m/^($YAML::PP::Parser::RE_OCT)/) {
+        my $oct = 0 . substr($content, 2);
+        $value = oct $oct;
+    }
     elsif ($content eq 'true' or $content eq 'false') {
-    my $tf = $self->truefalse;
         $value = $self->truefalse->($content);
     }
     else {

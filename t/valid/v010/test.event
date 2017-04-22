@@ -1,0 +1,16 @@
++STR
++DOC
++MAP
+=VAL :int
+=VAL :-42
+=VAL :float1
+=VAL :+3.14
+=VAL :float2
+=VAL :0.3e3
+=VAL :hex
+=VAL :0xc0ffee
+=VAL :oct
+=VAL :0o27
+-MAP
+-DOC
+-STR
