@@ -12,8 +12,8 @@ use File::Basename qw/ dirname basename /;
 $|++;
 
 my @dirs;
-if (-f "$Bin/../yaml-test-suite") {
-my $datadir = "$Bin/../yaml-test-suite";
+if (-d "$Bin/../yaml-test-suite") {
+    my $datadir = "$Bin/../yaml-test-suite";
     opendir my $dh, $datadir or die $!;
     push @dirs, map { "$datadir/$_" } grep { m/^[A-Z0-9]{4}\z/ } readdir $dh;
     closedir $dh;
