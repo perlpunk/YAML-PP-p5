@@ -41,20 +41,55 @@ my $RE_EOL = qr/\A($RE_WS+#.*|$RE_WS+)?$RE_LB/;
 
 my $RE_URI_CHAR = '%[0-9a-fA-F]{2}' .'|'. q{[0-9A-Za-z#;/?:@&=+$,_.!*'\(\)\[\]]};
 
+#  [#x21-#x7E]          /* 8 bit */
+# | #x85 | [#xA0-#xD7FF] | [#xE000-#xFFFD] /* 16 bit */
+# | [#x10000-#x10FFFF]                     /* 32 bit */
+
+#my $RE_NB_CHAR = '[\x21-\x7E]';
+
+my $RE_PLAIN_START = '[\x21\x22\x24-\x7E]';
+my $RE_PLAIN = '[\x21-\x7E]';
+my $RE_PLAIN_END = '[\x21-\x39\x3B-\x7E]';
+my $RE_PLAIN_FIRST = '[\x24\x28-\x29\x2B\x2E-\x3D\x41-\x5A\x5C\x5E-\x5F\x61-\x7A\x7E]';
+# c-indicators
+#! 21
+#" 22
+## 23
+#% 25
+#& 26
+#' 27
+#* 2A
+#, 2C
+#- 2D XX
+#: 3A XX
+#> 3E
+#? 3F XX
+#@ 40
+#[ 5B
+#] 5D
+#` 60
+#{ 7B
+#| 7C
+#} 7D
+
+
 our $RE_INT = '[+-]?[1-9]\d*';
 our $RE_OCT = '0o[1-7][0-7]*';
 our $RE_HEX = '0x[1-9a-fA-F][0-9a-fA-F]*';
 our $RE_FLOAT = '[+-]?(?:\.\d+|\d+\.\d*)(?:[eE][+-]?\d+)?';
 our $RE_NUMBER ="'(?:$RE_INT|$RE_OCT|$RE_HEX|$RE_FLOAT)";
 
-my $key_start_re = '[a-zA-Z0-9%.]';
-my $key_content_re = '[a-zA-Z0-9%.\\]"\\\\ -]';
+my $RE_PLAIN_WORD = "$RE_PLAIN_START(?:$RE_PLAIN_END|$RE_PLAIN*$RE_PLAIN_END)?";
+my $RE_PLAIN_FIRST_WORD1 = "(?:[:?-]$RE_PLAIN*$RE_PLAIN_END)";
+my $RE_PLAIN_FIRST_WORD2 = "(?:$RE_PLAIN_FIRST$RE_PLAIN*$RE_PLAIN_END)";
+my $RE_PLAIN_FIRST_WORD3 = "(?:$RE_PLAIN_FIRST$RE_PLAIN_END?)";
+my $RE_PLAIN_FIRST_WORD = "(?:$RE_PLAIN_FIRST_WORD1|$RE_PLAIN_FIRST_WORD2|$RE_PLAIN_FIRST_WORD3)";
+my $RE_PLAIN_KEY = "(?:$RE_PLAIN_FIRST_WORD(?:$RE_WS+$RE_PLAIN_WORD)*|)";
 my $key_content_re_dq = '[^"\r\n\\\\]';
 my $key_content_re_sq = q{[^'\r\n]};
-my $key_re = qr{(?:$key_start_re$key_content_re*$key_start_re|$key_start_re?)};
 my $key_re_double_quotes = qr{"(?:\\\\|\\[^\r\n]|$key_content_re_dq)*"};
 my $key_re_single_quotes = qr{'(?:\\\\|''|$key_content_re_sq)*'};
-my $key_full_re = qr{(?:$key_re_double_quotes|$key_re_single_quotes|$key_re)};
+my $key_full_re = qr{(?:$key_re_double_quotes|$key_re_single_quotes|$RE_PLAIN_KEY)};
 
 my $plain_start_word_re = '[^*!&\s#][^\r\n\s]*';
 my $plain_word_re = '[^#\r\n\s][^\r\n\s]*';
