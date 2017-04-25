@@ -25,6 +25,12 @@ sub new {
     elsif ($bool eq 'perl') {
         $truefalse = \&bool_perl;
     }
+    else {
+        die "Invalid value for 'boolean': '$bool'. Allowed: ('perl', 'boolean', 'JSON::PP')";
+    }
+    if (keys %args) {
+        die "Unexpected arguments: " . join ', ', sort keys %args;
+    }
     my $self = bless {
         boolean => $bool,
         truefalse => $truefalse,
