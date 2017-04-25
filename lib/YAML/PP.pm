@@ -131,9 +131,9 @@ TODO:
 =item Complex Keys
 
 Mapping Keys in YAML can be more than just scalars. Of course, you can't load
-that into a native perl structure. The Loader will not handle this at the
-moment. I would like to stringify the complex key and possibly offer to
-specify a method for stringification.
+that into a native perl structure. The Loader will stringify those keys
+with L<Data::Dumper>.
+I would like to add a possibility to specify a method for stringification.
 
 =item Tags
 

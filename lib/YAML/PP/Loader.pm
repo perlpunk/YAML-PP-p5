@@ -66,7 +66,7 @@ sub Load {
 sub event {
     my ($self, $parser, $event, $docs) = @_;
     my ($name, $info) = @$event;
-    DEBUG and warn "event($name)\n";
+    DEBUG and warn YAML::PP::Parser->event_to_test_suite($event) ."\n";
 
     my $refs = $self->refs;
     if ($name eq 'BEGIN') {
@@ -88,6 +88,11 @@ sub event {
                 push @$$ref, $data;
                 push @$refs, \$data;
             }
+            elsif (ref $$ref eq 'HASH') {
+                # we got a complex key
+                push @$refs, \\undef;
+                push @$refs, \$data;
+            }
             else {
                 die "Unexpected";
             }
@@ -97,10 +102,40 @@ sub event {
         }
     }
     elsif ($name eq 'END') {
-        if ($info->{type} eq 'DOC') {
+        my $type = $info->{type};
+        if ($type eq 'DOC') {
             push @$docs, $self->data;
+            pop @$refs if @$refs;
         }
-        pop @$refs if @$refs;
+        elsif ($type eq 'MAP' or $type eq 'SEQ') {
+            my $complex = pop @$refs;
+            if (@$refs > 1) {
+                my $ref1 = $refs->[-1];
+                my $ref2 = $refs->[-2];
+                if (ref $$ref1 eq 'SCALAR') {
+                    pop @$refs;
+                    my $string;
+                    {
+                        local $Data::Dumper::Terse = 1;
+                        local $Data::Dumper::Indent = 0;
+                        local $Data::Dumper::Useqq = 0;
+                        local $Data::Dumper::Sortkeys = 1;
+                        $string = Data::Dumper->Dump([$$complex], ['complex']);
+                        $string =~ s/^\$complex = //;
+                    }
+                    if (ref $$ref2 eq 'HASH') {
+                        $$ref2->{ $string } = undef;
+                        push @$refs, \$$ref2->{ $string };
+                    }
+                    else {
+                        die "Unexpected";
+                    }
+                }
+            }
+        }
+        else {
+            pop @$refs if @$refs;
+        }
     }
     elsif ($name eq 'VALUE' or $name eq 'ALIAS') {
         my $value;
