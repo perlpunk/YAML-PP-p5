@@ -16,7 +16,7 @@ sub render_tag {
     elsif ($tag =~ m/^!(<.*)/) {
         return $1;
     }
-    elsif ($tag =~ m/^(![a-z]*!|!)(.+)/) {
+    elsif ($tag =~ m/^(![^!]*!|!)(.+)/) {
         my $alias = $1;
         my $name = $2;
         $name =~ s/%([0-9a-fA-F]{2})/chr hex $1/eg;

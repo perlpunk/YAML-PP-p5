@@ -39,7 +39,10 @@ my $RE_DOC_END = qr/\A\.\.\.(?=$RE_WS|$)/m;
 my $RE_DOC_START = qr/\A---(?=$RE_WS|$)/m;
 my $RE_EOL = qr/\A($RE_WS+#.*|$RE_WS+)?$RE_LB/;
 
-my $RE_URI_CHAR = '%[0-9a-fA-F]{2}' .'|'. q{[0-9A-Za-z#;/?:@&=+$,_.!*'\(\)\[\]]};
+#ns-word-char    ::= ns-dec-digit | ns-ascii-letter | “-”
+my $RE_NS_WORD_CHAR = '[0-9A-Za-z-]';
+my $RE_URI_CHAR = '(?:' . '%[0-9a-fA-F]{2}' .'|'.  q{[0-9A-Za-z#;/?:@&=+$,_.!*'\(\)\[\]-]} . ')';
+my $RE_NS_TAG_CHAR = '(?:' . '%[0-9a-fA-F]{2}' .'|'.  q{[0-9A-Za-z#;/?:@&=+$_.*'\(\)-]} . ')';
 
 #  [#x21-#x7E]          /* 8 bit */
 # | #x85 | [#xA0-#xD7FF] | [#xE000-#xFFFD] /* 16 bit */
@@ -94,8 +97,13 @@ my $key_full_re = qr{(?:$key_re_double_quotes|$key_re_single_quotes|$RE_PLAIN_KE
 my $plain_start_word_re = '[^*!&\s#][^\r\n\s]*';
 my $plain_word_re = '[^#\r\n\s][^\r\n\s]*';
 
-my $tag_re = '(?:[a-zA-Z]|%[0-9a-fA-F]{2})+';
-my $full_tag_re = "![a-z]*!$tag_re|!$tag_re|!<(?:$RE_URI_CHAR)+>|!";
+
+#c-secondary-tag-handle  ::= “!” “!”
+#c-named-tag-handle  ::= “!” ns-word-char+ “!”
+#ns-tag-char ::= ns-uri-char - “!” - c-flow-indicator
+#ns-global-tag-prefix    ::= ns-tag-char ns-uri-char*
+#c-ns-local-tag-prefix   ::= “!” ns-uri-char*
+my $RE_TAG = "!(?:$RE_NS_WORD_CHAR*!$RE_NS_TAG_CHAR+|$RE_NS_TAG_CHAR+|<$RE_URI_CHAR+>|)";
 
 my $anchor_start_re = '[a-zA-Z0-9]';
 my $anchor_content_re = '[a-zA-Z0-9:]';
@@ -196,7 +204,7 @@ sub parse_document_head {
             $head = 1;
             next;
         }
-        if ($$yaml =~ s/\A\s*%TAG +(![a-z]*!|!) +(tag:\S+|![a-z][a-z-]*)$RE_WS*//) {
+        if ($$yaml =~ s/\A\s*%TAG +(!$RE_NS_WORD_CHAR*!|!) +(tag:\S+|!$RE_URI_CHAR+)$RE_WS*//) {
             $head = 1;
             my $tag_alias = $1;
             my $tag_url = $2;
@@ -636,18 +644,18 @@ sub parse_tag_anchor {
     my ($tag, $anchor);
     if ($check_anchor and $check_tag) {
         if ($$yaml =~
-        s/\A($full_tag_re)(?:$RE_WS+&($anchor_re))?(?=$RE_WS|$RE_LB|\z)//) {
+        s/\A($RE_TAG)(?:$RE_WS+&($anchor_re))?(?=$RE_WS|$RE_LB|\z)//) {
             $tag = $1;
             $anchor = $2;
         }
         elsif ($$yaml =~
-        s/\A&($anchor_re)(?:$RE_WS+($full_tag_re))?(?=$RE_WS|$RE_LB|\z)//) {
+        s/\A&($anchor_re)(?:$RE_WS+($RE_TAG))?(?=$RE_WS|$RE_LB|\z)//) {
             $anchor = $1;
             $tag = $2;
         }
     }
     elsif ($check_tag) {
-        if ($$yaml =~ s/\A($full_tag_re)(?=$RE_WS|$RE_LB|\z)//) {
+        if ($$yaml =~ s/\A($RE_TAG)(?=$RE_WS|$RE_LB|\z)//) {
             $tag = $1;
         }
     }
@@ -765,13 +773,13 @@ sub parse_map {
         $alias = $1;
     }
     elsif (not $tag_anchor and
-        $$yaml =~ s/\A&($anchor_re)(?: +($full_tag_re))? +($key_full_re) *:(?=$RE_WS|$)//) {
+        $$yaml =~ s/\A&($anchor_re)(?: +($RE_TAG))? +($key_full_re) *:(?=$RE_WS|$)//) {
         $anchor = $1;
         $tag = $2;
         $key = $3;
     }
     elsif (not $tag_anchor and
-        $$yaml =~ s/\A($full_tag_re)(?: +&($anchor_re))? +($key_full_re) *:(?=$RE_WS|$)//) {
+        $$yaml =~ s/\A($RE_TAG)(?: +&($anchor_re))? +($key_full_re) *:(?=$RE_WS|$)//) {
         $tag = $1;
         $anchor = $2;
         $key = $3;
