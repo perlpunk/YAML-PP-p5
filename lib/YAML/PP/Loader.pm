@@ -114,15 +114,7 @@ sub event {
                 my $ref2 = $refs->[-2];
                 if (ref $$ref1 eq 'SCALAR') {
                     pop @$refs;
-                    my $string;
-                    {
-                        local $Data::Dumper::Terse = 1;
-                        local $Data::Dumper::Indent = 0;
-                        local $Data::Dumper::Useqq = 0;
-                        local $Data::Dumper::Sortkeys = 1;
-                        $string = Data::Dumper->Dump([$$complex], ['complex']);
-                        $string =~ s/^\$complex = //;
-                    }
+                    my $string = $self->stringify_complex($$complex);
                     if (ref $$ref2 eq 'HASH') {
                         $$ref2->{ $string } = undef;
                         push @$refs, \$$ref2->{ $string };
@@ -181,6 +173,19 @@ sub render_value {
     TRACE and local $Data::Dumper::Useqq = 1;
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$value], ['value']);
     return $value;
+}
+
+sub stringify_complex {
+    my ($self, $data) = @_;
+    require Data::Dumper;
+    local $Data::Dumper::Quotekeys = 0;
+    local $Data::Dumper::Terse = 1;
+    local $Data::Dumper::Indent = 0;
+    local $Data::Dumper::Useqq = 0;
+    local $Data::Dumper::Sortkeys = 1;
+    my $string = Data::Dumper->Dump([$data], ['data']);
+    $string =~ s/^\$data = //;
+    return $string;
 }
 
 sub render_plain_scalar {

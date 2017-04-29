@@ -135,6 +135,30 @@ that into a native perl structure. The Loader will stringify those keys
 with L<Data::Dumper>.
 I would like to add a possibility to specify a method for stringification.
 
+Example:
+
+    use YAML::PP::Loader;
+    use JSON::XS;
+    my $yppl = YAML::PP::Loader->new;
+    my $coder = JSON::XS->new->ascii->pretty->allow_nonref->canonical;
+    my $yaml = <<'EOM';
+    complex:
+        ?
+            ?
+                a: 1
+                c: 2
+            : 23
+        : 42
+    EOM
+    my $data = $yppl->Load($yaml);
+    say $coder->encode($data);
+    __END__
+    {
+       "complex" : {
+          "{'{a => 1,c => 2}' => 23}" : 42
+       }
+    }
+
 =item Tags
 
 Tags are completely ignored.

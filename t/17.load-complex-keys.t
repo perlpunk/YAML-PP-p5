@@ -31,22 +31,10 @@ complex:
         : 23
     : 42
 EOM
-my ($exp_complexmap, $exp_complexseq);
-my ($inner, $nested);
-{
-    local $Data::Dumper::Terse = 1;
-    local $Data::Dumper::Indent = 0;
-    local $Data::Dumper::Useqq = 0;
-    local $Data::Dumper::Sortkeys = 1;
-    $exp_complexmap = Data::Dumper->Dump([{ a => 'b' }], ['x']);
-    $exp_complexseq = Data::Dumper->Dump([[qw/ A B /]], ['x']);
-    $exp_complexmap =~ s/^\$x = //;
-    $exp_complexseq =~ s/^\$x = //;
-    $inner = Data::Dumper->Dump([{ a => 'b', c => 'd' }], ['x']);
-    $inner =~ s/^\$x = //;
-    $nested = Data::Dumper->Dump([{ $inner => 23 }], ['x']);
-    $nested =~ s/^\$x = //;
-}
+my $exp_complexmap = $yppl->stringify_complex({ a => 'b' });
+my $exp_complexseq = $yppl->stringify_complex([qw/ A B /]);
+my $inner = $yppl->stringify_complex({ a => 'b', c => 'd' });
+my $nested = $yppl->stringify_complex({ $inner => 23 });
 
 {
     my $data = $yppl->Load($yaml);
