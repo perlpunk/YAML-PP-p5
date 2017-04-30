@@ -1,3 +1,8 @@
+0.001_002 2017-04-30 15:20:36+02:00
+    - Fix some missing final line break issues
+    - Loader: Support stringification of complex mapping keys
+    - Improve regexes for mapping keys, tags, anchors/aliases
+
 0.001_001 2017-04-22 20:33:04+02:00
     - Make JSON::PP optional in test
     - Fix bug for perl <= 5.22
