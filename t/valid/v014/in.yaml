@@ -1,0 +1,9 @@
+%TAG !123ab-! tag:example.com,2000:app/
+---
+!123ab-!foo scalar
+...
+%TAG !pre! !prefix-%2F[]*@
+---
+!pre!name scalar
+---
+!foo%2f()*@a=b&c=d scalar

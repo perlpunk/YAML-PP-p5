@@ -39,7 +39,44 @@ my $RE_DOC_END = qr/\A\.\.\.(?=$RE_WS|$)/m;
 my $RE_DOC_START = qr/\A---(?=$RE_WS|$)/m;
 my $RE_EOL = qr/\A($RE_WS+#.*|$RE_WS+)?$RE_LB/;
 
-my $RE_URI_CHAR = '%[0-9a-fA-F]{2}' .'|'. q{[0-9A-Za-z#;/?:@&=+$,_.!*'\(\)\[\]]};
+#ns-word-char    ::= ns-dec-digit | ns-ascii-letter | “-”
+my $RE_NS_WORD_CHAR = '[0-9A-Za-z-]';
+my $RE_URI_CHAR = '(?:' . '%[0-9a-fA-F]{2}' .'|'.  q{[0-9A-Za-z#;/?:@&=+$,_.!*'\(\)\[\]-]} . ')';
+my $RE_NS_TAG_CHAR = '(?:' . '%[0-9a-fA-F]{2}' .'|'.  q{[0-9A-Za-z#;/?:@&=+$_.*'\(\)-]} . ')';
+
+#  [#x21-#x7E]          /* 8 bit */
+# | #x85 | [#xA0-#xD7FF] | [#xE000-#xFFFD] /* 16 bit */
+# | [#x10000-#x10FFFF]                     /* 32 bit */
+
+#nb-char ::= c-printable - b-char - c-byte-order-mark
+#my $RE_NB_CHAR = '[\x21-\x7E]';
+my $RE_ANCHOR_CAR = '[\x21-\x2B\x2D-\x5A\x5C\x5E-\x7A\x7C\x7E]';
+
+my $RE_PLAIN_START = '[\x21\x22\x24-\x7E]';
+my $RE_PLAIN = '[\x21-\x7E]';
+my $RE_PLAIN_END = '[\x21-\x39\x3B-\x7E]';
+my $RE_PLAIN_FIRST = '[\x24\x28-\x29\x2B\x2E-\x3D\x41-\x5A\x5C\x5E-\x5F\x61-\x7A\x7E]';
+# c-indicators
+#! 21
+#" 22
+## 23
+#% 25
+#& 26
+#' 27
+#* 2A
+#, 2C FLOW
+#- 2D XX
+#: 3A XX
+#> 3E
+#? 3F XX
+#@ 40
+#[ 5B FLOW
+#] 5D FLOW
+#` 60
+#{ 7B FLOW
+#| 7C
+#} 7D FLOW
+
 
 our $RE_INT = '[+-]?[1-9]\d*';
 our $RE_OCT = '0o[1-7][0-7]*';
@@ -47,29 +84,39 @@ our $RE_HEX = '0x[1-9a-fA-F][0-9a-fA-F]*';
 our $RE_FLOAT = '[+-]?(?:\.\d+|\d+\.\d*)(?:[eE][+-]?\d+)?';
 our $RE_NUMBER ="'(?:$RE_INT|$RE_OCT|$RE_HEX|$RE_FLOAT)";
 
-my $key_start_re = '[a-zA-Z0-9%.]';
-my $key_content_re = '[a-zA-Z0-9%.\\]"\\\\ -]';
+my $RE_PLAIN_WORD = "$RE_PLAIN_START(?:$RE_PLAIN_END|$RE_PLAIN*$RE_PLAIN_END)?";
+my $RE_PLAIN_FIRST_WORD1 = "(?:[:?-]$RE_PLAIN*$RE_PLAIN_END)";
+my $RE_PLAIN_FIRST_WORD2 = "(?:$RE_PLAIN_FIRST$RE_PLAIN*$RE_PLAIN_END)";
+my $RE_PLAIN_FIRST_WORD3 = "(?:$RE_PLAIN_FIRST$RE_PLAIN_END?)";
+my $RE_PLAIN_FIRST_WORD = "(?:$RE_PLAIN_FIRST_WORD1|$RE_PLAIN_FIRST_WORD2|$RE_PLAIN_FIRST_WORD3)";
+my $RE_PLAIN_KEY = "(?:$RE_PLAIN_FIRST_WORD(?:$RE_WS+$RE_PLAIN_WORD)*|)";
 my $key_content_re_dq = '[^"\r\n\\\\]';
 my $key_content_re_sq = q{[^'\r\n]};
-my $key_re = qr{(?:$key_start_re$key_content_re*$key_start_re|$key_start_re?)};
 my $key_re_double_quotes = qr{"(?:\\\\|\\[^\r\n]|$key_content_re_dq)*"};
 my $key_re_single_quotes = qr{'(?:\\\\|''|$key_content_re_sq)*'};
-my $key_full_re = qr{(?:$key_re_double_quotes|$key_re_single_quotes|$key_re)};
+my $key_full_re = qr{(?:$key_re_double_quotes|$key_re_single_quotes|$RE_PLAIN_KEY)};
 
 my $plain_start_word_re = '[^*!&\s#][^\r\n\s]*';
 my $plain_word_re = '[^#\r\n\s][^\r\n\s]*';
 
-my $tag_re = '(?:[a-zA-Z]|%[0-9a-fA-F]{2})+';
-my $full_tag_re = "![a-z]*!$tag_re|!$tag_re|!<(?:$RE_URI_CHAR)+>|!";
 
-my $anchor_start_re = '[a-zA-Z0-9]';
-my $anchor_content_re = '[a-zA-Z0-9:]';
-my $anchor_re = qr{(?:$anchor_start_re$anchor_content_re*|$anchor_start_re?)};
+#c-secondary-tag-handle  ::= “!” “!”
+#c-named-tag-handle  ::= “!” ns-word-char+ “!”
+#ns-tag-char ::= ns-uri-char - “!” - c-flow-indicator
+#ns-global-tag-prefix    ::= ns-tag-char ns-uri-char*
+#c-ns-local-tag-prefix   ::= “!” ns-uri-char*
+my $RE_TAG = "!(?:$RE_NS_WORD_CHAR*!$RE_NS_TAG_CHAR+|$RE_NS_TAG_CHAR+|<$RE_URI_CHAR+>|)";
+
+#c-ns-anchor-property    ::= “&” ns-anchor-name
+#ns-char ::= nb-char - s-white
+#ns-anchor-char  ::= ns-char - c-flow-indicator
+#ns-anchor-name  ::= ns-anchor-char+
+my $RE_ANCHOR = "$RE_ANCHOR_CAR+";
 
 my $RE_SEQSTART = qr/\A(-)(?=$RE_WS|$)/m;
 my $RE_COMPLEX = qr/\A(\?)(?=$RE_WS|$)/m;
 my $RE_COMPLEXCOLON = qr/\A(:)(?=$RE_WS|$)/m;
-my $RE_ALIAS = qr/\A\*($anchor_re)/m;
+my $RE_ALIAS = qr/\A\*($RE_ANCHOR)/m;
 
 sub parse {
     my ($self, $yaml) = @_;
@@ -161,7 +208,7 @@ sub parse_document_head {
             $head = 1;
             next;
         }
-        if ($$yaml =~ s/\A\s*%TAG +(![a-z]*!|!) +(tag:\S+|![a-z][a-z-]*)$RE_WS*//) {
+        if ($$yaml =~ s/\A\s*%TAG +(!$RE_NS_WORD_CHAR*!|!) +(tag:\S+|!$RE_URI_CHAR+)$RE_WS*//) {
             $head = 1;
             my $tag_alias = $1;
             my $tag_url = $2;
@@ -601,23 +648,23 @@ sub parse_tag_anchor {
     my ($tag, $anchor);
     if ($check_anchor and $check_tag) {
         if ($$yaml =~
-        s/\A($full_tag_re)(?:$RE_WS+&($anchor_re))?(?=$RE_WS|$RE_LB|\z)//) {
+        s/\A($RE_TAG)(?:$RE_WS+&($RE_ANCHOR))?(?=$RE_WS|$RE_LB|\z)//) {
             $tag = $1;
             $anchor = $2;
         }
         elsif ($$yaml =~
-        s/\A&($anchor_re)(?:$RE_WS+($full_tag_re))?(?=$RE_WS|$RE_LB|\z)//) {
+        s/\A&($RE_ANCHOR)(?:$RE_WS+($RE_TAG))?(?=$RE_WS|$RE_LB|\z)//) {
             $anchor = $1;
             $tag = $2;
         }
     }
     elsif ($check_tag) {
-        if ($$yaml =~ s/\A($full_tag_re)(?=$RE_WS|$RE_LB|\z)//) {
+        if ($$yaml =~ s/\A($RE_TAG)(?=$RE_WS|$RE_LB|\z)//) {
             $tag = $1;
         }
     }
     elsif ($check_anchor) {
-        if ($$yaml =~ s/\A&($anchor_re)(?=$RE_WS|$RE_LB|\z)//) {
+        if ($$yaml =~ s/\A&($RE_ANCHOR)(?=$RE_WS|$RE_LB|\z)//) {
             $anchor = $1;
         }
     }
@@ -723,20 +770,20 @@ sub parse_map {
 
     my ($tag, $anchor);
 
-    if ($$yaml =~ s/\A\*($anchor_re) +:(?=$RE_WS|$)//m) {
+    if ($$yaml =~ s/\A\*($RE_ANCHOR) +:(?=$RE_WS|$)//m) {
         if (defined $self->anchor or defined $self->tag) {
             die "TODO";
         }
         $alias = $1;
     }
     elsif (not $tag_anchor and
-        $$yaml =~ s/\A&($anchor_re)(?: +($full_tag_re))? +($key_full_re) *:(?=$RE_WS|$)//) {
+        $$yaml =~ s/\A&($RE_ANCHOR)(?: +($RE_TAG))? +($key_full_re) *:(?=$RE_WS|$)//) {
         $anchor = $1;
         $tag = $2;
         $key = $3;
     }
     elsif (not $tag_anchor and
-        $$yaml =~ s/\A($full_tag_re)(?: +&($anchor_re))? +($key_full_re) *:(?=$RE_WS|$)//) {
+        $$yaml =~ s/\A($RE_TAG)(?: +&($RE_ANCHOR))? +($key_full_re) *:(?=$RE_WS|$)//) {
         $tag = $1;
         $anchor = $2;
         $key = $3;

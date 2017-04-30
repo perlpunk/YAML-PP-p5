@@ -1,0 +1,11 @@
++STR
++DOC ---
+=VAL <tag:example.com,2000:app/foo> :scalar
+-DOC ...
++DOC ---
+=VAL <!prefix-%2F[]*@name> :scalar
+-DOC
++DOC ---
+=VAL <!foo/()*@a=b&c=d> :scalar
+-DOC
+-STR
