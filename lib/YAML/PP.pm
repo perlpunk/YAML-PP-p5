@@ -181,14 +181,11 @@ Compare the output of the following YAML Loaders and JSON::XS dump:
     use Devel::Peek;
 
     use YAML::XS ();
-
     use YAML ();
-    $YAML::Numify = 1; # since version 1.23
-
+        $YAML::Numify = 1; # since version 1.23
     use YAML::Syck ();
-
+        $YAML::Syck::ImplicitTyping = 1;
     use YAML::Tiny ();
-
     use YAML::PP::Loader;
 
     my $yaml = "foo: 23";
@@ -226,12 +223,10 @@ Compare the output of the following YAML Loaders and JSON::XS dump:
       NV = 0
       PV = 0
 
-    SV = PV(0x564f09d45690) at 0x564f09d46b50
+    SV = IV(0x564f6fab37d0) at 0x564f6fab37e0
       REFCNT = 1
-      FLAGS = (POK,pPOK)
-      PV = 0x564f09cd1200 "23"\0
-      CUR = 2
-      LEN = 10
+      FLAGS = (IOK,pIOK)
+      IV = 23
 
     SV = PVMG(0x5640b45a42a0) at 0x5640b4594250
       REFCNT = 1
@@ -251,18 +246,51 @@ Compare the output of the following YAML Loaders and JSON::XS dump:
 
     {"foo":"23"}
     {"foo":23}
-    {"foo":"23"}
-    {"foo":"23"}
     {"foo":23}
+    {"foo":23}
+    {"foo":"23"}
 
 
 =head1 WHY
 
-In 2016 two really cool projects were started by Ingy döt Net.
+All the available parsers and loaders for Perl are behaving differently,
+and more important, aren't conforming to the spec. L<YAML::XS> is
+doing pretty well, but C<libyaml> only handles YAML 1.1 and diverges
+a bit from the spec. The pure perl loaders lack support for a number of
+features.
+
+I was going over L<YAML>.pm issues end of 216, integrating old patches
+from rt.cpan.org and creating some pull requests myself. I realized
+that it would be difficult to patch YAML.pm to parse YAML 1.1 or even 1.2,
+and it would also break existing usages relying on the current behaviour.
+
+
+In 2016 Ingy döt Net initiated two really cool projects:
+
+=over 4
+
+=item L<"YAML TEST SUITE">
+
+=item L<"YAML EDITOR">
+
+=back
+
+These projects are a big help for any developer. So I got the idea
+to write my own parser and started on New Year's Day 2017.
+Without the test suite and the editor I would have never started this.
+
+I also started another YAML Test project which allows to get a quick
+overview of which frameworks support which YAML features:
+
+=over 4
+
+=item L<"YAML TEST MATRIX">
+
+=back
 
 =head2 YAML TEST SUITE
 
-One is the yaml-test-suite: L<https://github.com/yaml/yaml-test-suite>
+L<https://github.com/yaml/yaml-test-suite>
 
 It contains about 160 test cases and expected parsing events and more.
 There will be more tests coming. This test suite allows to write parsers
@@ -278,12 +306,11 @@ Thanks also to Felix Krause, who is writing a YAML parser in Nim.
 He turned all the spec examples into test cases.
 
 As of this writing, the test suite only contains valid examples.
-Invalid ones are on our TODO list.
+Invalid ones are currently added.
 
 =head2 YAML EDITOR
 
-The second project is a tool to play around with several YAML parsers and
-loaders in vim.
+This is a tool to play around with several YAML parsers and loaders in vim.
 
 L<https://github.com/yaml/yaml-editor>
 
@@ -291,8 +318,9 @@ The project contains the code to build the frameworks (16 as of this
 writing) and put it into one big Docker image.
 
 It also contains the yaml-editor itself, which will start a vim in the docker
-container, with some useful mappings. You can choose which frameworks you want
-to test and see the output in a grid of vim windows.
+container. It uses a lot of funky vimscript that makes playing with it easy
+and useful. You can choose which frameworks you want to test and see the
+output in a grid of vim windows.
 
 Especially when writing a parser it is extremely helpful to have all
 the test cases and be able to play around with your own examples to see
