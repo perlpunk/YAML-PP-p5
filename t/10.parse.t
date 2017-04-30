@@ -11,11 +11,25 @@ use File::Basename qw/ dirname basename /;
 
 $|++;
 
+my %id_tags;
+my $yts = "$Bin/../yaml-test-suite";
 my @dirs;
-if (-d "$Bin/../yaml-test-suite") {
-    my $datadir = "$Bin/../yaml-test-suite";
-    opendir my $dh, $datadir or die $!;
-    push @dirs, map { "$datadir/$_" } grep { m/^[A-Z0-9]{4}\z/ } readdir $dh;
+if (-d $yts) {
+    my $datadir = $yts;
+    opendir my $dh, "$yts/tags" or die $!;
+    my @tags = grep { not m/^\./ } readdir $dh;
+    for my $tag (sort @tags) {
+        opendir my $dh, "$yts/tags/$tag" or die $!;
+        my @ids = grep { -l "$yts/tags/$tag/$_" } readdir $dh;
+        $id_tags{ $_ }->{ $tag } = 1 for @ids;
+        closedir $dh;
+    }
+    closedir $dh;
+
+    opendir $dh, $datadir or die $!;
+    my @ids = grep { m/^[A-Z0-9]{4}\z/ } readdir $dh;
+    @ids = grep { not $id_tags{ $_ }->{error} } @ids;
+    push @dirs, map { "$datadir/$_" } @ids;
     closedir $dh;
 }
 my $extradir = "$Bin/valid";
