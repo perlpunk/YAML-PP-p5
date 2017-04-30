@@ -28,13 +28,13 @@ complex:
         ?
             a: b
             c: d
-        : 23
-    : 42
+        : innervalue
+    : outervalue
 EOM
 my $exp_complexmap = $yppl->stringify_complex({ a => 'b' });
 my $exp_complexseq = $yppl->stringify_complex([qw/ A B /]);
 my $inner = $yppl->stringify_complex({ a => 'b', c => 'd' });
-my $nested = $yppl->stringify_complex({ $inner => 23 });
+my $nested = $yppl->stringify_complex({ $inner => "innervalue" });
 
 {
     my $data = $yppl->Load($yaml);
