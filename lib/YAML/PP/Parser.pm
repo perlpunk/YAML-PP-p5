@@ -876,12 +876,23 @@ sub parse_block_scalar {
     TRACE and warn "=== parse_block_scalar()\n";
     my ($self) = @_;
     my $yaml = $self->yaml;
-    unless ($$yaml =~ s/\A([|>])([1-9]\d*)?([+-]?)( +#.*)?($RE_LB|\z)//) {
+
+    my $block_type;
+    my $exp_indent;
+    my $chomp;
+    if ($$yaml =~ s/\A([|>])([1-9]\d*)?([+-]?)( +#.*)?($RE_LB|\z)//) {
+        $block_type = $1;
+        $exp_indent = $2;
+        $chomp = $3;
+    }
+    elsif ($$yaml =~ s/\A([|>])([+-]?)([1-9]\d*)?( +#.*)?($RE_LB|\z)//) {
+        $block_type = $1;
+        $chomp = $2;
+        $exp_indent = $3;
+    }
+    else {
         return 0;
     }
-    my $block_type = $1;
-    my $exp_indent = $2;
-    my $chomp = $3;
     if (defined $exp_indent) {
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$exp_indent], ['exp_indent']);
     }
