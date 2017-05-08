@@ -1047,7 +1047,7 @@ sub begin {
         }
     }
     TRACE and $self->debug_event("------------->> BEGIN $event ($offset) @content");
-    $self->receiver->($self, [ BEGIN => { %info, content => $content[0] } ]);
+    $self->receiver->begin({ %info, content => $content[0] });
     $self->push_events($event, $offset);
     TRACE and $self->debug_events;
 }
@@ -1057,7 +1057,7 @@ sub end {
     $self->pop_events($event);
     TRACE and $self->debug_event("-------------<< END   $event @{[$content//'']}");
     return if $event eq 'END';
-    $self->receiver->($self, [ END => { type => $event, content => $content } ]);
+    $self->receiver->end({ type => $event, content => $content });
     if ($event eq 'DOC') {
         $self->set_tagmap({
             '!!' => "tag:yaml.org,2002:",
@@ -1069,7 +1069,7 @@ sub event {
     my ($self, $event) = @_;
     TRACE and $self->debug_event("------------- EVENT @{[ $self->event_to_test_suite($event)]}");
 
-    $self->receiver->($self, $event);
+    $self->receiver->value($event);
 }
 
 sub event_to_test_suite {

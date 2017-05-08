@@ -39,9 +39,11 @@ sub new {
 }
 
 sub data { return $_[0]->{data} }
+sub docs { return $_[0]->{docs} }
 sub refs { return $_[0]->{refs} }
 sub anchors { return $_[0]->{anchors} }
 sub set_data { $_[0]->{data} = $_[1] }
+sub set_docs { $_[0]->{docs} = $_[1] }
 sub set_refs { $_[0]->{refs} = $_[1] }
 sub set_anchors { $_[0]->{anchors} = $_[1] }
 sub boolean { return $_[0]->{boolean} }
@@ -49,9 +51,9 @@ sub truefalse { return $_[0]->{truefalse} }
 
 sub Load {
     my ($self, $yaml) = @_;
-    my @documents;
+    $self->set_docs([]);
     my $parser = YAML::PP::Parser->new(
-        receiver => sub { $self->event(@_, \@documents) },
+        receiver => $self,
     );
     $self->set_data(undef);
     $self->set_refs([]);
@@ -60,50 +62,52 @@ sub Load {
     $self->set_data(undef);
     $self->set_refs([]);
     $self->set_anchors({});
-    return wantarray ? @documents : $documents[0];
+    my $docs = $self->docs;
+    return wantarray ? @$docs : $docs->[0];
 }
 
-sub event {
-    my ($self, $parser, $event, $docs) = @_;
-    my ($name, $info) = @$event;
-    DEBUG and warn YAML::PP::Parser->event_to_test_suite($event) ."\n";
+
+sub begin {
+    my ($self, $event) = @_;
 
     my $refs = $self->refs;
-    if ($name eq 'BEGIN') {
+    my $type = $event->{type};
+    if ($type eq 'DOC') {
+        $self->set_data(undef);
+        $self->set_refs([ \$self->{data} ]);
+        $self->set_anchors({});
+    }
+    elsif ($type eq 'MAP' or $type eq 'SEQ') {
+        my $data = $type eq 'MAP' ? {} : [];
 
-        my $type = $info->{type};
-        if ($type eq 'DOC') {
-            $self->set_data(undef);
-            $self->set_refs([ \$self->{data} ]);
-            $self->set_anchors({});
+        my $ref = $refs->[-1];
+        if (not defined $$ref) {
+            $$ref = $data;
         }
-        elsif ($type eq 'MAP' or $type eq 'SEQ') {
-            my $data = $type eq 'MAP' ? {} : [];
-
-            my $ref = $refs->[-1];
-            if (not defined $$ref) {
-                $$ref = $data;
-            }
-            elsif (ref $$ref eq 'ARRAY') {
-                push @$$ref, $data;
-                push @$refs, \$data;
-            }
-            elsif (ref $$ref eq 'HASH') {
-                # we got a complex key
-                push @$refs, \\undef;
-                push @$refs, \$data;
-            }
-            else {
-                die "Unexpected";
-            }
-            if (defined(my $anchor = $info->{anchor})) {
-                $self->anchors->{ $anchor } = \$data;
-            }
+        elsif (ref $$ref eq 'ARRAY') {
+            push @$$ref, $data;
+            push @$refs, \$data;
+        }
+        elsif (ref $$ref eq 'HASH') {
+            # we got a complex key
+            push @$refs, \\undef;
+            push @$refs, \$data;
+        }
+        else {
+            die "Unexpected";
+        }
+        if (defined(my $anchor = $event->{anchor})) {
+            $self->anchors->{ $anchor } = \$data;
         }
     }
-    elsif ($name eq 'END') {
-        my $type = $info->{type};
+}
+
+sub end {
+    my ($self, $event) = @_;
+    my $refs = $self->refs;
+        my $type = $event->{type};
         if ($type eq 'DOC') {
+            my $docs = $self->docs;
             push @$docs, $self->data;
             pop @$refs if @$refs;
         }
@@ -128,14 +132,25 @@ sub event {
         else {
             pop @$refs if @$refs;
         }
-    }
-    elsif ($name eq 'VALUE' or $name eq 'ALIAS') {
+}
+
+sub value {
+    my ($self, $event) = @_;
+    $self->event(@$event);
+}
+
+sub event {
+    my ($self, $name, $event) = @_;
+    DEBUG and warn YAML::PP::Parser->event_to_test_suite($event) ."\n";
+
+    my $refs = $self->refs;
+    if ($name eq 'VALUE' or $name eq 'ALIAS') {
         my $value;
         if ($name eq 'VALUE') {
-            $value = $self->render_value($info);
+            $value = $self->render_value($event);
         }
         else {
-            my $name = $info->{content};
+            my $name = $event->{content};
             if (my $anchor = $self->anchors->{ $name }) {
                 $value = $$anchor;
             }
