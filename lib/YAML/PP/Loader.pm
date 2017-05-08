@@ -68,106 +68,133 @@ sub Load {
 
 
 sub begin {
-    my ($self, $event) = @_;
+    my ($self, $data, $event) = @_;
 
     my $refs = $self->refs;
-    my $type = $event->{type};
-    if ($type eq 'DOC') {
-        $self->set_data(undef);
-        $self->set_refs([ \$self->{data} ]);
-        $self->set_anchors({});
-    }
-    elsif ($type eq 'MAP' or $type eq 'SEQ') {
-        my $data = $type eq 'MAP' ? {} : [];
 
-        my $ref = $refs->[-1];
-        if (not defined $$ref) {
-            $$ref = $data;
-        }
-        elsif (ref $$ref eq 'ARRAY') {
-            push @$$ref, $data;
-            push @$refs, \$data;
-        }
-        elsif (ref $$ref eq 'HASH') {
-            # we got a complex key
-            push @$refs, \\undef;
-            push @$refs, \$data;
-        }
-        else {
-            die "Unexpected";
-        }
-        if (defined(my $anchor = $event->{anchor})) {
-            $self->anchors->{ $anchor } = \$data;
-        }
+    my $ref = $refs->[-1];
+    if (not defined $$ref) {
+        $$ref = $data;
+    }
+    elsif (ref $$ref eq 'ARRAY') {
+        push @$$ref, $data;
+        push @$refs, \$data;
+    }
+    elsif (ref $$ref eq 'HASH') {
+        # we got a complex key
+        push @$refs, \\undef;
+        push @$refs, \$data;
+    }
+    else {
+        die "Unexpected";
+    }
+    if (defined(my $anchor = $event->{anchor})) {
+        $self->anchors->{ $anchor } = \$data;
     }
 }
+
+sub begin_doc {
+    my ($self, $event) = @_;
+    $self->set_data(undef);
+    $self->set_refs([ \$self->{data} ]);
+    $self->set_anchors({});
+}
+
+sub end_doc {
+    my ($self, $event) = @_;
+    my $refs = $self->refs;
+    my $docs = $self->docs;
+    push @$docs, $self->data;
+    pop @$refs if @$refs;
+}
+
+sub begin_map {
+    my ($self, $event) = @_;
+    my $data = {};
+    shift->begin($data, @_);
+}
+
+sub end_map {
+    shift->end(@_);
+}
+
+sub begin_seq {
+    my ($self, $event) = @_;
+    my $data = [];
+    shift->begin($data, @_);
+}
+
+sub end_seq {
+    shift->end(@_);
+}
+
+sub begin_str {
+    my ($self, $event) = @_;
+    my $refs = $self->refs;
+    pop @$refs if @$refs;
+}
+
+sub end_str {}
 
 sub end {
     my ($self, $event) = @_;
     my $refs = $self->refs;
-        my $type = $event->{type};
-        if ($type eq 'DOC') {
-            my $docs = $self->docs;
-            push @$docs, $self->data;
-            pop @$refs if @$refs;
-        }
-        elsif ($type eq 'MAP' or $type eq 'SEQ') {
-            my $complex = pop @$refs;
-            if (@$refs > 1) {
-                my $ref1 = $refs->[-1];
-                my $ref2 = $refs->[-2];
-                if (ref $$ref1 eq 'SCALAR') {
-                    pop @$refs;
-                    my $string = $self->stringify_complex($$complex);
-                    if (ref $$ref2 eq 'HASH') {
-                        $$ref2->{ $string } = undef;
-                        push @$refs, \$$ref2->{ $string };
-                    }
-                    else {
-                        die "Unexpected";
-                    }
-                }
+
+    my $complex = pop @$refs;
+    if (@$refs > 1) {
+        my $ref1 = $refs->[-1];
+        my $ref2 = $refs->[-2];
+        if (ref $$ref1 eq 'SCALAR') {
+            pop @$refs;
+            my $string = $self->stringify_complex($$complex);
+            if (ref $$ref2 eq 'HASH') {
+                $$ref2->{ $string } = undef;
+                push @$refs, \$$ref2->{ $string };
+            }
+            else {
+                die "Unexpected";
             }
         }
-        else {
-            pop @$refs if @$refs;
-        }
+    }
 }
+
 
 sub value {
     my ($self, $event) = @_;
-    $self->event(@$event);
+    my $value = $self->render_value($event);
+    $self->event(value => $value, event => $event);
+    DEBUG and warn YAML::PP::Parser->event_to_test_suite([value => $event]) ."\n";
+}
+
+sub alias {
+    my ($self, $event) = @_;
+    my $value;
+    my $name = $event->{content};
+    if (my $anchor = $self->anchors->{ $name }) {
+        $value = $$anchor;
+    }
+    DEBUG and warn YAML::PP::Parser->event_to_test_suite([alias => $event]) ."\n";
+    $self->event(value => $value, event => $event);
 }
 
 sub event {
-    my ($self, $name, $event) = @_;
-    DEBUG and warn YAML::PP::Parser->event_to_test_suite($event) ."\n";
+    my ($self, %args) = @_;
+    my $value = $args{value};
+    my $event = $args{event};
 
     my $refs = $self->refs;
-    if ($name eq 'VALUE' or $name eq 'ALIAS') {
-        my $value;
-        if ($name eq 'VALUE') {
-            $value = $self->render_value($event);
-        }
-        else {
-            my $name = $event->{content};
-            if (my $anchor = $self->anchors->{ $name }) {
-                $value = $$anchor;
-            }
-        }
 
-        my $ref = $refs->[-1];
-        if (not defined $$ref) {
-            $$ref = $value;
-            pop @$refs;
-        }
-        elsif (ref $$ref eq 'HASH') {
-            $$ref->{ $value } = undef;
-            push @$refs, \$$ref->{ $value };
-        }
-        elsif (ref $$ref eq 'ARRAY') {
-            push @{ $$ref }, $value;
-        }
+    my $ref = $refs->[-1];
+    if (not defined $$ref) {
+        $$ref = $value;
+        pop @$refs;
+    }
+    elsif (ref $$ref eq 'HASH') {
+        $$ref->{ $value } = undef;
+        push @$refs, \$$ref->{ $value };
+    }
+    elsif (ref $$ref eq 'ARRAY') {
+        push @{ $$ref }, $value;
     }
 }
 

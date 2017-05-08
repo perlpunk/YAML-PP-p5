@@ -19,7 +19,7 @@ else {
 my $parser = YAML::PP::Parser->new(
   receiver => sub {
     my ($self, @args) = @_;
-    say encode_utf8(YAML::PP::Parser->event_to_test_suite(@args));
+    say encode_utf8(YAML::PP::Parser->event_to_test_suite(\@args));
   },
 );
 
