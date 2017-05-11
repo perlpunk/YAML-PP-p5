@@ -39,9 +39,11 @@ sub new {
 }
 
 sub data { return $_[0]->{data} }
+sub docs { return $_[0]->{docs} }
 sub refs { return $_[0]->{refs} }
 sub anchors { return $_[0]->{anchors} }
 sub set_data { $_[0]->{data} = $_[1] }
+sub set_docs { $_[0]->{docs} = $_[1] }
 sub set_refs { $_[0]->{refs} = $_[1] }
 sub set_anchors { $_[0]->{anchors} = $_[1] }
 sub boolean { return $_[0]->{boolean} }
@@ -49,9 +51,9 @@ sub truefalse { return $_[0]->{truefalse} }
 
 sub Load {
     my ($self, $yaml) = @_;
-    my @documents;
+    $self->set_docs([]);
     my $parser = YAML::PP::Parser->new(
-        receiver => sub { $self->event(@_, \@documents) },
+        receiver => $self,
     );
     $self->set_data(undef);
     $self->set_refs([]);
@@ -60,99 +62,139 @@ sub Load {
     $self->set_data(undef);
     $self->set_refs([]);
     $self->set_anchors({});
-    return wantarray ? @documents : $documents[0];
+    my $docs = $self->docs;
+    return wantarray ? @$docs : $docs->[0];
 }
 
-sub event {
-    my ($self, $parser, $event, $docs) = @_;
-    my ($name, $info) = @$event;
-    DEBUG and warn YAML::PP::Parser->event_to_test_suite($event) ."\n";
+
+sub begin {
+    my ($self, $data, $event) = @_;
 
     my $refs = $self->refs;
-    if ($name eq 'BEGIN') {
 
-        my $type = $info->{type};
-        if ($type eq 'DOC') {
-            $self->set_data(undef);
-            $self->set_refs([ \$self->{data} ]);
-            $self->set_anchors({});
-        }
-        elsif ($type eq 'MAP' or $type eq 'SEQ') {
-            my $data = $type eq 'MAP' ? {} : [];
+    my $ref = $refs->[-1];
+    if (not defined $$ref) {
+        $$ref = $data;
+    }
+    elsif (ref $$ref eq 'ARRAY') {
+        push @$$ref, $data;
+        push @$refs, \$data;
+    }
+    elsif (ref $$ref eq 'HASH') {
+        # we got a complex key
+        push @$refs, \\undef;
+        push @$refs, \$data;
+    }
+    else {
+        die "Unexpected";
+    }
+    if (defined(my $anchor = $event->{anchor})) {
+        $self->anchors->{ $anchor } = \$data;
+    }
+}
 
-            my $ref = $refs->[-1];
-            if (not defined $$ref) {
-                $$ref = $data;
-            }
-            elsif (ref $$ref eq 'ARRAY') {
-                push @$$ref, $data;
-                push @$refs, \$data;
-            }
-            elsif (ref $$ref eq 'HASH') {
-                # we got a complex key
-                push @$refs, \\undef;
-                push @$refs, \$data;
+sub begin_doc {
+    my ($self, $event) = @_;
+    $self->set_data(undef);
+    $self->set_refs([ \$self->{data} ]);
+    $self->set_anchors({});
+}
+
+sub end_doc {
+    my ($self, $event) = @_;
+    my $refs = $self->refs;
+    my $docs = $self->docs;
+    push @$docs, $self->data;
+    pop @$refs if @$refs;
+}
+
+sub begin_map {
+    my ($self, $event) = @_;
+    my $data = {};
+    shift->begin($data, @_);
+}
+
+sub end_map {
+    shift->end(@_);
+}
+
+sub begin_seq {
+    my ($self, $event) = @_;
+    my $data = [];
+    shift->begin($data, @_);
+}
+
+sub end_seq {
+    shift->end(@_);
+}
+
+sub begin_str {
+    my ($self, $event) = @_;
+    my $refs = $self->refs;
+    pop @$refs if @$refs;
+}
+
+sub end_str {}
+
+sub end {
+    my ($self, $event) = @_;
+    my $refs = $self->refs;
+
+    my $complex = pop @$refs;
+    if (@$refs > 1) {
+        my $ref1 = $refs->[-1];
+        my $ref2 = $refs->[-2];
+        if (ref $$ref1 eq 'SCALAR') {
+            pop @$refs;
+            my $string = $self->stringify_complex($$complex);
+            if (ref $$ref2 eq 'HASH') {
+                $$ref2->{ $string } = undef;
+                push @$refs, \$$ref2->{ $string };
             }
             else {
                 die "Unexpected";
             }
-            if (defined(my $anchor = $info->{anchor})) {
-                $self->anchors->{ $anchor } = \$data;
-            }
         }
     }
-    elsif ($name eq 'END') {
-        my $type = $info->{type};
-        if ($type eq 'DOC') {
-            push @$docs, $self->data;
-            pop @$refs if @$refs;
-        }
-        elsif ($type eq 'MAP' or $type eq 'SEQ') {
-            my $complex = pop @$refs;
-            if (@$refs > 1) {
-                my $ref1 = $refs->[-1];
-                my $ref2 = $refs->[-2];
-                if (ref $$ref1 eq 'SCALAR') {
-                    pop @$refs;
-                    my $string = $self->stringify_complex($$complex);
-                    if (ref $$ref2 eq 'HASH') {
-                        $$ref2->{ $string } = undef;
-                        push @$refs, \$$ref2->{ $string };
-                    }
-                    else {
-                        die "Unexpected";
-                    }
-                }
-            }
-        }
-        else {
-            pop @$refs if @$refs;
-        }
-    }
-    elsif ($name eq 'VALUE' or $name eq 'ALIAS') {
-        my $value;
-        if ($name eq 'VALUE') {
-            $value = $self->render_value($info);
-        }
-        else {
-            my $name = $info->{content};
-            if (my $anchor = $self->anchors->{ $name }) {
-                $value = $$anchor;
-            }
-        }
+}
 
-        my $ref = $refs->[-1];
-        if (not defined $$ref) {
-            $$ref = $value;
-            pop @$refs;
-        }
-        elsif (ref $$ref eq 'HASH') {
-            $$ref->{ $value } = undef;
-            push @$refs, \$$ref->{ $value };
-        }
-        elsif (ref $$ref eq 'ARRAY') {
-            push @{ $$ref }, $value;
-        }
+
+sub value {
+    my ($self, $event) = @_;
+    my $value = $self->render_value($event);
+    $self->event(value => $value, event => $event);
+    DEBUG and warn YAML::PP::Parser->event_to_test_suite([value => $event]) ."\n";
+}
+
+sub alias {
+    my ($self, $event) = @_;
+    my $value;
+    my $name = $event->{content};
+    if (my $anchor = $self->anchors->{ $name }) {
+        $value = $$anchor;
+    }
+    DEBUG and warn YAML::PP::Parser->event_to_test_suite([alias => $event]) ."\n";
+    $self->event(value => $value, event => $event);
+}
+
+sub event {
+    my ($self, %args) = @_;
+    my $value = $args{value};
+    my $event = $args{event};
+
+    my $refs = $self->refs;
+
+    my $ref = $refs->[-1];
+    if (not defined $$ref) {
+        $$ref = $value;
+        pop @$refs;
+    }
+    elsif (ref $$ref eq 'HASH') {
+        $$ref->{ $value } = undef;
+        push @$refs, \$$ref->{ $value };
+    }
+    elsif (ref $$ref eq 'ARRAY') {
+        push @{ $$ref }, $value;
     }
 }
 

@@ -113,7 +113,7 @@ sub test {
     my $parser = YAML::PP::Parser->new(
         receiver => sub {
             my ($self, @args) = @_;
-            push @events, YAML::PP::Parser->event_to_test_suite(@args);
+            push @events, YAML::PP::Parser->event_to_test_suite(\@args);
         },
     );
     my $ok = 0;
