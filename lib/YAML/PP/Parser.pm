@@ -9,7 +9,17 @@ use YAML::PP::Render;
 
 sub new {
     my ($class, %args) = @_;
+    my $self = bless {
+    }, $class;
     my $receiver = delete $args{receiver};
+    if ($receiver) {
+        $self->set_receiver($receiver);
+    }
+    return $self;
+}
+sub receiver { return $_[0]->{receiver} }
+sub set_receiver {
+    my ($self, $receiver) = @_;
     my $callback;
     if (ref $receiver eq 'CODE') {
         $callback = $receiver;
@@ -21,14 +31,9 @@ sub new {
             return $receiver->$event($info);
         };
     }
-    my $self = bless {
-        receiver => $receiver,
-        callback => $callback,
-    }, $class;
-    return $self;
+    $self->{callback} = $callback;
+    $self->{receiver} = $receiver;
 }
-sub receiver { return $_[0]->{receiver} }
-sub set_receiver { $_[0]->{receiver} = $_[1] }
 sub callback { return $_[0]->{callback} }
 sub set_callback { $_[0]->{callback} = $_[1] }
 sub yaml { return $_[0]->{yaml} }

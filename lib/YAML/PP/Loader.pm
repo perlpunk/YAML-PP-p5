@@ -28,16 +28,21 @@ sub new {
     else {
         die "Invalid value for 'boolean': '$bool'. Allowed: ('perl', 'boolean', 'JSON::PP')";
     }
+
+    my $parser = $args{parser} || YAML::PP::Parser->new;
     if (keys %args) {
         die "Unexpected arguments: " . join ', ', sort keys %args;
     }
     my $self = bless {
         boolean => $bool,
         truefalse => $truefalse,
+        parser => $parser,
     }, $class;
+    $parser->set_receiver($self);
     return $self;
 }
 
+sub parser { return $_[0]->{parser} }
 sub data { return $_[0]->{data} }
 sub docs { return $_[0]->{docs} }
 sub refs { return $_[0]->{refs} }
@@ -52,9 +57,7 @@ sub truefalse { return $_[0]->{truefalse} }
 sub Load {
     my ($self, $yaml) = @_;
     $self->set_docs([]);
-    my $parser = YAML::PP::Parser->new(
-        receiver => $self,
-    );
+    my $parser = $self->parser;
     $self->set_data(undef);
     $self->set_refs([]);
     $self->set_anchors({});
@@ -65,6 +68,7 @@ sub Load {
     my $docs = $self->docs;
     return wantarray ? @$docs : $docs->[0];
 }
+*load = \&Load;
 
 
 sub begin {
