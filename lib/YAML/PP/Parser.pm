@@ -9,7 +9,9 @@ use YAML::PP::Render;
 
 sub new {
     my ($class, %args) = @_;
+    my $reader = delete $args{reader};
     my $self = bless {
+        reader => $reader,
     }, $class;
     my $receiver = delete $args{receiver};
     if ($receiver) {
@@ -34,6 +36,28 @@ sub set_receiver {
     $self->{callback} = $callback;
     $self->{receiver} = $receiver;
 }
+sub reader {
+    my ($self) = @_;
+    if (defined $self->{reader}) {
+        return $self->{reader};
+    }
+
+    {
+        package Reader;
+        sub read {
+            $_[0]->{input};
+        }
+        sub new {
+            my ($class, %args) = @_;
+            return bless { %args }, $class;
+        }
+    }
+
+    my $input = $self->{input} // die;
+
+    return Reader->new(input => $input);
+}
+sub input { return($_[0]->{receiver} // die "No input") }
 sub callback { return $_[0]->{callback} }
 sub set_callback { $_[0]->{callback} = $_[1] }
 sub yaml { return $_[0]->{yaml} }
@@ -140,7 +164,10 @@ my $RE_ALIAS = qr/\A\*($RE_ANCHOR)/m;
 
 sub parse {
     my ($self, $yaml) = @_;
-    $self->set_yaml(\$yaml);
+    if (defined $yaml) {
+        $self->{input} = $yaml;
+    }
+    $self->set_yaml(\$self->reader->read);
     $self->set_level(-1);
     $self->set_offset([0]);
     $self->set_events([]);

@@ -29,7 +29,7 @@ sub new {
         die "Invalid value for 'boolean': '$bool'. Allowed: ('perl', 'boolean', 'JSON::PP')";
     }
 
-    my $parser = $args{parser} || YAML::PP::Parser->new;
+    my $parser = delete $args{parser} || YAML::PP::Parser->new;
     if (keys %args) {
         die "Unexpected arguments: " . join ', ', sort keys %args;
     }
@@ -61,7 +61,9 @@ sub load {
     $self->set_data(undef);
     $self->set_refs([]);
     $self->set_anchors({});
+
     $parser->parse($yaml);
+
     $self->set_data(undef);
     $self->set_refs([]);
     $self->set_anchors({});
