@@ -5,7 +5,7 @@ use 5.010;
 use Test::More;
 use FindBin '$Bin';
 use Data::Dumper;
-use YAML::PP;
+use YAML::PP::Loader;
 
 my $yaml = <<'EOM';
 foo: &sequence
@@ -15,7 +15,7 @@ foo: &sequence
 bar: *sequence
 EOM
 
-my $data = YAML::PP->new->Load($yaml);
+my $data = YAML::PP::Loader->new->load($yaml);
 
 $data->{foo}->[-1] = "changed";
 

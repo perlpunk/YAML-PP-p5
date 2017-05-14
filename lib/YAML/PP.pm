@@ -18,7 +18,7 @@ sub Load {
     require YAML::PP::Loader;
     my ($self, $yaml) = @_;
     $self->{loader} = YAML::PP::Loader->new;
-    return $self->loader->Load($yaml);
+    return $self->loader->load($yaml);
 }
 
 1;
@@ -44,8 +44,8 @@ Here are a few examples of what you can do right now:
 
     # The loader offers JSON::PP, boolean.pm or pureperl 1/0 (default)
     # for booleans
-    my $ypp = YAML::PP::Loader->new(boolean => 'JSON::PP');
-    my ($data1, $data2) = $ypp->Load($yaml);
+    my $yppl = YAML::PP::Loader->new(boolean => 'JSON::PP');
+    my ($data1, $data2) = $yppl->load($yaml);
 
     # Print the events from the parser in yaml-test-suite format
     yaml-pp-p5-events < file.yaml
@@ -150,7 +150,7 @@ Example:
             : 23
         : 42
     EOM
-    my $data = $yppl->Load($yaml);
+    my $data = $yppl->load($yaml);
     say $coder->encode($data);
     __END__
     {
@@ -194,7 +194,7 @@ Compare the output of the following YAML Loaders and JSON::XS dump:
     my $d2 = YAML::Load($yaml);
     my $d3 = YAML::Syck::Load($yaml);
     my $d4 = YAML::Tiny->read_string($yaml);
-    my $d5 = YAML::PP::Loader->new->Load($yaml);
+    my $d5 = YAML::PP::Loader->new->load($yaml);
 
     Dump $d1->{foo};
     Dump $d2->{foo};

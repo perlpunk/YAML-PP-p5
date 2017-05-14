@@ -17,7 +17,7 @@ else {
 }
 
 my $ypp = YAML::PP::Loader->new;
-my @docs = $ypp->Load($yaml);
+my @docs = $ypp->load($yaml);
 
 local $Data::Dumper::Useqq = 1;
 print Data::Dumper->Dump([$docs[ $_ ]], ["doc$_"]) for 0 ..$#docs;

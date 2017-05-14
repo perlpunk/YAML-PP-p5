@@ -37,7 +37,7 @@ my $inner = $yppl->stringify_complex({ a => 'b', c => 'd' });
 my $nested = $yppl->stringify_complex({ $inner => "innervalue" });
 
 {
-    my $data = $yppl->Load($yaml);
+    my $data = $yppl->load($yaml);
     my $val1 = delete $data->{complexmap}->{x};
     my $val2 = delete $data->{complexseq}->{X};
     cmp_ok($val1, 'eq', 'y', "Normal key x");
@@ -49,7 +49,7 @@ my $nested = $yppl->stringify_complex({ $inner => "innervalue" });
 }
 
 {
-    my $nested_data = $yppl->Load($nested_yaml);
+    my $nested_data = $yppl->load($nested_yaml);
     my $data1 = $nested_data->{complex};
     my $key = (keys %$data1)[0];
     cmp_ok($key, 'eq', $nested, "Nested complex maps");

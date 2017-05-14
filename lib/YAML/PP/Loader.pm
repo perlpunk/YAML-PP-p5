@@ -54,7 +54,7 @@ sub set_anchors { $_[0]->{anchors} = $_[1] }
 sub boolean { return $_[0]->{boolean} }
 sub truefalse { return $_[0]->{truefalse} }
 
-sub Load {
+sub load {
     my ($self, $yaml) = @_;
     $self->set_docs([]);
     my $parser = $self->parser;
@@ -68,7 +68,6 @@ sub Load {
     my $docs = $self->docs;
     return wantarray ? @$docs : $docs->[0];
 }
-*load = \&Load;
 
 
 sub begin {
