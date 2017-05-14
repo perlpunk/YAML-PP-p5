@@ -43,7 +43,8 @@ sub reader {
     }
 
     {
-        package Reader;
+        package
+         Reader;
         sub read {
             $_[0]->{input};
         }
