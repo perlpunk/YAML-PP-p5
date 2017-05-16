@@ -41,23 +41,11 @@ sub reader {
         return $self->{reader};
     }
 
-    {
-        package
-         Reader;
-        sub read {
-            $_[0]->{input};
-        }
-        sub new {
-            my ($class, %args) = @_;
-            return bless { %args }, $class;
-        }
-    }
+    my $input = $self->{input} // die "No input";
 
-    my $input = $self->{input} // die;
-
-    return Reader->new(input => $input);
+    require YAML::PP::Reader;
+    return YAML::PP::Reader->new(input => $input);
 }
-sub input { return($_[0]->{receiver} // die "No input") }
 sub callback { return $_[0]->{callback} }
 sub set_callback { $_[0]->{callback} = $_[1] }
 sub yaml { return $_[0]->{yaml} }
