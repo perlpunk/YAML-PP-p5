@@ -29,7 +29,6 @@ sub set_receiver {
     else {
         $callback = sub {
             my ($self, $event, $info) = @_;
-            $event = lc $event;
             return $receiver->$event($info);
         };
     }
@@ -603,7 +602,7 @@ sub parse_next {
 sub res_to_event {
     my ($self, $res) = @_;
     if (defined(my $alias = $res->{alias})) {
-        $self->event([ alias => { content => $alias }]);
+        $self->event([ ALI => { content => $alias }]);
     }
     elsif (defined(my $value = $res->{value})) {
         my $style = $res->{style} // ':';
@@ -1053,7 +1052,7 @@ sub event_value {
         $self->set_anchor(undef);
         $info{anchor} = $anchor;
     }
-    $self->event([ value => { content => $value, %info, }]);
+    $self->event([ VAL => { content => $value, %info, }]);
 }
 
 sub push_events {
@@ -1076,6 +1075,15 @@ sub pop_events {
     }
 }
 
+my %event_to_method = (
+    MAP => 'mapping',
+    SEQ => 'sequence',
+    DOC => 'document',
+    STR => 'stream',
+    VAL => 'value',
+    ALI => 'alias',
+);
+
 sub begin {
     my ($self, $event, $offset, @content) = @_;
     my $event_name = $event;
@@ -1095,7 +1103,8 @@ sub begin {
         }
     }
     TRACE and $self->debug_event("------------->> BEGIN $event ($offset) @content");
-    $self->callback->($self, "begin_" . (lc $event_name) => { %info, content => $content[0] });
+    $self->callback->($self, "begin_" . $event_to_method{ $event_name }
+        => { %info, content => $content[0] });
     $self->push_events($event, $offset);
     TRACE and $self->debug_events;
 }
@@ -1105,7 +1114,8 @@ sub end {
     $self->pop_events($event);
     TRACE and $self->debug_event("-------------<< END   $event @{[$content//'']}");
     return if $event eq 'END';
-    $self->callback->($self, "end_" . (lc $event), => { type => $event, content => $content });
+    $self->callback->($self, "end_" . $event_to_method{ $event }
+        => { type => $event, content => $content });
     if ($event eq 'DOC') {
         $self->set_tagmap({
             '!!' => "tag:yaml.org,2002:",
@@ -1118,7 +1128,7 @@ sub event {
     TRACE and $self->debug_event("------------- EVENT @{[ $self->event_to_test_suite($event)]}");
 
     my ($type, $info) = @$event;
-    $self->callback->($self, lc $type, $info);
+    $self->callback->($self, $event_to_method{ $type }, $info);
 }
 
 sub event_to_test_suite {
