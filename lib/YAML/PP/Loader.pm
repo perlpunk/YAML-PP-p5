@@ -98,14 +98,14 @@ sub begin {
     }
 }
 
-sub begin_doc {
+sub begin_document {
     my ($self, $event) = @_;
     $self->set_data(undef);
     $self->set_refs([ \$self->{data} ]);
     $self->set_anchors({});
 }
 
-sub end_doc {
+sub end_document {
     my ($self, $event) = @_;
     my $refs = $self->refs;
     my $docs = $self->docs;
@@ -113,33 +113,33 @@ sub end_doc {
     pop @$refs if @$refs;
 }
 
-sub begin_map {
+sub begin_mapping {
     my ($self, $event) = @_;
     my $data = {};
     shift->begin($data, @_);
 }
 
-sub end_map {
+sub end_mapping {
     shift->end(@_);
 }
 
-sub begin_seq {
+sub begin_sequence {
     my ($self, $event) = @_;
     my $data = [];
     shift->begin($data, @_);
 }
 
-sub end_seq {
+sub end_sequence {
     shift->end(@_);
 }
 
-sub begin_str {
+sub begin_stream {
     my ($self, $event) = @_;
     my $refs = $self->refs;
     pop @$refs if @$refs;
 }
 
-sub end_str {}
+sub end_stream {}
 
 sub end {
     my ($self, $event) = @_;
