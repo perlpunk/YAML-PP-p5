@@ -3,6 +3,8 @@ use strict;
 use warnings;
 package YAML::PP::Reader;
 
+our $VERSION = '0.000'; # VERSION
+
 sub new {
     my ($class, %args) = @_;
     my $input = delete $args{input};
