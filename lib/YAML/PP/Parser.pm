@@ -1068,7 +1068,7 @@ my %event_to_method = (
     SEQ => 'sequence',
     DOC => 'document',
     STR => 'stream',
-    VAL => 'value',
+    VAL => 'scalar',
     ALI => 'alias',
 );
 
@@ -1091,7 +1091,7 @@ sub begin {
         }
     }
     TRACE and $self->debug_event("------------->> BEGIN $event ($offset) @content");
-    $self->callback->($self, "begin_" . $event_to_method{ $event_name }
+    $self->callback->($self, $event_to_method{ $event_name } . "_start_event"
         => { %info, content => $content[0] });
     $self->push_events($event, $offset);
     TRACE and $self->debug_events;
@@ -1102,7 +1102,7 @@ sub end {
     $self->pop_events($event);
     TRACE and $self->debug_event("-------------<< END   $event @{[$content//'']}");
     return if $event eq 'END';
-    $self->callback->($self, "end_" . $event_to_method{ $event }
+    $self->callback->($self, $event_to_method{ $event } . "_end_event"
         => { type => $event, content => $content });
     if ($event eq 'DOC') {
         $self->set_tagmap({
@@ -1116,7 +1116,7 @@ sub event {
     TRACE and $self->debug_event("------------- EVENT @{[ $self->event_to_test_suite($event)]}");
 
     my ($type, $info) = @$event;
-    $self->callback->($self, $event_to_method{ $type }, $info);
+    $self->callback->($self, $event_to_method{ $type } . "_event", $info);
 }
 
 sub event_to_test_suite {
@@ -1126,7 +1126,7 @@ sub event_to_test_suite {
         my $string;
         my $type = $info->{type};
         my $content = $info->{content};
-        if ($ev =~ m/^begin/) {
+        if ($ev =~ m/start/) {
             $string = "+$type";
             if (defined $info->{anchor}) {
                 $string .= " &$info->{anchor}";
@@ -1136,11 +1136,11 @@ sub event_to_test_suite {
             }
             $string .= " $content" if defined $content;
         }
-        elsif ($ev =~ m/^end_/) {
+        elsif ($ev =~ m/end/) {
             $string = "-$type";
             $string .= " $content" if defined $content;
         }
-        elsif ($ev eq 'value') {
+        elsif ($ev eq 'scalar_event') {
             $string = '=VAL';
             if (defined $info->{anchor}) {
                 $string .= " &$info->{anchor}";
@@ -1150,7 +1150,7 @@ sub event_to_test_suite {
             }
             $string .= ' ' . $info->{style} . ($content // '');
         }
-        elsif ($ev eq 'alias') {
+        elsif ($ev eq 'alias_event') {
             $string = "=ALI *$content";
         }
         return $string;

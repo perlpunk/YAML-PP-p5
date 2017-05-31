@@ -98,14 +98,14 @@ sub begin {
     }
 }
 
-sub begin_document {
+sub document_start_event {
     my ($self, $event) = @_;
     $self->set_data(undef);
     $self->set_refs([ \$self->{data} ]);
     $self->set_anchors({});
 }
 
-sub end_document {
+sub document_end_event {
     my ($self, $event) = @_;
     my $refs = $self->refs;
     my $docs = $self->docs;
@@ -113,33 +113,33 @@ sub end_document {
     pop @$refs if @$refs;
 }
 
-sub begin_mapping {
+sub mapping_start_event {
     my ($self, $event) = @_;
     my $data = {};
     shift->begin($data, @_);
 }
 
-sub end_mapping {
+sub mapping_end_event {
     shift->end(@_);
 }
 
-sub begin_sequence {
+sub sequence_start_event {
     my ($self, $event) = @_;
     my $data = [];
     shift->begin($data, @_);
 }
 
-sub end_sequence {
+sub sequence_end_event {
     shift->end(@_);
 }
 
-sub begin_stream {
+sub stream_start_event {
     my ($self, $event) = @_;
     my $refs = $self->refs;
     pop @$refs if @$refs;
 }
 
-sub end_stream {}
+sub stream_end_event {}
 
 sub end {
     my ($self, $event) = @_;
@@ -164,14 +164,14 @@ sub end {
 }
 
 
-sub value {
+sub scalar_event {
     my ($self, $event) = @_;
     my $value = $self->render_value($event);
     $self->event(value => $value, event => $event);
     DEBUG and warn YAML::PP::Parser->event_to_test_suite([value => $event]) ."\n";
 }
 
-sub alias {
+sub alias_event {
     my ($self, $event) = @_;
     my $value;
     my $name = $event->{content};
