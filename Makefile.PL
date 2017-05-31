@@ -8,7 +8,7 @@ use ExtUtils::MakeMaker;
 
 my %WriteMakefileArgs = (
   "ABSTRACT" => "YAML Parser and Loader",
-  "AUTHOR" => "Tina M\x{fc}ller <cpan2\@tinita.de>",
+  "AUTHOR" => "Tina M\x{fc}ller <tinita\@cpan.org>",
   "CONFIGURE_REQUIRES" => {
     "ExtUtils::MakeMaker" => 0
   },
@@ -36,7 +36,7 @@ my %WriteMakefileArgs = (
     "Test::More" => 0,
     "blib" => "1.01"
   },
-  "VERSION" => "0.002_002",
+  "VERSION" => "0.003",
   "test" => {
     "TESTS" => "t/*.t"
   }

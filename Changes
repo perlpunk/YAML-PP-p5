@@ -1,6 +1,5 @@
-0.002_002 2017-05-16 23:14:23+02:00
-    - Add YAML::PP::Reader
-    - Rename loader methods
+0.003 2017-05-31 23:35:44+02:00
+    - Changes for new Loader API
 
 0.002 2017-04-30 19:07:48+02:00
     - Loader: Support stringification of complex mapping keys
