@@ -1,0 +1,2 @@
+key1: &a value1
+&b *a: value2
