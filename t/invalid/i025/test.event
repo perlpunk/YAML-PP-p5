@@ -1,8 +1,0 @@
-+STR
-+DOC
-+MAP
-=VAL :foo
-+MAP
-=VAL :ok
-=VAL :1
--MAP

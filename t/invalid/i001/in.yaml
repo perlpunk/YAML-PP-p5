@@ -1,4 +1,0 @@
-foo1: &node1
-  &k1 key1: val1
-foo2: &node2
-  &v2 val2
