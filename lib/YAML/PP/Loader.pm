@@ -195,6 +195,7 @@ sub event {
         pop @$refs;
     }
     elsif (ref $$ref eq 'HASH') {
+        $value = '' unless defined $value;
         $$ref->{ $value } = undef;
         push @$refs, \$$ref->{ $value };
     }
