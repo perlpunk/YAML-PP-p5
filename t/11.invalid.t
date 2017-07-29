@@ -29,6 +29,8 @@ my @skip = qw/
     N782
     RXY3
     5TRB
+
+    i034 i035
 /;
 
 
