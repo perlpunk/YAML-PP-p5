@@ -5,7 +5,11 @@ package YAML::PP::Parser;
 
 our $VERSION = '0.000'; # VERSION
 
+use constant TRACE => $ENV{YAML_PP_TRACE};
+use constant DEBUG => $ENV{YAML_PP_DEBUG} || $ENV{YAML_PP_TRACE};
+
 use YAML::PP::Render;
+use YAML::PP::Tokenizer;
 
 sub new {
     my ($class, %args) = @_;
@@ -56,19 +60,19 @@ sub offset { return $_[0]->{offset} }
 sub set_offset { $_[0]->{offset} = $_[1] }
 sub events { return $_[0]->{events} }
 sub set_events { $_[0]->{events} = $_[1] }
-sub anchor { return $_[0]->{anchor} }
-sub set_anchor { $_[0]->{anchor} = $_[1] }
-sub tag { return $_[0]->{tag} }
-sub set_tag { $_[0]->{tag} = $_[1] }
 sub tagmap { return $_[0]->{tagmap} }
 sub set_tagmap { $_[0]->{tagmap} = $_[1] }
-
-use constant TRACE => $ENV{YAML_PP_TRACE};
+sub tokens { return $_[0]->{tokens} }
+sub set_tokens { $_[0]->{tokens} = $_[1] }
+sub rules { return $_[0]->{rules} }
+sub set_rules { $_[0]->{rules} = $_[1] }
+sub stack { return $_[0]->{stack} }
+sub set_stack { $_[0]->{stack} = $_[1] }
 
 my $RE_WS = '[\t ]';
 my $RE_LB = '[\r\n]';
-my $RE_DOC_END = qr/\A\.\.\.(?=$RE_WS|$)/m;
-my $RE_DOC_START = qr/\A---(?=$RE_WS|$)/m;
+my $RE_DOC_END = qr/\A(\.\.\.)(?=$RE_WS|$)/m;
+my $RE_DOC_START = qr/\A(---)(?=$RE_WS|$)/m;
 my $RE_EOL = qr/\A($RE_WS+#.*|$RE_WS+)?$RE_LB/;
 
 #ns-word-char    ::= ns-dec-digit | ns-ascii-letter | “-”
@@ -80,75 +84,16 @@ my $RE_NS_TAG_CHAR = '(?:' . '%[0-9a-fA-F]{2}' .'|'.  q{[0-9A-Za-z#;/?:@&=+$_.*'
 # | #x85 | [#xA0-#xD7FF] | [#xE000-#xFFFD] /* 16 bit */
 # | [#x10000-#x10FFFF]                     /* 32 bit */
 
-#nb-char ::= c-printable - b-char - c-byte-order-mark
-#my $RE_NB_CHAR = '[\x21-\x7E]';
-my $RE_ANCHOR_CAR = '[\x21-\x2B\x2D-\x5A\x5C\x5E-\x7A\x7C\x7E]';
-
-my $RE_PLAIN_START = '[\x21\x22\x24-\x7E]';
-my $RE_PLAIN = '[\x21-\x7E]';
-my $RE_PLAIN_END = '[\x21-\x39\x3B-\x7E]';
-my $RE_PLAIN_FIRST = '[\x24\x28-\x29\x2B\x2E-\x3D\x41-\x5A\x5C\x5E-\x5F\x61-\x7A\x7E]';
-# c-indicators
-#! 21
-#" 22
-## 23
-#% 25
-#& 26
-#' 27
-#* 2A
-#, 2C FLOW
-#- 2D XX
-#: 3A XX
-#> 3E
-#? 3F XX
-#@ 40
-#[ 5B FLOW
-#] 5D FLOW
-#` 60
-#{ 7B FLOW
-#| 7C
-#} 7D FLOW
-
-
 our $RE_INT = '[+-]?[1-9]\d*';
 our $RE_OCT = '0o[1-7][0-7]*';
 our $RE_HEX = '0x[1-9a-fA-F][0-9a-fA-F]*';
 our $RE_FLOAT = '[+-]?(?:\.\d+|\d+\.\d*)(?:[eE][+-]?\d+)?';
 our $RE_NUMBER ="'(?:$RE_INT|$RE_OCT|$RE_HEX|$RE_FLOAT)";
 
-my $RE_PLAIN_WORD = "$RE_PLAIN_START(?:$RE_PLAIN_END|$RE_PLAIN*$RE_PLAIN_END)?";
-my $RE_PLAIN_FIRST_WORD1 = "(?:[:?-]$RE_PLAIN*$RE_PLAIN_END)";
-my $RE_PLAIN_FIRST_WORD2 = "(?:$RE_PLAIN_FIRST$RE_PLAIN*$RE_PLAIN_END)";
-my $RE_PLAIN_FIRST_WORD3 = "(?:$RE_PLAIN_FIRST$RE_PLAIN_END?)";
-my $RE_PLAIN_FIRST_WORD = "(?:$RE_PLAIN_FIRST_WORD1|$RE_PLAIN_FIRST_WORD2|$RE_PLAIN_FIRST_WORD3)";
-my $RE_PLAIN_KEY = "(?:$RE_PLAIN_FIRST_WORD(?:$RE_WS+$RE_PLAIN_WORD)*|)";
-my $key_content_re_dq = '[^"\r\n\\\\]';
-my $key_content_re_sq = q{[^'\r\n]};
-my $key_re_double_quotes = qr{"(?:\\\\|\\[^\r\n]|$key_content_re_dq)*"};
-my $key_re_single_quotes = qr{'(?:\\\\|''|$key_content_re_sq)*'};
-my $key_full_re = qr{(?:$key_re_double_quotes|$key_re_single_quotes|$RE_PLAIN_KEY)};
-
 my $plain_start_word_re = '[^*!&\s#][^\r\n\s]*';
 my $plain_word_re = '[^#\r\n\s][^\r\n\s]*';
 
 
-#c-secondary-tag-handle  ::= “!” “!”
-#c-named-tag-handle  ::= “!” ns-word-char+ “!”
-#ns-tag-char ::= ns-uri-char - “!” - c-flow-indicator
-#ns-global-tag-prefix    ::= ns-tag-char ns-uri-char*
-#c-ns-local-tag-prefix   ::= “!” ns-uri-char*
-my $RE_TAG = "!(?:$RE_NS_WORD_CHAR*!$RE_NS_TAG_CHAR+|$RE_NS_TAG_CHAR+|<$RE_URI_CHAR+>|)";
-
-#c-ns-anchor-property    ::= “&” ns-anchor-name
-#ns-char ::= nb-char - s-white
-#ns-anchor-char  ::= ns-char - c-flow-indicator
-#ns-anchor-name  ::= ns-anchor-char+
-my $RE_ANCHOR = "$RE_ANCHOR_CAR+";
-
-my $RE_SEQSTART = qr/\A(-)(?=$RE_WS|$)/m;
-my $RE_COMPLEX = qr/\A(\?)(?=$RE_WS|$)/m;
-my $RE_COMPLEXCOLON = qr/\A(:)(?=$RE_WS|$)/m;
-my $RE_ALIAS = qr/\A\*($RE_ANCHOR)/m;
 
 sub parse {
     my ($self, $yaml) = @_;
@@ -159,13 +104,17 @@ sub parse {
     $self->set_level(-1);
     $self->set_offset([0]);
     $self->set_events([]);
-    $self->set_anchor(undef);
-    $self->set_tag(undef);
     $self->set_tagmap({
         '!!' => "tag:yaml.org,2002:",
     });
+    $self->set_tokens([]);
+    $self->set_rules([]);
+    $self->set_stack({});
     $self->parse_stream;
 }
+
+use constant NODE_TYPE => 0;
+use constant NODE_OFFSET => 1;
 
 sub parse_stream {
     TRACE and warn "=== parse_stream()\n";
@@ -188,16 +137,17 @@ sub parse_stream {
         last unless length $$yaml;
 
         if ($start) {
-            $self->begin('DOC', -1, "---");
+            $self->begin('DOC', -1, { content => "---" });
         }
         else {
             $self->begin('DOC', -1);
         }
 
-        my $new_node = [ ($start_line ? 'STARTNODE' : 'NODE') => 0 ];
+        my $new_node = [ ($start_line ? 'STARTNODE' : 'FULLNODE') => 0 ];
+        $self->set_rules([@{ $YAML::PP::Tokenizer::GRAMMAR{FULLNODE} } ]);
         my ($end) = $self->parse_document($new_node);
         if ($end) {
-            $self->end('DOC', "...");
+            $self->end('DOC', { content => "..." });
         }
         else {
             $exp_start = 1;
@@ -217,10 +167,13 @@ sub parse_document_start {
 
     my ($start, $start_line) = (0, 0);
     if ($$yaml =~ s/$RE_DOC_START//) {
+        push @{ $self->tokens }, ['DOC_START', $1];
         $start = 1;
         my $eol = $$yaml =~ s/\A($RE_EOL|\z)//;
+        push @{ $self->tokens }, ['EOL', $1] if $eol;
         unless ($eol) {
-            if ($$yaml =~ s/\A$RE_WS+//) {
+            if ($$yaml =~ s/\A($RE_WS+)//) {
+                push @{ $self->tokens }, ['WS', $1];
                 $start_line = 1;
             }
             else {
@@ -236,21 +189,25 @@ sub parse_document_head {
     TRACE and warn "=== parse_document_head()\n";
     my ($self) = @_;
     my $yaml = $self->yaml;
+    my $tokens = $self->tokens;
     my $head;
     while (length $$yaml) {
         $self->parse_empty;
-        if ($$yaml =~ s/\A\s*%YAML ?1\.2$RE_WS*//) {
+        if ($$yaml =~ s/\A(\s*%YAML ?1\.2$RE_WS*)//) {
+            push @$tokens, ['YAML_DIRECTIVE', $1];
             $head = 1;
             next;
         }
-        if ($$yaml =~ s/\A\s*%TAG +(!$RE_NS_WORD_CHAR*!|!) +(tag:\S+|!$RE_URI_CHAR+)$RE_WS*//) {
+        if ($$yaml =~ s/\A(\s*%TAG +(!$RE_NS_WORD_CHAR*!|!) +(tag:\S+|!$RE_URI_CHAR+)$RE_WS*)//) {
+            push @$tokens, ['TAG_DIRECTIVE', $1];
             $head = 1;
-            my $tag_alias = $1;
-            my $tag_url = $2;
+            my $tag_alias = $2;
+            my $tag_url = $3;
             $self->tagmap->{ $tag_alias } = $tag_url;
             next;
         }
-        if ($$yaml =~ s/\s*\A%(\w+).*//) {
+        if ($$yaml =~ s/\A(\s*\A%(?:\w+).*)//) {
+            push @$tokens, ['RESERVED_DIRECTIVE', $1];
             warn "Found reserved directive '$1'";
             $head = 1;
             next;
@@ -260,14 +217,13 @@ sub parse_document_head {
     return $head;
 }
 
-use constant GOT_TAG => 1;
-use constant GOT_ANCHOR => 2;
+
 sub parse_document {
     TRACE and warn "=== parse_document()\n";
     my ($self, $new_node) = @_;
 
     my $next_full_line = 1;
-    my $got_tag_anchor = 0;
+    my $tokens = $self->tokens;
     while (1) {
 
         TRACE and $self->info("----------------------- LOOP");
@@ -277,77 +233,50 @@ sub parse_document {
 
         my $exp = $self->events->[-1];
         my $offset;
-        my $full_line = $next_full_line;
-        $next_full_line = 1;
-        if ($full_line) {
+        if ($next_full_line) {
             $self->parse_empty;
 
             my $end;
             my $explicit_end;
-            ($exp, $new_node, $offset, $end, $explicit_end) = $self->check_indent(
+            ($new_node, $offset, $end, $explicit_end) = $self->check_indent(
                 expected => $exp,
                 new_node => $new_node,
             );
+            $exp = $self->events->[-1];
             if ($explicit_end) {
                 return 1;
             }
             if ($end) {
                 return;
             }
-            unless ($new_node) {
-                $got_tag_anchor = 0;
-            }
 
         }
         else {
             TRACE and $self->info("ON SAME LINE: INDENT");
-            $offset = $new_node->[1];
+            $offset = $new_node->[NODE_OFFSET];
         }
+        $next_full_line = 1;
 
         TRACE and $self->info("Expecting $exp");
 
-        my $found_tag_anchor;
-        if ($new_node and $got_tag_anchor < 3) {
-            my ($tag, $anchor) = $self->parse_tag_anchor(
-                tag => (not defined $self->tag),
-                anchor => (not defined $self->anchor),
-            );
-            if ($tag or $anchor) {
-                $got_tag_anchor += GOT_TAG if $tag;
-                $got_tag_anchor += GOT_ANCHOR if $anchor;
-                my $yaml = $self->yaml;
-                if ($$yaml =~ s/$RE_EOL//) {
-                    if ($new_node->[0] eq 'STARTNODE') {
-                        $new_node->[0] = 'NODE';
-                    }
-                    next;
-                }
-                elsif ($$yaml =~ s/\A$RE_WS+//) {
-                    # expect map key or scalar on same line
-                    $found_tag_anchor = 1;
-                }
-            }
-        }
+        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$new_node], ['new_node']);
 
-        my $res = $self->parse_next(
-            tag_anchor => $found_tag_anchor,
+        my ($res) = $self->parse_next(
             expected => $exp,
-            new_node => $new_node,
+            node_type => ($new_node ? $new_node->[NODE_TYPE] : undef),
         );
+        next unless $res;
 
         ($new_node) = $self->process_result(
             result => $res,
             offset => $offset,
-            new_node => $new_node,
             expected => $exp,
         );
 
         $next_full_line = $res->{eol} ? 1 : 0;
-        $got_tag_anchor = 0;
     }
 
     TRACE and $self->debug_events;
-
     return 0;
 }
 
@@ -358,9 +287,9 @@ sub check_indent {
     my $yaml = $self->yaml;
     my $end = 0;
     my $explicit_end = 0;
-    my $offset;
     my $space = 0;
     my $indent = 0;
+    my $tokens = $self->tokens;
 
     my $eoyaml = not length $$yaml;
     if ($eoyaml) {
@@ -369,6 +298,7 @@ sub check_indent {
     else {
         if ($$yaml =~ s/\A( +)//) {
             $space = length $1;
+            push @$tokens, ['INDENT', $1];
         }
 
         $indent = $self->offset->[ -1 ];
@@ -379,6 +309,20 @@ sub check_indent {
 
     TRACE and $self->info("INDENT: space=$space indent=$indent");
 
+    if ($space <= 0) {
+        if ($$yaml =~ s/$RE_DOC_END//) {
+            push @$tokens, ['DOC_END', $1];
+            $$yaml =~ s/($RE_EOL|\z)// or die "Unexpected";
+            push @$tokens, ['EOL', $1];
+            $end = 1;
+            $explicit_end = 1;
+            $space = -1;
+        }
+        elsif ($$yaml =~ $RE_DOC_START) {
+            $end = 1;
+        }
+    }
+
     if ($space > $indent) {
         unless ($new_node) {
             die "Bad indendation in $exp";
@@ -388,15 +332,7 @@ sub check_indent {
 
         if ($space <= 0) {
             unless ($end) {
-                if ($$yaml =~ s/$RE_DOC_END//) {
-                    $$yaml =~ s/$RE_EOL|\z// or die "Unexpected";
-                    $end = 1;
-                    $explicit_end = 1;
-                }
-                elsif ($$yaml =~ $RE_DOC_START) {
-                    $end = 1;
-                }
-                elsif ($self->level < 2 and not $new_node) {
+                if ($self->level < 2 and not $new_node) {
                     $end = 1;
                 }
             }
@@ -418,8 +354,10 @@ sub check_indent {
             if ($remove == 0 and $seq_start and $exp eq 'MAP') {
             }
             else {
+                my $properties = $self->stack->{node_properties} ||= {};
                 undef $new_node;
-                $self->event_value(style => ':');
+                $self->event_value({ style => ':', %$properties });
+                %$properties = ();
             }
         }
 
@@ -451,140 +389,233 @@ sub check_indent {
         }
     }
 
-    $offset = $space;
-    if ($new_node) {
-        if ($new_node->[0] eq 'MAPVALUE') {
-            $new_node->[0] = 'NODE';
-        }
-    }
-
-    return ($exp, $new_node, $offset, $end, $explicit_end);
+    return ($new_node, $space, $end, $explicit_end);
 }
 
 sub process_result {
     my ($self, %args) = @_;
     my $res = $args{result};
     my $offset = $args{offset};
-    my $new_node = $args{new_node};
     my $exp = $args{expected};
+    my $new_node;
+
+    my $new_offset = $offset + 1 + ($res->{ws} || 0);
+    my $props = $self->stack->{node_properties} ||= {};
+    my $properties = $self->stack->{properties} ||= {};
+
+    my $stack_events = $self->stack->{events} || [];
+    for my $event (@$stack_events) {
+        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$event], ['event']);
+        my ($type, $name, $res) = @$event;
+        if ($type eq 'begin') {
+            $self->$type($name, $offset, { %$res, %$props });
+            %$props = ();
+        }
+        elsif ($type eq 'value') {
+            for my $key (keys %$properties) {
+                $props->{ $key } = $properties->{ $key };
+            }
+            $self->res_to_event({ %$res, %$props });
+            %$properties = ();
+            %$props = ();
+        }
+        elsif ($type eq 'alias') {
+            if (keys %$props or keys %$properties) {
+                die "Parse error: Alias not allowed in this context";
+            }
+            $self->res_to_event({ %$res });
+        }
+    }
+    @$stack_events = ();
+
 
     my $got = $res->{name};
     TRACE and $self->got("GOT $got");
+    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$got], ['got']);
+    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$res], ['res']);
 
-    my $new_offset = $offset + 1 + ($res->{ws} || 0);
-    if ($got eq "MAPKEY") {
-        if ($new_node) {
-            $self->begin('MAP', $offset);
-        }
-        elsif ($exp eq 'COMPLEX') {
+    TRACE and $self->highlight_yaml;
+    if ($got eq 'SCALAR') {
+        return;
+    }
+
+    if ($got eq "MAPSTART") { }
+    elsif ($got eq "MAPKEY") {
+        if ($exp eq 'COMPLEX') {
             $self->events->[-1] = 'MAP';
-            $self->event_value(style => ':');
         }
-        $self->res_to_event($res);
-        $new_node = [ 'MAPVALUE' => $new_offset ];
     }
-    elsif ($got eq 'SEQSTART') {
-        if ($new_node) {
-            $self->begin('SEQ', $offset);
-        }
-        $new_node = [ 'NODE' => $new_offset ];
-    }
+    elsif ($got eq 'NOOP') { }
+    elsif ($got eq 'SEQITEM') { }
     elsif ($got eq 'COMPLEX') {
-        if ($new_node) {
-            $self->begin('COMPLEX', $offset);
-        }
-        elsif ($exp eq 'MAP') {
+        if ($exp eq 'MAP') {
             $self->events->[-1] = 'COMPLEX';
         }
-        elsif ($exp eq 'COMPLEX') {
-            $self->event_value(style => ':');
-        }
-        $new_node = [ 'NODE' => $new_offset ];
     }
     elsif ($got eq 'COMPLEXCOLON') {
         $self->events->[-1] = 'MAP';
-        $new_node = [ 'NODE' => $new_offset ];
-    }
-    elsif ($got eq 'NODE') {
-        $self->res_to_event($res);
-        undef $new_node;
-        if (not $res->{eol}) {
-            die "Expected EOL";
-        }
     }
     else {
         die "Unexpected res $got";
     }
+    $new_node = [ $res->{new_type} => $new_offset ];
+    $self->set_rules([@{ $YAML::PP::Tokenizer::GRAMMAR{FULLNODE} } ]);
     return $new_node;
 }
+
+#my %MAPVALUE_RULES = (
+#    '-' => [qw/ RULE_SEQSTART RULE_PLAIN /],
+#    '?' => [qw/ RULE_COMPLEX RULE_PLAIN /],
+#    '*' => [qw/ RULE_ALIAS_KEY_OR_NODE /],
+#    "'" => [qw/ RULE_SINGLEQUOTED_KEY_OR_NODE /],
+#    '"' => [qw/ RULE_DOUBLEQUOTED_KEY_OR_NODE /],
+#    '|' => [qw/ RULE_BLOCK_SCALAR /],
+#    '>' => [qw/ RULE_BLOCK_SCALAR /],
+#);
+#for my $key (keys %MAPVALUE_RULES) {
+#    my $rules = $MAPVALUE_RULES{ $key };
+#    $MAPVALUE_RULES{ $key } = [ map {
+#        @{ $YAML::PP::Tokenizer::GRAMMAR{ $_ } }
+#    } @$rules ];
+#}
+#if (0) {
+#    my $yaml = $self->yaml;
+#    my $first = substr($$yaml, 0, 1);
+#    if (my $names = $MAPVALUE_RULES{ $first }) {
+#        @$rules = @$names;
+#    }
+#    else {
+#        push @$rules, @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_PLAIN} };
+#    }
+#}
+
+my %TYPE2RULE = (
+    MAP => [
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY_ALIAS} },
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY} },
+    ],
+    MAPSTART => [
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPSTART} },
+    ],
+    SEQ => [ @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SEQITEM} } ],
+    MAPKEY => [
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY_ALIAS} },
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY} },
+    ],
+    COMPLEX => [
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_COMPLEXVALUE} },
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY_ALIAS} },
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY} },
+    ],
+    STARTNODE => [
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SINGLEQUOTED_KEY_OR_NODE} },
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_BLOCK_SCALAR} },
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_PLAIN} },
+    ],
+    MAPVALUE => [
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_ALIAS_KEY_OR_NODE} },
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SINGLEQUOTED_KEY_OR_NODE} },
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_BLOCK_SCALAR} },
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_PLAIN} },
+    ],
+    NODE => [
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SEQSTART} },
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_COMPLEX} },
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SINGLEQUOTED_KEY_OR_NODE} },
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_BLOCK_SCALAR} },
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_ALIAS_KEY_OR_NODE} },
+        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_PLAIN_KEY_OR_NODE} },
+    ],
+);
 
 sub parse_next {
     TRACE and warn "=== parse_next()\n";
     my ($self, %args) = @_;
-    my $new_node = delete $args{new_node};
+    my $node_type = $args{node_type};
     my $exp = delete $args{expected};
     my $res;
-    my @possible;
-    my $in_map;
-    if ($new_node) {
-        $in_map = $new_node->[0] eq 'MAPVALUE' ? 1 : 0;
-        if ($new_node->[0] ne 'STARTNODE') {
-            push @possible, [$RE_SEQSTART, 'SEQSTART'];
-            push @possible, [$RE_COMPLEX, 'COMPLEX'];
-            push @possible, 'parse_map';
-        }
-        if (not $args{tag_anchor}) {
-            push @possible, 'parse_alias';
-        }
-        push @possible, 'parse_scalar';
-    }
-    elsif ($exp eq 'MAP') {
-        push @possible, [$RE_COMPLEX, 'COMPLEX'];
-        push @possible, 'parse_map';
-    }
-    elsif ($exp eq 'SEQ') {
-        push @possible, [$RE_SEQSTART, 'SEQSTART'];
-    }
-    elsif ($exp eq 'COMPLEX') {
-        push @possible, [$RE_COMPLEXCOLON, 'COMPLEXCOLON'];
-        push @possible, [$RE_COMPLEX, 'COMPLEX'];
-        push @possible, 'parse_map';
-    }
-    else {
-        die "Unexpected exp $exp";
+    my $rules = $self->rules;
+    unless ($rules) {
+        $rules = [];
+        $self->set_rules($rules);
     }
 
-    my $yaml = $self->yaml;
-    for my $method (@possible) {
-        if (ref $method eq 'ARRAY') {
-            my ($re, $name) = @$method;
-            if ($$yaml =~ s/$re//) {
-                $res = { name => $name };
-                last;
+    my $expected_type = $exp;
+    my $no_alias = 0;
+    if ($node_type or $exp eq 'MAP') {
+        unless ($node_type) {
+            @$rules = @{ $YAML::PP::Tokenizer::GRAMMAR{FULL_MAPKEY} };
+        }
+        my ($success, $new_type) = YAML::PP::Tokenizer::parse_tokens($self,
+            callback => sub {
+                my ($self, $sub) = @_;
+                $sub->($self, undef);
+            },
+        );
+        if (not $new_type and not $success) {
+            die "Expected " . ($node_type ? "new node ($node_type)" : $exp);
+        }
+        my $return = 0;
+        if ($new_type and $node_type) {
+            if ($new_type =~ s/^TYPE_//) {
+                $return = 1;
+                @$rules = [\$new_type];
+            }
+            elsif ($new_type eq 'PREVIOUS') {
+                $new_type = $node_type;
+                $new_type =~ s/^FULL//;
             }
         }
-        else {
-            $res = $self->$method(%args) and last;
+        if ($return) {
+            return;
         }
-    }
-    unless ($res) {
-        TRACE and $self->debug_yaml;
-        die "Expected " . ($new_node ? "new node" : $exp);
-    }
-    if ($in_map and $res->{name} =~ m/MAP|SEQ|COMPLEX/) {
-        die "Parse error: $res->{name} not allowed in this context";
+
+
+        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$new_type], ['new_type']);
+        unless ($new_type) {
+            warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$rules], ['rules']);
+            die "This should never happen";
+        }
+        # we got an anchor or tag
+        $no_alias = $success ? 1 : 0;
+
+        $expected_type = $new_type;
     }
 
-    unless (exists $res->{eol}) {
-        my $yaml = $self->yaml;
-        my $eol = $$yaml =~ s/\A($RE_EOL|$RE_WS*\z)//;
-        $res->{eol} = $eol;
-        unless ($eol) {
-            $$yaml =~ s/\A($RE_WS+)//
-                and $res->{ws} = length $1;
-        }
+    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$expected_type], ['expected_type']);
+    @$rules = @{ $TYPE2RULE{ $expected_type } };
+
+    $res = {};
+    my ($success, $new_type) = YAML::PP::Tokenizer::parse_tokens($self,
+        callback => sub {
+            my ($self, $sub) = @_;
+            $sub->($self, $res);
+        },
+    );
+
+    unless ($success) {
+        die "Expected $expected_type";
     }
-    return $res;
+
+    if (not $new_type) {
+        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$new_type], ['new_type']);
+        die "This should never happen";
+    }
+
+    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$new_type], ['new_type']);
+    $new_type =~ s/^TYPE_//;
+    my $stack = $self->stack;
+    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$stack], ['stack']);
+
+    if (defined $res->{alias} and $no_alias) {
+        die "Parse error: Alias not allowed in this context";
+    }
+
+    $res->{new_type}= $new_type;
+    return ($res);
 }
 
 sub res_to_event {
@@ -592,14 +623,31 @@ sub res_to_event {
     if (defined(my $alias = $res->{alias})) {
         $self->event([ ALI => { content => $alias }]);
     }
-    elsif (defined(my $value = $res->{value})) {
+    else {
+        my $value = delete $res->{value};
         my $style = $res->{style} // ':';
-        $self->event_value(
-            content => $value,
-            style => $style,
-            tag => $res->{tag},
-            anchor => $res->{anchor},
-        );
+        if ($style eq ':') {
+            if (ref $value) {
+                $value = YAML::PP::Render::render_multi_val($value);
+            }
+            elsif (defined $value) {
+                $value =~ s/\\/\\\\/g;
+            }
+        }
+        elsif ($style eq '"') {
+            $value = YAML::PP::Render::render_quoted(
+                double => 1,
+                lines => $value,
+            );
+        }
+        elsif ($style eq "'") {
+            $value = YAML::PP::Render::render_quoted(
+                double => 0,
+                lines => $value,
+            );
+        }
+        $res->{content} = $value;
+        $self->event_value( $res );
     }
 }
 
@@ -608,7 +656,7 @@ sub remove_nodes {
     my $exp = $self->events->[-1];
     for (1 .. $count) {
         if ($exp eq 'COMPLEX') {
-            $self->event_value(style => ':');
+            $self->event_value({ style => ':' });
             $self->events->[-1] = 'MAP';
             $self->end('MAP');
         }
@@ -627,7 +675,6 @@ sub reset_indent {
     TRACE and warn "=== reset_indent($space)\n";
     my $off = $self->offset;
     my $i = $#$off;
-    my $count = 0;
     while ($i > 1) {
         my $test_indent = $off->[ $i ];
         if ($test_indent == $space) {
@@ -636,94 +683,9 @@ sub reset_indent {
         elsif ($test_indent <= $space) {
             last;
         }
-        $count++;
         $i--;
     }
-    return $count;
-}
-
-my %scalar_methods = (
-    '[' => \&parse_flow,
-    '{' => \&parse_flow,
-    '|' => \&parse_block_scalar,
-    '>' => \&parse_block_scalar,
-    '"' => \&parse_quoted,
-    "'" => \&parse_quoted,
-);
-sub parse_scalar {
-    my ($self) = @_;
-    my $yaml = $self->yaml;
-    if ($$yaml =~ m/\A([\[\{>|'"])/) {
-        my $method = $scalar_methods{ $1 };
-        my $res = $self->$method;
-        return $res;
-    }
-    elsif (my $res = $self->parse_plain_multi) {
-        return $res;
-    }
-    return 0;
-}
-
-sub parse_flow {
-    my ($self) = @_;
-    my $yaml= $self->yaml;
-    TRACE and warn "=== parse_flow()\n";
-    if ($$yaml =~ m/\A[\{\[]/) {
-        die "Not Implemented: Flow Style";
-    }
-    return 0;
-}
-
-sub parse_tag_anchor {
-    TRACE and warn "=== parse_tag_anchor()\n";
-    my ($self, %args) = @_;
-    my $yaml = $self->yaml;
-    my $check_anchor = $args{anchor} // 1;
-    my $check_tag = $args{tag} // 1;
-    my ($tag, $anchor);
-    if ($check_anchor and $check_tag) {
-        if ($$yaml =~
-        s/\A($RE_TAG)(?:$RE_WS+&($RE_ANCHOR))?(?=$RE_WS|$RE_LB|\z)//) {
-            $tag = $1;
-            $anchor = $2;
-        }
-        elsif ($$yaml =~
-        s/\A&($RE_ANCHOR)(?:$RE_WS+($RE_TAG))?(?=$RE_WS|$RE_LB|\z)//) {
-            $anchor = $1;
-            $tag = $2;
-        }
-    }
-    elsif ($check_tag) {
-        if ($$yaml =~ s/\A($RE_TAG)(?=$RE_WS|$RE_LB|\z)//) {
-            $tag = $1;
-        }
-    }
-    elsif ($check_anchor) {
-        if ($$yaml =~ s/\A&($RE_ANCHOR)(?=$RE_WS|$RE_LB|\z)//) {
-            $anchor = $1;
-        }
-    }
-    if (defined $tag) {
-        TRACE and $self->got("GOT TAG $tag");
-        $self->set_tag($tag);
-    }
-    if (defined $anchor) {
-        TRACE and $self->got("GOT ANCHOR $anchor");
-        $self->set_anchor($anchor);
-    }
-    return (defined $tag, defined $anchor);
-
-}
-
-sub parse_alias {
-    TRACE and warn "=== parse_alias()\n";
-    my ($self) = @_;
-    my $yaml = $self->yaml;
-    if ($$yaml =~ s/$RE_ALIAS//m) {
-        my $alias = $1;
-        return { name => 'NODE', alias => $alias };
-    }
-    return 0;
+    return $#$off - $i;
 }
 
 sub parse_plain_multi {
@@ -732,39 +694,47 @@ sub parse_plain_multi {
     my $yaml = $self->yaml;
     my @multi;
     my $indent = $self->offset->[ -1 ] + 1;
-    my $start_space = $indent;
+    my $tokens = $self->tokens;
 
     my $indent_re = $RE_WS . '{' . $indent . '}';
-    my $re = $plain_start_word_re;
     while (1) {
-        my $space = $start_space;
-        $start_space = 0;
         last if not length $$yaml;
-        if ($space == 0) {
-            unless ($$yaml =~ s/\A$indent_re//) {
-                last;
-            }
+
+        unless ($$yaml =~ s/\A($indent_re)//) {
+            last;
+        }
+        push @$tokens, ['INDENT', $1];
+
+        if ($indent == 0) {
             last if $$yaml =~ $RE_DOC_END;
             last if $$yaml =~ $RE_DOC_START;
         }
-        if ($$yaml =~ s/\A$RE_WS+//) {
+        if ($$yaml =~ s/\A($RE_WS+)//) {
+            push @$tokens, ['INDENT', $1];
             if ($$yaml =~ s/\A#.*//) {
                 last;
             }
         }
+        elsif ($$yaml =~ s/\A(#.*)//) {
+            push @$tokens, ['COMMENT', $1];
+            last;
+        }
 
         if ($$yaml =~ s/\A($RE_LB|\z)//) {
+            push @$tokens, ['LB', $1];
             push @multi, '';
         }
-        elsif ($$yaml =~ s/\A($re)//) {
+        elsif ($$yaml =~ s/\A($plain_word_re)//) {
             my $string = $1;
+            push @$tokens, ['PLAIN', $string];
             if ($string =~ m/:$/) {
                 die "Unexpected content: '$string'";
             }
-            $re = $plain_word_re;
             while ($$yaml =~ s/\A($RE_WS+)//) {
+                push @$tokens, ['WS', $1];
                 my $sp = $1;
-                $$yaml =~ s/\A($re)// or last;
+                $$yaml =~ s/\A($plain_word_re)// or last;
+                push @$tokens, ['PLAIN', $1];
                 my $value = $sp . $1;
                 if ($value =~ m/:$/) {
                     die "Unexpected content: '$value'";
@@ -773,134 +743,25 @@ sub parse_plain_multi {
             }
             push @multi, $string;
             if ($$yaml =~ s/\A(#.*)//) {
+                push @$tokens, ['COMMENT', $1];
                 last;
             }
             unless ($$yaml =~ s/\A($RE_LB|\z)//) {
                 warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
                 die "Unexpected content";
             }
+            push @$tokens, ['LB', $1];
         }
         else {
+            TRACE and $self->debug_yaml;
             die "Unexpected content";
         }
     }
-    my $string = YAML::PP::Render::render_multi_val(\@multi);
     return {
-        name => 'NODE',
         eol => 1,
         style => ':',
-        value => $string,
+        value => \@multi,
     };
-}
-
-my %control = (
-    '\\' => '\\', n => "\n", t => "\t", r => "\r", b => "\b",
-    'x0a' => "\n", 'x0d' => "\r",
-);
-sub parse_map {
-    my ($self, %args) = @_;
-    my $yaml = $self->yaml;
-    TRACE and warn "=== parse_map()\n";
-    my $tag_anchor = $args{tag_anchor};
-
-    my $key;
-    my $key_style = ':';
-    my $alias;
-
-    my ($tag, $anchor);
-
-    if ($$yaml =~ s/\A\*($RE_ANCHOR) +:(?=$RE_WS|$)//m) {
-        if (defined $self->anchor or defined $self->tag) {
-            die "TODO";
-        }
-        $alias = $1;
-    }
-    elsif (not $tag_anchor and
-        $$yaml =~ s/\A&($RE_ANCHOR)(?: +($RE_TAG))? +($key_full_re) *:(?=$RE_WS|$)//) {
-        $anchor = $1;
-        $tag = $2;
-        $key = $3;
-    }
-    elsif (not $tag_anchor and
-        $$yaml =~ s/\A($RE_TAG)(?: +&($RE_ANCHOR))? +($key_full_re) *:(?=$RE_WS|$)//) {
-        $tag = $1;
-        $anchor = $2;
-        $key = $3;
-    }
-    elsif ($$yaml =~ s/\A($key_full_re) *:(?=$RE_WS|$)//m) {
-        $key = $1;
-    }
-    else {
-        return 0;
-    }
-
-    my $res = {
-        name => "MAPKEY",
-    };
-    if ($alias) {
-        $res->{alias} = $alias;
-    }
-    else {
-        if ($key =~ s/^(["'])(.*)\1$/$2/) {
-            $key_style = $1;
-        }
-        if ($key_style eq '"') {
-            $key =~ s/\\(x0d|x0a|[\\ntrb])/$control{ $1 }/g;
-            $key =~ s/\\"/"/g;
-            $key =~ s/\\u([A-Fa-f0-9]+)/chr(oct("x$1"))/eg;
-        }
-        if ($tag_anchor) {
-            $anchor = $self->anchor and $self->set_anchor(undef);
-            $tag = $self->tag and $self->set_tag(undef);
-        }
-        $res->{value} = $key;
-        $res->{style} = $key_style;
-        $res->{tag} = $tag,
-        $res->{anchor} = $anchor;
-    }
-    return $res;
-}
-
-sub parse_quoted {
-    TRACE and warn "=== parse_quoted()\n";
-    my ($self) = @_;
-    my $yaml = $self->yaml;
-    if ($$yaml =~ s/\A(["'])//) {
-        my $quote = $1;
-        my $double = $quote eq '"';
-        my $last = 0;
-        my @lines;
-        while (1) {
-            my $line;
-            if ($double) {
-                last unless $$yaml =~ s/\A((?:\\"|[^"\r\n])*)//;
-                $line = $1;
-            }
-            else {
-                last unless $$yaml =~ s/\A((?:''|[^'\r\n])*)//;
-                $line = $1;
-            }
-            if ($$yaml =~ s/\A$RE_LB//) {
-                # next line
-            }
-            elsif ($$yaml =~ s/\A$quote//) {
-                $last = 1;
-            }
-            else {
-                die "Couldn't parse $quote quoted string";
-            }
-            push @lines, $line;
-            last if $last;
-        }
-
-        my $quoted = YAML::PP::Render::render_quoted(
-            double => $double,
-            lines => \@lines,
-        );
-
-        return { name => 'NODE', style => $quote, value => $quoted };
-    }
-    return 0;
 }
 
 sub parse_empty {
@@ -908,31 +769,49 @@ sub parse_empty {
     my ($self) = @_;
     my $yaml = $self->yaml;
     while (length $$yaml) {
-        $$yaml =~ s/\A *#.*//;
-        last unless $$yaml =~ s/\A$RE_WS*(?:$RE_LB|\z)//;
+        if ($$yaml =~ s/\A( *#.*)($RE_LB|\z)//) {
+            push @{ $self->tokens },
+                ['COMMENT', $1],
+                ['LB', $2];
+        }
+        elsif ($$yaml =~ s/\A($RE_WS*)($RE_LB|\z)//) {
+            push @{ $self->tokens },
+                ['WS', $1],
+                ['LB', $2];
+        }
+        else {
+            last;
+        }
     }
 }
 
 sub parse_block_scalar {
     TRACE and warn "=== parse_block_scalar()\n";
-    my ($self) = @_;
+    my ($self, %args) = @_;
     my $yaml = $self->yaml;
+    my $tokens = $self->tokens;
 
-    my $block_type;
+    my $block_type = $args{type};
     my $exp_indent;
     my $chomp;
-    if ($$yaml =~ s/\A([|>])([1-9]\d*)?([+-]?)( +#.*)?($RE_LB|\z)//) {
-        $block_type = $1;
-        $exp_indent = $2;
-        $chomp = $3;
-    }
-    elsif ($$yaml =~ s/\A([|>])([+-]?)([1-9]\d*)?( +#.*)?($RE_LB|\z)//) {
-        $block_type = $1;
+    if ($$yaml =~ s/\A([1-9]\d*)?([+-]?)( +#.*)?($RE_LB|\z)//) {
+        $exp_indent = $1;
+        push @$tokens, ['BLOCK_SCALAR_INDENT', $1] if $1;
         $chomp = $2;
-        $exp_indent = $3;
+        push @$tokens, ['BLOCK_SCALAR_CHOMP', $2] if $2;
+        push @$tokens, ['COMMENT', $3] if $3;
+        push @$tokens, ['LB', $4];
+    }
+    elsif ($$yaml =~ s/\A([+-]?)([1-9]\d*)?( +#.*)?($RE_LB|\z)//) {
+        $chomp = $1;
+        push @$tokens, ['BLOCK_SCALAR_CHOMP', $1] if $1;
+        $exp_indent = $2;
+        push @$tokens, ['BLOCK_SCALAR_INDENT', $2] if $2;
+        push @$tokens, ['COMMENT', $3] if $3;
+        push @$tokens, ['LB', $4];
     }
     else {
-        return 0;
+        die "Invalid block scalar";
     }
     if (defined $exp_indent) {
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$exp_indent], ['exp_indent']);
@@ -960,13 +839,17 @@ sub parse_block_scalar {
         if ($$yaml =~ s/\A($indent_re)($RE_WS*)//) {
             $pre = $1;
             $space = $2;
+            push @$tokens, ['INDENT', $pre];
+            push @$tokens, ['WS', $space];
             $length = length $space;
         }
         elsif ($$yaml =~ m/\A$RE_WS*#.*$RE_LB/) {
             last;
         }
-        elsif ($$yaml =~ s/\A($RE_WS*)$RE_LB//) {
+        elsif ($$yaml =~ s/\A($RE_WS*)($RE_LB)//) {
             $pre = $1;
+            push @$tokens, ['WS', $pre];
+            push @$tokens, ['LB', $2];
             $space = '';
             $type = 'EMPTY';
             push @lines, [$type => $pre, $space];
@@ -975,7 +858,8 @@ sub parse_block_scalar {
         else {
             last;
         }
-        if ($$yaml =~ s/\A$RE_LB//) {
+        if ($$yaml =~ s/\A($RE_LB)//) {
+            push @$tokens, ['LB', $1];
             $type = 'EMPTY';
             if ($got_indent) {
                 push @lines, [$type => $pre, $space];
@@ -995,6 +879,8 @@ sub parse_block_scalar {
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
         if ($$yaml =~ s/\A(.*)($RE_LB|\z)//) {
             my $value = $1;
+            push @$tokens, ['BLOCK_SCALAR_CONTENT', $value];
+            push @$tokens, ['LB', $2];
             $type = length $space ? 'MORE' : 'CONTENT';
             push @lines, [ $type => $pre, $space . $value ];
         }
@@ -1008,7 +894,7 @@ sub parse_block_scalar {
         lines => \@lines,
     );
 
-    return { name => 'NODE', eol => 1, value => $string, style => $block_type };
+    return { eol => 1, value => $string, style => $block_type };
 }
 
 
@@ -1030,23 +916,14 @@ sub in {
 }
 
 sub event_value {
-    my ($self, %args) = @_;
-    my $value = $args{content};
-    my $anchor = $self->anchor // $args{anchor};
-    my $tag = $self->tag // $args{tag};
-    my $style = $args{style};
+    my ($self, $args) = @_;
 
-    my %info = ( style => $style );
+    my $tag = $args->{tag};
     if (defined $tag) {
         my $tag_str = YAML::PP::Render::render_tag($tag, $self->tagmap);
-        $info{tag} = $tag_str;
-        $self->set_tag(undef);
+        $args->{tag} = $tag_str;
     }
-    if (defined $anchor) {
-        $self->set_anchor(undef);
-        $info{anchor} = $anchor;
-    }
-    $self->event([ VAL => { content => $value, %info, }]);
+    $self->event([ VAL => $args]);
 }
 
 sub push_events {
@@ -1079,32 +956,32 @@ my %event_to_method = (
 );
 
 sub begin {
-    my ($self, $event, $offset, @content) = @_;
+    my ($self, $event, $offset, $info) = @_;
+    my $content = $info->{content};
     my $event_name = $event;
     $event_name =~ s/^COMPLEX/MAP/;
     my %info = ( type => $event_name );
     if ($event_name eq 'SEQ' or $event_name eq 'MAP') {
-        my $anchor = $self->anchor;
-        my $tag = $self->tag;
+        my $anchor = $info->{anchor};
+        my $tag = $info->{tag};
         if (defined $tag) {
-            $self->set_tag(undef);
             my $tag_str = YAML::PP::Render::render_tag($tag, $self->tagmap);
             $info{tag} = $tag_str;
         }
         if (defined $anchor) {
-            $self->set_anchor(undef);
             $info{anchor} = $anchor;
         }
     }
-    TRACE and $self->debug_event("------------->> BEGIN $event ($offset) @content");
+    TRACE and $self->debug_event("------------->> BEGIN $event ($offset) $content");
     $self->callback->($self, $event_to_method{ $event_name } . "_start_event"
-        => { %info, content => $content[0] });
+        => { %info, content => $content });
     $self->push_events($event, $offset);
     TRACE and $self->debug_events;
 }
 
 sub end {
-    my ($self, $event, $content) = @_;
+    my ($self, $event, $info) = @_;
+    my $content = $info->{content};
     $self->pop_events($event);
     TRACE and $self->debug_event("-------------<< END   $event @{[$content//'']}");
     return if $event eq 'END';
@@ -1129,6 +1006,9 @@ sub event_to_test_suite {
     my ($self, $event) = @_;
     if (ref $event) {
         my ($ev, $info) = @$event;
+        if ($event_to_method{ $ev }) {
+            $ev = $event_to_method{ $ev } . "_event";
+        }
         my $string;
         my $type = $info->{type};
         my $content = $info->{content};
@@ -1204,6 +1084,13 @@ sub debug_yaml {
     }
 }
 
+sub debug_next_line {
+    my ($self) = @_;
+    my $yaml = $self->yaml;
+    my ($line) = $$yaml =~ m/\A(.*)/;
+    $self->note("NEXT LINE: $line");
+}
+
 sub note {
     my ($self, $msg) = @_;
     require Term::ANSIColor;
@@ -1232,6 +1119,50 @@ sub not {
     my ($self, $msg) = @_;
     require Term::ANSIColor;
     warn Term::ANSIColor::colored(["red"], "============ $msg"), "\n";
+}
+
+sub debug_rules {
+    my ($self, $rules) = @_;
+    local $Data::Dumper::Maxdepth = 2;
+    $self->note("RULES:");
+    for my $rule (@$rules) {
+        my $first = $rule->[0];
+        if (ref $first eq 'SCALAR') {
+            $self->info("-> $$first");
+        }
+        else {
+            if (ref $first eq 'ARRAY') {
+                $first = $first->[0];
+            }
+            $self->info("TYPE $first");
+        }
+    }
+}
+
+sub debug_tokens {
+    my ($self) = @_;
+    my $tokens = $self->tokens;
+    require Term::ANSIColor;
+    for my $token (@$tokens) {
+        my $type = Term::ANSIColor::colored(["green"],
+            sprintf "%-20s", $token->[0] . ':'
+        );
+        local $Data::Dumper::Useqq = 1;
+        local $Data::Dumper::Terse = 1;
+        my $str = Data::Dumper->Dump([$token->[1]], ['str']);
+        chomp $str;
+        $str =~ s/(^.|.$)/Term::ANSIColor::colored(['blue'], $1)/ge;
+        warn "$type$str\n";
+    }
+
+}
+
+sub highlight_yaml {
+    my ($self) = @_;
+    require YAML::PP::Highlight;
+    my $tokens = $self->tokens;
+    my $highlighted = YAML::PP::Highlight->ansicolored($tokens);
+    warn $highlighted;
 }
 
 1;

@@ -1,0 +1,31 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use 5.010;
+
+use Data::Dumper;
+use YAML::PP::Loader;
+use YAML::PP::Highlight;
+
+my ($file) = @ARGV;
+my $yaml;
+
+if ($file) {
+    $yaml = do { open my $fh, '<', $file or die $!; local $/; <$fh> };
+}
+else {
+    $yaml = do { local $/; <STDIN> };
+}
+
+my $ypp = YAML::PP::Loader->new;
+my @docs = eval {
+    $ypp->load($yaml);
+};
+my $error = $@;
+my $tokens = $ypp->parser->tokens;
+my $remaining = $ypp->parser->yaml;
+if ($error) {
+    push @$tokens, [ERROR => $$remaining];
+}
+my $highlighted = YAML::PP::Highlight->ansicolored($tokens);
+print $highlighted;
