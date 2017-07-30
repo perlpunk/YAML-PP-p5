@@ -111,6 +111,15 @@ sub parse {
     $self->set_rules([]);
     $self->set_stack({});
     $self->parse_stream;
+
+    DEBUG and $self->highlight_yaml;
+    TRACE and $self->debug_tokens;
+    if (DEBUG and $ENV{YAML_PP_STATS}) {
+        my %stats = %YAML::PP::Tokenizer::STAT;
+        for my $key (sort { $stats{ $b } <=> $stats{ $a } } keys %stats) {
+            warn __PACKAGE__.':'.__LINE__.": $key: $stats{ $key };\n";
+        }
+    }
 }
 
 use constant NODE_TYPE => 0;
@@ -1154,6 +1163,7 @@ sub debug_tokens {
         );
         local $Data::Dumper::Useqq = 1;
         local $Data::Dumper::Terse = 1;
+        require Data::Dumper;
         my $str = Data::Dumper->Dump([$token->[1]], ['str']);
         chomp $str;
         $str =~ s/(^.|.$)/Term::ANSIColor::colored(['blue'], $1)/ge;

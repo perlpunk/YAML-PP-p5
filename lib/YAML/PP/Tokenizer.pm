@@ -842,6 +842,7 @@ sub parse_tokens {
         }
 
         my $success;
+        DEBUG and $YAML::PP::Tokenizer::STAT{ $rule }++;
         if ($rule eq 'EOS') {
             $success = not length $$yaml;
         }
@@ -876,8 +877,8 @@ sub parse_tokens {
             }
         }
     }
+    TRACE and $self->highlight_yaml;
     TRACE and $self->debug_tokens;
-    DEBUG and $self->highlight_yaml;
 
     return ($ok, $new_type);
 }
