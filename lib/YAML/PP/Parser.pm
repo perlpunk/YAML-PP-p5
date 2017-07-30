@@ -143,8 +143,9 @@ sub parse_stream {
             $self->begin('DOC', -1);
         }
 
-        my $new_node = [ ($start_line ? 'STARTNODE' : 'FULLNODE') => 0 ];
-        $self->set_rules([@{ $YAML::PP::Tokenizer::GRAMMAR{FULLNODE} } ]);
+        my $new_type = $start_line ? 'FULLSTARTNODE' : 'FULLNODE';
+        my $new_node = [ $new_type => 0 ];
+        $self->set_rules([@{ $YAML::PP::Tokenizer::GRAMMAR{ FULLNODE } } ]);
         my ($end) = $self->parse_document($new_node);
         if ($end) {
             $self->end('DOC', { content => "..." });
@@ -458,8 +459,12 @@ sub process_result {
     else {
         die "Unexpected res $got";
     }
-    $new_node = [ $res->{new_type} => $new_offset ];
-    $self->set_rules([@{ $YAML::PP::Tokenizer::GRAMMAR{FULLNODE} } ]);
+    my $new_type = $res->{new_type};
+    $new_node = [ $new_type => $new_offset ];
+    if ($new_type eq 'MAPVALUE') {
+        $new_type = 'FULLMAPVALUE';
+    }
+    $self->set_rules([@{ $YAML::PP::Tokenizer::GRAMMAR{ FULLNODE } } ]);
     return $new_node;
 }
 

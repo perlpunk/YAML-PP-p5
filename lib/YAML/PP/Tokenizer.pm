@@ -472,7 +472,7 @@ our %GRAMMAR = (
         [\'PROP_MAPKEY'],
         [\'NODE'],
     ],
-    FULLNODE => [
+    RULE_ANCHOR => [
         [$rule_anchor,
             [$rule_property_eol,
                 [\'TYPE_FULLNODE_ANCHOR'],
@@ -489,6 +489,8 @@ our %GRAMMAR = (
                 [\'NODE'],
             ],
         ],
+    ],
+    RULE_TAG => [
         [$rule_tag,
             [$rule_property_eol,
                 [\'TYPE_FULLNODE_TAG'],
@@ -505,8 +507,22 @@ our %GRAMMAR = (
                 [\'NODE'],
             ],
         ],
+    ],
+    FULLNODE => [
+        [\'RULE_ANCHOR'],
+        [\'RULE_TAG'],
         [\'PREVIOUS'],
     ],
+#    FULLMAPVALUE => [
+#        [\'RULE_ANCHOR'],
+#        [\'RULE_TAG'],
+#        [\'MAPVALUE'],
+#    ],
+#    FULLSTARTNODE => [
+#        [\'RULE_ANCHOR'],
+#        [\'RULE_TAG'],
+#        [\'STARTNODE'],
+#    ],
 );
 
 sub cb_ws {
