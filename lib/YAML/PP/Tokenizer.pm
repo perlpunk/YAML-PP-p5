@@ -133,11 +133,10 @@ our %GRAMMAR = (
         ],
     ],
     RULE_COMPLEXVALUE => [
-        [['COLON', \&cb_complexcolon],
+        [['COLON', \&cb_complexcolon, \&cb_empty_complexvalue],
             [$rule_eol, [\'TYPE_FULLNODE'] ],
             [$rule_ws, [\'TYPE_FULLNODE'] ],
         ],
-        [['FALSE', undef, \&cb_empty_complexvalue]],
         [['QUESTION', \&cb_question],
             [$rule_eol, [\'TYPE_FULLNODE'] ],
             [$rule_ws, [\'TYPE_FULLNODE'] ],
@@ -848,9 +847,6 @@ sub parse_tokens {
         }
         elsif ($rule eq 'NOOP') {
             $success = 1;
-        }
-        elsif ($rule eq 'FALSE') {
-            $success = 0;
         }
         else {
             my $regex = $REGEXES{ $rule } or die "No regex found for '$rule'";
