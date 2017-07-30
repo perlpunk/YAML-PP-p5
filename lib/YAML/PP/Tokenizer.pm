@@ -859,22 +859,20 @@ sub parse_tokens {
         if ($success) {
             DEBUG and $self->got("got $rule");
             $ok = 1;
-        }
-        else {
-            DEBUG and $self->not("not $rule");
-            unless (@$rules) {
-                return (0);
-            }
-        }
-        if ($success) {
+
             @$rules = @next_rule;
             if ($sub) {
                 $callback->($self, $sub);
             }
         }
         else {
+            DEBUG and $self->not("not $rule");
+
             if ($subfalse) {
                 $subfalse->($self, $sub);
+            }
+            unless (@$rules) {
+                return (0);
             }
         }
     }
