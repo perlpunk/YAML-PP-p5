@@ -115,9 +115,15 @@ sub parse {
     DEBUG and $self->highlight_yaml;
     TRACE and $self->debug_tokens;
     if (DEBUG and $ENV{YAML_PP_STATS}) {
-        my %stats = %YAML::PP::Tokenizer::STAT;
-        for my $key (sort { $stats{ $b } <=> $stats{ $a } } keys %stats) {
-            warn __PACKAGE__.':'.__LINE__.": $key: $stats{ $key };\n";
+        my %match = %YAML::PP::Tokenizer::MATCH_RULE;
+        my %check = %YAML::PP::Tokenizer::CHECK_RULE;
+        warn __PACKAGE__.':'.__LINE__.": ----- REGEXES\n";
+        for my $key (sort { $match{ $b } <=> $match{ $a } } keys %match) {
+            warn __PACKAGE__.':'.__LINE__.": $key: $match{ $key };\n";
+        }
+        warn __PACKAGE__.':'.__LINE__.": ----- RULE CHECKS\n";
+        for my $key (sort { $check{ $b } <=> $check{ $a } } keys %check) {
+            warn __PACKAGE__.':'.__LINE__.": $key: $check{ $key };\n";
         }
     }
 }

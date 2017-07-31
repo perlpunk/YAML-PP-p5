@@ -805,6 +805,120 @@ my %REGEXES = (
     FLOW_MAP_START => qr{(\{)},
     FLOW_SEQ_START => qr{(\[)},
 );
+my %RULES_BY_FIRST = (
+    ANY => {
+        SCALAR => 0,
+        DOUBLEQUOTED => 0,
+        SINGLEQUOTED => 0,
+        WS => 0,
+    },
+    '&' => {
+        ANCHOR => 0,
+        SINGLEQUOTED => 0,
+        DOUBLEQUOTED => 0,
+        WS => 0,
+    },
+    '!' => {
+        TAG => 0,
+        SINGLEQUOTED => 0,
+        DOUBLEQUOTED => 0,
+        WS => 0,
+    },
+    '*' => {
+        ALIAS => 0,
+        MAPKEY_ALIAS => 0,
+        SINGLEQUOTED => 0,
+        DOUBLEQUOTED => 0,
+        WS => 0,
+    },
+    "\t" => {
+        WS => 0,
+        'WS+' => 0,
+        EOL => 0,
+        SINGLEQUOTED => 0,
+        DOUBLEQUOTED => 0,
+        WS => 0,
+    },
+    "\n" => {
+        EOL => 0,
+        LB => 0,
+        EMPTY => 0,
+        SINGLEQUOTED => 0,
+        DOUBLEQUOTED => 0,
+        WS => 0,
+    },
+    "\r" => {
+        EOL => 0,
+        LB => 0,
+        EMPTY => 0,
+        SINGLEQUOTED => 0,
+        DOUBLEQUOTED => 0,
+        WS => 0,
+    },
+    '' => {
+        EOL => 1,
+    },
+    "'" => {
+        SINGLEQUOTE => 1,
+        SINGLEQUOTED => 0,
+        DOUBLEQUOTED => 0,
+        WS => 0,
+    },
+    '"' => {
+        DOUBLEQUOTE => 1,
+        SINGLEQUOTED => 0,
+        DOUBLEQUOTED => 0,
+        WS => 0,
+    },
+    ' ' => {
+        EOL => 0,
+        WS => 0,
+        'WS+' => 0,
+        DOUBLEQUOTED => 0,
+        SINGLEQUOTED => 0,
+        WS => 0,
+    },
+    ':' => {
+        SCALAR => 0,
+        COLON => 0,
+        DOUBLEQUOTED => 0,
+        SINGLEQUOTED => 0,
+        WS => 0,
+    },
+    '-' => {
+        DASH => 0,
+        SCALAR => 0,
+        DOUBLEQUOTED => 0,
+        SINGLEQUOTED => 0,
+        WS => 0,
+    },
+    '?' => {
+        QUESTION => 0,
+        SCALAR => 0,
+        DOUBLEQUOTED => 0,
+        SINGLEQUOTED => 0,
+        WS => 0,
+    },
+    '|' => {
+        LITERAL => 0,
+        DOUBLEQUOTED => 0,
+        SINGLEQUOTED => 0,
+        WS => 0,
+    },
+    '>' => {
+        FOLDED => 0,
+        DOUBLEQUOTED => 0,
+        SINGLEQUOTED => 0,
+        WS => 0,
+    },
+    '#' => {
+        EOL => 0,
+        EMPTY => 0,
+        DOUBLEQUOTED => 0,
+        SINGLEQUOTED => 0,
+        WS => 0,
+    },
+);
 
 sub parse_tokens {
     my ($self, %args) = @_;
@@ -818,7 +932,9 @@ sub parse_tokens {
     TRACE and $self->debug_yaml;
     DEBUG and $self->debug_next_line;
 
+    my @next_tokens;
     my $yaml = $self->yaml;
+    my $first = substr($$yaml, 0, 1);
     RULE: while (my $next_rule = shift @$rules) {
         my ($rule, @next_rule) = @$next_rule;
 
@@ -842,7 +958,7 @@ sub parse_tokens {
         }
 
         my $success;
-        DEBUG and $YAML::PP::Tokenizer::STAT{ $rule }++;
+        DEBUG and $YAML::PP::Tokenizer::CHECK_RULE{ $rule }++;
         if ($rule eq 'EOS') {
             $success = not length $$yaml;
         }
@@ -850,11 +966,31 @@ sub parse_tokens {
             $success = 1;
         }
         else {
-            my $regex = $REGEXES{ $rule } or die "No regex found for '$rule'";
-            $success = $$yaml =~ s/\A$regex//;
-            if ($success) {
-                push @$tokens, [$rule, $1];
+            my $possible_rules = $RULES_BY_FIRST{ $first } || $RULES_BY_FIRST{ANY};
+
+            TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$first], ['first']);
+            TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$rule], ['rule']);
+            TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$possible_rules], ['possible_rules']);
+            if (not exists $possible_rules->{ $rule }) {
+                $success = 0;
             }
+            if ($possible_rules->{ $rule }) {
+                substr($$yaml, 0, 1, '');
+                $first = substr($$yaml, 0, 1);
+                push @$tokens, [ $rule, $first ];
+                $success = 1;
+            }
+
+            unless (defined $success) {
+                DEBUG and $YAML::PP::Tokenizer::MATCH_RULE{ $rule }++;
+                my $regex = $REGEXES{ $rule } or die "No regex found for '$rule'";
+                $success = $$yaml =~ s/\A$regex//;
+                if ($success) {
+                    push @$tokens, [$rule, $1];
+                    $first = substr($$yaml, 0, 1);
+                }
+            }
+
         }
 
         if ($success) {
