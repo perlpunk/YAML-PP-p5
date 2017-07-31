@@ -16,6 +16,7 @@ sub new {
     my $reader = delete $args{reader};
     my $self = bless {
         reader => $reader,
+        tokenizer => YAML::PP::Tokenizer->new,
     }, $class;
     my $receiver = delete $args{receiver};
     if ($receiver) {
@@ -50,6 +51,7 @@ sub reader {
     require YAML::PP::Reader;
     return YAML::PP::Reader->new(input => $input);
 }
+sub tokenizer { return $_[0]->{tokenizer} }
 sub callback { return $_[0]->{callback} }
 sub set_callback { $_[0]->{callback} = $_[1] }
 sub yaml { return $_[0]->{yaml} }
@@ -110,6 +112,7 @@ sub parse {
     $self->set_tokens([]);
     $self->set_rules([]);
     $self->set_stack({});
+    $self->tokenizer->init;
     $self->parse_stream;
 
     DEBUG and $self->highlight_yaml;
@@ -141,7 +144,6 @@ sub parse_stream {
 
     my $exp_start = 0;
     while (length $$yaml) {
-        $self->parse_empty;
         my $head = $self->parse_document_head();
         my ($start, $start_line) = $self->parse_document_start;
         if (($head or $exp_start) and not $start) {
@@ -160,7 +162,7 @@ sub parse_stream {
 
         my $new_type = $start_line ? 'FULLSTARTNODE' : 'FULLNODE';
         my $new_node = [ $new_type => 0 ];
-        $self->set_rules([@{ $YAML::PP::Tokenizer::GRAMMAR{ FULLNODE } } ]);
+        $self->set_rules([ $YAML::PP::Tokenizer::GRAMMAR{ FULLNODE } ]);
         my ($end) = $self->parse_document($new_node);
         if ($end) {
             $self->end('DOC', { content => "..." });
@@ -171,7 +173,6 @@ sub parse_stream {
         }
 
     }
-    $self->parse_empty;
 
     $self->end('STR');
 }
@@ -248,13 +249,35 @@ sub parse_document {
         TRACE and $self->debug_events;
 
         my $exp = $self->events->[-1];
-        my $offset;
+        my $offset = 0;
         if ($next_full_line) {
-            $self->parse_empty;
+            my $yaml = $self->yaml;
+            my $next_tokens = $self->tokenizer->next_tokens;
+            unless (@$next_tokens) {
+                @$next_tokens = $self->tokenizer->fetch_next_tokens(0, $yaml);
+            }
+            TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
+            if (@$next_tokens and $next_tokens->[0]->[0] eq 'INDENT') {
+                $offset = length $next_tokens->[0]->[1];
+                push @$tokens, $next_tokens->[0];
+                shift @$next_tokens;
+            }
+            if (@$next_tokens == 1 and $next_tokens->[0]->[0] =~ m/EOL|EMPTY/) {
+                push @$tokens, shift @$next_tokens;
+                TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
+                if ($tokens->[-1]->[1] eq '') {
+                }
+                else {
+                    next;
+                }
+                TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
+            }
 
             my $end;
             my $explicit_end;
-            ($new_node, $offset, $end, $explicit_end) = $self->check_indent(
+            ($new_node, $end, $explicit_end) = $self->check_indent(
+                next_tokens => $next_tokens,
+                space => $offset,
                 expected => $exp,
                 new_node => $new_node,
             );
@@ -300,22 +323,28 @@ sub check_indent {
     my ($self, %args) = @_;
     my $exp = $args{expected};
     my $new_node = $args{new_node};
+    my $space = $args{space};
+    my $next_tokens = $args{next_tokens};
     my $yaml = $self->yaml;
     my $end = 0;
     my $explicit_end = 0;
-    my $space = 0;
     my $indent = 0;
     my $tokens = $self->tokens;
 
-    my $eoyaml = not length $$yaml;
-    if ($eoyaml) {
-        $end = 1;
+    if (@$next_tokens) {
+        if ($next_tokens->[0]->[1] eq '') {
+            $end = 1;
+        }
     }
     else {
-        if ($$yaml =~ s/\A( +)//) {
-            $space = length $1;
-            push @$tokens, ['INDENT', $1];
+        my $eoyaml = not length $$yaml;
+        if ($eoyaml) {
+            $end = 1;
         }
+    }
+    if ($end) {
+    }
+    else {
 
         $indent = $self->offset->[ -1 ];
         if ($indent == -1 and $space == 0 and not $new_node) {
@@ -326,7 +355,9 @@ sub check_indent {
     TRACE and $self->info("INDENT: space=$space indent=$indent");
 
     if ($space <= 0) {
-        if ($$yaml =~ s/$RE_DOC_END//) {
+        if (@$next_tokens and $next_tokens->[0]->[0] eq 'DOC_START') {
+        }
+        elsif ($$yaml =~ s/$RE_DOC_END//) {
             push @$tokens, ['DOC_END', $1];
             $$yaml =~ s/($RE_EOL|\z)// or die "Unexpected";
             push @$tokens, ['EOL', $1];
@@ -405,7 +436,7 @@ sub check_indent {
         }
     }
 
-    return ($new_node, $space, $end, $explicit_end);
+    return ($new_node, $end, $explicit_end);
 }
 
 sub process_result {
@@ -413,13 +444,12 @@ sub process_result {
     my $res = $args{result};
     my $offset = $args{offset};
     my $exp = $args{expected};
-    my $new_node;
 
-    my $new_offset = $offset + 1 + ($res->{ws} || 0);
-    my $props = $self->stack->{node_properties} ||= {};
-    my $properties = $self->stack->{properties} ||= {};
+    my $stack = $self->stack;
+    my $props = $stack->{node_properties} ||= {};
+    my $properties = $stack->{properties} ||= {};
+    my $stack_events = $stack->{events} || [];
 
-    my $stack_events = $self->stack->{events} || [];
     for my $event (@$stack_events) {
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$event], ['event']);
         my ($type, $name, $res) = @$event;
@@ -444,13 +474,11 @@ sub process_result {
     }
     @$stack_events = ();
 
-
     my $got = $res->{name};
     TRACE and $self->got("GOT $got");
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$got], ['got']);
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$res], ['res']);
-
     TRACE and $self->highlight_yaml;
+
     if ($got eq 'SCALAR') {
         return;
     }
@@ -474,81 +502,57 @@ sub process_result {
     else {
         die "Unexpected res $got";
     }
+
+    my $new_offset = $offset + 1 + ($res->{ws} || 0);
     my $new_type = $res->{new_type};
-    $new_node = [ $new_type => $new_offset ];
-    if ($new_type eq 'MAPVALUE') {
-        $new_type = 'FULLMAPVALUE';
-    }
-    $self->set_rules([@{ $YAML::PP::Tokenizer::GRAMMAR{ FULLNODE } } ]);
+    my $new_node = [ $new_type => $new_offset ];
+#    if ($new_type eq 'MAPVALUE') {
+#        $new_type = 'FULLMAPVALUE';
+#    }
+    $self->set_rules([ $YAML::PP::Tokenizer::GRAMMAR{ FULLNODE } ]);
     return $new_node;
 }
 
-#my %MAPVALUE_RULES = (
-#    '-' => [qw/ RULE_SEQSTART RULE_PLAIN /],
-#    '?' => [qw/ RULE_COMPLEX RULE_PLAIN /],
-#    '*' => [qw/ RULE_ALIAS_KEY_OR_NODE /],
-#    "'" => [qw/ RULE_SINGLEQUOTED_KEY_OR_NODE /],
-#    '"' => [qw/ RULE_DOUBLEQUOTED_KEY_OR_NODE /],
-#    '|' => [qw/ RULE_BLOCK_SCALAR /],
-#    '>' => [qw/ RULE_BLOCK_SCALAR /],
-#);
-#for my $key (keys %MAPVALUE_RULES) {
-#    my $rules = $MAPVALUE_RULES{ $key };
-#    $MAPVALUE_RULES{ $key } = [ map {
-#        @{ $YAML::PP::Tokenizer::GRAMMAR{ $_ } }
-#    } @$rules ];
-#}
-#if (0) {
-#    my $yaml = $self->yaml;
-#    my $first = substr($$yaml, 0, 1);
-#    if (my $names = $MAPVALUE_RULES{ $first }) {
-#        @$rules = @$names;
-#    }
-#    else {
-#        push @$rules, @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_PLAIN} };
-#    }
-#}
-
 my %TYPE2RULE = (
-    MAP => [
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY_ALIAS} },
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY} },
-    ],
-    MAPSTART => [
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPSTART} },
-    ],
-    SEQ => [ @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SEQITEM} } ],
-    MAPKEY => [
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY_ALIAS} },
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY} },
-    ],
-    COMPLEX => [
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_COMPLEXVALUE} },
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY_ALIAS} },
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY} },
-    ],
-    STARTNODE => [
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SINGLEQUOTED_KEY_OR_NODE} },
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_BLOCK_SCALAR} },
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_PLAIN} },
-    ],
-    MAPVALUE => [
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_ALIAS_KEY_OR_NODE} },
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SINGLEQUOTED_KEY_OR_NODE} },
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_BLOCK_SCALAR} },
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_PLAIN} },
-    ],
-    NODE => [
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SEQSTART} },
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_COMPLEX} },
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SINGLEQUOTED_KEY_OR_NODE} },
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_BLOCK_SCALAR} },
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_ALIAS_KEY_OR_NODE} },
-        @{ $YAML::PP::Tokenizer::GRAMMAR{RULE_PLAIN_KEY_OR_NODE} },
-    ],
+    MAP => {
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY_ALIAS} },
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY} },
+    },
+    MAPSTART => {
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPSTART} },
+    },
+    SEQ => { %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SEQITEM} } },
+    MAPKEY => {
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY_ALIAS} },
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY} },
+    },
+    COMPLEX => {
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_COMPLEXVALUE} },
+#        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY_ALIAS} },
+#        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY} },
+    },
+    STARTNODE => {
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SINGLEQUOTED_KEY_OR_NODE} },
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_BLOCK_SCALAR} },
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_PLAIN} },
+    },
+    MAPVALUE => {
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_ALIAS_KEY_OR_NODE} },
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SINGLEQUOTED_KEY_OR_NODE} },
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_BLOCK_SCALAR} },
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_PLAIN} },
+    },
+    NODE => {
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SEQSTART} },
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_COMPLEX} },
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SINGLEQUOTED_KEY_OR_NODE} },
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_BLOCK_SCALAR} },
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_ALIAS_KEY_OR_NODE} },
+        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_PLAIN_KEY_OR_NODE} },
+    },
 );
 
 sub parse_next {
@@ -567,9 +571,9 @@ sub parse_next {
     my $no_alias = 0;
     if ($node_type or $exp eq 'MAP') {
         unless ($node_type) {
-            @$rules = @{ $YAML::PP::Tokenizer::GRAMMAR{FULL_MAPKEY} };
+            @$rules = $YAML::PP::Tokenizer::GRAMMAR{FULL_MAPKEY};
         }
-        my ($success, $new_type) = YAML::PP::Tokenizer::parse_tokens($self,
+        my ($success, $new_type) = $self->tokenizer->parse_tokens($self,
             callback => sub {
                 my ($self, $sub) = @_;
                 $sub->($self, undef);
@@ -582,7 +586,7 @@ sub parse_next {
         if ($new_type and $node_type) {
             if ($new_type =~ s/^TYPE_//) {
                 $return = 1;
-                @$rules = [\$new_type];
+                @$rules = \$new_type;
             }
             elsif ($new_type eq 'PREVIOUS') {
                 $new_type = $node_type;
@@ -606,10 +610,10 @@ sub parse_next {
     }
 
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$expected_type], ['expected_type']);
-    @$rules = @{ $TYPE2RULE{ $expected_type } };
+    @$rules = $TYPE2RULE{ $expected_type };
 
     $res = {};
-    my ($success, $new_type) = YAML::PP::Tokenizer::parse_tokens($self,
+    my ($success, $new_type) = $self->tokenizer->parse_tokens($self,
         callback => sub {
             my ($self, $sub) = @_;
             $sub->($self, $res);
@@ -810,6 +814,7 @@ sub parse_block_scalar {
     my ($self, %args) = @_;
     my $yaml = $self->yaml;
     my $tokens = $self->tokens;
+    my $indent = $self->offset->[-1] + 1;
 
     my $block_type = $args{type};
     my $exp_indent;
@@ -838,7 +843,6 @@ sub parse_block_scalar {
     }
     my @lines;
 
-    my $indent = $self->offset->[-1] + 1;
     my $got_indent = 0;
     if ($exp_indent) {
         $indent = $exp_indent;
@@ -1146,6 +1150,7 @@ sub debug_rules {
     local $Data::Dumper::Maxdepth = 2;
     $self->note("RULES:");
     for my $rule (@$rules) {
+        eval {
         my $first = $rule->[0];
         if (ref $first eq 'SCALAR') {
             $self->info("-> $$first");
@@ -1156,6 +1161,7 @@ sub debug_rules {
             }
             $self->info("TYPE $first");
         }
+        };
     }
 }
 

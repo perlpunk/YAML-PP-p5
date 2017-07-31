@@ -10,6 +10,19 @@ use constant DEBUG => $ENV{YAML_PP_DEBUG} || $ENV{YAML_PP_TRACE};
 use constant NODE_TYPE => 0;
 use constant NODE_OFFSET => 1;
 
+sub new {
+    my ($class, %args) = @_;
+    my $self = bless {
+        next_tokens => [],
+    }, $class;
+    return $self;
+}
+
+sub init {
+    $_[0]->{next_tokens} = [];
+}
+
+sub next_tokens { return $_[0]->{next_tokens} }
 
 my $RE_WS = '[\t ]';
 my $RE_LB = '[\r\n]';
@@ -107,411 +120,369 @@ my $RE_ALIAS = qr/(\*$RE_ANCHOR)/m;
 my $rule_anchor = ['ANCHOR', \&cb_anchor];
 my $rule_tag = ['TAG', \&cb_tag];
 my $rule_property_eol = ['EOL', \&cb_property_eol];
-my $rule_eol = ['EOL', \&cb_eol];
-my $rule_ws = ['WS+', \&cb_ws];
+my $rule_ws = ['WS', \&cb_ws];
 our %GRAMMAR = (
-    RULE_ALIAS_KEY_OR_NODE => [
-        [['MAPKEY_ALIAS', \&cb_alias],
-            ['WS+',
-                ['COLON',
-                    [$rule_eol, [\'TYPE_FULLNODE'] ],
-                    [$rule_ws, [\'MAPVALUE'] ],
-                ],
-            ],
-        ],
-        [['ALIAS', \&cb_node_alias],
-            [$rule_eol,
-            # TODO
-                [\'NODE'],
-            ],
-        ],
-    ],
-    RULE_COMPLEX => [
-        [['QUESTION', \&cb_questionstart],
-            [$rule_eol, [\'TYPE_FULLNODE'] ],
-            [$rule_ws, [\'TYPE_FULLNODE'] ],
-        ],
-    ],
-    RULE_COMPLEXVALUE => [
-        [['COLON', \&cb_complexcolon, \&cb_empty_complexvalue],
-            [$rule_eol, [\'TYPE_FULLNODE'] ],
-            [$rule_ws, [\'TYPE_FULLNODE'] ],
-        ],
-        [['QUESTION', \&cb_question],
-            [$rule_eol, [\'TYPE_FULLNODE'] ],
-            [$rule_ws, [\'TYPE_FULLNODE'] ],
-        ],
-    ],
-    RULE_SINGLEQUOTED_KEY_OR_NODE => [
-        ['SINGLEQUOTE',
-            [['SINGLEQUOTED', \&cb_stack_singlequoted],
-                ['SINGLEQUOTE',
-                    [['EOL', \&cb_scalar_from_stack],
-                        [\'NODE'],
-                    ],
-                    ['WS',
-                        [['COLON', \&cb_mapkey_from_stack],
-                            [$rule_eol, [\'TYPE_FULLNODE'] ],
-                            [$rule_ws, [\'MAPVALUE'] ],
-                        ],
-                        [['EOL', \&cb_scalar_from_stack],
-                            [\'TYPE_FULLNODE'],
-                        ],
-                    ],
-                ],
-                ['LB',
-                    [\'MULTILINE_SINGLEQUOTED'],
-                ],
-            ],
-        ],
-    ],
-    MULTILINE_SINGLEQUOTED => [
-        [['SINGLEQUOTED', \&cb_stack_singlequoted],
-            ['SINGLEQUOTE',
-                [['EOL', \&cb_scalar_from_stack],
-                    [\'NODE'],
-                ],
-                ['WS',
-                    [['EOL', \&cb_scalar_from_stack],
-                        [\'NODE'],
-                    ],
-                ],
-            ],
-            ['LB',
-                [\'MULTILINE_SINGLEQUOTED'],
-            ],
-        ],
-    ],
-    RULE_DOUBLEQUOTED_KEY_OR_NODE => [
-        ['DOUBLEQUOTE',
-            [['DOUBLEQUOTED', \&cb_stack_doublequoted],
-                ['DOUBLEQUOTE',
-                    [['EOL', \&cb_scalar_from_stack],
-                        [\'NODE'],
-                    ],
-                    ['WS',
-                        [['COLON', \&cb_mapkey_from_stack],
-                            [$rule_eol, [\'TYPE_FULLNODE'] ],
-                            [$rule_ws, [\'MAPVALUE'] ],
-                        ],
-                        [['NOOP', \&cb_scalar_from_stack],
-                            [\'ERROR'],
-                        ],
-                    ],
-                ],
-                ['LB',
-                    [\'MULTILINE_DOUBLEQUOTED'],
-                ],
-            ],
-        ],
-    ],
-    MULTILINE_DOUBLEQUOTED => [
-        [['DOUBLEQUOTED', \&cb_stack_doublequoted],
-            ['DOUBLEQUOTE',
-                [['EOL', \&cb_scalar_from_stack],
-                    [\'NODE'],
-                ],
-                ['WS',
-                    [['EOL', \&cb_scalar_from_stack],
-                        [\'NODE'],
-                    ],
-                ],
-            ],
-            ['LB',
-                [\'MULTILINE_DOUBLEQUOTED'],
-            ],
-        ],
-    ],
-    RULE_PLAIN_KEY_OR_NODE => [
-        [['SCALAR', \&cb_stack_plain],
-            ['WS+',
-                [['EMPTY', \&cb_plain_single],
-                    [\'NODE'],
-                ],
-                [['COLON', \&cb_mapkey_from_stack],
-                    [['EOL', \&cb_eol],
-                        [\'TYPE_FULLNODE'],
-                    ],
-                    [['WS', \&cb_ws],
-                        [\'MAPVALUE'],
-                    ],
-                ],
-            ],
-            [['LB', \&cb_multiscalar_from_stack],
-                [\'NODE'],
-            ],
-            [['EOS', \&cb_multiscalar_from_stack],
-                [\'END'],
-            ],
-            [['COLON', \&cb_mapkey_from_stack],
-                [['EOL', \&cb_eol],
-                    [\'TYPE_FULLNODE'],
-                ],
-                [['WS', \&cb_ws],
-                    [\'MAPVALUE'],
-                ],
-            ],
-        ],
-    ],
-    RULE_PLAIN => [
-        [['SCALAR', \&cb_stack_plain],
-            [['EOL', \&cb_multiscalar_from_stack],
-                [\'NODE'],
-            ],
-            [['EOS', \&cb_multiscalar_from_stack],
-                [\'END'],
-            ],
-        ],
-    ],
-    RULE_MAPKEY_ALIAS => [
-        [['MAPKEY_ALIAS', \&cb_mapkey_alias],
-            ['WS+',
-                ['COLON',
-                    [$rule_eol, [\'TYPE_FULLNODE'], ],
-                    [$rule_ws, [\'MAPVALUE'], ],
-                ],
-            ],
-        ],
-    ],
-    RULE_MAPKEY => [
-        [['QUESTION', \&cb_question],
-            [$rule_eol, [\'TYPE_FULLNODE'], ],
-            [$rule_ws, [\'TYPE_FULLNODE'], ],
-        ],
-        ['DOUBLEQUOTE',
-            [['DOUBLEQUOTED', \&cb_doublequoted],
-                ['DOUBLEQUOTE',
-                    ['WS',
-                        ['COLON',
-                            [$rule_eol, [\'TYPE_FULLNODE'], ],
-                            [$rule_ws, [\'MAPVALUE'], ],
-                        ],
-                    ],
-                ],
-            ],
-        ],
-        ['SINGLEQUOTE',
-            [['SINGLEQUOTED', \&cb_singleequoted],
-                ['SINGLEQUOTE',
-                    ['WS',
-                        ['COLON',
-                            [$rule_eol, [\'TYPE_FULLNODE'], ],
-                            [$rule_ws, [\'MAPVALUE'], ],
-                        ],
-                    ],
-                ],
-            ],
-        ],
-        [['SCALAR', \&cb_mapkey],
-            ['WS',
-                ['COLON',
-                    [$rule_eol, [\'TYPE_FULLNODE'], ],
-                    [$rule_ws, [\'MAPVALUE'], ],
-                ],
-            ],
-        ],
-    ],
-    RULE_MAPSTART => [
-        [['QUESTION', \&cb_questionstart],
-            [$rule_eol, [\'TYPE_FULLNODE'], ],
-            [$rule_ws, [\'TYPE_FULLNODE'], ],
-        ],
-        ['DOUBLEQUOTE',
-            [['DOUBLEQUOTED', \&cb_doublequotedstart],
-                ['DOUBLEQUOTE',
-                    ['WS',
-                        ['COLON',
-                            [$rule_eol, [\'TYPE_FULLNODE'], ],
-                            [$rule_ws, [\'MAPVALUE'], ],
-                        ],
-                    ],
-                ],
-            ],
-        ],
-        ['SINGLEQUOTE',
-            [['SINGLEQUOTED', \&cb_singleequotedstart],
-                ['SINGLEQUOTE',
-                    ['WS',
-                        ['COLON',
-                            [$rule_eol, [\'TYPE_FULLNODE'], ],
-                            [$rule_ws, [\'MAPVALUE'], ],
-                        ],
-                    ],
-                ],
-            ],
-        ],
-        [['SCALAR', \&cb_mapkeystart],
-            ['WS',
-                ['COLON',
-                    [$rule_eol, [\'TYPE_FULLNODE'], ],
-                    [$rule_ws, [\'MAPVALUE'], ],
-                ],
-            ],
-        ],
-    ],
-    RULE_SEQSTART => [
-        [['DASH', \&cb_seqstart],
-            [$rule_eol, [\'TYPE_FULLNODE'], ],
-            [$rule_ws, [\'TYPE_FULLNODE'], ],
-        ],
-    ],
-    RULE_SEQITEM => [
-        [['DASH', \&cb_seqitem],
-            [$rule_eol, [\'TYPE_FULLNODE'], ],
-            [$rule_ws, [\'TYPE_FULLNODE'], ],
-        ],
-    ],
-    RULE_BLOCK_SCALAR => [
-        [['LITERAL', \&cb_block_scalar],
-            [\'NODE'],
-        ],
-        [['FOLDED', \&cb_block_scalar],
-            [\'NODE'],
-        ],
-    ],
-    RULE_FLOW_MAP => [
-        [['FLOW_MAP_START', \&cb_flow_map],
-            [\'ERROR'],
-        ],
-    ],
-    RULE_FLOW_SEQ => [
-        [['FLOW_SEQ_START', \&cb_flow_seq],
-            [\'ERROR'],
-        ],
-    ],
+    RULE_ALIAS_KEY_OR_NODE => {
+        ALIAS => [\&cb_stack_alias, {
+            EOL => [ \&cb_alias_from_stack, [ \'NODE' ]],
+            WS => [0, {
+                COLON => [ \&cb_alias_key_from_stack, {
+                    EOL => [\&cb_eol, [ \'TYPE_FULLNODE' ]],
+                    WS => [\&cb_ws, [ \'MAPVALUE' ]],
+                }],
+            }],
+        }],
+    },
+    RULE_COMPLEX => {
+        QUESTION => [ \&cb_questionstart, {
+            EOL => [\&cb_eol, [ \'TYPE_FULLNODE' ]],
+            WS => [\&cb_ws, [\'TYPE_FULLNODE']],
+        }],
+    },
+    RULE_COMPLEXVALUE => {
+        COLON => [ \&cb_complexcolon, {
+            EOL => [\&cb_eol, [ \'TYPE_FULLNODE' ]],
+            WS => [\&cb_ws, [ \'TYPE_FULLNODE' ]],
+        }],
+        DEFAULT => [\&cb_empty_complexvalue, {
+            QUESTION => [\&cb_question, {
+                EOL => [\&cb_eol, [ \'TYPE_FULLNODE' ]],
+                WS => [\&cb_ws, [ \'TYPE_FULLNODE' ]],
+            }],
+            DEFAULT => [0, [
+                \'RULE_MAPKEY_ALIAS',
+                \'RULE_MAPKEY',
+            ]],
+        }],
+    },
+    RULE_SINGLEQUOTED_KEY_OR_NODE => {
+        SINGLEQUOTE => [0, {
+            SINGLEQUOTED_SINGLE => [ \&cb_stack_singlequoted_single, {
+                SINGLEQUOTE => [0, {
+                    EOL => [ \&cb_scalar_from_stack, [ \'NODE' ]],
+                    'WS?' => [0, {
+                        COLON => [ \&cb_mapkey_from_stack, {
+                            EOL => [\&cb_eol, [ \'TYPE_FULLNODE' ]],
+                            WS => [\&cb_ws, [ \'MAPVALUE' ]],
+                        }],
+                        EOL => [ \&cb_scalar_from_stack, [
+                            \'TYPE_FULLNODE',
+                        ]],
+                    }],
+                }],
+                LB => [0, [ \'MULTILINE_SINGLEQUOTED' ]],
+            }],
+            SINGLEQUOTED_LINE => [ \&cb_stack_singlequoted, {
+                LB => [0, [ \'MULTILINE_SINGLEQUOTED' ] ],
+            }],
+        }],
+    },
+    MULTILINE_SINGLEQUOTED => {
+        SINGLEQUOTED_END => [ \&cb_stack_singlequoted, {
+            SINGLEQUOTE => [0, {
+                EOL => [ \&cb_scalar_from_stack, [ \'NODE' ]],
+            }],
+        }],
+        SINGLEQUOTED_LINE => [ \&cb_stack_singlequoted, {
+            LB => [0, [ \'MULTILINE_SINGLEQUOTED' ]],
+        }],
+    },
+    RULE_DOUBLEQUOTED_KEY_OR_NODE => {
+        DOUBLEQUOTE => [0, {
+            DOUBLEQUOTED_SINGLE => [ \&cb_stack_doublequoted_single, {
+                DOUBLEQUOTE => [ 0, {
+                    EOL => [ \&cb_scalar_from_stack, [ \'NODE' ]],
+                    'WS?' => [0, {
+                        COLON => [ \&cb_mapkey_from_stack, {
+                            EOL => [\&cb_eol, [ \'TYPE_FULLNODE' ]],
+                            WS => [\&cb_ws, [ \'MAPVALUE' ]],
+                        }],
+                        DEFAULT => [ \&cb_scalar_from_stack, [
+                            \'ERROR',
+                        ]],
+                    }],
+                }],
+            }],
+            DOUBLEQUOTED_LINE => [ \&cb_stack_doublequoted, {
+                LB => [0, [ \'MULTILINE_DOUBLEQUOTED' ] ],
+            }],
+        }],
+    },
+    MULTILINE_DOUBLEQUOTED => {
+        DOUBLEQUOTED_END => [ \&cb_stack_doublequoted, {
+            DOUBLEQUOTE => [0, {
+                EOL => [ \&cb_scalar_from_stack, [ \'NODE' ]],
+            }],
+        }],
+        DOUBLEQUOTED_LINE => [ \&cb_stack_doublequoted, {
+            LB => [0, [ \'MULTILINE_DOUBLEQUOTED' ] ],
+        }],
+    },
+    RULE_PLAIN_KEY_OR_NODE => {
+        SCALAR => [ \&cb_stack_plain, {
+            COMMENT_EOL => [ \&cb_plain_single, [ \'NODE' ]],
+            EOL => [ \&cb_multiscalar_from_stack, [ \'NODE' ]],
+            'WS?' => [0, {
+                COLON => [ \&cb_mapkey_from_stack, {
+                    EOL => [ \&cb_eol, [ \'TYPE_FULLNODE' ]],
+                    'WS?' => [ \&cb_ws, [ \'MAPVALUE' ]],
+                }],
+            }],
+        }],
+        COLON => [ \&cb_mapkey_from_stack, {
+            EOL => [ \&cb_eol, [ \'TYPE_FULLNODE' ]],
+            'WS?' => [ \&cb_ws, [ \'MAPVALUE' ]],
+        }],
+    },
+    RULE_PLAIN => {
+        SCALAR => [\&cb_stack_plain, {
+            COMMENT_EOL => [\&cb_multiscalar_from_stack, [ \'NODE' ]],
+            EOL => [ \&cb_multiscalar_from_stack, [ \'NODE' ]],
+        }],
+    },
+    RULE_MAPKEY_ALIAS => {
+        ALIAS => [ \&cb_mapkey_alias, {
+            WS => [0, {
+                COLON => [0, {
+                    EOL => [\&cb_eol, [ \'TYPE_FULLNODE' ]],
+                    WS => [\&cb_ws, [ \'MAPVALUE' ]],
+                }],
+            }],
+        }],
+    },
+    RULE_MAPKEY => {
+        QUESTION => [\&cb_question, {
+            EOL => [\&cb_eol, [ \'TYPE_FULLNODE' ]],
+            WS => [\&cb_ws, [ \'TYPE_FULLNODE' ]],
+        }],
+        DOUBLEQUOTE => [0, {
+            DOUBLEQUOTED_SINGLE => [\&cb_doublequoted_key, {
+                DOUBLEQUOTE => [ 0, {
+                    'WS?' => [0, {
+                        COLON => [0, {
+                            EOL => [\&cb_eol, [ \'TYPE_FULLNODE' ]],
+                            WS => [\&cb_ws, [ \'MAPVALUE' ]],
+                        }],
+                    }],
+                }],
+            }],
+        }],
+        SINGLEQUOTE => [0, {
+            SINGLEQUOTED_SINGLE => [ \&cb_singlequoted_key, {
+                SINGLEQUOTE => [0, {
+                    'WS?' => [0, {
+                        COLON => [0, {
+                            EOL => [\&cb_eol, [ \'TYPE_FULLNODE' ]],
+                            WS => [\&cb_ws, [ \'MAPVALUE' ]],
+                        }],
+                    }],
+                }],
+            }],
+        }],
+        SCALAR => [\&cb_mapkey, {
+            'WS?' => [ 0, {
+                COLON => [0, {
+                    EOL => [\&cb_eol, [ \'TYPE_FULLNODE' ]],
+                    WS => [\&cb_ws, [ \'MAPVALUE' ]],
+                }],
+            }],
+        }],
+        COLON => [ \&cb_empty_mapkey, {
+            EOL => [\&cb_eol, [ \'TYPE_FULLNODE' ]],
+            WS => [\&cb_ws, [ \'MAPVALUE' ]],
+        }],
+    },
+    RULE_MAPSTART => {
+        QUESTION => [ \&cb_questionstart, {
+            EOL => [\&cb_eol, [ \'TYPE_FULLNODE' ]],
+            WS => [\&cb_ws, [ \'TYPE_FULLNODE' ]],
+        }],
+        DOUBLEQUOTE => [0, {
+            DOUBLEQUOTED => [ \&cb_doublequotedstart, {
+                DOUBLEQUOTE => [0, {
+                    'WS?' => [0, {
+                        COLON => [0, {
+                            EOL => [\&cb_eol, [ \'TYPE_FULLNODE' ]],
+                            WS => [\&cb_ws, [ \'MAPVALUE' ]],
+                        }],
+                    }],
+                }],
+            }],
+        }],
+        SINGLEQUOTE => [0, {
+            SINGLEQUOTED => [ \&cb_singleequotedstart, {
+                SINGLEQUOTE => [0, {
+                    'WS?' => [0, {
+                        COLON => [0, {
+                            EOL => [\&cb_eol, [ \'TYPE_FULLNODE' ]],
+                            WS => [\&cb_ws, [ \'MAPVALUE' ]],
+                        }],
+                    }],
+                }],
+            }],
+        }],
+        SCALAR => [ \&cb_mapkeystart, {
+            'WS?' => [0, {
+                COLON => [0, {
+                    EOL => [\&cb_eol, [ \'TYPE_FULLNODE' ]],
+                    WS => [\&cb_ws, [ \'MAPVALUE' ]],
+                }],
+            }],
+        }],
+    },
+    RULE_SEQSTART => {
+        DASH =>[ \&cb_seqstart, {
+            EOL => [\&cb_eol, [ \'TYPE_FULLNODE' ]],
+            WS => [\&cb_ws, [ \'TYPE_FULLNODE' ]],
+        }],
+    },
+    RULE_SEQITEM => {
+        DASH => [ \&cb_seqitem, {
+            EOL => [\&cb_eol, [ \'TYPE_FULLNODE' ]],
+            WS => [\&cb_ws, [ \'TYPE_FULLNODE' ]],
+        }],
+    },
+    RULE_BLOCK_SCALAR => {
+        LITERAL => [ \&cb_block_scalar, [ \'NODE' ]],
+        FOLDED => [ \&cb_block_scalar, [ \'NODE' ]],
+    },
+#    RULE_FLOW_MAP => [
+#        [['FLOW_MAP_START', \&cb_flow_map],
+#            \'ERROR'
+#        ],
+#    ],
+#    RULE_FLOW_SEQ => [
+#        [['FLOW_SEQ_START', \&cb_flow_seq],
+#            \'ERROR'
+#        ],
+#    ],
 
 
-    ANCHOR_MAPKEY => [
-        [$rule_anchor,
-            ['WS+', [\'MAPSTART'], ],
-        ],
-    ],
-    TAG_MAPKEY => [
-        [$rule_tag,
-            ['WS+', [\'MAPSTART'], ],
-        ],
-    ],
-    FULL_MAPKEY => [
-        [$rule_anchor,
-            ['WS+',
-                [$rule_tag,
-                    ['WS+', [\'MAPKEY'], ],
-                ],
-                [\'MAPKEY'],
-            ],
-        ],
-        [$rule_tag,
-            ['WS+',
-                [$rule_anchor,
-                    ['WS+', [\'MAPKEY'], ],
-                ],
-                [\'MAPKEY'],
-            ],
-        ],
-        [\'MAPKEY'],
-    ],
-    PROP_MAPKEY => [
-        [$rule_anchor,
-            ['WS+',
-                [$rule_tag,
-                    ['WS+', [\'MAPSTART'], ],
-                ],
-                [\'MAPSTART'],
-            ],
-        ],
-        [$rule_tag,
-            ['WS+',
-                [$rule_anchor,
-                    ['WS+', [\'MAPSTART'], ],
-                ],
-                [\'MAPSTART'],
-            ],
-        ],
-    ],
+    ANCHOR_MAPKEY => {
+        ANCHOR => [\&cb_anchor, {
+            WS => [0, [ \'MAPSTART' ] ],
+        }],
+    },
+    TAG_MAPKEY => {
+        TAG => [\&cb_tag, {
+            WS => [0, [ \'MAPSTART' ] ],
+        }],
+    },
+    FULL_MAPKEY => {
+        ANCHOR => [\&cb_anchor, {
+            WS => [0, {
+                TAG => [\&cb_tag, {
+                    WS => [0, [ \'MAPKEY' ] ],
+                }],
+                DEFAULT => [0, [ \'MAPKEY' ]],
+            }],
+        }],
+        TAG => [\&cb_tag, {
+            WS => [0, {
+                ANCHOR => [\&cb_anchor, {
+                    WS => [0, [ \'MAPKEY' ] ],
+                }],
+                DEFAULT => [0, [ \'MAPKEY' ]],
+            }],
+        }],
+        DEFAULT => [0, [ \'MAPKEY' ]],
+    },
+    PROP_MAPKEY => {
+        ANCHOR => [\&cb_anchor, {
+            WS => [0, {
+                TAG => [\&cb_tag, {
+                    WS => [0, [ \'MAPSTART' ] ],
+                }],
+                DEFAULT => [0, [ \'MAPSTART' ]],
+            }],
+        }],
+        TAG => [\&cb_tag, {
+            WS => [0, {
+                ANCHOR => [\&cb_anchor, {
+                    WS => [0, [ \'MAPSTART' ] ],
+                }],
+                DEFAULT => [0, [ \'MAPSTART' ]],
+            }],
+        }],
+    },
 
-    FULLNODE_ANCHOR => [
-        [$rule_tag,
-            [$rule_property_eol,
-                [\'TYPE_FULLNODE_TAG_ANCHOR'],
-            ],
-            ['WS+',
-                [\'ANCHOR_MAPKEY'],
+    FULLNODE_ANCHOR => {
+        TAG => [\&cb_tag, {
+            EOL => [\&cb_property_eol, [ \'TYPE_FULLNODE_TAG_ANCHOR' ]],
+            WS => [0, [
+                \'ANCHOR_MAPKEY',
                 # SCALAR
-                [\'NODE'],
-            ],
-        ],
-        [$rule_anchor,
-            ['WS+',
-                [\'TAG_MAPKEY'],
-                [\'MAPSTART'],
-            ],
-        ],
-        [\'NODE'],
-    ],
-    FULLNODE_TAG => [
-        [$rule_anchor,
-            [$rule_property_eol,
-                [\'TYPE_FULLNODE_TAG_ANCHOR'],
-            ],
-            ['WS+',
-                [\'TAG_MAPKEY'],
+                \'NODE',
+            ]],
+        }],
+        ANCHOR => [\&cb_anchor, {
+            WS => [0, [
+                \'TAG_MAPKEY',
+                \'MAPSTART',
+            ]],
+        }],
+        DEFAULT => [0, [
+            \'NODE',
+        ]],
+    },
+    FULLNODE_TAG => {
+        ANCHOR => [\&cb_anchor, {
+            EOL => [\&cb_property_eol, [ \'TYPE_FULLNODE_TAG_ANCHOR' ]],
+            WS => [0, [
+                \'TAG_MAPKEY',
                 # SCALAR
-                [\'NODE'],
-            ],
-        ],
-        [$rule_tag,
-            ['WS+',
-                [\'ANCHOR_MAPKEY'],
-                [\'MAPSTART'],
-            ],
-        ],
-        [\'NODE'],
-    ],
+                \'NODE',
+            ]],
+        }],
+        TAG => [\&cb_tag, {
+            WS => [0, [
+                \'ANCHOR_MAPKEY',
+                \'MAPSTART',
+            ]],
+        }],
+        DEFAULT => [0, [ \'NODE' ]],
+    },
     FULLNODE_TAG_ANCHOR => [
-        [\'PROP_MAPKEY'],
-        [\'NODE'],
+        \'PROP_MAPKEY',
+        \'NODE',
     ],
-    RULE_ANCHOR => [
-        [$rule_anchor,
-            [$rule_property_eol,
-                [\'TYPE_FULLNODE_ANCHOR'],
-            ],
-            ['WS+',
-                [$rule_tag,
-                    [$rule_property_eol,
-                        [\'TYPE_FULLNODE_TAG_ANCHOR'],
-                    ],
+    FULLNODE => {
+        ANCHOR => [\&cb_anchor, {
+            EOL => [\&cb_property_eol, [
+                \'TYPE_FULLNODE_ANCHOR',
+            ]],
+            WS => [0, {
+                TAG => [\&cb_tag, {
+                    EOL => [\&cb_property_eol, [
+                        \'TYPE_FULLNODE_TAG_ANCHOR'
+                    ]],
                     # SCALAR
-                    ['WS+', [\'NODE'] ],
-                ],
+                    WS => [0, [ \'NODE' ] ],
+                }],
                 # SCALAR
-                [\'NODE'],
-            ],
-        ],
-    ],
-    RULE_TAG => [
-        [$rule_tag,
-            [$rule_property_eol,
-                [\'TYPE_FULLNODE_TAG'],
-            ],
-            ['WS+',
-                [$rule_anchor,
-                    [$rule_property_eol,
-                        [\'TYPE_FULLNODE_TAG_ANCHOR'],
-                    ],
+                DEFAULT => [0, [
+                    \'NODE',
+                ]],
+            }],
+        }],
+        TAG => [\&cb_tag, {
+            EOL => [\&cb_property_eol, [ \'TYPE_FULLNODE_TAG' ]],
+            WS => [0, {
+                ANCHOR => [\&cb_anchor, {
+                    EOL => [\&cb_property_eol, [
+                        \'TYPE_FULLNODE_TAG_ANCHOR'
+                    ]],
                     # SCALAR
-                    ['WS+', [\'NODE'] ],
-                ],
+                    WS => [0, [ \'NODE' ] ],
+                }],
                 # SCALAR
-                [\'NODE'],
-            ],
-        ],
-    ],
-    FULLNODE => [
-        [\'RULE_ANCHOR'],
-        [\'RULE_TAG'],
-        [\'PREVIOUS'],
-    ],
+                DEFAULT => [0, [ \'NODE' ]],
+            }],
+        }],
+        DEFAULT => [0, [
+            \'PREVIOUS',
+        ]],
+    },
 #    FULLMAPVALUE => [
 #        [\'RULE_ANCHOR'],
 #        [\'RULE_TAG'],
@@ -574,36 +545,49 @@ sub cb_mapkey {
     }];
 }
 
-sub cb_mapkeystart {
-    my ($self, $res) = @_;
-    push @{ $self->stack->{events} }, [ begin => 'MAP', { }];
-    push @{ $self->stack->{events} }, [ value => undef, {
-        style => ':',
-        value => $self->tokens->[-1]->[1],
-    }];
-    $res->{name} = 'MAPSTART';
-}
-
-sub cb_doublequoted {
+sub cb_empty_mapkey {
     my ($self, $res) = @_;
     $res->{name} = 'MAPKEY';
     push @{ $self->stack->{events} }, [ value => undef, {
+        style => ':',
+        value => undef,
+    }];
+}
+
+sub cb_mapkeystart {
+    my ($self, $res) = @_;
+    push @{ $self->stack->{events} },
+        [ begin => 'MAP', { }],
+        [ value => undef, {
+            style => ':',
+            value => $self->tokens->[-1]->[1],
+        }];
+    $res->{name} = 'MAPSTART';
+}
+
+sub cb_doublequoted_key {
+    my ($self, $res) = @_;
+    $res->{name} = 'MAPKEY';
+    my $value = $self->tokens->[-1]->[1];
+    push @{ $self->stack->{events} }, [ value => undef, {
         style => '"',
-        value => [ $self->tokens->[-1]->[1] ],
+        value => [ $value ],
     }];
 }
 
 sub cb_doublequotedstart {
     my ($self, $res) = @_;
-    push @{ $self->stack->{events} }, [ begin => 'MAP', { }];
-    push @{ $self->stack->{events} }, [ value => undef, {
-        style => '"',
-        value => [ $self->tokens->[-1]->[1] ],
-    }];
+    my $value = $self->tokens->[-1]->[1];
+    push @{ $self->stack->{events} },
+        [ begin => 'MAP', { }],
+        [ value => undef, {
+            style => '"',
+            value => [ $value ],
+        }];
     $res->{name} = 'MAPSTART';
 }
 
-sub cb_singleequoted {
+sub cb_singlequoted_key {
     my ($self, $res) = @_;
     $res->{name} = 'MAPKEY';
     push @{ $self->stack->{events} }, [ value => undef, {
@@ -614,11 +598,12 @@ sub cb_singleequoted {
 
 sub cb_singleequotedstart {
     my ($self, $res) = @_;
-    push @{ $self->stack->{events} }, [ begin => 'MAP', { }];
-    push @{ $self->stack->{events} }, [ value => undef, {
-        style => "'",
-        value => [ $self->tokens->[-1]->[1] ],
-    }];
+    push @{ $self->stack->{events} },
+        [ begin => 'MAP', { }],
+        [ value => undef, {
+            style => "'",
+            value => [ $self->tokens->[-1]->[1] ],
+        }];
     $res->{name} = 'MAPSTART';
 }
 
@@ -664,25 +649,44 @@ sub cb_seqitem {
     $res->{name} = 'SEQITEM';
 }
 
-sub cb_alias {
+sub cb_alias_key_from_stack {
     my ($self, $res) = @_;
-    push @{ $self->stack->{events} }, [ begin => 'MAP', { }];
-    my $alias = $self->tokens->[-1]->[1];
-    $alias = substr($alias, 1);
-    push @{ $self->stack->{events} }, [ alias => undef, {
-        alias => $alias,
-    }];
-    $res->{name} = 'MAPSTART';
+    my $stack = delete $self->stack->{res};
+    push @{ $self->stack->{events} },
+        [ begin => 'MAP', { }],
+        [ alias => undef, {
+            alias => $stack->{alias},
+        }];
+    # TODO
+    $res->{name} = 'MAPKEY';
 }
 
-sub cb_node_alias {
+sub cb_alias_from_stack {
+    my ($self, $res) = @_;
+    my $stack = delete $self->stack->{res};
+    push @{ $self->stack->{events} }, [ alias => undef, {
+        alias => $stack->{alias},
+    }];
+    # TODO
+    $res->{name} = 'SCALAR';
+    $res->{eol} = 1;
+}
+
+sub cb_stack_alias {
     my ($self, $res) = @_;
     my $alias = $self->tokens->[-1]->[1];
     $alias = substr($alias, 1);
-    $res->{name} = 'SCALAR';
-    push @{ $self->stack->{events} }, [ alias => undef, {
+    $self->stack->{res} ||= {
         alias => $alias,
-    }];
+    };
+}
+
+sub cb_stack_singlequoted_single {
+    my ($self, $res) = @_;
+    $self->stack->{res} ||= {
+        style => "'",
+        value => [$self->tokens->[-1]->[1]],
+    };
 }
 
 sub cb_stack_singlequoted {
@@ -692,6 +696,14 @@ sub cb_stack_singlequoted {
         value => [],
     };
     push @{ $self->stack->{res}->{value} }, $self->tokens->[-1]->[1];
+}
+
+sub cb_stack_doublequoted_single {
+    my ($self, $res) = @_;
+    $self->stack->{res} ||= {
+        style => '"',
+        value => [$self->tokens->[-1]->[1]],
+    };
 }
 
 sub cb_stack_doublequoted {
@@ -705,6 +717,7 @@ sub cb_stack_doublequoted {
 
 sub cb_stack_plain {
     my ($self, $res) = @_;
+    my $t = $self->tokens->[-1];
     $self->stack->{res} ||= {
         style => ':',
         value => [],
@@ -725,12 +738,13 @@ sub cb_plain_single {
 
 sub cb_mapkey_from_stack {
     my ($self, $res) = @_;
-    push @{ $self->stack->{events} }, [ begin => 'MAP', { }];
-    %$res = %{ $self->stack->{res} };
+    my $stack = $self->stack->{res} || { style => ':', value => undef };
     undef $self->stack->{res};
-    push @{ $self->stack->{events} }, [ value => undef, {
-        %$res,
-    }];
+    push @{ $self->stack->{events} },
+        [ begin => 'MAP', { }],
+        [ value => undef, {
+            %$stack,
+        }];
     $res->{name} = 'MAPSTART';
 
 }
@@ -750,13 +764,13 @@ sub cb_multiscalar_from_stack {
     my ($self, $res) = @_;
     my $stack = $self->stack;
     my $multi = $self->parse_plain_multi;
-    my $first = $self->stack->{res}->{value}->[0];
+    my $first = $stack->{res}->{value}->[0];
     $res->{eol} = delete $multi->{eol};
     unshift @{ $multi->{value} }, $first;
-    push @{ $self->stack->{events} }, [ value => undef, {
+    push @{ $stack->{events} }, [ value => undef, {
         %$multi,
     }];
-    undef $self->stack->{res};
+    undef $stack->{res};
     $res->{name} = 'SCALAR';
 }
 
@@ -788,10 +802,8 @@ my %REGEXES = (
     EMPTY => qr{($RE_COMMENT_EOL)},
     LB => qr{($RE_LB)},
     WS => qr{($RE_WS*)},
-    'WS+' => qr{($RE_WS+)},
+    'WS' => qr{($RE_WS+)},
     SCALAR => qr{($RE_PLAIN_KEY)},
-    MAPKEY_ALIAS => qr{$RE_ALIAS(?=$RE_WS+:(?m:$RE_WS|$))},
-#    MAPKEY_ALIAS => qr{$RE_ALIAS)},
     ALIAS => qr{$RE_ALIAS},
     QUESTION => qr{$RE_COMPLEX},
     COLON => qr{(?m:(:)(?=$RE_WS|$))},
@@ -805,218 +817,281 @@ my %REGEXES = (
     FLOW_MAP_START => qr{(\{)},
     FLOW_SEQ_START => qr{(\[)},
 );
-my %RULES_BY_FIRST = (
-    ANY => {
-        SCALAR => 0,
-        DOUBLEQUOTED => 0,
-        SINGLEQUOTED => 0,
-        WS => 0,
-    },
-    '&' => {
-        ANCHOR => 0,
-        SINGLEQUOTED => 0,
-        DOUBLEQUOTED => 0,
-        WS => 0,
-    },
-    '!' => {
-        TAG => 0,
-        SINGLEQUOTED => 0,
-        DOUBLEQUOTED => 0,
-        WS => 0,
-    },
-    '*' => {
-        ALIAS => 0,
-        MAPKEY_ALIAS => 0,
-        SINGLEQUOTED => 0,
-        DOUBLEQUOTED => 0,
-        WS => 0,
-    },
-    "\t" => {
-        WS => 0,
-        'WS+' => 0,
-        EOL => 0,
-        SINGLEQUOTED => 0,
-        DOUBLEQUOTED => 0,
-        WS => 0,
-    },
-    "\n" => {
-        EOL => 0,
-        LB => 0,
-        EMPTY => 0,
-        SINGLEQUOTED => 0,
-        DOUBLEQUOTED => 0,
-        WS => 0,
-    },
-    "\r" => {
-        EOL => 0,
-        LB => 0,
-        EMPTY => 0,
-        SINGLEQUOTED => 0,
-        DOUBLEQUOTED => 0,
-        WS => 0,
-    },
-    '' => {
-        EOL => 1,
-    },
-    "'" => {
-        SINGLEQUOTE => 1,
-        SINGLEQUOTED => 0,
-        DOUBLEQUOTED => 0,
-        WS => 0,
-    },
-    '"' => {
-        DOUBLEQUOTE => 1,
-        SINGLEQUOTED => 0,
-        DOUBLEQUOTED => 0,
-        WS => 0,
-    },
-    ' ' => {
-        EOL => 0,
-        WS => 0,
-        'WS+' => 0,
-        DOUBLEQUOTED => 0,
-        SINGLEQUOTED => 0,
-        WS => 0,
-    },
-    ':' => {
-        SCALAR => 0,
-        COLON => 0,
-        DOUBLEQUOTED => 0,
-        SINGLEQUOTED => 0,
-        WS => 0,
-    },
-    '-' => {
-        DASH => 0,
-        SCALAR => 0,
-        DOUBLEQUOTED => 0,
-        SINGLEQUOTED => 0,
-        WS => 0,
-    },
-    '?' => {
-        QUESTION => 0,
-        SCALAR => 0,
-        DOUBLEQUOTED => 0,
-        SINGLEQUOTED => 0,
-        WS => 0,
-    },
-    '|' => {
-        LITERAL => 0,
-        DOUBLEQUOTED => 0,
-        SINGLEQUOTED => 0,
-        WS => 0,
-    },
-    '>' => {
-        FOLDED => 0,
-        DOUBLEQUOTED => 0,
-        SINGLEQUOTED => 0,
-        WS => 0,
-    },
-    '#' => {
-        EOL => 0,
-        EMPTY => 0,
-        DOUBLEQUOTED => 0,
-        SINGLEQUOTED => 0,
-        WS => 0,
-    },
-);
 
 sub parse_tokens {
-    my ($self, %args) = @_;
-    my $rules = $self->rules;
+    my ($self, $parser, %args) = @_;
+    my $rules = $parser->rules;
     my $callback = $args{callback};
-    my $tokens = $self->tokens;
+    my $tokens = $parser->tokens;
     my $new_type;
     my $ok = 0;
 
-    TRACE and $self->debug_rules($rules);
-    TRACE and $self->debug_yaml;
-    DEBUG and $self->debug_next_line;
+    TRACE and $parser->debug_rules($rules);
+    TRACE and $parser->debug_yaml;
+    DEBUG and $parser->debug_next_line;
 
-    my @next_tokens;
-    my $yaml = $self->yaml;
-    my $first = substr($$yaml, 0, 1);
+    my $next_tokens = $self->next_tokens;
     RULE: while (my $next_rule = shift @$rules) {
-        my ($rule, @next_rule) = @$next_rule;
-
-        if (ref $rule eq 'SCALAR') {
-            DEBUG and $self->got("NEW: $$rule");
-            TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$rule], ['rule']);
-            if (exists $GRAMMAR{ $$rule }) {
-                unshift @$rules, @{ $GRAMMAR{ $$rule } };
+        TRACE and warn __PACKAGE__.':'.__LINE__.": !!!!! $next_rule\n";
+        if (ref $next_rule eq 'HASH') {
+            my $success;
+            #TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_rule], ['next_rule']);
+            unless (@$next_tokens) {
+                @$next_tokens = $self->fetch_next_tokens(1, $parser->yaml);
+            }
+            my $next = $next_tokens->[0];
+            TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next], ['next']);
+#            my @k = sort keys %$next_rule;
+#            TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@k], ['k']);
+            my $def = $next_rule->{ $next->[0] };
+            if ($def) {
+                shift @$next_tokens;
+                push @$tokens, $next;
+            }
+            if (not $def and $next->[0] eq 'WS') {
+                $def = $next_rule->{ 'WS?' };
+                shift @$next_tokens;
+                push @$tokens, $next;
+            }
+            if (not $def) {
+                $def = $next_rule->{ 'WS?' };
+            }
+            if (not $def) {
+                $def = $next_rule->{DEFAULT};
+                TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$def], ['def']);
+            }
+            if ($def) {
+                DEBUG and $parser->got("---got $next->[0]");
+                my ($sub, $next_rule) = @$def;
+                $ok = 1;
+                $success = 1;
+                if ($sub) {
+                    $callback->($parser, $sub);
+                }
+                if (ref $next_rule eq 'HASH') {
+                    @$rules = $next_rule;
+                }
+                else {
+                    @$rules = @$next_rule;
+                }
+            }
+            else {
+                DEBUG and $parser->not("---not $next->[0]");
+                unless (@$rules) {
+                    return (0);
+                }
+            }
+            next RULE;
+        }
+        elsif (ref $next_rule eq 'SCALAR') {
+            TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([$next_rule], ['next_rule']);
+            DEBUG and $parser->got("NEW: $$next_rule");
+            if (exists $GRAMMAR{ $$next_rule }) {
+                my $new = $GRAMMAR{ $$next_rule };
+                if (ref $new eq 'HASH') {
+                    unshift @$rules, $new;
+                }
+                else {
+                    unshift @$rules, @$new;
+                }
                 next RULE;
             }
             else {
-                $new_type = $$rule;
+                $new_type = $$next_rule;
                 last RULE;
             }
         }
-
-        my $sub;
-        my $subfalse;
-        if (ref $rule eq 'ARRAY') {
-            ($rule, $sub, $subfalse) = @$rule;
-        }
-
-        my $success;
-        DEBUG and $YAML::PP::Tokenizer::CHECK_RULE{ $rule }++;
-        if ($rule eq 'EOS') {
-            $success = not length $$yaml;
-        }
-        elsif ($rule eq 'NOOP') {
-            $success = 1;
-        }
         else {
-            my $possible_rules = $RULES_BY_FIRST{ $first } || $RULES_BY_FIRST{ANY};
+            die "Unexpected";
+        }
 
-            TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$first], ['first']);
-            TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$rule], ['rule']);
-            TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$possible_rules], ['possible_rules']);
-            if (not exists $possible_rules->{ $rule }) {
-                $success = 0;
-            }
-            if ($possible_rules->{ $rule }) {
-                substr($$yaml, 0, 1, '');
-                $first = substr($$yaml, 0, 1);
-                push @$tokens, [ $rule, $first ];
-                $success = 1;
-            }
+    }
+    TRACE and $parser->highlight_yaml;
+    TRACE and $parser->debug_tokens;
 
-            unless (defined $success) {
-                DEBUG and $YAML::PP::Tokenizer::MATCH_RULE{ $rule }++;
-                my $regex = $REGEXES{ $rule } or die "No regex found for '$rule'";
-                $success = $$yaml =~ s/\A$regex//;
-                if ($success) {
-                    push @$tokens, [$rule, $1];
-                    $first = substr($$yaml, 0, 1);
+    return ($ok, $new_type);
+}
+
+sub fetch_next_tokens {
+    my ($self, $offset, $yaml) = @_;
+    my @next;
+    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$offset], ['offset']);
+    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
+    if (not length $$yaml) {
+        return [ 'EOL' => '' ];
+    }
+    my $first = substr($$yaml, 0, 1);
+    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$first], ['first']);
+    if ($offset == 0) {
+        if ($first eq "\n") {
+        }
+        elsif ($first eq "#") {
+        }
+        elsif ($first eq ' ') {
+            if ($$yaml =~ s/\A( +)//) {
+                push @next, [ 'INDENT', $1 ];
+            }
+            $first = substr($$yaml, 0, 1);
+            if ($first ne '#') {
+                return @next;
+            }
+        }
+        elsif ($first eq '- ') {
+            return;
+            if ($$yaml =~ s/\A(---)(?:($RE_WS+)|([\r\n]|\z))//) {
+                push @next, [ 'DOC_START', $1 ];
+                if (defined $2) {
+                    my $ws = $2;
+                    if ($$yaml =~ s/\A(#.*(?:[\r\n]|\z))//) {
+                        push @next, [ 'EOL', $ws . $1 ];
+                        return @next;
+                    }
+                }
+                else {
+                    push @next, [ 'EOL', $3 ];
+                    return @next;
                 }
             }
-
         }
-
-        if ($success) {
-            DEBUG and $self->got("got $rule");
-            $ok = 1;
-
-            @$rules = @next_rule;
-            if ($sub) {
-                $callback->($self, $sub);
+        elsif ($first eq '.') {
+            return;
+        }
+        else {
+            return;
+        }
+    }
+    my $rule;
+    if ($first eq '"' or $first eq "'") {
+        my $token_name = $first eq '"' ? 'DOUBLEQUOTE' : 'SINGLEQUOTE';
+        my $token_name2 = $token_name . 'D';
+        my $regex = $REGEXES{ $token_name2 };
+        if ($$yaml =~ s/\A($first)$regex($first|[\r\n]|\z)//) {
+            my $quote = $1;
+            push @next, [ $token_name, $1 ];
+            if ($3 eq $first) {
+                push @next, [ $token_name . 'D_SINGLE', $2 ];
+                push @next, [ $token_name, $3 ];
+            }
+            else {
+                push @next, [ $token_name . 'D_LINE', $2 ];
+                push @next, [ 'LB', $3 ];
+                while (1) {
+                    if ($$yaml =~ s/\A$regex($first|[\r\n])//) {
+                        if ($2 eq $first) {
+                            push @next, [$token_name . 'D_END', => $1 ];
+                            push @next, [$token_name, => $2 ];
+                            last;
+                        }
+                        else {
+                            push @next, [$token_name . 'D_LINE' => $1 ];
+                            push @next, ['LB' => $2 ];
+                        }
+                    }
+                    else {
+                        die "Invalid quoted string";
+                    }
+                }
             }
         }
         else {
-            DEBUG and $self->not("not $rule");
-
-            if ($subfalse) {
-                $subfalse->($self, $sub);
+            die "Invalid quoted string";
+        }
+    }
+    elsif ($first eq '-' or $first eq ':' or $first eq '?') {
+        my $token_name = { '-' => 'DASH', ':' => 'COLON', '?' => 'QUESTION' }->{ $first };
+        if ($$yaml =~ s/\A(\Q$first\E)(?:($RE_WS+)|([\r\n]|\z))//) {
+            push @next, [ $token_name => $1 ];
+            if (defined $2) {
+                my $ws = $2;
+                if ($$yaml =~ s/\A(#.*|)([\r\n]|\z)//) {
+                    push @next, [ 'EOL' => $ws . ($1 // '') . $2 ];
+                }
+                else {
+                    push @next, [ 'WS' => $ws ];
+                }
             }
-            unless (@$rules) {
-                return (0);
+            else {
+                push @next, [ 'EOL' => $3 ];
+            }
+        }
+        else {
+            $rule = 'SCALAR';
+        }
+    }
+    elsif ($first eq '#') {
+        if ($$yaml =~ s/\A(#.*(?:[\r\n]|\z))//) {
+            push @next, [ 'EMPTY' => $1 ];
+        }
+    }
+    elsif ($first eq '|') {
+        if ($$yaml =~ s/\A(\|)//) {
+            push @next, [ 'LITERAL' => $1 ];
+        }
+    }
+    elsif ($first eq '>') {
+        if ($$yaml =~ s/\A(>)//) {
+            push @next, [ 'FOLDED' => $1 ];
+        }
+    }
+    elsif ($first eq '!') {
+        if ($$yaml =~ s/\A($RE_TAG)//) {
+            push @next, [ 'TAG' => $1 ];
+        }
+    }
+    elsif ($first eq '&') {
+        if ($$yaml =~ s/\A(\&$RE_ANCHOR)//) {
+            push @next, [ 'ANCHOR' => $1 ];
+        }
+    }
+    elsif ($first eq '*') {
+        if ($$yaml =~ s/\A(\*$RE_ANCHOR)//) {
+            push @next, [ 'ALIAS' => $1 ];
+        }
+    }
+    elsif ($first eq ' ') {
+        if ($$yaml =~ s/\A($RE_WS+)//) {
+            my $ws = $1;
+            if ($$yaml =~ s/\A(#.*)?([\r\n]|\z)//) {
+                push @next, [ 'EOL' => $ws . ($1 // '') . $2 ];
+            }
+            else {
+                push @next, [ 'WS' => $ws ];
             }
         }
     }
-    TRACE and $self->highlight_yaml;
-    TRACE and $self->debug_tokens;
+    elsif ($first eq "\n") {
+        if ($$yaml =~ s/\A(\n)//) {
+            push @next, [ 'EOL', $1 ];
+        }
+    }
+    elsif ($first eq '{' or $first eq '[') {
+        die "Not Implemented: Flow Style";
+    }
+    else {
+        $rule = 'SCALAR';
+    }
+    if (not $rule) {
+        return @next;
+    }
+    else {
+        if ($$yaml =~ s/\A($RE_PLAIN_KEY)//) {
+            push @next, [ 'SCALAR' => $1 ];
+            if ($$yaml =~ s/\A(?:($RE_WS+#.*)|($RE_WS*))([\r\n]|\z)//) {
+                if (defined $1) {
+                    push @next, [ 'COMMENT_EOL', $1 . $3 ];
+                }
+                else {
+                    push @next, [ 'EOL' => $2 . $3 ];
+                }
+            }
+        }
+        else {
+            warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
+            die "Invalid plain scalar";
+        }
+    }
 
-    return ($ok, $new_type);
+    return @next;
 }
 
 1;
