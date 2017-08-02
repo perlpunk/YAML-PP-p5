@@ -17,6 +17,7 @@ my %WriteMakefileArgs = (
     "bin/yaml-pp-p5-events",
     "bin/yaml-pp-p5-load",
     "bin/yaml-pp-p5-load-dump"
+    "bin/yamlpp5-highlight"
   ],
   "LICENSE" => "perl",
   "MIN_PERL_VERSION" => "5.010",
@@ -24,6 +25,8 @@ my %WriteMakefileArgs = (
   "PREREQ_PM" => {
     "Data::Dumper" => 0,
     "Encode" => 0,
+    "Exporter" => 0,
+    "base" => 0,
     "constant" => 0,
     "strict" => 0,
     "warnings" => 0
@@ -48,12 +51,14 @@ my %WriteMakefileArgs = (
 my %FallbackPrereqs = (
   "Data::Dumper" => 0,
   "Encode" => 0,
+  "Exporter" => 0,
   "File::Basename" => 0,
   "File::Spec" => 0,
   "FindBin" => 0,
   "IO::Handle" => 0,
   "IPC::Open3" => 0,
   "Test::More" => 0,
+  "base" => 0,
   "blib" => "1.01",
   "constant" => 0,
   "lib" => 0,
