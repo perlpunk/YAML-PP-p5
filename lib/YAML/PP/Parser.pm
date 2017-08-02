@@ -578,7 +578,7 @@ sub parse_next {
         my ($success, $new_type) = $self->tokenizer->parse_tokens($self,
             callback => sub {
                 my ($self, $sub) = @_;
-                $sub->($self, undef);
+                $self->$sub(undef);
             },
         );
         if (not $new_type and not $success) {
@@ -618,7 +618,7 @@ sub parse_next {
     my ($success, $new_type) = $self->tokenizer->parse_tokens($self,
         callback => sub {
             my ($self, $sub) = @_;
-            $sub->($self, $res);
+            $self->$sub($res);
         },
     );
 
@@ -1193,5 +1193,305 @@ sub highlight_yaml {
     my $highlighted = YAML::PP::Highlight->ansicolored($tokens);
     warn $highlighted;
 }
+
+sub cb_tag {
+    my ($self, $res) = @_;
+    my $props = $self->stack->{properties} ||= {};
+    $props->{tag} = $self->tokens->[-1]->[1];
+}
+
+sub cb_anchor {
+    my ($self, $res) = @_;
+    my $props = $self->stack->{properties} ||= {};
+    my $anchor = $self->tokens->[-1]->[1];
+    $anchor = substr($anchor, 1);
+    $props->{anchor} = $anchor;
+}
+
+sub cb_property_eol {
+    my ($self, $res) = @_;
+    my $node_props = $self->stack->{node_properties} ||= {};
+    my $props = $self->stack->{properties} ||= {};
+    if (defined $props->{anchor}) {
+        $node_props->{anchor} = delete $props->{anchor};
+    }
+    if (defined $props->{tag}) {
+        $node_props->{tag} = delete $props->{tag};
+    }
+}
+
+sub cb_ws {
+    my ($self, $res, $props) = @_;
+    if ($res) {
+        $res->{ws} = length $self->tokens->[-1]->[1];
+        $res->{eol} = 0;
+    }
+}
+
+sub cb_eol {
+    my ($self, $res) = @_;
+    $res->{eol} = 1;
+    return;
+}
+
+sub cb_mapkey {
+    my ($self, $res) = @_;
+    my $value = $self->tokens->[-1]->[1];
+    $res->{name} = 'MAPKEY';
+    push @{ $self->stack->{events} }, [ value => undef, {
+        style => ':',
+        value => $self->tokens->[-1]->[1],
+    }];
+}
+
+sub cb_empty_mapkey {
+    my ($self, $res) = @_;
+    $res->{name} = 'MAPKEY';
+    push @{ $self->stack->{events} }, [ value => undef, {
+        style => ':',
+        value => undef,
+    }];
+}
+
+sub cb_mapkeystart {
+    my ($self, $res) = @_;
+    push @{ $self->stack->{events} },
+        [ begin => 'MAP', { }],
+        [ value => undef, {
+            style => ':',
+            value => $self->tokens->[-1]->[1],
+        }];
+    $res->{name} = 'MAPSTART';
+}
+
+sub cb_doublequoted_key {
+    my ($self, $res) = @_;
+    $res->{name} = 'MAPKEY';
+    push @{ $self->stack->{events} }, [ value => undef, {
+        style => '"',
+        value => [ $self->tokens->[-1]->[1] ],
+    }];
+}
+
+sub cb_doublequotedstart {
+    my ($self, $res) = @_;
+    my $value = $self->tokens->[-1]->[1];
+    push @{ $self->stack->{events} },
+        [ begin => 'MAP', { }],
+        [ value => undef, {
+            style => '"',
+            value => [ $value ],
+        }];
+    $res->{name} = 'MAPSTART';
+}
+
+sub cb_singlequoted_key {
+    my ($self, $res) = @_;
+    $res->{name} = 'MAPKEY';
+    push @{ $self->stack->{events} }, [ value => undef, {
+        style => "'",
+        value => [ $self->tokens->[-1]->[1] ],
+    }];
+}
+
+sub cb_singleequotedstart {
+    my ($self, $res) = @_;
+    push @{ $self->stack->{events} },
+        [ begin => 'MAP', { }],
+        [ value => undef, {
+            style => "'",
+            value => [ $self->tokens->[-1]->[1] ],
+        }];
+    $res->{name} = 'MAPSTART';
+}
+
+sub cb_mapkey_alias {
+    my ($self, $res) = @_;
+    my $alias = $self->tokens->[-1]->[1];
+    $alias = substr($alias, 1);
+    $res->{name} = 'MAPKEY';
+    push @{ $self->stack->{events} }, [ alias => undef, {
+        alias => $alias,
+    }];
+}
+
+sub cb_question {
+    my ($self, $res) = @_;
+    $res->{name} = 'COMPLEX';
+}
+
+sub cb_empty_complexvalue {
+    my ($self, $res) = @_;
+    push @{ $self->stack->{events} }, [ value => undef, { style => ':' }];
+}
+
+sub cb_questionstart {
+    my ($self, $res) = @_;
+    push @{ $self->stack->{events} }, [ begin => 'COMPLEX', { }];
+    $res->{name} = 'NOOP';
+}
+
+sub cb_complexcolon {
+    my ($self, $res) = @_;
+    $res->{name} = 'COMPLEXCOLON';
+}
+
+sub cb_seqstart {
+    my ($self, $res) = @_;
+    push @{ $self->stack->{events} }, [ begin => 'SEQ', { }];
+    $res->{name} = 'NOOP';
+}
+
+sub cb_seqitem {
+    my ($self, $res) = @_;
+    $res->{name} = 'SEQITEM';
+}
+
+sub cb_alias_key_from_stack {
+    my ($self, $res) = @_;
+    my $stack = delete $self->stack->{res};
+    push @{ $self->stack->{events} },
+        [ begin => 'MAP', { }],
+        [ alias => undef, {
+            alias => $stack->{alias},
+        }];
+    # TODO
+    $res->{name} = 'MAPKEY';
+}
+
+sub cb_alias_from_stack {
+    my ($self, $res) = @_;
+    my $stack = delete $self->stack->{res};
+    push @{ $self->stack->{events} }, [ alias => undef, {
+        alias => $stack->{alias},
+    }];
+    # TODO
+    $res->{name} = 'SCALAR';
+    $res->{eol} = 1;
+}
+
+sub cb_stack_alias {
+    my ($self, $res) = @_;
+    my $alias = $self->tokens->[-1]->[1];
+    $alias = substr($alias, 1);
+    $self->stack->{res} ||= {
+        alias => $alias,
+    };
+}
+
+sub cb_stack_singlequoted_single {
+    my ($self, $res) = @_;
+    $self->stack->{res} ||= {
+        style => "'",
+        value => [$self->tokens->[-1]->[1]],
+    };
+}
+
+sub cb_stack_singlequoted {
+    my ($self, $res) = @_;
+    $self->stack->{res} ||= {
+        style => "'",
+        value => [],
+    };
+    push @{ $self->stack->{res}->{value} }, $self->tokens->[-1]->[1];
+}
+
+sub cb_stack_doublequoted_single {
+    my ($self, $res) = @_;
+    $self->stack->{res} ||= {
+        style => '"',
+        value => [$self->tokens->[-1]->[1]],
+    };
+}
+
+sub cb_stack_doublequoted {
+    my ($self, $res) = @_;
+    $self->stack->{res} ||= {
+        style => '"',
+        value => [],
+    };
+    push @{ $self->stack->{res}->{value} }, $self->tokens->[-1]->[1];
+}
+
+sub cb_stack_plain {
+    my ($self, $res) = @_;
+    my $t = $self->tokens->[-1];
+    $self->stack->{res} ||= {
+        style => ':',
+        value => [],
+    };
+    push @{ $self->stack->{res}->{value} }, $self->tokens->[-1]->[1];
+}
+
+sub cb_plain_single {
+    my ($self, $res) = @_;
+    $res->{name} = 'SCALAR';
+    $res->{eol} = 1;
+    push @{ $self->stack->{events} }, [ value => undef, {
+        style => ':',
+        value => $self->stack->{res}->{value},
+    }];
+    undef $self->stack->{res};
+}
+
+sub cb_mapkey_from_stack {
+    my ($self, $res) = @_;
+    my $stack = $self->stack->{res} || { style => ':', value => undef };
+    undef $self->stack->{res};
+    push @{ $self->stack->{events} },
+        [ begin => 'MAP', { }],
+        [ value => undef, {
+            %$stack,
+        }];
+    $res->{name} = 'MAPSTART';
+
+}
+
+sub cb_scalar_from_stack {
+    my ($self, $res) = @_;
+    my $stack = $self->stack;
+    push @{ $self->stack->{events} }, [ value => undef, {
+        %{ $self->stack->{res} },
+    }];
+    undef $self->stack->{res};
+    $res->{name} = 'SCALAR';
+    $res->{eol} = 1;
+}
+
+sub cb_multiscalar_from_stack {
+    my ($self, $res) = @_;
+    my $stack = $self->stack;
+    my $multi = $self->parse_plain_multi;
+    my $first = $stack->{res}->{value}->[0];
+    $res->{eol} = delete $multi->{eol};
+    unshift @{ $multi->{value} }, $first;
+    push @{ $stack->{events} }, [ value => undef, {
+        %$multi,
+    }];
+    undef $stack->{res};
+    $res->{name} = 'SCALAR';
+}
+
+sub cb_block_scalar {
+    my ($self, $res) = @_;
+    my $type = $self->tokens->[-1]->[1];
+    my $block = $self->parse_block_scalar(
+        type => $type,
+    );
+    $res->{eol} = delete $block->{eol};
+    push @{ $self->stack->{events} }, [ value => undef, {
+        %$block,
+    }];
+    $res->{name} = 'SCALAR';
+}
+
+sub cb_flow_map {
+    die "Not Implemented: Flow Style";
+}
+
+sub cb_flow_seq {
+    die "Not Implemented: Flow Style";
+}
+
 
 1;
