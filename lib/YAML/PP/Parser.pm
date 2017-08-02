@@ -10,6 +10,8 @@ use constant DEBUG => $ENV{YAML_PP_DEBUG} || $ENV{YAML_PP_TRACE};
 
 use YAML::PP::Render;
 use YAML::PP::Tokenizer;
+use YAML::PP::Grammar qw/ $GRAMMAR /;
+
 
 sub new {
     my ($class, %args) = @_;
@@ -162,7 +164,7 @@ sub parse_stream {
 
         my $new_type = $start_line ? 'FULLSTARTNODE' : 'FULLNODE';
         my $new_node = [ $new_type => 0 ];
-        $self->set_rules([ $YAML::PP::Tokenizer::GRAMMAR{ FULLNODE } ]);
+        $self->set_rules([ $GRAMMAR->{ FULLNODE } ]);
         my ($end) = $self->parse_document($new_node);
         if ($end) {
             $self->end('DOC', { content => "..." });
@@ -509,49 +511,49 @@ sub process_result {
 #    if ($new_type eq 'MAPVALUE') {
 #        $new_type = 'FULLMAPVALUE';
 #    }
-    $self->set_rules([ $YAML::PP::Tokenizer::GRAMMAR{ FULLNODE } ]);
+    $self->set_rules([ $GRAMMAR->{ FULLNODE } ]);
     return $new_node;
 }
 
 my %TYPE2RULE = (
     MAP => {
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY_ALIAS} },
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY} },
+        %{ $GRAMMAR->{RULE_MAPKEY_ALIAS} },
+        %{ $GRAMMAR->{RULE_MAPKEY} },
     },
     MAPSTART => {
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPSTART} },
+        %{ $GRAMMAR->{RULE_MAPSTART} },
     },
-    SEQ => { %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SEQITEM} } },
+    SEQ => { %{ $GRAMMAR->{RULE_SEQITEM} } },
     MAPKEY => {
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY_ALIAS} },
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY} },
+        %{ $GRAMMAR->{RULE_MAPKEY_ALIAS} },
+        %{ $GRAMMAR->{RULE_MAPKEY} },
     },
     COMPLEX => {
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_COMPLEXVALUE} },
-#        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY_ALIAS} },
-#        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_MAPKEY} },
+        %{ $GRAMMAR->{RULE_COMPLEXVALUE} },
+#        %{ $GRAMMAR->{RULE_MAPKEY_ALIAS} },
+#        %{ $GRAMMAR->{RULE_MAPKEY} },
     },
     STARTNODE => {
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SINGLEQUOTED_KEY_OR_NODE} },
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_BLOCK_SCALAR} },
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_PLAIN} },
+        %{ $GRAMMAR->{RULE_SINGLEQUOTED_KEY_OR_NODE} },
+        %{ $GRAMMAR->{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
+        %{ $GRAMMAR->{RULE_BLOCK_SCALAR} },
+        %{ $GRAMMAR->{RULE_PLAIN} },
     },
     MAPVALUE => {
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_ALIAS_KEY_OR_NODE} },
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SINGLEQUOTED_KEY_OR_NODE} },
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_BLOCK_SCALAR} },
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_PLAIN} },
+        %{ $GRAMMAR->{RULE_ALIAS_KEY_OR_NODE} },
+        %{ $GRAMMAR->{RULE_SINGLEQUOTED_KEY_OR_NODE} },
+        %{ $GRAMMAR->{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
+        %{ $GRAMMAR->{RULE_BLOCK_SCALAR} },
+        %{ $GRAMMAR->{RULE_PLAIN} },
     },
     NODE => {
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SEQSTART} },
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_COMPLEX} },
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_SINGLEQUOTED_KEY_OR_NODE} },
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_BLOCK_SCALAR} },
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_ALIAS_KEY_OR_NODE} },
-        %{ $YAML::PP::Tokenizer::GRAMMAR{RULE_PLAIN_KEY_OR_NODE} },
+        %{ $GRAMMAR->{RULE_SEQSTART} },
+        %{ $GRAMMAR->{RULE_COMPLEX} },
+        %{ $GRAMMAR->{RULE_SINGLEQUOTED_KEY_OR_NODE} },
+        %{ $GRAMMAR->{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
+        %{ $GRAMMAR->{RULE_BLOCK_SCALAR} },
+        %{ $GRAMMAR->{RULE_ALIAS_KEY_OR_NODE} },
+        %{ $GRAMMAR->{RULE_PLAIN_KEY_OR_NODE} },
     },
 );
 
@@ -571,7 +573,7 @@ sub parse_next {
     my $no_alias = 0;
     if ($node_type or $exp eq 'MAP') {
         unless ($node_type) {
-            @$rules = $YAML::PP::Tokenizer::GRAMMAR{FULL_MAPKEY};
+            @$rules = $GRAMMAR->{FULL_MAPKEY};
         }
         my ($success, $new_type) = $self->tokenizer->parse_tokens($self,
             callback => sub {
