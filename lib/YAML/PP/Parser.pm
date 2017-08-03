@@ -254,10 +254,7 @@ sub parse_document {
         my $offset = 0;
         if ($next_full_line) {
             my $yaml = $self->yaml;
-            my $next_tokens = $self->tokenizer->next_tokens;
-            unless (@$next_tokens) {
-                @$next_tokens = $self->tokenizer->fetch_next_tokens(0, $yaml);
-            }
+            my $next_tokens = $self->tokenizer->fetch_next_tokens(0, $yaml);
             TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
             if (@$next_tokens and $next_tokens->[0]->[0] eq 'INDENT') {
                 $offset = length $next_tokens->[0]->[1];
@@ -1152,18 +1149,22 @@ sub debug_rules {
     local $Data::Dumper::Maxdepth = 2;
     $self->note("RULES:");
     for my $rule (@$rules) {
-        eval {
-        my $first = $rule->[0];
-        if (ref $first eq 'SCALAR') {
-            $self->info("-> $$first");
+        if (ref $rule eq 'ARRAY') {
+            my $first = $rule->[0];
+            if (ref $first eq 'SCALAR') {
+                $self->info("-> $$first");
+            }
+            else {
+                if (ref $first eq 'ARRAY') {
+                    $first = $first->[0];
+                }
+                $self->info("TYPE $first");
+            }
         }
         else {
-            if (ref $first eq 'ARRAY') {
-                $first = $first->[0];
-            }
-            $self->info("TYPE $first");
+            my @keys = sort keys %$rule;
+            $self->info("@keys");
         }
-        };
     }
 }
 

@@ -159,14 +159,9 @@ sub parse_tokens {
         TRACE and warn __PACKAGE__.':'.__LINE__.": !!!!! $next_rule\n";
         if (ref $next_rule eq 'HASH') {
             my $success;
-            #TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_rule], ['next_rule']);
-            unless (@$next_tokens) {
-                @$next_tokens = $self->fetch_next_tokens(1, $parser->yaml);
-            }
+            $next_tokens = $self->fetch_next_tokens(1, $parser->yaml);
             my $next = $next_tokens->[0];
             TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next], ['next']);
-#            my @k = sort keys %$next_rule;
-#            TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@k], ['k']);
             my $def = $next_rule->{ $next->[0] };
             if ($def) {
                 shift @$next_tokens;
@@ -237,6 +232,15 @@ sub parse_tokens {
 }
 
 sub fetch_next_tokens {
+    my ($self, $offset, $yaml) = @_;
+    my $next = $self->next_tokens;
+    unless (@$next) {
+        @$next = $self->_fetch_next_tokens($offset, $yaml);
+    }
+    return $next;
+}
+
+sub _fetch_next_tokens {
     my ($self, $offset, $yaml) = @_;
     my @next;
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$offset], ['offset']);
