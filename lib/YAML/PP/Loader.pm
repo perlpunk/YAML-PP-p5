@@ -204,7 +204,6 @@ sub event {
     }
 }
 
-my %control = ( '\\' => '\\', n => "\n", t => "\t", r => "\r", b => "\b" );
 sub render_value {
     my ($self, $info) = @_;
     my $value;
@@ -216,7 +215,6 @@ sub render_value {
     }
     else {
         $value = $content;
-        $value =~ s/\\([\\ntrb])/$control{ $1 }/eg;
     }
     TRACE and local $Data::Dumper::Useqq = 1;
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$value], ['value']);
@@ -255,8 +253,6 @@ sub render_plain_scalar {
     }
     else {
         $value = $content;
-        $value =~ s/\\n/\n/g;
-        $value =~ s/\\t/\t/g;
     }
     return $value;
 }

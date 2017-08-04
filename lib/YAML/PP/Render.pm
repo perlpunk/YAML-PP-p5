@@ -33,6 +33,10 @@ sub render_tag {
     return $tag;
 }
 
+my %control = (
+    '\\' => '\\', n => "\n", t => "\t", r => "\r", b => "\b",
+    'x0a' => "\n", 'x0d' => "\r",
+);
 sub render_quoted {
     my (%args) = @_;
     my $double = $args{double};
@@ -43,13 +47,13 @@ sub render_quoted {
         my $line = $lines->[ $i ];
         my $last = $i == $#$lines;
         my $first = $i == 0;
-        if ($line =~ s/^$WS*$/\\n/) {
+        if ($line =~ s/^$WS*$/\n/) {
             $addspace = 0;
             if ($first or $last) {
                 $quoted .= " ";
             }
             else {
-                $quoted .= "\\n";
+                $quoted .= "\n";
             }
         }
         else {
@@ -70,15 +74,12 @@ sub render_quoted {
             }
             else {
                 $line =~ s/''/'/g;
-                $line =~ s/\\/\\\\/g;
             }
             if ($line =~ s/\\$//) {
                 $addspace = 0;
             }
             $line =~ s/^\\ / /;
-            $line =~ s/\t/\\t/g;
-            $line =~ s/\\x0d/\\r/g;
-            $line =~ s/\\x0a/\\n/g;
+            $line =~ s/\\(x0d|x0a|[\\ntrb])/$control{ $1 }/g;
             $line =~ s/\\u([A-Fa-f0-9]+)/chr(oct("x$1"))/eg;
             $quoted .= $line;
         }
@@ -153,9 +154,6 @@ sub render_block_scalar {
     if ($trim) {
         $string =~ s/\n$//;
     }
-    $string =~ s/\\/\\\\/g;
-    $string =~ s/\n/\\n/g;
-    $string =~ s/\t/\\t/g;
     return $string;
 }
 
@@ -173,7 +171,7 @@ sub render_multi_val {
     for my $line (@$multi) {
         if (not $start) {
             if ($line eq '') {
-                $string .= "\\n";
+                $string .= "\n";
                 $start = 1;
             }
             else {

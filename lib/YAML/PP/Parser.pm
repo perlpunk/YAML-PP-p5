@@ -793,6 +793,10 @@ sub parse_plain_multi {
     };
 }
 
+my %control = (
+    '\\' => '\\', n => "\n", t => "\t", r => "\r", b => "\b",
+    'x0a' => "\n", 'x0d' => "\r",
+);
 sub parse_map {
     my ($self, %args) = @_;
     my $yaml = $self->yaml;
@@ -840,8 +844,8 @@ sub parse_map {
         if ($key =~ s/^(["'])(.*)\1$/$2/) {
             $key_style = $1;
         }
-        if ($key_style ne '"') {
-            $key =~ s/\\/\\\\/g;
+        if ($key_style eq '"') {
+            $key =~ s/\\(x0d|x0a|[\\ntrb])/$control{ $1 }/g;
         }
         if ($tag_anchor) {
             $anchor = $self->anchor and $self->set_anchor(undef);
@@ -1147,6 +1151,16 @@ sub event_to_test_suite {
             }
             if (defined $info->{tag}) {
                 $string .= " $info->{tag}";
+            }
+            if (defined $content) {
+                $content =~ s/\\/\\\\/g;
+                $content =~ s/\t/\\t/g;
+                $content =~ s/\r/\\r/g;
+                $content =~ s/\n/\\n/g;
+                $content =~ s/[\b]/\\b/g;
+            }
+            else {
+                $content = '';
             }
             $string .= ' ' . $info->{style} . ($content // '');
         }
