@@ -2,153 +2,73 @@ use strict;
 use warnings;
 package YAML::PP::Dumper;
 
+our $VERSION = '0.000'; # VERSION
+
+use YAML::PP::Emitter;
+
 sub new {
-    my ($class) = @_;
+    my ($class, %args) = @_;
     my $self = bless {
         refs => {},
-        level => 0,
+        emitter => YAML::PP::Emitter->new(
+            indent => $args{indent} // 2,
+        ),
     }, $class;
     return $self;
 }
 
+sub emitter { return $_[0]->{emitter} }
+sub set_emitter { $_[0]->{emitter} = $_[1] }
+
 sub dump {
     my ($self, @docs) = @_;
-    my $yaml = '';
+    $self->emitter->init;
     for my $i (0 .. $#docs) {
         my $doc = $docs[ $i ];
         my $yaml_doc = $self->dump_document($doc);
-        $yaml .= $yaml_doc;
-        $yaml .= "...\n---\n" if $i < $#docs;
+        if ($i < $#docs) {
+            $self->emitter->document_end_event();
+            $self->emitter->document_start_event();
+        }
     }
-    return $yaml;
+    my $yaml = $self->emitter->yaml;
+    return $$yaml;
 }
 
 sub dump_document {
     my ($self, $doc) = @_;
     $self->{refs} = {};
     $self->{anchor_num} = 0;
-    $self->{level} = -1;
-    $self->{event_stack} = ['DOC'];
     $self->check_references($doc);
-    my $yaml = '';
-    $self->{yaml} = \$yaml;
     $self->dump_node($doc);
-    return $yaml;
 }
 
 sub dump_node {
     my ($self, $node) = @_;
+
     if (ref $node eq 'HASH') {
-        $self->event('mapping_start');
+        $self->emitter->mapping_start_event();
         for my $key (sort keys %$node) {
             $self->dump_node($key);
             $self->dump_node($node->{ $key });
         }
-        $self->event('mapping_end');
+        $self->emitter->mapping_end_event;
     }
     elsif (ref $node eq 'ARRAY') {
-        $self->event('sequence_start');
+        $self->emitter->sequence_start_event;
         for my $elem (@$node) {
             $self->dump_node($elem);
         }
-        $self->event('sequence_end');
+        $self->emitter->sequence_end_event;
     }
     elsif (ref $node) {
         die "Not implemented";
     }
     else {
-        $self->event('scalar', { value => $node });
+        $self->emitter->scalar_event({ value => $node });
     }
 }
 
-sub event {
-    my ($self, $type, $info) = @_;
-    my $yaml = $self->{yaml};
-
-    my $level = $self->{level};
-    $level = 0 if $level < 0;
-    my $indent = ' ' x ($level * 2);
-    my $stack = $self->{event_stack};
-    if ($type eq 'mapping_start') {
-        $self->{level}++;
-        $$yaml .= "\n";
-        if ($stack->[-1] eq 'SEQ') {
-            $$yaml .= "$indent-\n";
-        }
-        elsif ($stack->[-1] eq 'MAP') {
-            $$yaml .= "$indent-\n";
-        }
-        push @{ $stack }, 'MAP';
-    }
-    elsif ($type eq 'mapping_end') {
-        $self->{level}--;
-        pop @{ $stack };
-        if ($stack->[-1] eq 'MAP') {
-            $stack->[-1] = 'MAPVALUE';
-        }
-        elsif ($stack->[-1] eq 'MAPVALUE') {
-            $stack->[-1] = 'MAP';
-        }
-        elsif ($stack->[-1] eq 'SEQ') {
-        }
-    }
-    elsif ($type eq 'sequence_start') {
-        if ($stack->[-1] eq 'SEQ') {
-            $$yaml .= "$indent-\n";
-        }
-        if ($stack->[-1] eq 'SEQ' or $stack->[-1] eq 'DOC') {
-        }
-        else {
-            $$yaml .= "\n";
-        }
-        push @{ $stack }, 'SEQ';
-        $self->{level}++;
-    }
-    elsif ($type eq 'sequence_end') {
-        $self->{level}--;
-        pop @{ $stack };
-        if ($stack->[-1] eq 'MAP') {
-            $stack->[-1] = 'MAPVALUE';
-        }
-        elsif ($stack->[-1] eq 'MAPVALUE') {
-            $stack->[-1] = 'MAP';
-        }
-        elsif ($stack->[-1] eq 'SEQ') {
-        }
-    }
-    elsif ($type eq 'scalar') {
-
-        my $value = $info->{value};
-        if (defined $value) {
-            $value =~ s/\\/\\\\/g;
-            $value =~ s/"/\\"/g;
-            $value =~ s/\n/\\n/g;
-            $value =~ s/\r/\\r/g;
-            $value =~ s/\t/\\t/g;
-            $value =~ s/[\b]/\\b/g;
-            $value = '"' . $value . '"';
-        }
-        else {
-            $value = '';
-        }
-
-        if ($stack->[-1] eq 'MAP') {
-            $$yaml .= "$indent$value: ";
-            $stack->[-1] = 'MAPVALUE';
-        }
-        elsif ($stack->[-1] eq 'MAPVALUE') {
-            $$yaml .= "$value\n";
-            $stack->[-1] = 'MAP';
-        }
-        elsif ($stack->[-1] eq 'SEQ') {
-            $$yaml .= "$indent- $value\n";
-        }
-        elsif ($stack->[-1] eq 'DOC') {
-            $$yaml .= "$value\n";
-        }
-
-    }
-}
 
 sub check_references {
     my ($self, $doc) = @_;
