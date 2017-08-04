@@ -45,6 +45,18 @@ sub render_quoted {
     my $addspace = 0;
     for my $i (0 .. $#$lines) {
         my $line = $lines->[ $i ];
+        if ($#$lines == 0) {
+            if ($double) {
+                $line =~ s/\\"/"/g;
+                $line =~ s/\\(x0d|x0a|[\\ntrb])/$control{ $1 }/g;
+                $line =~ s/\\u([A-Fa-f0-9]+)/chr(oct("x$1"))/eg;
+            }
+            else {
+                $line =~ s/''/'/g;
+            }
+            $quoted .= $line;
+            last;
+        }
         my $last = $i == $#$lines;
         my $first = $i == 0;
         if ($line =~ s/^$WS*$/\n/) {
@@ -79,8 +91,10 @@ sub render_quoted {
                 $addspace = 0;
             }
             $line =~ s/^\\ / /;
-            $line =~ s/\\(x0d|x0a|[\\ntrb])/$control{ $1 }/g;
-            $line =~ s/\\u([A-Fa-f0-9]+)/chr(oct("x$1"))/eg;
+            if ($double) {
+                $line =~ s/\\(x0d|x0a|[\\ntrb])/$control{ $1 }/g;
+                $line =~ s/\\u([A-Fa-f0-9]+)/chr(oct("x$1"))/eg;
+            }
             $quoted .= $line;
         }
     }
