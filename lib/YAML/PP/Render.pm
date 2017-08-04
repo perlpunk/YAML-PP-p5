@@ -183,7 +183,7 @@ sub render_multi_val {
     my $string = '';
     my $start = 1;
     for my $line (@$multi) {
-        $line =~ s/\\/\\\\/g;
+        #$line =~ s/\\/\\\\/g;
         if (not $start) {
             if ($line eq '') {
                 $string .= "\n";
