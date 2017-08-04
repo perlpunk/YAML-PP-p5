@@ -36,22 +36,9 @@ my @skip = qw/
 
 # dumper
 # alias
-push @skip, qw/ v015 /;
-# tags
-push @skip, qw/ v014 /;
-# complex keys
-push @skip, qw/ XW4D /;
+#push @skip, qw/ v015 /;
 
 push @skip, qw/
-6SLA
-6ZKB
-AZW3
-J3BT
-K858
-RZT7
-UT92
-W4TN
-v012
 /;
 
 my $skipped = \@skip;
