@@ -2,7 +2,7 @@
 +DOC
 +MAP
 =VAL :safe
-=VAL :a!"#$%&'()*+,-./09:;<=>?@AZ[\]^_`az{|}~ !"#$%&'()*+,-./09:;<=>?@AZ[\]^_`az{|}~
+=VAL :a!"#$%&'()*+,-./09:;<=>?@AZ[\\]^_`az{|}~ !"#$%&'()*+,-./09:;<=>?@AZ[\\]^_`az{|}~
 =VAL :safe question mark
 =VAL :?foo
 =VAL :safe colon
