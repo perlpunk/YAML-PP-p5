@@ -846,6 +846,8 @@ sub parse_map {
         }
         if ($key_style eq '"') {
             $key =~ s/\\(x0d|x0a|[\\ntrb])/$control{ $1 }/g;
+            $key =~ s/\\"/"/g;
+            $key =~ s/\\u([A-Fa-f0-9]+)/chr(oct("x$1"))/eg;
         }
         if ($tag_anchor) {
             $anchor = $self->anchor and $self->set_anchor(undef);
