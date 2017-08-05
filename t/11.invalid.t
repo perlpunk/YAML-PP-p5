@@ -26,6 +26,8 @@ my @dirs = YAML::PP::Test->get_tests(
 my @skip = qw/
     i019 i023
     CML9 C2SP
+    N782
+    RXY3
 /;
 
 
