@@ -25,13 +25,13 @@ my @dirs = YAML::PP::Test->get_tests(
 
 # skip tests that parser can't parse
 my @skip = qw/
-    4ABK 54T7 5C5M 5KJE 6HB6 87E4 8UDB
+    4ABK 54T7 5C5M 5KJE 5TRB 6HB6 87E4 8UDB 9MMW
     C2DT C4HZ CT4Q D88J DBG4 DFF7 DHP8
     EHF6 FRK4 FUP4
     KZN9 L9U5 LP6E LQZ7
     M5DY M7A3 MXS3 N782
     Q88A Q9WF QF4Y
-    R4YG SBG9 UDR7 WZ62 X38W YD5X ZF4X
+    R4YG SBG9 UDR7 UT92 WZ62 X38W YD5X ZF4X
 /;
 
 # emitter
@@ -43,6 +43,7 @@ push @skip, qw/
 82AN
 9YRD
 HS5T
+T4YY
 v011
 /;
 # tags
@@ -53,14 +54,19 @@ v014
 /;
 # block scalar
 push @skip, qw/
+4Q9F
+4QFQ
 5BVJ
 5GBF
 5WE3
 6VJK
 735Y
+753E
 7T8X
+93WF
 96L6
 A6F9
+B3HG
 F8F9
 G992
 HMK4
@@ -70,8 +76,12 @@ M5C3
 MYW6
 MZX3
 P2AD
+RZP5
+T26H
+T5N4
 TS54
 XW4D
+Z67P
 v016
 /;
 # comment
@@ -87,21 +97,31 @@ push @skip, qw/
 2SXE
 27NA
 4ZYM
+52DL
 565N
 6FWR
 6LVF
 6M2F
 6SLA
+6WLZ
+6WPF
 6ZKB
+9DXL
+9TFX
 DWX9
+EX5H
+EXG3
 FH7J
 G4RS
 H2RW
 J3BT
+JDH8
 KSS4
 M9B4
 NHX8
 PRH3
+Q8AD
+SSW6
 v009
 /;
 # nested seq
