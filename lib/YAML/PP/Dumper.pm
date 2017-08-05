@@ -27,8 +27,8 @@ sub dump {
         my $doc = $docs[ $i ];
         my $yaml_doc = $self->dump_document($doc);
         if ($i < $#docs) {
-            $self->emitter->document_end_event();
-            $self->emitter->document_start_event();
+            $self->emitter->document_end_event(); #{ content => '...' });
+            $self->emitter->document_start_event({ content => '---' });
         }
     }
     my $yaml = $self->emitter->yaml;
@@ -65,7 +65,7 @@ sub dump_node {
         die "Not implemented";
     }
     else {
-        $self->emitter->scalar_event({ value => $node });
+        $self->emitter->scalar_event({ content => $node });
     }
 }
 
