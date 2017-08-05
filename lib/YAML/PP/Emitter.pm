@@ -55,9 +55,16 @@ sub mapping_start_event {
 
     my $first = $self->first;
     my $new_first = 1;
+    if ($stack->[-1] eq 'DOC') {
+        if ($first or $props) {
+            $$yaml .= "$props\n";
+        }
+        $new_first = 0;
+    }
+    else {
     if ($stack->[-1] eq 'SEQ') {
         if ($props) {
-            $$yaml .= "$indent-$props\n";
+            $$yaml .= "$indent-$props";
             $new_first = 0;
         }
         else {
@@ -74,22 +81,14 @@ sub mapping_start_event {
         }
         if ($props) {
             $new_first = 0;
-            $$yaml .= "\n";
         }
         $self->set_current_indent($current_indent + $self->indent);
         $stack->[-1] = 'COMPLEX';
     }
     elsif ($stack->[-1] eq 'MAPVALUE') {
-        $$yaml .= "$props\n";
+        $$yaml .= "$props";
         $self->set_current_indent($current_indent + $self->indent);
         $new_first = 0;
-    }
-    elsif ($stack->[-1] eq 'DOC') {
-        if ($first or $props) {
-            $$yaml .= "$props\n";
-        }
-        else {
-        }
     }
     elsif ($stack->[-1] eq 'COMPLEX') {
         $stack->[-1] = 'COMPLEXVALUE';
@@ -100,13 +99,16 @@ sub mapping_start_event {
             $$yaml .= "$indent:$props";
         }
         if ($props) {
-            $$yaml .= "\n";
             $new_first = 0;
         }
         $self->set_current_indent($current_indent + $self->indent);
     }
     else {
         die 23;
+    }
+    if ($new_first == 0) {
+        $$yaml .= "\n";
+    }
     }
     push @{ $stack }, 'MAP';
     #warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$new_first], ['new_first']);
@@ -156,13 +158,15 @@ sub sequence_start_event {
 
     my $first = $self->first;
     my $new_first = 1;
+    if ($props) {
+        $new_first = 0;
+    }
     if ($stack->[-1] eq 'SEQ') {
         if (not $first) {
             $$yaml .= $indent;
         }
         if ($props) {
             $$yaml .= "-$props\n";
-            $new_first = 0;
         }
         else {
             $$yaml .= "-";
@@ -172,7 +176,6 @@ sub sequence_start_event {
     elsif ($stack->[-1] eq 'MAP') {
         if ($props) {
             $$yaml .= "?$props\n";
-            $new_first = 0;
         }
         else {
             $$yaml .= "?";
@@ -187,7 +190,6 @@ sub sequence_start_event {
     elsif ($stack->[-1] eq 'COMPLEXVALUE') {
         if ($props) {
             $$yaml .= ":$props\n";
-            $new_first = 0;
         }
         else {
             $$yaml .= ":";
@@ -198,9 +200,7 @@ sub sequence_start_event {
         if ($first or $props) {
             $$yaml .= "$props\n";
         }
-        else {
-        }
-            $new_first = 0;
+        $new_first = 0;
     }
     else {
         die 23;
@@ -266,16 +266,55 @@ sub scalar_event {
     #warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$value], ['value']);
 
     my $style = $info->{style} // '';
+    DEBUG and local $Data::Dumper::Useqq = 1;
     if (defined $value) {
+        if (($style eq '|' or $style eq '>') and $value eq '') {
+            $style = '"';
+        }
         if ($style eq ":") {
+            $value =~ s/\n/\n\n/g;
         }
         elsif ($style eq "'") {
+            $value =~ s/\n/\n\n/g;
             $value =~ s/'/''/g;
             $value = "'" . $value . "'";
         }
         elsif ($style eq '|') {
+            DEBUG and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$value], ['value']);
+            my $indicators = '';
+            if ($value !~ m/\n\z/) {
+                $indicators .= '-';
+                $value .= "\n";
+            }
+            elsif ($value =~ m/\n\n\z/) {
+                $indicators .= '+';
+            }
             $value =~ s/^(?=.)/$indent  /gm;
-            $value = "|\n$value";
+            $value = "|$indicators\n$value";
+        }
+        elsif ($style eq '>') {
+            DEBUG and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$value], ['value']);
+            my @lines = split /\n/, $value, -1;
+            DEBUG and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@lines], ['lines']);
+            my $eol = 0;
+            my $indicators = '';
+            if ($lines[-1] eq '') {
+                pop @lines;
+                $eol = 1;
+            }
+            else {
+                $indicators .= '-';
+            }
+            $value = ">$indicators\n";
+            for my $i (0 .. $#lines) {
+                my $line = $lines[ $i ];
+                if (length $line) {
+                    $value .= "$indent  $line\n";
+                }
+                if ($i != $#lines) {
+                    $value .= "\n";
+                }
+            }
         }
         else {
             $value =~ s/\\/\\\\/g;
@@ -292,7 +331,7 @@ sub scalar_event {
     }
     my $first = $self->first;
 
-    #warn __PACKAGE__.':'.__LINE__.": (@$stack)\n";
+    DEBUG and warn __PACKAGE__.':'.__LINE__.": (@$stack)\n";
     if ($stack->[-1] eq 'MAP') {
         #warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$first], ['first']);
         #warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$props], ['props']);
@@ -300,34 +339,25 @@ sub scalar_event {
         if ($props) {
             $props .= ' ';
         }
+        my $new_event = 'MAPVALUE';
+        if ($style eq '|' or $style eq '>') {
+            # oops, a complex key
+            $$yaml .= '?';
+            $first = 1;
+            $new_event = 'COMPLEXVALUE';
+        }
         if ($first) {
-            if ($stack->[-2] eq 'SEQ') {
-                $$yaml .= " $props$value:";
-            }
-            elsif ($stack->[-2] eq 'MAPVALUE') {
-                $$yaml .= "$props$value:";
-            }
-            elsif ($stack->[-2] eq 'MAP') {
-                $$yaml .= " $props$value:";
-            }
-            elsif ($stack->[-2] eq 'DOC') {
-                $$yaml .= "$props$value:";
-            }
-            elsif ($stack->[-2] eq 'COMPLEX') {
-                $$yaml .= " $props$value:";
-            }
-            elsif ($stack->[-2] eq 'COMPLEXVALUE') {
-                $$yaml .= " $props$value:";
+            if ($style eq '|' or $style eq '>') {
+                $$yaml .= " $props$value";
             }
             else {
-                warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$stack], ['stack']);
-                die 23;
+                $$yaml .= " $props$value:";
             }
         }
         else {
             $$yaml .= "$indent$props$value:";
         }
-        $stack->[-1] = 'MAPVALUE';
+        $stack->[-1] = $new_event;
     }
     elsif ($stack->[-1] eq 'MAPVALUE') {
         if (not length $value and not $props) {
@@ -340,7 +370,7 @@ sub scalar_event {
                 }
             }
             $$yaml .= " $props$value";
-            if ($style ne '|') {
+            if ($style ne '|' and $style ne '>') {
                 $$yaml .= "\n";
             }
         }
@@ -358,7 +388,10 @@ sub scalar_event {
         if ($props and length $value) {
             $props .= ' ';
         }
-        $$yaml .= "- $props$value\n";
+        $$yaml .= "- $props$value";
+        if ($style ne '|' and $style ne '>') {
+            $$yaml .= "\n";
+        }
     }
     elsif ($stack->[-1] eq 'DOC') {
         if ($props and length $value) {
@@ -372,7 +405,7 @@ sub scalar_event {
         else {
             $$yaml .= "$props$value";
         }
-        if ($style ne '|') {
+        if ($style ne '|' and $style ne '>') {
             $$yaml .= "\n";
         }
     }

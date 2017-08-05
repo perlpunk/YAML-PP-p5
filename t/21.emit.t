@@ -36,7 +36,6 @@ my @skip = qw/
 
 # emitter
 push @skip, qw/
-RZT7
 /;
 # quoting
 push @skip, qw/
@@ -44,7 +43,6 @@ push @skip, qw/
 9YRD
 HS5T
 T4YY
-v011
 /;
 # tags
 push @skip, qw/
@@ -54,51 +52,22 @@ v014
 /;
 # block scalar
 push @skip, qw/
-4Q9F
 4QFQ
-5BVJ
-5GBF
-5WE3
 6VJK
-735Y
-753E
 7T8X
-93WF
-96L6
-A6F9
-B3HG
-F8F9
-G992
-HMK4
-K527
-K858
-M5C3
-MYW6
-MZX3
+
 P2AD
-RZP5
-T26H
-T5N4
-TS54
-XW4D
-Z67P
 v016
 /;
-# comment
-push @skip, qw/
-S3PD
-/;
 # test
-#35KP
-#3MYT
 push @skip, qw/
-35KP
 3MYT
 2SXE
 27NA
 4ZYM
 52DL
 565N
+6BCT
 6FWR
 6LVF
 6M2F
@@ -108,6 +77,7 @@ push @skip, qw/
 6ZKB
 9DXL
 9TFX
+B3HG
 DWX9
 EX5H
 EXG3
@@ -118,17 +88,23 @@ J3BT
 JDH8
 KSS4
 M9B4
+MJS9
 NHX8
 PRH3
 Q8AD
+S3PD
 SSW6
+T26H
+T5N4
 v009
+v011
+
+
+K858
+
 /;
 # nested seq
 push @skip, qw/
-3ALJ
-6BCT
-A2M4
 W42U
 /;
 
