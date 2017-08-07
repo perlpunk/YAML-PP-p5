@@ -31,7 +31,7 @@ __END__
 
 =head1 NAME
 
-YAML::PP - YAML Parser and Loader
+YAML::PP - YAML Framework
 
 =head1 SYNOPSIS
 
@@ -39,24 +39,34 @@ WARNING: This is highly experimental.
 
 Here are a few examples of what you can do right now:
 
-    # Load YAML into a very simple data structure
-    yaml-pp-p5-load < file.yaml
-
     # The loader offers JSON::PP, boolean.pm or pureperl 1/0 (default)
     # for booleans
     my $yppl = YAML::PP::Loader->new(boolean => 'JSON::PP');
     my ($data1, $data2) = $yppl->load($yaml);
 
+    my $yppd = YAML::PP::Dumper->new();
+    my $yaml = $yppd->dump($data1, $data2);
+
+Some utility scripts:
+
+    # Load YAML into a very simple data structure
+    yaml-pp-p5-load < file.yaml
+
+    # Load and dump
+    yaml-pp-p5-load-dump < file.yaml
+
     # Print the events from the parser in yaml-test-suite format
     yaml-pp-p5-events < file.yaml
+
 
 =head1 DESCRIPTION
 
 This is Yet Another YAML Parser. For why this project was started, see
 L<"WHY">.
 
-This project contains a Parser L<YAML::PP::Parser> and a Loader
-L<YAML::PP::Loader>.
+This project contains a Parser L<YAML::PP::Parser>, a Loader
+L<YAML::PP::Loader>, a Dumper L<YAML::PP::Dumper> and Emitter
+L<YAML::PP::Emitter>.
 
 =head2 YAML::PP::Parser
 
@@ -171,6 +181,31 @@ The spec says that this is throwaway content, but I read that many people
 wish to be able to keep the comments.
 
 =back
+
+=head2 YAML::PP::Dumper, YAML::PP::Emitter
+
+This is also pretty simple so far. Any string containing something
+other than C<0-9a-zA-Z.-> will be dumped with double quotes.
+
+It will recognize JSON::PP::Boolean and boolean.pm objects and dump them
+correctly.
+
+The layout is like libyaml output:
+
+    key:
+    - a
+    - b
+    - c
+    ---
+    - key1: 1
+      key2: 2
+      key3: 3
+    ---
+    - - a1
+      - a2
+    - - b1
+      - b2
+
 
 =head1 NUMBERS
 
