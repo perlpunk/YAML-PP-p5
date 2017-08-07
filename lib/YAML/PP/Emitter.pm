@@ -268,6 +268,15 @@ sub scalar_event {
     my $style = $info->{style} // '';
     DEBUG and local $Data::Dumper::Useqq = 1;
     if (defined $value) {
+        if ($style eq '') {
+            # any
+            if (not length $value or $value =~ tr/0-9a-zA-Z.-//c) {
+                $style = '"';
+            }
+            else {
+                $style = ':';
+            }
+        }
         if (($style eq '|' or $style eq '>') and $value eq '') {
             $style = '"';
         }
@@ -440,6 +449,7 @@ sub alias_event {
 }
 
 sub document_start_event {
+    DEBUG and warn __PACKAGE__.':'.__LINE__.": +++ document_start_event\n";
     my ($self, $info) = @_;
     my $yaml = $self->yaml;
     if ($info->{content}) {
@@ -452,6 +462,7 @@ sub document_start_event {
 }
 
 sub document_end_event {
+    DEBUG and warn __PACKAGE__.':'.__LINE__.": +++ document_end_event\n";
     my ($self, $info) = @_;
     my $yaml = $self->yaml;
     if ($info->{content}) {
