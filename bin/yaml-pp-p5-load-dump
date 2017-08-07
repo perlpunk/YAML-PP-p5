@@ -1,0 +1,24 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+use 5.010;
+
+use YAML::PP::Loader;
+use YAML::PP::Dumper;
+
+my ($file) = @ARGV;
+my $yaml;
+
+if ($file) {
+    $yaml = do { open my $fh, '<', $file or die $!; local $/; <$fh> };
+}
+else {
+    $yaml = do { local $/; <STDIN> };
+}
+
+my $yppl = YAML::PP::Loader->new(boolean => 'JSON::PP');
+my $yppd = YAML::PP::Dumper->new;
+my @docs = $yppl->load($yaml);
+my $out_yaml = $yppd->dump(@docs);
+
+print $out_yaml;

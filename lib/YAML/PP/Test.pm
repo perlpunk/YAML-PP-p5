@@ -43,7 +43,7 @@ sub get_tests {
     }
 
     opendir my $dh, $dir or die $!;
-    push @dirs, map { "$dir/$_" } grep { m/^v[A-Z0-9]{3}\z/ } readdir $dh;
+    push @dirs, map { "$dir/$_" } grep { m/^[iv][A-Z0-9]{3}\z/ } readdir $dh;
     closedir $dh;
 
     return @dirs;
