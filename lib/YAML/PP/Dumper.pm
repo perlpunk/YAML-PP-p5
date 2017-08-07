@@ -23,6 +23,7 @@ sub set_emitter { $_[0]->{emitter} = $_[1] }
 sub dump {
     my ($self, @docs) = @_;
     $self->emitter->init;
+    $self->emitter->document_start_event();
     for my $i (0 .. $#docs) {
         my $doc = $docs[ $i ];
         my $yaml_doc = $self->dump_document($doc);
@@ -31,6 +32,7 @@ sub dump {
             $self->emitter->document_start_event({ content => '---' });
         }
     }
+    $self->emitter->document_end_event();
     my $yaml = $self->emitter->yaml;
     return $$yaml;
 }
@@ -62,7 +64,15 @@ sub dump_node {
         $self->emitter->sequence_end_event;
     }
     elsif (ref $node) {
-        die "Not implemented";
+        if (ref $node eq 'JSON::PP::Boolean' or ref $node eq 'boolean') {
+            $self->emitter->scalar_event({
+                content => $node ? 'true' : 'false',
+                style => ':',
+            });
+        }
+        else {
+            die "Not implemented";
+        }
     }
     else {
         $self->emitter->scalar_event({ content => $node });
@@ -91,7 +101,11 @@ sub check_references {
             }
         }
         elsif (ref $doc) {
-            die "Reference @{[ ref $doc ]} not implemented";
+            if (ref $doc eq 'JSON::PP::Boolean' or ref $doc eq 'boolean') {
+            }
+            else {
+                die "Reference @{[ ref $doc ]} not implemented";
+            }
         }
     }
 }
