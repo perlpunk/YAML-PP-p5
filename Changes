@@ -1,3 +1,7 @@
+0.003_001 2017-08-07 23:29:51+02:00
+    - Fix some parsing bugs for quoted strings
+    - Add Dumper and Emitter
+
 0.003 2017-05-31 23:35:44+02:00
     - Changes for new Loader API
 
