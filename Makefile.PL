@@ -16,7 +16,7 @@ my %WriteMakefileArgs = (
   "EXE_FILES" => [
     "bin/yaml-pp-p5-events",
     "bin/yaml-pp-p5-load",
-    "bin/yaml-pp-p5-load-dump"
+    "bin/yaml-pp-p5-load-dump",
     "bin/yamlpp5-highlight"
   ],
   "LICENSE" => "perl",
