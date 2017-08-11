@@ -437,7 +437,7 @@ sub alias_event {
     my $alias = '*' . $info->{content};
 
     if ($stack->[-1] eq 'MAP') {
-        $$yaml .= "$indent$alias:";
+        $$yaml .= "$indent$alias :";
         $stack->[-1] = 'MAPVALUE';
     }
     elsif ($stack->[-1] eq 'MAPVALUE') {
