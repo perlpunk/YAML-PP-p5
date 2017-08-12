@@ -32,6 +32,10 @@ my @skip = qw/
     M5DY M7A3 MXS3 N782
     Q88A Q9WF QF4Y
     R4YG SBG9 UDR7 UT92 WZ62 X38W YD5X ZF4X
+
+    W4TN
+
+    v018
 /;
 
 # dumper
