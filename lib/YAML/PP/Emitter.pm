@@ -397,7 +397,12 @@ sub scalar_event {
         if ($props and length $value) {
             $props .= ' ';
         }
-        $$yaml .= "- $props$value";
+        if ($props or length $value) {
+            $$yaml .= "- $props$value";
+        }
+        else {
+            $$yaml .= "-";
+        }
         if ($style ne '|' and $style ne '>') {
             $$yaml .= "\n";
         }

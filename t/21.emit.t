@@ -105,7 +105,6 @@ K858
 /;
 # nested seq
 push @skip, qw/
-W42U
 /;
 
 my $skipped = \@skip;
