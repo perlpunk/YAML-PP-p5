@@ -64,33 +64,24 @@ v016
 # test
 push @skip, qw/
 3MYT
-4ZYM
 565N
 6FWR
 6SLA
-6WLZ
 6WPF
 6ZKB
 9DXL
 9TFX
 B3HG
-DWX9
 EX5H
 EXG3
-FH7J
 G4RS
 H2RW
-J3BT
 JDH8
 KSS4
-M9B4
 MJS9
 NHX8
 PRH3
-Q8AD
 S3PD
-T26H
-T5N4
 v009
 v011
 
@@ -142,8 +133,13 @@ for my $item (@dirs) {
     close $fh;
     #diag "------------------------------ $id";
 
-    my $out_yaml_file = "$dir/$id/out.yaml";
-    $out_yaml_file = "$dir/$id/in.yaml" unless -f $out_yaml_file;
+    my $out_yaml_file = "$dir/$id/emit.yaml";
+    unless (-f $out_yaml_file) {
+        $out_yaml_file = "$dir/$id/out.yaml";
+    }
+    unless (-f $out_yaml_file) {
+        $out_yaml_file = "$dir/$id/in.yaml";
+    }
     open $fh, "<", $out_yaml_file or die $!;
     my $out_yaml = do { local $/; <$fh> };
     close $fh;
