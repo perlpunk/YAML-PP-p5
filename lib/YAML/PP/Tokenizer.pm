@@ -133,7 +133,7 @@ my %REGEXES = (
     COLON => qr{(?m:(:)(?=$RE_WS|$))},
     DASH => qr{(?m:(-)(?=$RE_WS|$))},
     DOUBLEQUOTE => qr{(")},
-    DOUBLEQUOTED => qr{((?:\\"|[^"\r\n])*)},
+    DOUBLEQUOTED => qr{((?:\\(?:.|$)|[^"\r\n\\])*)}m,
     SINGLEQUOTE => qr{(')},
     SINGLEQUOTED => qr{((?:''|[^'\r\n])*)},
     LITERAL => qr{(\|)},
