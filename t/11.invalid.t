@@ -31,6 +31,8 @@ my @skip = qw/
     5TRB
 
     i034 i035
+
+    i031
 /;
 
 

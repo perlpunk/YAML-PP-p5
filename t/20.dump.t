@@ -36,6 +36,9 @@ my @skip = qw/
     W4TN
 
     v018
+
+    8G76
+    98YD
 /;
 
 # dumper

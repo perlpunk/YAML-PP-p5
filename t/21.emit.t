@@ -34,6 +34,9 @@ my @skip = qw/
     R4YG SBG9 UDR7 UT92 WZ62 X38W YD5X ZF4X
 
     v018
+
+    8G76
+    98YD
 /;
 
 # emitter
