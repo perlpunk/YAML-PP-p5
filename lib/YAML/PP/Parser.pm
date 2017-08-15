@@ -139,21 +139,26 @@ use constant NODE_OFFSET => 1;
 sub parse_stream {
     TRACE and warn "=== parse_stream()\n";
     my ($self) = @_;
-    my $yaml = $self->yaml;
     $self->begin('STR', -1);
 
     TRACE and $self->debug_yaml;
 
     my $exp_start = 0;
-    while (length $$yaml) {
+    while (1) {
+        my $next_tokens = $self->tokenizer->fetch_next_tokens(0, $self->yaml);
+        last unless @$next_tokens;
         my $head = $self->parse_document_head();
         my ($start, $start_line) = $self->parse_document_start;
         if (($head or $exp_start) and not $start) {
             die "Expected ---";
         }
         $exp_start = 0;
-        $self->parse_empty;
-        last unless length $$yaml;
+        while( $self->parse_empty($next_tokens) ) {
+        }
+        unless (@$next_tokens) {
+            my $yaml = $self->yaml;
+            last unless length $$yaml;
+        }
 
         if ($start) {
             $self->begin('DOC', -1, { content => "---" });
@@ -182,23 +187,23 @@ sub parse_stream {
 sub parse_document_start {
     TRACE and warn "=== parse_document_start()\n";
     my ($self) = @_;
-    my $yaml = $self->yaml;
 
     my ($start, $start_line) = (0, 0);
-    if ($$yaml =~ s/$RE_DOC_START//) {
-        push @{ $self->tokens }, ['DOC_START', $1];
+    my $next_tokens = $self->tokenizer->next_tokens;
+    if (@$next_tokens and $next_tokens->[0]->[0] eq 'DOC_START') {
+        push @{ $self->tokens }, shift @$next_tokens;
         $start = 1;
-        my $eol = $$yaml =~ s/\A($RE_EOL|\z)//;
-        push @{ $self->tokens }, ['EOL', $1] if $eol;
-        unless ($eol) {
-            if ($$yaml =~ s/\A($RE_WS+)//) {
-                push @{ $self->tokens }, ['WS', $1];
-                $start_line = 1;
-            }
-            else {
-                warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
-                die "Unexpected content after ---";
-            }
+        if ($next_tokens->[0]->[0] eq 'EOL') {
+            push @{ $self->tokens }, shift @$next_tokens;
+            $self->tokenizer->fetch_next_tokens(0, $self->yaml);
+        }
+        elsif ($next_tokens->[0]->[0] eq 'WS') {
+            push @{ $self->tokens }, shift @$next_tokens;
+            $start_line = 1;
+        }
+        else {
+            $self->debug_yaml;
+            die "Unexpected content after ---";
         }
     }
     return ($start, $start_line);
@@ -207,28 +212,34 @@ sub parse_document_start {
 sub parse_document_head {
     TRACE and warn "=== parse_document_head()\n";
     my ($self) = @_;
-    my $yaml = $self->yaml;
     my $tokens = $self->tokens;
     my $head;
-    while (length $$yaml) {
-        $self->parse_empty;
-        if ($$yaml =~ s/\A(\s*%YAML ?1\.2$RE_WS*)//) {
-            push @$tokens, ['YAML_DIRECTIVE', $1];
-            $head = 1;
+    while (1) {
+        my $next_tokens = $self->tokenizer->next_tokens;
+        if ($self->parse_empty($next_tokens)) {
             next;
         }
-        if ($$yaml =~ s/\A(\s*%TAG +(!$RE_NS_WORD_CHAR*!|!) +(tag:\S+|!$RE_URI_CHAR+)$RE_WS*)//) {
-            push @$tokens, ['TAG_DIRECTIVE', $1];
+        if ($next_tokens->[0]->[0] eq 'YAML_DIRECTIVE') {
+            push @$tokens, shift @$next_tokens;
             $head = 1;
-            my $tag_alias = $2;
-            my $tag_url = $3;
+            push @$tokens, shift @$next_tokens;
+            $self->tokenizer->fetch_next_tokens(0, $self->yaml);
+            next;
+        }
+        elsif ($next_tokens->[0]->[0] eq 'TAG_DIRECTIVE') {
+            $head = 1;
+            my ($name, $tag_alias, $tag_url) = split ' ', $next_tokens->[0]->[1];
+            push @$tokens, shift @$next_tokens;
             $self->tagmap->{ $tag_alias } = $tag_url;
+            push @$tokens, shift @$next_tokens;
+            $self->tokenizer->fetch_next_tokens(0, $self->yaml);
             next;
         }
-        if ($$yaml =~ s/\A(\s*\A%(?:\w+).*)//) {
-            push @$tokens, ['RESERVED_DIRECTIVE', $1];
-            warn "Found reserved directive '$1'";
+        elsif ($next_tokens->[0]->[0] eq 'RESERVED_DIRECTIVE') {
+            push @$tokens, shift @$next_tokens;
             $head = 1;
+            push @$tokens, shift @$next_tokens;
+            $self->tokenizer->fetch_next_tokens(0, $self->yaml);
             next;
         }
         last;
@@ -243,6 +254,7 @@ sub parse_document {
 
     my $next_full_line = 1;
     my $tokens = $self->tokens;
+    my $next_tokens = $self->tokenizer->next_tokens;
     while (1) {
 
         TRACE and $self->info("----------------------- LOOP");
@@ -324,7 +336,6 @@ sub check_indent {
     my $new_node = $args{new_node};
     my $space = $args{space};
     my $next_tokens = $args{next_tokens};
-    my $yaml = $self->yaml;
     my $end = 0;
     my $explicit_end = 0;
     my $indent = 0;
@@ -336,6 +347,7 @@ sub check_indent {
         }
     }
     else {
+        my $yaml = $self->yaml;
         my $eoyaml = not length $$yaml;
         if ($eoyaml) {
             $end = 1;
@@ -354,18 +366,21 @@ sub check_indent {
     TRACE and $self->info("INDENT: space=$space indent=$indent");
 
     if ($space <= 0) {
+        #warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
         if (@$next_tokens and $next_tokens->[0]->[0] eq 'DOC_START') {
+            $end = 1;
         }
-        elsif ($$yaml =~ s/$RE_DOC_END//) {
-            push @$tokens, ['DOC_END', $1];
-            $$yaml =~ s/($RE_EOL|\z)// or die "Unexpected";
-            push @$tokens, ['EOL', $1];
+        elsif (@$next_tokens and $next_tokens->[0]->[0] eq 'DOC_END') {
+            push @$tokens, shift @$next_tokens;
+            if (@$next_tokens and $next_tokens->[0]->[0] eq 'EOL') {
+                push @$tokens, shift @$next_tokens;
+            }
+            else {
+                die "Unexpected";
+            }
             $end = 1;
             $explicit_end = 1;
             $space = -1;
-        }
-        elsif ($$yaml =~ $RE_DOC_START) {
-            $end = 1;
         }
     }
 
@@ -388,8 +403,8 @@ sub check_indent {
         }
 
         my $seq_start = 0;
-        if (not $end and $$yaml =~ m/\A-($RE_WS|$)/m) {
-            $seq_start = length $1 ? 2 : 1;
+        if (not $end and $next_tokens->[0]->[0] eq 'DASH') {
+            $seq_start = 1;
         }
         TRACE and $self->info("SEQSTART: $seq_start");
 
@@ -789,23 +804,14 @@ sub parse_plain_multi {
 
 sub parse_empty {
     TRACE and warn "=== parse_empty()\n";
-    my ($self) = @_;
-    my $yaml = $self->yaml;
-    while (length $$yaml) {
-        if ($$yaml =~ s/\A( *#.*)($RE_LB|\z)//) {
-            push @{ $self->tokens },
-                ['COMMENT', $1],
-                ['LB', $2];
-        }
-        elsif ($$yaml =~ s/\A($RE_WS*)($RE_LB|\z)//) {
-            push @{ $self->tokens },
-                ['WS', $1],
-                ['LB', $2];
-        }
-        else {
-            last;
-        }
+    my ($self, $next_tokens) = @_;
+    #warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
+    if (@$next_tokens == 1 and $next_tokens->[0]->[0] eq 'EMPTY') {
+        push @{ $self->tokens }, shift @$next_tokens;
+        $self->tokenizer->fetch_next_tokens(0, $self->yaml);
+        return 1;
     }
+    return 0;
 }
 
 sub parse_block_scalar {
@@ -1162,8 +1168,11 @@ sub debug_rules {
             }
         }
         else {
-            my @keys = sort keys %$rule;
-            $self->info("@keys");
+            warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$rule], ['rule']);
+            eval {
+                my @keys = sort keys %$rule;
+                $self->info("@keys");
+            };
         }
     }
 }
