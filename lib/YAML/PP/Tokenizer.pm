@@ -455,7 +455,7 @@ sub _fetch_next_tokens {
     if (not $rule) {
     }
     else {
-        if ($$yaml =~ s/\A($RE_PLAIN_KEY)//) {
+        if ($$yaml =~ s/\A($RE_PLAIN_KEY)// and (length $1) > 0) {
             push @$next, [ 'SCALAR' => $1 ];
             if ($$yaml =~ s/\A(?:($RE_WS+#.*)|($RE_WS*))([\r\n]|\z)//) {
                 if (defined $1) {

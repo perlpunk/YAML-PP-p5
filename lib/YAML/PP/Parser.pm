@@ -64,6 +64,8 @@ sub offset { return $_[0]->{offset} }
 sub set_offset { $_[0]->{offset} = $_[1] }
 sub events { return $_[0]->{events} }
 sub set_events { $_[0]->{events} = $_[1] }
+sub new_node { return $_[0]->{new_node} }
+sub set_new_node { $_[0]->{new_node} = $_[1] }
 sub tagmap { return $_[0]->{tagmap} }
 sub set_tagmap { $_[0]->{tagmap} = $_[1] }
 sub tokens { return $_[0]->{tokens} }
@@ -97,17 +99,12 @@ our $RE_NUMBER ="'(?:$RE_INT|$RE_OCT|$RE_HEX|$RE_FLOAT)";
 my $plain_start_word_re = '[^*!&\s#][^\r\n\s]*';
 my $plain_word_re = '[^#\r\n\s][^\r\n\s]*';
 
-
-
-sub parse {
-    my ($self, $yaml) = @_;
-    if (defined $yaml) {
-        $self->{input} = $yaml;
-    }
-    $self->set_yaml(\$self->reader->read);
+sub init {
+    my ($self) = @_;
     $self->set_level(-1);
     $self->set_offset([0]);
     $self->set_events([]);
+    $self->set_new_node(undef);
     $self->set_tagmap({
         '!!' => "tag:yaml.org,2002:",
     });
@@ -115,22 +112,19 @@ sub parse {
     $self->set_rules([]);
     $self->set_stack({});
     $self->tokenizer->init;
+}
+
+sub parse {
+    my ($self, $yaml) = @_;
+    if (defined $yaml) {
+        $self->{input} = $yaml;
+    }
+    $self->set_yaml(\$self->reader->read);
+    $self->init;
     $self->parse_stream;
 
     DEBUG and $self->highlight_yaml;
     TRACE and $self->debug_tokens;
-    if (DEBUG and $ENV{YAML_PP_STATS}) {
-        my %match = %YAML::PP::Tokenizer::MATCH_RULE;
-        my %check = %YAML::PP::Tokenizer::CHECK_RULE;
-        warn __PACKAGE__.':'.__LINE__.": ----- REGEXES\n";
-        for my $key (sort { $match{ $b } <=> $match{ $a } } keys %match) {
-            warn __PACKAGE__.':'.__LINE__.": $key: $match{ $key };\n";
-        }
-        warn __PACKAGE__.':'.__LINE__.": ----- RULE CHECKS\n";
-        for my $key (sort { $check{ $b } <=> $check{ $a } } keys %check) {
-            warn __PACKAGE__.':'.__LINE__.": $key: $check{ $key };\n";
-        }
-    }
 }
 
 use constant NODE_TYPE => 0;
@@ -147,18 +141,12 @@ sub parse_stream {
     while (1) {
         my $next_tokens = $self->tokenizer->fetch_next_tokens(0, $self->yaml);
         last unless @$next_tokens;
-        my $head = $self->parse_document_head();
-        my ($start, $start_line) = $self->parse_document_start;
-        if (($head or $exp_start) and not $start) {
-            die "Expected ---";
-        }
+        my ($start, $start_line) = $self->parse_document_head($exp_start);
+
         $exp_start = 0;
         while( $self->parse_empty($next_tokens) ) {
         }
-        unless (@$next_tokens) {
-            my $yaml = $self->yaml;
-            last unless length $$yaml;
-        }
+        last unless @$next_tokens;
 
         if ($start) {
             $self->begin('DOC', -1, { content => "---" });
@@ -170,7 +158,8 @@ sub parse_stream {
         my $new_type = $start_line ? 'FULLSTARTNODE' : 'FULLNODE';
         my $new_node = [ $new_type => 0 ];
         $self->set_rules([ $GRAMMAR->{ FULLNODE } ]);
-        my ($end) = $self->parse_document($new_node);
+        $self->set_new_node($new_node);
+        my ($end) = $self->parse_document();
         if ($end) {
             $self->end('DOC', { content => "..." });
         }
@@ -211,148 +200,127 @@ sub parse_document_start {
 
 sub parse_document_head {
     TRACE and warn "=== parse_document_head()\n";
-    my ($self) = @_;
+    my ($self, $exp_start) = @_;
     my $tokens = $self->tokens;
-    my $head;
     while (1) {
         my $next_tokens = $self->tokenizer->next_tokens;
+        last unless @$next_tokens;
         if ($self->parse_empty($next_tokens)) {
             next;
         }
         if ($next_tokens->[0]->[0] eq 'YAML_DIRECTIVE') {
-            push @$tokens, shift @$next_tokens;
-            $head = 1;
-            push @$tokens, shift @$next_tokens;
-            $self->tokenizer->fetch_next_tokens(0, $self->yaml);
-            next;
         }
         elsif ($next_tokens->[0]->[0] eq 'TAG_DIRECTIVE') {
-            $head = 1;
             my ($name, $tag_alias, $tag_url) = split ' ', $next_tokens->[0]->[1];
-            push @$tokens, shift @$next_tokens;
             $self->tagmap->{ $tag_alias } = $tag_url;
-            push @$tokens, shift @$next_tokens;
-            $self->tokenizer->fetch_next_tokens(0, $self->yaml);
-            next;
         }
         elsif ($next_tokens->[0]->[0] eq 'RESERVED_DIRECTIVE') {
-            push @$tokens, shift @$next_tokens;
-            $head = 1;
-            push @$tokens, shift @$next_tokens;
-            $self->tokenizer->fetch_next_tokens(0, $self->yaml);
-            next;
         }
-        last;
+        else {
+            last;
+        }
+        if ($exp_start) {
+            die "Expected ---";
+        }
+        $exp_start = 1;
+        push @$tokens, shift @$next_tokens;
+        push @$tokens, shift @$next_tokens;
+        $self->tokenizer->fetch_next_tokens(0, $self->yaml);
     }
-    return $head;
+    my ($start, $start_line) = $self->parse_document_start;
+    if ($exp_start and not $start) {
+        die "Expected ---";
+    }
+    return ($start, $start_line);
 }
 
+my %is_new_line = (
+    EOL => 1,
+    COMMENT_EOL => 1,
+    LB => 1,
+    EMPTY => 1,
+);
 
 sub parse_document {
     TRACE and warn "=== parse_document()\n";
-    my ($self, $new_node) = @_;
+    my ($self) = @_;
 
     my $next_full_line = 1;
-    my $tokens = $self->tokens;
-    my $next_tokens = $self->tokenizer->next_tokens;
     while (1) {
 
         TRACE and $self->info("----------------------- LOOP");
-        TRACE and $self->info("EXPECTED: (@$new_node)") if $new_node;
+#        TRACE and $self->info("EXPECTED: (@$new_node)") if $new_node;
         TRACE and $self->debug_yaml;
         TRACE and $self->debug_events;
 
-        my $exp = $self->events->[-1];
         my $offset = 0;
         if ($next_full_line) {
-            my $yaml = $self->yaml;
-            my $next_tokens = $self->tokenizer->fetch_next_tokens(0, $yaml);
-            TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
-            if (@$next_tokens and $next_tokens->[0]->[0] eq 'INDENT') {
-                $offset = length $next_tokens->[0]->[1];
-                push @$tokens, $next_tokens->[0];
-                shift @$next_tokens;
-            }
-            if (@$next_tokens == 1 and $next_tokens->[0]->[0] =~ m/EOL|EMPTY/) {
-                push @$tokens, shift @$next_tokens;
-                TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
-                if ($tokens->[-1]->[1] eq '') {
-                }
-                else {
-                    next;
-                }
-                TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
-            }
 
             my $end;
             my $explicit_end;
-            ($new_node, $end, $explicit_end) = $self->check_indent(
-                next_tokens => $next_tokens,
-                space => $offset,
-                expected => $exp,
-                new_node => $new_node,
-            );
-            $exp = $self->events->[-1];
-            if ($explicit_end) {
-                return 1;
-            }
+            ($offset, $end, $explicit_end) = $self->check_indent();
             if ($end) {
-                return;
+                return $explicit_end;
             }
 
         }
         else {
-            TRACE and $self->info("ON SAME LINE: INDENT");
-            $offset = $new_node->[NODE_OFFSET];
+            $offset = $self->new_node->[NODE_OFFSET];
         }
-        $next_full_line = 1;
 
-        TRACE and $self->info("Expecting $exp");
-
-        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$new_node], ['new_node']);
-
-        my ($res) = $self->parse_next(
-            expected => $exp,
-            node_type => ($new_node ? $new_node->[NODE_TYPE] : undef),
-        );
-        next unless $res;
-
-        ($new_node) = $self->process_result(
-            result => $res,
+        $self->next_result(
             offset => $offset,
-            expected => $exp,
         );
 
-        $next_full_line = $res->{eol} ? 1 : 0;
+        $next_full_line = $is_new_line{ $self->tokens->[-1]->[0] };
     }
 
     TRACE and $self->debug_events;
     return 0;
 }
 
+sub next_result {
+    my ($self, %args) = @_;
+    my $offset = $args{offset};
+
+    my ($res) = $self->parse_next();
+    return unless $res;
+
+    $self->process_result(
+        result => $res,
+        offset => $offset,
+    );
+    return;
+}
+
 sub check_indent {
     my ($self, %args) = @_;
-    my $exp = $args{expected};
-    my $new_node = $args{new_node};
-    my $space = $args{space};
-    my $next_tokens = $args{next_tokens};
+    my $next_tokens = $self->tokenizer->next_tokens;
+    my $new_node = $self->new_node;
+    my $exp = $self->events->[-1];
     my $end = 0;
     my $explicit_end = 0;
     my $indent = 0;
     my $tokens = $self->tokens;
 
+    $self->tokenizer->fetch_next_tokens(0, $self->yaml);
+    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
+    my $space = 0;
+    my $offset = $space;
+    while ($self->parse_empty($next_tokens)) {
+    }
     if (@$next_tokens) {
-        if ($next_tokens->[0]->[1] eq '') {
-            $end = 1;
+        if ($next_tokens->[0]->[0] eq 'INDENT') {
+            $offset = length $next_tokens->[0]->[1];
+            $space = $offset;
+            push @$tokens, shift @$next_tokens;
         }
     }
-    else {
-        my $yaml = $self->yaml;
-        my $eoyaml = not length $$yaml;
-        if ($eoyaml) {
-            $end = 1;
-        }
+
+    unless (@$next_tokens) {
+        $end = 1;
     }
+
     if ($end) {
     }
     else {
@@ -415,10 +383,10 @@ sub check_indent {
             if ($remove == 0 and $seq_start and $exp eq 'MAP') {
             }
             else {
-                my $properties = $self->stack->{node_properties} ||= {};
+                my $properties = delete $self->stack->{node_properties} || {};
                 undef $new_node;
+                $self->set_new_node(undef);
                 $self->event_value({ style => ':', %$properties });
-                %$properties = ();
             }
         }
 
@@ -450,14 +418,14 @@ sub check_indent {
         }
     }
 
-    return ($new_node, $end, $explicit_end);
+    return ($offset, $end, $explicit_end);
 }
 
 sub process_result {
     my ($self, %args) = @_;
     my $res = $args{result};
     my $offset = $args{offset};
-    my $exp = $args{expected};
+    my $exp = $self->events->[-1];
 
     my $stack = $self->stack;
     my $props = $stack->{node_properties} ||= {};
@@ -494,6 +462,7 @@ sub process_result {
     TRACE and $self->highlight_yaml;
 
     if ($got eq 'SCALAR') {
+        $self->set_new_node(undef);
         return;
     }
 
@@ -520,11 +489,12 @@ sub process_result {
     my $new_offset = $offset + 1 + ($res->{ws} || 0);
     my $new_type = $res->{new_type};
     my $new_node = [ $new_type => $new_offset ];
+    $self->set_new_node($new_node);
 #    if ($new_type eq 'MAPVALUE') {
 #        $new_type = 'FULLMAPVALUE';
 #    }
     $self->set_rules([ $GRAMMAR->{ FULLNODE } ]);
-    return $new_node;
+    return;
 }
 
 my %TYPE2RULE = (
@@ -572,14 +542,9 @@ my %TYPE2RULE = (
 sub parse_next {
     TRACE and warn "=== parse_next()\n";
     my ($self, %args) = @_;
-    my $node_type = $args{node_type};
-    my $exp = delete $args{expected};
-    my $res;
+    my $node_type = ($self->new_node ? $self->new_node->[NODE_TYPE] : undef);
+    my $exp = $self->events->[-1];
     my $rules = $self->rules;
-    unless ($rules) {
-        $rules = [];
-        $self->set_rules($rules);
-    }
 
     my $expected_type = $exp;
     my $no_alias = 0;
@@ -626,7 +591,7 @@ sub parse_next {
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$expected_type], ['expected_type']);
     @$rules = $TYPE2RULE{ $expected_type };
 
-    $res = {};
+    my $res = {};
     my ($success, $new_type) = $self->tokenizer->parse_tokens($self,
         callback => sub {
             my ($self, $sub) = @_;
@@ -741,20 +706,18 @@ sub parse_plain_multi {
         unless ($$yaml =~ s/\A($indent_re)//) {
             last;
         }
-        push @$tokens, ['INDENT', $1];
 
         if ($indent == 0) {
             last if $$yaml =~ $RE_DOC_END;
             last if $$yaml =~ $RE_DOC_START;
         }
+        push @$tokens, ['INDENT', $1];
         if ($$yaml =~ s/\A($RE_WS+)//) {
-            push @$tokens, ['INDENT', $1];
-            if ($$yaml =~ s/\A#.*//) {
-                last;
-            }
+            push @$tokens, ['WS', $1];
         }
-        elsif ($$yaml =~ s/\A(#.*)//) {
+        if ($$yaml =~ s/\A(#.*)($RE_LB|\z)//) {
             push @$tokens, ['COMMENT', $1];
+            push @$tokens, ['LB', $2];
             last;
         }
 
@@ -780,8 +743,9 @@ sub parse_plain_multi {
                 $string .= $value;
             }
             push @multi, $string;
-            if ($$yaml =~ s/\A(#.*)//) {
+            if ($$yaml =~ s/\A(#.*)($RE_LB|\z)//) {
                 push @$tokens, ['COMMENT', $1];
+                push @$tokens, ['LB', $2];
                 last;
             }
             unless ($$yaml =~ s/\A($RE_LB|\z)//) {
@@ -805,8 +769,7 @@ sub parse_plain_multi {
 sub parse_empty {
     TRACE and warn "=== parse_empty()\n";
     my ($self, $next_tokens) = @_;
-    #warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
-    if (@$next_tokens == 1 and $next_tokens->[0]->[0] eq 'EMPTY') {
+    if (@$next_tokens == 1 and ($next_tokens->[0]->[0] eq 'EMPTY' or $next_tokens->[0]->[0] eq 'EOL')) {
         push @{ $self->tokens }, shift @$next_tokens;
         $self->tokenizer->fetch_next_tokens(0, $self->yaml);
         return 1;
