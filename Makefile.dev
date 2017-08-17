@@ -7,6 +7,9 @@ test-all:
 	TEST_ALL=1 prove -lrv t
 
 test:
+	prove -lr t
+
+testv:
 	prove -lrv t
 
 # YAML_PP_TRACE=1 YAML_TEST_DIR=M9B4 prove -lrv t

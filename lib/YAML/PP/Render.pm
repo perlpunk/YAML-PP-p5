@@ -87,7 +87,7 @@ sub render_quoted {
             else {
                 $line =~ s/''/'/g;
             }
-            if ($line =~ s/\\$//) {
+            if (not $last and $line =~ s/\\$//) {
                 $addspace = 0;
             }
             $line =~ s/^\\ / /;
@@ -183,6 +183,7 @@ sub render_multi_val {
     my $string = '';
     my $start = 1;
     for my $line (@$multi) {
+        #$line =~ s/\\/\\\\/g;
         if (not $start) {
             if ($line eq '') {
                 $string .= "\n";
