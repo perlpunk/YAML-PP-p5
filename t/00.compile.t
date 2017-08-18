@@ -18,7 +18,7 @@ my @module_files = (
     'YAML/PP/Parser.pm',
     'YAML/PP/Reader.pm',
     'YAML/PP/Render.pm',
-    'YAML/PP/Tokenizer.pm'
+    'YAML/PP/Lexer.pm'
 );
 
 my @scripts = (

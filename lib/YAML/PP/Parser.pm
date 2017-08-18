@@ -9,7 +9,7 @@ use constant TRACE => $ENV{YAML_PP_TRACE};
 use constant DEBUG => $ENV{YAML_PP_DEBUG} || $ENV{YAML_PP_TRACE};
 
 use YAML::PP::Render;
-use YAML::PP::Tokenizer;
+use YAML::PP::Lexer;
 use YAML::PP::Grammar qw/ $GRAMMAR /;
 
 
@@ -18,7 +18,7 @@ sub new {
     my $reader = delete $args{reader};
     my $self = bless {
         reader => $reader,
-        tokenizer => YAML::PP::Tokenizer->new,
+        lexer => YAML::PP::Lexer->new,
     }, $class;
     my $receiver = delete $args{receiver};
     if ($receiver) {
@@ -53,7 +53,7 @@ sub reader {
     require YAML::PP::Reader;
     return YAML::PP::Reader->new(input => $input);
 }
-sub tokenizer { return $_[0]->{tokenizer} }
+sub lexer { return $_[0]->{lexer} }
 sub callback { return $_[0]->{callback} }
 sub set_callback { $_[0]->{callback} = $_[1] }
 sub yaml { return $_[0]->{yaml} }
@@ -111,7 +111,7 @@ sub init {
     $self->set_tokens([]);
     $self->set_rules([]);
     $self->set_stack({});
-    $self->tokenizer->init;
+    $self->lexer->init;
 }
 
 sub parse {
@@ -139,7 +139,7 @@ sub parse_stream {
 
     my $exp_start = 0;
     while (1) {
-        my $next_tokens = $self->tokenizer->fetch_next_tokens(0, $self->yaml);
+        my $next_tokens = $self->lexer->fetch_next_tokens(0, $self->yaml);
         last unless @$next_tokens;
         my ($start, $start_line) = $self->parse_document_head($exp_start);
 
@@ -178,13 +178,13 @@ sub parse_document_start {
     my ($self) = @_;
 
     my ($start, $start_line) = (0, 0);
-    my $next_tokens = $self->tokenizer->next_tokens;
+    my $next_tokens = $self->lexer->next_tokens;
     if (@$next_tokens and $next_tokens->[0]->[0] eq 'DOC_START') {
         push @{ $self->tokens }, shift @$next_tokens;
         $start = 1;
         if ($next_tokens->[0]->[0] eq 'EOL') {
             push @{ $self->tokens }, shift @$next_tokens;
-            $self->tokenizer->fetch_next_tokens(0, $self->yaml);
+            $self->lexer->fetch_next_tokens(0, $self->yaml);
         }
         elsif ($next_tokens->[0]->[0] eq 'WS') {
             push @{ $self->tokens }, shift @$next_tokens;
@@ -203,7 +203,7 @@ sub parse_document_head {
     my ($self, $exp_start) = @_;
     my $tokens = $self->tokens;
     while (1) {
-        my $next_tokens = $self->tokenizer->next_tokens;
+        my $next_tokens = $self->lexer->next_tokens;
         last unless @$next_tokens;
         if ($self->parse_empty($next_tokens)) {
             next;
@@ -225,7 +225,7 @@ sub parse_document_head {
         $exp_start = 1;
         push @$tokens, shift @$next_tokens;
         push @$tokens, shift @$next_tokens;
-        $self->tokenizer->fetch_next_tokens(0, $self->yaml);
+        $self->lexer->fetch_next_tokens(0, $self->yaml);
     }
     my ($start, $start_line) = $self->parse_document_start;
     if ($exp_start and not $start) {
@@ -295,7 +295,7 @@ sub next_result {
 
 sub check_indent {
     my ($self, %args) = @_;
-    my $next_tokens = $self->tokenizer->next_tokens;
+    my $next_tokens = $self->lexer->next_tokens;
     my $new_node = $self->new_node;
     my $exp = $self->events->[-1];
     my $end = 0;
@@ -303,7 +303,7 @@ sub check_indent {
     my $indent = 0;
     my $tokens = $self->tokens;
 
-    $self->tokenizer->fetch_next_tokens(0, $self->yaml);
+    $self->lexer->fetch_next_tokens(0, $self->yaml);
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
     my $space = 0;
     my $offset = $space;
@@ -552,7 +552,7 @@ sub parse_next {
         unless ($node_type) {
             @$rules = $GRAMMAR->{FULL_MAPKEY};
         }
-        my ($success, $new_type) = $self->tokenizer->parse_tokens($self,
+        my ($success, $new_type) = $self->lexer->parse_tokens($self,
             callback => sub {
                 my ($self, $sub) = @_;
                 $self->$sub(undef);
@@ -592,7 +592,7 @@ sub parse_next {
     @$rules = $TYPE2RULE{ $expected_type };
 
     my $res = {};
-    my ($success, $new_type) = $self->tokenizer->parse_tokens($self,
+    my ($success, $new_type) = $self->lexer->parse_tokens($self,
         callback => sub {
             my ($self, $sub) = @_;
             $self->$sub($res);
@@ -771,7 +771,7 @@ sub parse_empty {
     my ($self, $next_tokens) = @_;
     if (@$next_tokens == 1 and ($next_tokens->[0]->[0] eq 'EMPTY' or $next_tokens->[0]->[0] eq 'EOL')) {
         push @{ $self->tokens }, shift @$next_tokens;
-        $self->tokenizer->fetch_next_tokens(0, $self->yaml);
+        $self->lexer->fetch_next_tokens(0, $self->yaml);
         return 1;
     }
     return 0;

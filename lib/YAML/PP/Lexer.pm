@@ -1,6 +1,6 @@
 use strict;
 use warnings;
-package YAML::PP::Tokenizer;
+package YAML::PP::Lexer;
 
 our $VERSION = '0.000'; # VERSION
 
