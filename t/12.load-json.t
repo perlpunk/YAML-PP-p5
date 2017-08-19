@@ -79,7 +79,7 @@ if (my $dir = $ENV{YAML_TEST_DIR}) {
 }
 
 SKIP: {
-    skip "JSON::XS not nstalled", scalar(@dirs) unless $json_xs;
+    skip "JSON::XS not installed", scalar(@dirs) unless $json_xs;
     my $coder = JSON::XS->new->ascii->pretty->allow_nonref->canonical;
 
 for my $item (@dirs) {
