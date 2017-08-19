@@ -29,16 +29,14 @@ my @skip = qw/
     C2DT C4HZ CT4Q D88J DBG4 DFF7 DHP8
     EHF6 FRK4 FUP4
     KZN9 L9U5 LP6E LQZ7
-    M5DY M7A3 MXS3 N782
+    M5DY MXS3 N782
     Q88A Q9WF QF4Y
-    R4YG SBG9 UDR7 UT92 WZ62 X38W YD5X ZF4X
+    SBG9 UDR7 UT92 WZ62 X38W YD5X ZF4X
 
     W4TN
 
     v018
 
-    8G76
-    98YD
 /;
 
 # dumper
@@ -120,14 +118,16 @@ sub test {
 #    warn __PACKAGE__.':'.__LINE__.": ================================ $name\n";
 #    @$test_events = grep { m/DOC|STR/ } @$test_events;
     my $ok = 0;
-    my $error = 0;
     my $loader = YAML::PP::Loader->new;
     my $dumper = YAML::PP::Dumper->new;
-    my @docs = $loader->load($yaml);
+    my @docs = eval { $loader->load($yaml) };
+    my $error = $@;
     my $out_yaml;
-    eval {
-        $out_yaml = $dumper->dump(@docs);
-    };
+    unless ($error) {
+        eval {
+            $out_yaml = $dumper->dump(@docs);
+        };
+    }
     if ($@) {
         diag "ERROR: $@";
         $results{ERROR}++;

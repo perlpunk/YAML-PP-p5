@@ -34,8 +34,6 @@ my @skip = qw/
 
     v018
 
-    8G76
-    98YD
 /;
 
 my $skipped = \@skip;
