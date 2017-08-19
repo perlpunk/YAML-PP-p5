@@ -167,6 +167,9 @@ sub end {
 sub scalar_event {
     my ($self, $event) = @_;
     my $value = $self->render_value($event);
+    if (defined (my $name = $event->{anchor})) {
+        $self->anchors->{ $name } = \$value;
+    }
     $self->event(value => $value, event => $event);
     DEBUG and warn YAML::PP::Parser->event_to_test_suite([value => $event]) ."\n";
 }

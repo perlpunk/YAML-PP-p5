@@ -13,9 +13,14 @@ foo: &sequence
     - b
     - c
 bar: *sequence
+copies:
+- &alias A
+- *alias
 EOM
 
 my $data = YAML::PP::Loader->new->load($yaml);
+cmp_ok($data->{copies}->[0],'eq', 'A', "Scalar anchor");
+cmp_ok($data->{copies}->[0],'eq', $data->{copies}->[1], "Scalar alias equals anchor");
 
 $data->{foo}->[-1] = "changed";
 
