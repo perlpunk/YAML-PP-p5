@@ -14,11 +14,11 @@ my @module_files = (
     'YAML/PP/Emitter.pm',
     'YAML/PP/Grammar.pm',
     'YAML/PP/Highlight.pm',
+    'YAML/PP/Lexer.pm',
     'YAML/PP/Loader.pm',
     'YAML/PP/Parser.pm',
     'YAML/PP/Reader.pm',
-    'YAML/PP/Render.pm',
-    'YAML/PP/Lexer.pm'
+    'YAML/PP/Render.pm'
 );
 
 my @scripts = (
