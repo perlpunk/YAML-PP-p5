@@ -25,6 +25,7 @@ sub get_tests {
     my $test_suite_dir = $args{test_suite_dir};
     my $dir = $args{dir};
     my $valid = $args{valid};
+    my $json = $args{json};
 
     my @dirs;
     if (-d $test_suite_dir) {
@@ -37,13 +38,27 @@ sub get_tests {
             ? not $id_tags{ $_ }->{error}
             : $id_tags{ $_ }->{error}
         } @ids;
+        if ($json) {
+            @ids = grep {
+                -f "$test_suite_dir/$_/in.json"
+            } @ids;
+        }
         push @dirs, map { "$test_suite_dir/$_" } @ids;
         closedir $dh;
 
     }
+    else {
+        Test::More::diag("\n############################");
+        Test::More::diag("No yaml-test-suite directory");
+        Test::More::diag("Using only local tests");
+        Test::More::diag("############################");
+    }
 
     opendir my $dh, $dir or die $!;
-    push @dirs, map { "$dir/$_" } grep { m/^[iv][A-Z0-9]{3}\z/ } readdir $dh;
+    push @dirs, map { "$dir/$_" } grep {
+        m/^[iv][A-Z0-9]{3}\z/
+        and -f "$dir/$_/in.json"
+    } readdir $dh;
     closedir $dh;
 
     return @dirs;

@@ -53,6 +53,11 @@ my %skip;
 my %todo;
 @todo{ @todo } = ();
 
+unless (@dirs) {
+    ok(1);
+    done_testing;
+    exit;
+}
 #plan tests => scalar @dirs;
 
 my %results;
