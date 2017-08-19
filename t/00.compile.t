@@ -6,10 +6,11 @@ use warnings;
 
 use Test::More;
 
-plan tests => 14 + ($ENV{AUTHOR_TESTING} ? 1 : 0);
+plan tests => 15 + ($ENV{AUTHOR_TESTING} ? 1 : 0);
 
 my @module_files = (
     'YAML/PP.pm',
+    'YAML/PP/Contructor.pm',
     'YAML/PP/Dumper.pm',
     'YAML/PP/Emitter.pm',
     'YAML/PP/Grammar.pm',
