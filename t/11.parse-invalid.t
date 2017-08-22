@@ -27,9 +27,10 @@ my @skip = qw/
     CML9 C2SP
     N782
     RXY3
+    55WF
     5TRB
 
-    i034 i035
+    i035
 
     i031
 /;

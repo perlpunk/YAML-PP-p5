@@ -57,7 +57,7 @@ sub get_tests {
     opendir my $dh, $dir or die $!;
     push @dirs, map { "$dir/$_" } grep {
         m/^[iv][A-Z0-9]{3}\z/
-        and -f "$dir/$_/in.json"
+        and (not $json or -f "$dir/$_/in.json")
     } readdir $dh;
     closedir $dh;
 
