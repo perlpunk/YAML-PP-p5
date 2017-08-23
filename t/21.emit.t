@@ -33,7 +33,6 @@ my @skip = qw/
     Q88A Q9WF QF4Y
     R4YG SBG9 UDR7 UT92 WZ62 X38W YD5X ZF4X
 
-    v018
 
 /;
 
@@ -60,7 +59,6 @@ push @skip, qw/
 7T8X
 
 P2AD
-v016
 /;
 # test
 push @skip, qw/
