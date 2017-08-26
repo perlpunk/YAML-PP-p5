@@ -11,6 +11,7 @@ use constant DEBUG => $ENV{YAML_PP_DEBUG} || $ENV{YAML_PP_TRACE};
 use YAML::PP::Render;
 use YAML::PP::Lexer;
 use YAML::PP::Grammar qw/ $GRAMMAR /;
+use Carp qw/ croak /;
 
 
 sub new {
@@ -192,7 +193,7 @@ sub parse_document_start {
         }
         else {
             $self->debug_yaml;
-            die "Unexpected content after ---";
+            $self->exception("Unexpected content after ---");
         }
     }
     return ($start, $start_line);
@@ -220,7 +221,7 @@ sub parse_document_head {
             last;
         }
         if ($exp_start) {
-            die "Expected ---";
+            $self->exception("Expected ---");
         }
         $exp_start = 1;
         push @$tokens, shift @$next_tokens;
@@ -229,7 +230,7 @@ sub parse_document_head {
     }
     my ($start, $start_line) = $self->parse_document_start;
     if ($exp_start and not $start) {
-        die "Expected ---";
+        $self->exception("Expected ---");
     }
     return ($start, $start_line);
 }
@@ -344,7 +345,7 @@ sub check_indent {
                 push @$tokens, shift @$next_tokens;
             }
             else {
-                die "Unexpected";
+                $self->exception("Unexpected");
             }
             $end = 1;
             $explicit_end = 1;
@@ -354,7 +355,7 @@ sub check_indent {
 
     if ($space > $indent) {
         unless ($new_node) {
-            die "Bad indendation in $exp";
+            $self->exception("Bad indendation in $exp");
         }
     }
     else {
@@ -406,13 +407,13 @@ sub check_indent {
                         $exp = $self->events->[-1];
                     }
                     else {
-                        die "Expected sequence item";
+                        $self->exception("Expected sequence item");
                     }
                 }
 
 
                 if ($self->offset->[-1] != $space) {
-                    die "Expected $exp";
+                    $self->exception("Expected $exp");
                 }
             }
         }
@@ -449,7 +450,7 @@ sub process_result {
         }
         elsif ($type eq 'alias') {
             if (keys %$props or keys %$properties) {
-                die "Parse error: Alias not allowed in this context";
+                $self->exception("Parse error: Alias not allowed in this context");
             }
             $self->res_to_event({ %$res });
         }
@@ -483,7 +484,7 @@ sub process_result {
         $self->events->[-1] = 'MAP';
     }
     else {
-        die "Unexpected res $got";
+        $self->exception("Unexpected res $got");
     }
 
     my $new_offset = $offset + 1 + ($res->{ws} || 0);
@@ -505,7 +506,6 @@ sub parse_next {
     my $rules = $self->rules;
 
     my $expected_type = $exp;
-    my $no_alias = 0;
     if ($node_type or $exp eq 'MAP') {
         unless ($node_type) {
             @$rules = $GRAMMAR->{FULL_MAPKEY};
@@ -517,7 +517,7 @@ sub parse_next {
             },
         );
         if (not $new_type and not $success) {
-            die "Expected " . ($node_type ? "new node ($node_type)" : $exp);
+            $self->exception( "Expected " . ($node_type ? "new node ($node_type)" : $exp));
         }
         my $return = 0;
         if ($new_type and $node_type) {
@@ -541,7 +541,6 @@ sub parse_next {
             die "This should never happen";
         }
         # we got an anchor or tag
-        $no_alias = $success ? 1 : 0;
 
         $expected_type = $new_type;
     }
@@ -558,7 +557,7 @@ sub parse_next {
     );
 
     unless ($success) {
-        die "Expected $expected_type";
+        $self->exception("Expected $expected_type");
     }
 
     if (not $new_type) {
@@ -570,10 +569,6 @@ sub parse_next {
     $new_type =~ s/^TYPE_//;
     my $stack = $self->stack;
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$stack], ['stack']);
-
-    if (defined $res->{alias} and $no_alias) {
-        die "Parse error: Alias not allowed in this context";
-    }
 
     $res->{new_type}= $new_type;
     return ($res);
@@ -687,7 +682,7 @@ sub parse_plain_multi {
             my $string = $1;
             push @$tokens, ['PLAIN', $string];
             if ($string =~ m/:$/) {
-                die "Unexpected content: '$string'";
+                $self->exception("Unexpected content: '$string'");
             }
             while ($$yaml =~ s/\A($RE_WS+)//) {
                 push @$tokens, ['WS', $1];
@@ -696,7 +691,7 @@ sub parse_plain_multi {
                 push @$tokens, ['PLAIN', $1];
                 my $value = $sp . $1;
                 if ($value =~ m/:$/) {
-                    die "Unexpected content: '$value'";
+                    $self->exception("Unexpected content: '$value'");
                 }
                 $string .= $value;
             }
@@ -708,13 +703,13 @@ sub parse_plain_multi {
             }
             unless ($$yaml =~ s/\A($RE_LB|\z)//) {
                 warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
-                die "Unexpected content";
+                $self->exception("Unexpected content");
             }
             push @$tokens, ['LB', $1];
         }
         else {
             TRACE and $self->debug_yaml;
-            die "Unexpected content";
+            $self->exception("Unexpected content");
         }
     }
     return {
@@ -762,7 +757,7 @@ sub parse_block_scalar {
         push @$tokens, ['LB', $4];
     }
     else {
-        die "Invalid block scalar";
+        $self->exception("Invalid block scalar");
     }
     if (defined $exp_indent) {
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$exp_indent], ['exp_indent']);
@@ -1023,6 +1018,10 @@ sub debug_offset {
 sub debug_yaml {
     my ($self) = @_;
     my $yaml = $self->yaml;
+    my $next_tokens = $self->lexer->next_tokens;
+    if (@$next_tokens) {
+        $self->debug_tokens($next_tokens);
+    }
     if (length $$yaml) {
         my $output = $$yaml;
         $output =~ s/( +)$/'·' x length $1/gem;
@@ -1099,8 +1098,8 @@ sub debug_rules {
 }
 
 sub debug_tokens {
-    my ($self) = @_;
-    my $tokens = $self->tokens;
+    my ($self, $tokens) = @_;
+    $tokens ||= $self->tokens;
     require Term::ANSIColor;
     for my $token (@$tokens) {
         my $type = Term::ANSIColor::colored(["green"],
@@ -1123,6 +1122,12 @@ sub highlight_yaml {
     my $tokens = $self->tokens;
     my $highlighted = YAML::PP::Highlight->ansicolored($tokens);
     warn $highlighted;
+}
+
+sub exception {
+    my ($self, $msg) = @_;
+#    $self->debug_yaml;
+    croak $msg;
 }
 
 sub cb_tag {
@@ -1417,11 +1422,11 @@ sub cb_block_scalar {
 }
 
 sub cb_flow_map {
-    die "Not Implemented: Flow Style";
+    $_[0]->exception("Not Implemented: Flow Style");
 }
 
 sub cb_flow_seq {
-    die "Not Implemented: Flow Style";
+    $_[0]->exception("Not Implemented: Flow Style");
 }
 
 
