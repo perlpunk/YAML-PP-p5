@@ -497,48 +497,6 @@ sub process_result {
     return;
 }
 
-my %TYPE2RULE = (
-    MAP => {
-        %{ $GRAMMAR->{RULE_MAPKEY_ALIAS} },
-        %{ $GRAMMAR->{RULE_MAPKEY} },
-    },
-    MAPSTART => {
-        %{ $GRAMMAR->{RULE_MAPSTART} },
-    },
-    SEQ => { %{ $GRAMMAR->{RULE_SEQITEM} } },
-    MAPKEY => {
-        %{ $GRAMMAR->{RULE_MAPKEY_ALIAS} },
-        %{ $GRAMMAR->{RULE_MAPKEY} },
-    },
-    COMPLEX => {
-        %{ $GRAMMAR->{RULE_COMPLEXVALUE} },
-#        %{ $GRAMMAR->{RULE_MAPKEY_ALIAS} },
-#        %{ $GRAMMAR->{RULE_MAPKEY} },
-    },
-    STARTNODE => {
-        %{ $GRAMMAR->{RULE_SINGLEQUOTED_KEY_OR_NODE} },
-        %{ $GRAMMAR->{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
-        %{ $GRAMMAR->{RULE_BLOCK_SCALAR} },
-        %{ $GRAMMAR->{RULE_PLAIN} },
-    },
-    MAPVALUE => {
-        %{ $GRAMMAR->{RULE_ALIAS_KEY_OR_NODE} },
-        %{ $GRAMMAR->{RULE_SINGLEQUOTED_KEY_OR_NODE} },
-        %{ $GRAMMAR->{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
-        %{ $GRAMMAR->{RULE_BLOCK_SCALAR} },
-        %{ $GRAMMAR->{RULE_PLAIN} },
-    },
-    NODE => {
-        %{ $GRAMMAR->{RULE_SEQSTART} },
-        %{ $GRAMMAR->{RULE_COMPLEX} },
-        %{ $GRAMMAR->{RULE_SINGLEQUOTED_KEY_OR_NODE} },
-        %{ $GRAMMAR->{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
-        %{ $GRAMMAR->{RULE_BLOCK_SCALAR} },
-        %{ $GRAMMAR->{RULE_ALIAS_KEY_OR_NODE} },
-        %{ $GRAMMAR->{RULE_PLAIN_KEY_OR_NODE} },
-    },
-);
-
 sub parse_next {
     TRACE and warn "=== parse_next()\n";
     my ($self, %args) = @_;
@@ -589,7 +547,7 @@ sub parse_next {
     }
 
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$expected_type], ['expected_type']);
-    @$rules = $TYPE2RULE{ $expected_type };
+    @$rules = $GRAMMAR->{ "NODETYPE_$expected_type" };
 
     my $res = {};
     my ($success, $new_type) = $self->lexer->parse_tokens($self,

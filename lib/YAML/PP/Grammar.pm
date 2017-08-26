@@ -37,7 +37,6 @@ our $GRAMMAR = {
                 WS => ['cb_ws', [ \'TYPE_FULLNODE' ]],
             }],
             DEFAULT => [0, [
-                \'RULE_MAPKEY_ALIAS',
                 \'RULE_MAPKEY',
             ]],
         }],
@@ -126,7 +125,11 @@ our $GRAMMAR = {
             EOL => [ 'cb_multiscalar_from_stack', [ \'NODE' ]],
         }],
     },
-    RULE_MAPKEY_ALIAS => {
+    RULE_MAPKEY => {
+        QUESTION => ['cb_question', {
+            EOL => ['cb_eol', [ \'TYPE_FULLNODE' ]],
+            WS => ['cb_ws', [ \'TYPE_FULLNODE' ]],
+        }],
         ALIAS => [ 'cb_mapkey_alias', {
             WS => [0, {
                 COLON => [0, {
@@ -134,12 +137,6 @@ our $GRAMMAR = {
                     WS => ['cb_ws', [ \'MAPVALUE' ]],
                 }],
             }],
-        }],
-    },
-    RULE_MAPKEY => {
-        QUESTION => ['cb_question', {
-            EOL => ['cb_eol', [ \'TYPE_FULLNODE' ]],
-            WS => ['cb_ws', [ \'TYPE_FULLNODE' ]],
         }],
         DOUBLEQUOTE => [0, {
             DOUBLEQUOTED_SINGLE => ['cb_doublequoted_key', {
@@ -380,5 +377,48 @@ our $GRAMMAR = {
 #        [\'STARTNODE'],
 #    ],
 };
+
+my %TYPE2RULE = (
+    NODETYPE_MAP => {
+        %{ $GRAMMAR->{RULE_MAPKEY} },
+    },
+    NODETYPE_MAPKEY => {
+        %{ $GRAMMAR->{RULE_MAPKEY} },
+    },
+    NODETYPE_MAPSTART => {
+        %{ $GRAMMAR->{RULE_MAPSTART} },
+    },
+    NODETYPE_SEQ => { %{ $GRAMMAR->{RULE_SEQITEM} } },
+    NODETYPE_COMPLEX => {
+        %{ $GRAMMAR->{RULE_COMPLEXVALUE} },
+    },
+    NODETYPE_STARTNODE => {
+        %{ $GRAMMAR->{RULE_SINGLEQUOTED_KEY_OR_NODE} },
+        %{ $GRAMMAR->{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
+        %{ $GRAMMAR->{RULE_BLOCK_SCALAR} },
+        %{ $GRAMMAR->{RULE_PLAIN} },
+    },
+    NODETYPE_MAPVALUE => {
+        %{ $GRAMMAR->{RULE_ALIAS_KEY_OR_NODE} },
+        %{ $GRAMMAR->{RULE_SINGLEQUOTED_KEY_OR_NODE} },
+        %{ $GRAMMAR->{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
+        %{ $GRAMMAR->{RULE_BLOCK_SCALAR} },
+        %{ $GRAMMAR->{RULE_PLAIN} },
+    },
+    NODETYPE_NODE => {
+        %{ $GRAMMAR->{RULE_SEQSTART} },
+        %{ $GRAMMAR->{RULE_COMPLEX} },
+        %{ $GRAMMAR->{RULE_SINGLEQUOTED_KEY_OR_NODE} },
+        %{ $GRAMMAR->{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
+        %{ $GRAMMAR->{RULE_BLOCK_SCALAR} },
+        %{ $GRAMMAR->{RULE_ALIAS_KEY_OR_NODE} },
+        %{ $GRAMMAR->{RULE_PLAIN_KEY_OR_NODE} },
+    },
+);
+
+%$GRAMMAR = (
+    %$GRAMMAR,
+    %TYPE2RULE,
+);
 
 1;
