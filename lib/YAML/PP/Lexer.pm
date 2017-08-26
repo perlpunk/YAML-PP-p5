@@ -401,16 +401,22 @@ sub _fetch_next_tokens {
             return;
         }
     }
-    elsif ($first eq '|') {
-        if ($$yaml =~ s/\A(\|)//) {
-            push @$next, [ 'LITERAL' => $1 ];
-            return;
-        }
-    }
-    elsif ($first eq '>') {
-        if ($$yaml =~ s/\A(>)//) {
-            push @$next, [ 'FOLDED' => $1 ];
-            return;
+    elsif ($first eq '|' or $first eq '>') {
+        my $token_name = { '|' => 'LITERAL', '>' => 'FOLDED' }->{ $first };
+        if ($$yaml =~ s/\A(\Q$first\E)//) {
+            push @$next, [ $token_name => $1 ];
+            if ($$yaml =~ s/\A([1-9]\d*)([+-]?)//) {
+                push @$next, ['BLOCK_SCALAR_INDENT', $1];
+                push @$next, ['BLOCK_SCALAR_CHOMP', $2] if $2;
+            }
+            elsif ($$yaml =~ s/\A([+-])([1-9]\d*)?//) {
+                push @$next, ['BLOCK_SCALAR_CHOMP', $1];
+                push @$next, ['BLOCK_SCALAR_INDENT', $2] if $2;
+            }
+            if ($$yaml =~ s/\A($RE_WS+#.*|$RE_WS*)([\r\n]|\z)//) {
+                push @$next, [ 'EOL' => $1 . $2 ];
+                return;
+            }
         }
     }
     elsif ($first eq '!') {

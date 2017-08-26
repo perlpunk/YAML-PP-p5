@@ -739,22 +739,26 @@ sub parse_block_scalar {
 
     my $block_type = $args{type};
     my $exp_indent;
-    my $chomp;
-    if ($$yaml =~ s/\A([1-9]\d*)?([+-]?)( +#.*)?($RE_LB|\z)//) {
-        $exp_indent = $1;
-        push @$tokens, ['BLOCK_SCALAR_INDENT', $1] if $1;
-        $chomp = $2;
-        push @$tokens, ['BLOCK_SCALAR_CHOMP', $2] if $2;
-        push @$tokens, ['COMMENT', $3] if $3;
-        push @$tokens, ['LB', $4];
+    my $chomp = '';
+    my $next_tokens = $self->lexer->next_tokens;
+    if ($next_tokens->[0]->[0] eq 'BLOCK_SCALAR_INDENT') {
+        $exp_indent = $next_tokens->[0]->[1];
+        shift @$next_tokens;
+        if ($next_tokens->[0]->[0] eq 'BLOCK_SCALAR_CHOMP') {
+            $chomp = $next_tokens->[0]->[1];
+            push @$tokens, shift @$next_tokens;
+        }
     }
-    elsif ($$yaml =~ s/\A([+-]?)([1-9]\d*)?( +#.*)?($RE_LB|\z)//) {
-        $chomp = $1;
-        push @$tokens, ['BLOCK_SCALAR_CHOMP', $1] if $1;
-        $exp_indent = $2;
-        push @$tokens, ['BLOCK_SCALAR_INDENT', $2] if $2;
-        push @$tokens, ['COMMENT', $3] if $3;
-        push @$tokens, ['LB', $4];
+    elsif ($next_tokens->[0]->[0] eq 'BLOCK_SCALAR_CHOMP') {
+        $chomp = $next_tokens->[0]->[1];
+        shift @$next_tokens;
+        if ($next_tokens->[0]->[0] eq 'BLOCK_SCALAR_INDENT') {
+            $exp_indent = $next_tokens->[0]->[1];
+            push @$tokens, shift @$next_tokens;
+        }
+    }
+    if ($next_tokens->[0]->[0] eq 'EOL') {
+        push @$tokens, shift @$next_tokens;
     }
     else {
         $self->exception("Invalid block scalar");
