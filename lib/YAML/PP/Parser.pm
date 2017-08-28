@@ -1160,14 +1160,7 @@ sub cb_ws {
     my ($self, $res, $props) = @_;
     if ($res) {
         $res->{ws} = length $self->tokens->[-1]->[1];
-        $res->{eol} = 0;
     }
-}
-
-sub cb_eol {
-    my ($self, $res) = @_;
-    $res->{eol} = 1;
-    return;
 }
 
 sub cb_mapkey {
@@ -1303,7 +1296,6 @@ sub cb_alias_from_stack {
     }];
     # TODO
     $res->{name} = 'SCALAR';
-    $res->{eol} = 1;
 }
 
 sub cb_stack_alias {
@@ -1362,7 +1354,6 @@ sub cb_stack_plain {
 sub cb_plain_single {
     my ($self, $res) = @_;
     $res->{name} = 'SCALAR';
-    $res->{eol} = 1;
     push @{ $self->stack->{events} }, [ value => undef, {
         style => ':',
         value => $self->stack->{res}->{value},
@@ -1391,7 +1382,6 @@ sub cb_scalar_from_stack {
     }];
     undef $self->stack->{res};
     $res->{name} = 'SCALAR';
-    $res->{eol} = 1;
 }
 
 sub cb_multiscalar_from_stack {
@@ -1399,7 +1389,6 @@ sub cb_multiscalar_from_stack {
     my $stack = $self->stack;
     my $multi = $self->parse_plain_multi;
     my $first = $stack->{res}->{value}->[0];
-    $res->{eol} = delete $multi->{eol};
     unshift @{ $multi->{value} }, $first;
     push @{ $stack->{events} }, [ value => undef, {
         %$multi,
@@ -1414,7 +1403,6 @@ sub cb_block_scalar {
     my $block = $self->parse_block_scalar(
         type => $type,
     );
-    $res->{eol} = delete $block->{eol};
     push @{ $self->stack->{events} }, [ value => undef, {
         %$block,
     }];
