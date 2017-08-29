@@ -14,3 +14,20 @@ testv:
 
 # YAML_PP_TRACE=1 YAML_TEST_DIR=M9B4 prove -lrv t
 
+gh-pages:
+	git clone git@github.com:perlpunk/YAML-PP-p5.git -b gh-pages gh-pages
+
+gh-pages-status: gh-pages
+	cd gh-pages && git status
+
+gh-pages-diff: gh-pages
+	cd gh-pages && git diff
+
+gh-pages-commit: gh-pages
+	cd gh-pages && git add . && git commit -m "Generate HTML"
+
+gh-pages-push: gh-pages
+	cd gh-pages && git push
+
+test-suite-html: gh-pages
+	perl etc/test-suite-html.pl > gh-pages/test-suite.html
