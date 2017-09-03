@@ -150,10 +150,10 @@ sub parse_stream {
         last unless @$next_tokens;
 
         if ($start) {
-            $self->begin('DOC', -1, { content => "---" });
+            $self->begin('DOC', -1, { implicit => 0 });
         }
         else {
-            $self->begin('DOC', -1);
+            $self->begin('DOC', -1, { implicit => 1 });
         }
 
         my $new_type = $start_line ? 'FULLSTARTNODE' : 'FULLNODE';
@@ -162,11 +162,11 @@ sub parse_stream {
         $self->set_new_node($new_node);
         my ($end) = $self->parse_document();
         if ($end) {
-            $self->end('DOC', { content => "..." });
+            $self->end('DOC', { implicit => 0 });
         }
         else {
             $exp_start = 1;
-            $self->end('DOC');
+            $self->end('DOC', { implicit => 1 });
         }
 
     }
@@ -921,6 +921,9 @@ sub begin {
             $info{anchor} = $anchor;
         }
     }
+    elsif ($event_name eq 'DOC') {
+        $info{implicit} = $info->{implicit};
+    }
     TRACE and $self->debug_event("------------->> BEGIN $event ($offset) $content");
     $self->callback->($self, $event_to_method{ $event_name } . "_start_event"
         => { %info, content => $content });
@@ -930,12 +933,14 @@ sub begin {
 
 sub end {
     my ($self, $event, $info) = @_;
-    my $content = $info->{content};
+    my %info;
+    if ($event eq 'DOC') {
+        $info{implicit} = $info->{implicit};
+    }
     $self->pop_events($event);
-    TRACE and $self->debug_event("-------------<< END   $event @{[$content//'']}");
-    return if $event eq 'END';
+    TRACE and $self->debug_event("-------------<< END   $event");
     $self->callback->($self, $event_to_method{ $event } . "_end_event"
-        => { type => $event, content => $content });
+        => { type => $event, %info });
     if ($event eq 'DOC') {
         $self->set_tagmap({
             '!!' => "tag:yaml.org,2002:",
@@ -961,7 +966,19 @@ sub event_to_test_suite {
         my $string;
         my $type = $info->{type};
         my $content = $info->{content};
-        if ($ev =~ m/start/) {
+        if ($ev eq 'document_start_event') {
+            $string = "+$type";
+            unless ($info->{implicit}) {
+                $string .= " ---";
+            }
+        }
+        elsif ($ev eq 'document_end_event') {
+            $string = "-$type";
+            unless ($info->{implicit}) {
+                $string .= " ...";
+            }
+        }
+        elsif ($ev =~ m/start/) {
             $string = "+$type";
             if (defined $info->{anchor}) {
                 $string .= " &$info->{anchor}";

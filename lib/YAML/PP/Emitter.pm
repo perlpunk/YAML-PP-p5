@@ -457,12 +457,12 @@ sub document_start_event {
     DEBUG and warn __PACKAGE__.':'.__LINE__.": +++ document_start_event\n";
     my ($self, $info) = @_;
     my $yaml = $self->yaml;
-    if ($info->{content}) {
-        $$yaml .= "---";
-        $self->set_first(1);
+    if ($info->{implicit}) {
+        $self->set_first(0);
     }
     else {
-        $self->set_first(0);
+        $$yaml .= "---";
+        $self->set_first(1);
     }
 }
 
@@ -470,7 +470,7 @@ sub document_end_event {
     DEBUG and warn __PACKAGE__.':'.__LINE__.": +++ document_end_event\n";
     my ($self, $info) = @_;
     my $yaml = $self->yaml;
-    if ($info->{content}) {
+    unless ($info->{implicit}) {
         $$yaml .= "...\n";
     }
 }
