@@ -671,11 +671,13 @@ sub parse_plain_multi {
         if ($$yaml =~ s/\A(#.*)($RE_LB|\z)//) {
             push @$tokens, ['COMMENT', $1];
             push @$tokens, ['LB', $2];
+            $self->lexer->inc_line;
             last;
         }
 
         if ($$yaml =~ s/\A($RE_LB|\z)//) {
             push @$tokens, ['LB', $1];
+            $self->lexer->inc_line;
             push @multi, '';
         }
         elsif ($$yaml =~ s/\A($plain_word_re)//) {
@@ -699,6 +701,7 @@ sub parse_plain_multi {
             if ($$yaml =~ s/\A(#.*)($RE_LB|\z)//) {
                 push @$tokens, ['COMMENT', $1];
                 push @$tokens, ['LB', $2];
+                $self->lexer->inc_line;
                 last;
             }
             unless ($$yaml =~ s/\A($RE_LB|\z)//) {
@@ -706,6 +709,7 @@ sub parse_plain_multi {
                 $self->exception("Unexpected content");
             }
             push @$tokens, ['LB', $1];
+            $self->lexer->inc_line;
         }
         else {
             TRACE and $self->debug_yaml;
@@ -799,6 +803,7 @@ sub parse_block_scalar {
             $pre = $1;
             push @$tokens, ['WS', $pre];
             push @$tokens, ['LB', $2];
+            $self->lexer->inc_line;
             $space = '';
             $type = 'EMPTY';
             push @lines, [$type => $pre, $space];
@@ -809,6 +814,7 @@ sub parse_block_scalar {
         }
         if ($$yaml =~ s/\A($RE_LB)//) {
             push @$tokens, ['LB', $1];
+            $self->lexer->inc_line;
             $type = 'EMPTY';
             if ($got_indent) {
                 push @lines, [$type => $pre, $space];
@@ -830,6 +836,7 @@ sub parse_block_scalar {
             my $value = $1;
             push @$tokens, ['BLOCK_SCALAR_CONTENT', $value];
             push @$tokens, ['LB', $2];
+            $self->lexer->inc_line;
             $type = length $space ? 'MORE' : 'CONTENT';
             push @lines, [ $type => $pre, $space . $value ];
         }
@@ -1039,6 +1046,8 @@ sub debug_offset {
 sub debug_yaml {
     my ($self) = @_;
     my $yaml = $self->yaml;
+    my $line = $self->lexer->line;
+    $self->note("LINE NUMBER: $line");
     my $next_tokens = $self->lexer->next_tokens;
     if (@$next_tokens) {
         $self->debug_tokens($next_tokens);

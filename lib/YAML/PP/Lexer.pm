@@ -14,17 +14,20 @@ use constant NODE_OFFSET => 1;
 
 sub new {
     my ($class, %args) = @_;
-    my $self = bless {
-        next_tokens => [],
-    }, $class;
+    my $self = bless {}, $class;
+    $self->init;
     return $self;
 }
 
 sub init {
     $_[0]->{next_tokens} = [];
+    $_[0]->{line} = 1;
 }
 
 sub next_tokens { return $_[0]->{next_tokens} }
+sub line { return $_[0]->{line} }
+sub set_line { $_[0]->{line} = $_[1] }
+sub inc_line { return $_[0]->{line}++ }
 
 my $RE_WS = '[\t ]';
 my $RE_LB = '[\r\n]';
@@ -271,6 +274,7 @@ sub _fetch_next_tokens {
             }
             if ($$yaml =~ s/\A([\r\n]|\z)//) {
                 push @$next, [ 'EMPTY' => $1 ];
+                $self->inc_line;
             }
             else {
                 die "Invalid directive";
@@ -282,6 +286,7 @@ sub _fetch_next_tokens {
         elsif ($first eq "#") {
             if ($$yaml =~ s/\A(#.*(?:[\r\n]|\z))//) {
                 push @$next, [ 'EMPTY' => $1 ];
+                $self->inc_line;
                 return;
             }
         }
@@ -292,10 +297,12 @@ sub _fetch_next_tokens {
             }
             if ($$yaml =~ s/\A(#.*(?:[\r\n]|\z))//) {
                 push @$next, [ 'EMPTY' => $ws . $1 ];
+                $self->inc_line;
                 return;
             }
             elsif ($$yaml =~ s/\A([\r\n]|\z)//) {
                 push @$next, [ 'EMPTY' => $ws . $1 ];
+                $self->inc_line;
                 return;
             }
             else {
@@ -308,6 +315,7 @@ sub _fetch_next_tokens {
                 my $eol = $$yaml =~ s/\A($RE_EOL|\z)//;
                 if ($eol) {
                     push @$next, ['EOL', $1];
+                    $self->inc_line;
                     return;
                 }
                 else {
@@ -325,6 +333,7 @@ sub _fetch_next_tokens {
             if ($$yaml =~ s/$RE_DOC_END//) {
                 push @$next, ['DOC_END', $1];
                 $$yaml =~ s/($RE_EOL|\z)// or die "Unexpected";
+                $self->inc_line;
                 push @$next, ['EOL', $1];
                 return;
             }
@@ -350,6 +359,7 @@ sub _fetch_next_tokens {
             else {
                 push @$next, [ $token_name . 'D_LINE', $2 ];
                 push @$next, [ 'LB', $3 ];
+                $self->inc_line;
                 while (1) {
                     if ($$yaml =~ s/\A$regex($first|[\r\n])//) {
                         if ($2 eq $first) {
@@ -360,6 +370,7 @@ sub _fetch_next_tokens {
                         else {
                             push @$next, [$token_name . 'D_LINE' => $1 ];
                             push @$next, ['LB' => $2 ];
+                            $self->inc_line;
                         }
                     }
                     else {
@@ -380,6 +391,7 @@ sub _fetch_next_tokens {
                 my $ws = $2;
                 if ($$yaml =~ s/\A(#.*|)([\r\n]|\z)//) {
                     push @$next, [ 'EOL' => $ws . ($1 // '') . $2 ];
+                    $self->inc_line;
                     return;
                 }
                 else {
@@ -388,6 +400,7 @@ sub _fetch_next_tokens {
             }
             else {
                 push @$next, [ 'EOL' => $3 ];
+                $self->inc_line;
                 return;
             }
         }
@@ -398,6 +411,7 @@ sub _fetch_next_tokens {
     elsif ($first eq '#') {
         if ($$yaml =~ s/\A(#.*(?:[\r\n]|\z))//) {
             push @$next, [ 'EMPTY' => $1 ];
+            $self->inc_line;
             return;
         }
     }
@@ -415,6 +429,7 @@ sub _fetch_next_tokens {
             }
             if ($$yaml =~ s/\A($RE_WS+#.*|$RE_WS*)([\r\n]|\z)//) {
                 push @$next, [ 'EOL' => $1 . $2 ];
+                $self->inc_line;
                 return;
             }
         }
@@ -439,6 +454,7 @@ sub _fetch_next_tokens {
             my $ws = $1;
             if ($$yaml =~ s/\A(#.*)?([\r\n]|\z)//) {
                 push @$next, [ 'EOL' => $ws . ($1 // '') . $2 ];
+                $self->inc_line;
                 return;
             }
             else {
@@ -449,6 +465,7 @@ sub _fetch_next_tokens {
     elsif ($first eq "\n") {
         if ($$yaml =~ s/\A(\n)//) {
             push @$next, [ 'EOL', $1 ];
+            $self->inc_line;
             return;
         }
     }
@@ -466,10 +483,12 @@ sub _fetch_next_tokens {
             if ($$yaml =~ s/\A(?:($RE_WS+#.*)|($RE_WS*))([\r\n]|\z)//) {
                 if (defined $1) {
                     push @$next, [ 'COMMENT_EOL', $1 . $3 ];
+                    $self->inc_line;
                     return;
                 }
                 else {
                     push @$next, [ 'EOL' => $2 . $3 ];
+                    $self->inc_line;
                     return;
                 }
             }

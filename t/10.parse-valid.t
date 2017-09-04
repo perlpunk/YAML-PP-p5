@@ -103,7 +103,7 @@ diag "Skipped $skip_count tests";
 sub test {
     my ($title, $name, $yaml, $test_events) = @_;
 #    warn __PACKAGE__.':'.__LINE__.": ================================ $name\n";
-#    @$test_events = grep { m/DOC|STR/ } @$test_events;
+    my $exp_lines = () = $yaml =~ m/[\r\n]/g;
     my @events;
     my $parser = YAML::PP::Parser->new(
         receiver => sub {
@@ -154,6 +154,8 @@ sub test {
             diag "GOT EVENTS:\n" . join '', map { "$_\n" } @events;
         }
     }
+    my $lines = $parser->lexer->line - 1;
+    cmp_ok($lines, '==', $exp_lines, "$name - Line count $lines == $exp_lines");
 }
 my $diff_count = @{ $results{DIFF} };
 diag "OK: $results{OK} DIFF: $diff_count ERROR: $results{ERROR} TODO: $results{TODO}";
