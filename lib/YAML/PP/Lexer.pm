@@ -688,7 +688,7 @@ my %is_new_line = (
 sub push_token {
     my ($self, $type, $value) = @_;
     my $next = $self->next_tokens;
-    push @$next, { name => $type, value => $value };
+    push @$next, { name => $type, value => $value, line => $self->line };
     if ($is_new_line{ $type }) {
         $self->inc_line;
     }
@@ -696,7 +696,7 @@ sub push_token {
 
 sub new_token {
     my ($self, $type, $value) = @_;
-    return { name => $type, value => $value };
+    return { name => $type, value => $value, line => $self->line };
 }
 
 1;
