@@ -76,29 +76,11 @@ sub set_rules { $_[0]->{rules} = $_[1] }
 sub stack { return $_[0]->{stack} }
 sub set_stack { $_[0]->{stack} = $_[1] }
 
-my $RE_WS = '[\t ]';
-my $RE_LB = '[\r\n]';
-my $RE_DOC_END = qr/\A(\.\.\.)(?=$RE_WS|$)/m;
-my $RE_DOC_START = qr/\A(---)(?=$RE_WS|$)/m;
-my $RE_EOL = qr/\A($RE_WS+#.*|$RE_WS+)?$RE_LB/;
-
-#ns-word-char    ::= ns-dec-digit | ns-ascii-letter | “-”
-my $RE_NS_WORD_CHAR = '[0-9A-Za-z-]';
-my $RE_URI_CHAR = '(?:' . '%[0-9a-fA-F]{2}' .'|'.  q{[0-9A-Za-z#;/?:@&=+$,_.!*'\(\)\[\]-]} . ')';
-my $RE_NS_TAG_CHAR = '(?:' . '%[0-9a-fA-F]{2}' .'|'.  q{[0-9A-Za-z#;/?:@&=+$_.*'\(\)-]} . ')';
-
-#  [#x21-#x7E]          /* 8 bit */
-# | #x85 | [#xA0-#xD7FF] | [#xE000-#xFFFD] /* 16 bit */
-# | [#x10000-#x10FFFF]                     /* 32 bit */
-
 our $RE_INT = '[+-]?[1-9]\d*';
 our $RE_OCT = '0o[1-7][0-7]*';
 our $RE_HEX = '0x[1-9a-fA-F][0-9a-fA-F]*';
 our $RE_FLOAT = '[+-]?(?:\.\d+|\d+\.\d*)(?:[eE][+-]?\d+)?';
 our $RE_NUMBER ="'(?:$RE_INT|$RE_OCT|$RE_HEX|$RE_FLOAT)";
-
-my $plain_start_word_re = '[^*!&\s#][^\r\n\s]*';
-my $plain_word_re = '[^#\r\n\s][^\r\n\s]*';
 
 sub init {
     my ($self) = @_;
