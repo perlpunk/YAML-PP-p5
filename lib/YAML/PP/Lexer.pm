@@ -240,7 +240,7 @@ sub parse_block_scalar {
     my $next_tokens = $self->next_tokens;
     if ($next_tokens->[0]->{name} eq 'BLOCK_SCALAR_INDENT') {
         $exp_indent = $next_tokens->[0]->{value};
-        shift @$next_tokens;
+        push @$tokens, shift @$next_tokens;
         if ($next_tokens->[0]->{name} eq 'BLOCK_SCALAR_CHOMP') {
             $chomp = $next_tokens->[0]->{value};
             push @$tokens, shift @$next_tokens;
@@ -248,7 +248,7 @@ sub parse_block_scalar {
     }
     elsif ($next_tokens->[0]->{name} eq 'BLOCK_SCALAR_CHOMP') {
         $chomp = $next_tokens->[0]->{value};
-        shift @$next_tokens;
+        push @$tokens, shift @$next_tokens;
         if ($next_tokens->[0]->{name} eq 'BLOCK_SCALAR_INDENT') {
             $exp_indent = $next_tokens->[0]->{value};
             push @$tokens, shift @$next_tokens;
