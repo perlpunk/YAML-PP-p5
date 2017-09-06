@@ -644,85 +644,6 @@ sub reset_indent {
     return $#$off - $i;
 }
 
-sub parse_plain_multi {
-    TRACE and warn "=== parse_plain_multi()\n";
-    my ($self) = @_;
-    my $yaml = $self->yaml;
-    my @multi;
-    my $indent = $self->offset->[ -1 ] + 1;
-    my $tokens = $self->tokens;
-
-    my $indent_re = $RE_WS . '{' . $indent . '}';
-    while (1) {
-        last if not length $$yaml;
-
-        unless ($$yaml =~ s/\A($indent_re)//) {
-            last;
-        }
-
-        if ($indent == 0) {
-            last if $$yaml =~ $RE_DOC_END;
-            last if $$yaml =~ $RE_DOC_START;
-        }
-        push @$tokens, $self->lexer->new_token( INDENT => $1 );
-        if ($$yaml =~ s/\A($RE_WS+)//) {
-            push @$tokens, $self->lexer->new_token( WS => $1 );
-        }
-        if ($$yaml =~ s/\A(#.*)($RE_LB|\z)//) {
-            push @$tokens, $self->lexer->new_token( COMMENT => $1 );
-            push @$tokens, $self->lexer->new_token( LB => $2 );
-            $self->lexer->inc_line;
-            last;
-        }
-
-        if ($$yaml =~ s/\A($RE_LB|\z)//) {
-            push @$tokens, $self->lexer->new_token( LB => $1 );
-            $self->lexer->inc_line;
-            push @multi, '';
-        }
-        elsif ($$yaml =~ s/\A($plain_word_re)//) {
-            my $string = $1;
-            push @$tokens, $self->lexer->new_token( PLAIN => $string );
-            if ($string =~ m/:$/) {
-                $self->exception("Unexpected content: '$string'");
-            }
-            while ($$yaml =~ s/\A($RE_WS+)//) {
-                push @$tokens, $self->lexer->new_token( WS => $1 );
-                my $sp = $1;
-                $$yaml =~ s/\A($plain_word_re)// or last;
-                push @$tokens, $self->lexer->new_token( PLAIN => $1 );
-                my $value = $sp . $1;
-                if ($value =~ m/:$/) {
-                    $self->exception("Unexpected content: '$value'");
-                }
-                $string .= $value;
-            }
-            push @multi, $string;
-            if ($$yaml =~ s/\A(#.*)($RE_LB|\z)//) {
-                push @$tokens, $self->lexer->new_token( COMMENT => $1 );
-                push @$tokens, $self->lexer->new_token( LB => $2 );
-                $self->lexer->inc_line;
-                last;
-            }
-            unless ($$yaml =~ s/\A($RE_LB|\z)//) {
-                warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
-                $self->exception("Unexpected content");
-            }
-            push @$tokens, $self->lexer->new_token( LB => $1 );
-            $self->lexer->inc_line;
-        }
-        else {
-            TRACE and $self->debug_yaml;
-            $self->exception("Unexpected content");
-        }
-    }
-    return {
-        eol => 1,
-        style => ':',
-        value => \@multi,
-    };
-}
-
 sub parse_empty {
     TRACE and warn "=== parse_empty()\n";
     my ($self, $next_tokens) = @_;
@@ -733,126 +654,6 @@ sub parse_empty {
     }
     return 0;
 }
-
-sub parse_block_scalar {
-    TRACE and warn "=== parse_block_scalar()\n";
-    my ($self, %args) = @_;
-    my $yaml = $self->yaml;
-    my $tokens = $self->tokens;
-    my $indent = $self->offset->[-1] + 1;
-
-    my $block_type = $args{type};
-    my $exp_indent;
-    my $chomp = '';
-    my $next_tokens = $self->lexer->next_tokens;
-    if ($next_tokens->[0]->[0] eq 'BLOCK_SCALAR_INDENT') {
-        $exp_indent = $next_tokens->[0]->[1];
-        shift @$next_tokens;
-        if ($next_tokens->[0]->[0] eq 'BLOCK_SCALAR_CHOMP') {
-            $chomp = $next_tokens->[0]->[1];
-            push @$tokens, shift @$next_tokens;
-        }
-    }
-    elsif ($next_tokens->[0]->[0] eq 'BLOCK_SCALAR_CHOMP') {
-        $chomp = $next_tokens->[0]->[1];
-        shift @$next_tokens;
-        if ($next_tokens->[0]->[0] eq 'BLOCK_SCALAR_INDENT') {
-            $exp_indent = $next_tokens->[0]->[1];
-            push @$tokens, shift @$next_tokens;
-        }
-    }
-    if ($next_tokens->[0]->[0] eq 'EOL') {
-        push @$tokens, shift @$next_tokens;
-    }
-    else {
-        $self->exception("Invalid block scalar");
-    }
-    if (defined $exp_indent) {
-        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$exp_indent], ['exp_indent']);
-    }
-    my @lines;
-
-    my $got_indent = 0;
-    if ($exp_indent) {
-        $indent = $exp_indent;
-        $got_indent = 1;
-    }
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$indent], ['indent']);
-    my $indent_re = $RE_WS ."{$indent}";
-    TRACE and local $Data::Dumper::Useqq = 1;
-    my $type;
-    while (length $$yaml) {
-        TRACE and warn __PACKAGE__.':'.__LINE__.": RE: $indent_re\n";
-        TRACE and $self->debug_yaml;
-        my $pre;
-        my $space;
-        my $length;
-        last if $$yaml =~ $RE_DOC_START;
-        last if $$yaml =~ $RE_DOC_END;
-        if ($$yaml =~ s/\A($indent_re)($RE_WS*)//) {
-            $pre = $1;
-            $space = $2;
-            push @$tokens, $self->lexer->new_token( INDENT => $pre );
-            push @$tokens, $self->lexer->new_token( WS => $space );
-            $length = length $space;
-        }
-        elsif ($$yaml =~ m/\A$RE_WS*#.*$RE_LB/) {
-            last;
-        }
-        elsif ($$yaml =~ s/\A($RE_WS*)($RE_LB)//) {
-            $pre = $1;
-            push @$tokens, $self->lexer->new_token( WS => $pre );
-            push @$tokens, $self->lexer->new_token( LB => $2 );
-            $self->lexer->inc_line;
-            $space = '';
-            $type = 'EMPTY';
-            push @lines, [$type => $pre, $space];
-            next;
-        }
-        else {
-            last;
-        }
-        if ($$yaml =~ s/\A($RE_LB)//) {
-            push @$tokens, $self->lexer->new_token( LB => $1 );
-            $self->lexer->inc_line;
-            $type = 'EMPTY';
-            if ($got_indent) {
-                push @lines, [$type => $pre, $space];
-            }
-            else {
-                push @lines, [$type => $pre . $space, ''];
-            }
-            next;
-        }
-        if ($length and not $got_indent) {
-            $indent += $length;
-            $indent_re = $RE_WS . "{$indent}";
-            $pre = $space;
-            $space = '';
-            $got_indent = 1;
-        }
-        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
-        if ($$yaml =~ s/\A(.*)($RE_LB|\z)//) {
-            my $value = $1;
-            push @$tokens, $self->lexer->new_token( BLOCK_SCALAR_CONTENT => $value );
-            push @$tokens, $self->lexer->new_token( LB => $2 );
-            $self->lexer->inc_line;
-            $type = length $space ? 'MORE' : 'CONTENT';
-            push @lines, [ $type => $pre, $space . $value ];
-        }
-
-    }
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@lines], ['lines']);
-
-    my $string = YAML::PP::Render::render_block_scalar(
-        block_type => $block_type,
-        chomp => $chomp,
-        lines => \@lines,
-    );
-
-    return { eol => 1, value => $string, style => $block_type };
-}
-
 
 sub in_unindented_seq {
     my ($self) = @_;
@@ -1417,7 +1218,7 @@ sub cb_scalar_from_stack {
 sub cb_multiscalar_from_stack {
     my ($self, $res) = @_;
     my $stack = $self->stack;
-    my $multi = $self->parse_plain_multi;
+    my $multi = $self->lexer->parse_plain_multi($self);
     my $first = $stack->{res}->{value}->[0];
     unshift @{ $multi->{value} }, $first;
     push @{ $stack->{events} }, [ value => undef, {
@@ -1430,7 +1231,8 @@ sub cb_multiscalar_from_stack {
 sub cb_block_scalar {
     my ($self, $res) = @_;
     my $type = $self->tokens->[-1]->[1];
-    my $block = $self->parse_block_scalar(
+    my $block = $self->lexer->parse_block_scalar(
+        $self,
         type => $type,
     );
     push @{ $self->stack->{events} }, [ value => undef, {
