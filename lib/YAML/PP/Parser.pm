@@ -11,6 +11,7 @@ use constant DEBUG => $ENV{YAML_PP_DEBUG} || $ENV{YAML_PP_TRACE};
 use YAML::PP::Render;
 use YAML::PP::Lexer;
 use YAML::PP::Grammar qw/ $GRAMMAR /;
+use YAML::PP::Exception;
 use Carp qw/ croak /;
 
 
@@ -98,7 +99,15 @@ sub parse {
     }
     $self->set_yaml(\$self->reader->read);
     $self->init;
-    $self->parse_stream;
+    eval {
+        $self->parse_stream;
+    };
+    if (my $error = $@) {
+        if (ref $error) {
+            croak "$error\n ";
+        }
+        croak $error;
+    }
 
     DEBUG and $self->highlight_yaml;
     TRACE and $self->debug_tokens;
@@ -933,8 +942,17 @@ sub highlight_yaml {
 
 sub exception {
     my ($self, $msg) = @_;
-#    $self->debug_yaml;
-    croak $msg;
+    my $next = $self->lexer->next_tokens;
+    my $line = @$next ? $next->[0]->{line} : $self->lexer->line;
+    my @caller = caller(0);
+    my $e = YAML::PP::Exception->new(
+        line => $line,
+        msg => $msg,
+        next => $next,
+        where => $caller[1] . ' line ' . $caller[2],
+        yaml => $self->yaml,
+    );
+    croak $e;
 }
 
 sub cb_tag {

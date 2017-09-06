@@ -8,6 +8,7 @@ use constant TRACE => $ENV{YAML_PP_TRACE};
 use constant DEBUG => $ENV{YAML_PP_DEBUG} || $ENV{YAML_PP_TRACE};
 
 use YAML::PP::Grammar qw/ $GRAMMAR /;
+use Carp qw/ croak /;
 
 use constant NODE_TYPE => 0;
 use constant NODE_OFFSET => 1;
@@ -217,7 +218,7 @@ sub parse_tokens {
             }
         }
         else {
-            die "Unexpected";
+            croak "Unexpected";
         }
 
     }
@@ -469,13 +470,13 @@ sub _fetch_next_tokens {
                 warn "Found reserved directive '$1'";
             }
             else {
-                die "Invalid directive";
+                $self->exception("Invalid directive");
             }
             if ($$yaml =~ s/\A([\r\n]|\z)//) {
                 $self->push_token( EMPTY => $1 );
             }
             else {
-                die "Invalid directive";
+                $self->exception("Invalid directive");
             }
             return;
         }
@@ -514,7 +515,7 @@ sub _fetch_next_tokens {
                     }
                     else {
                         warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
-                        die "Unexpected content after ---";
+                        $self->exception("Unexpected content after ---");
                     }
                 }
             }
@@ -522,7 +523,7 @@ sub _fetch_next_tokens {
         elsif ($first eq '.') {
             if ($$yaml =~ s/$RE_DOC_END//) {
                 $self->push_token( DOC_END => $1 );
-                $$yaml =~ s/($RE_EOL|\z)// or die "Unexpected";
+                $$yaml =~ s/($RE_EOL|\z)// or croak "Unexpected";
                 $self->push_token( EOL => $1 );
                 return;
             }
@@ -561,13 +562,13 @@ sub _fetch_next_tokens {
                             }
                         }
                         else {
-                            die "Invalid quoted string";
+                            $self->exception("Invalid quoted string");
                         }
                     }
                 }
             }
             else {
-                die "Invalid quoted string";
+                $self->exception("Invalid quoted string");
             }
         }
         elsif ($first eq '-' or $first eq ':' or $first eq '?') {
@@ -609,7 +610,7 @@ sub _fetch_next_tokens {
                 $self->push_token( $token_name => $1 );
             }
             else {
-                die "Invalid tag";
+                $self->exception("Invalid tag");
             }
         }
         elsif ($first eq '&') {
@@ -618,7 +619,7 @@ sub _fetch_next_tokens {
                 $self->push_token( $token_name => $1 );
             }
             else {
-                die "Invalid anchor";
+                $self->exception("Invalid anchor");
             }
         }
         elsif ($first eq '*') {
@@ -627,7 +628,7 @@ sub _fetch_next_tokens {
                 $self->push_token( $token_name => $1 );
             }
             else {
-                die "Invalid alias";
+                $self->exception("Invalid alias");
             }
         }
         elsif ($first eq ' ') {
@@ -647,7 +648,7 @@ sub _fetch_next_tokens {
             }
         }
         elsif ($first eq '{' or $first eq '[') {
-            die "Not Implemented: Flow Style";
+            $self->exception("Not Implemented: Flow Style");
         }
         else {
             $plain = 1;
@@ -667,7 +668,7 @@ sub _fetch_next_tokens {
             }
             else {
                 warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
-                die "Invalid plain scalar";
+                $self->exception("Invalid plain scalar");
             }
         }
 
@@ -697,6 +698,21 @@ sub push_token {
 sub new_token {
     my ($self, $type, $value) = @_;
     return { name => $type, value => $value, line => $self->line };
+}
+
+sub exception {
+    my ($self, $msg) = @_;
+    my $next = $self->next_tokens;
+    my $line = @$next ? $next->[0]->{line} : $self->line;
+    my @caller = caller(0);
+    my $e = YAML::PP::Exception->new(
+        line => $line,
+        msg => $msg,
+        next => $next,
+        where => $caller[1] . ' line ' . $caller[2],
+        yaml => \'',
+    );
+    croak $e;
 }
 
 1;

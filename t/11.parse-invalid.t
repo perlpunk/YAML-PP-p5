@@ -121,10 +121,10 @@ sub test {
         diag "ERROR: $@" if $ENV{YAML_PP_TRACE};
         $results{ERROR}++;
         my $error_type = 'unknown';
-        if ($@ =~ m/(Expected .*?) at/) {
+        if ($@ =~ m/( Expected .*?)/) {
             $error_type = "$1";
         }
-        elsif ($@ =~ m/(Not Implemented: .*?) at/) {
+        elsif ($@ =~ m/( Not Implemented: .*?)/) {
             $error_type = "$1";
         }
         push @{ $errors{ $error_type } }, $name;

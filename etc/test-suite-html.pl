@@ -173,6 +173,7 @@ sub highlight_test {
 
     $title = decode_utf8($title);
     $title = encode_entities($title);
+    $error =~ s{\Q$Bin/../lib/}{}g;
     $error = encode_entities($error);
     $yaml = decode_utf8($yaml);
     $yaml = encode_entities($yaml);
@@ -188,7 +189,7 @@ EOM
     my $orig = $diff ? qq{<br><pre>$yaml</pre>} : '';
     $html .= <<"EOM";
 <td valign="top"><pre class="$class">$high</pre>
-$error
+<pre>$error</pre>
 $orig
 </td>
 <td valign="top" style="max-width: 30em; overflow-x: auto;">

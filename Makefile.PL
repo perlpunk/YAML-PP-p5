@@ -23,11 +23,13 @@ my %WriteMakefileArgs = (
   "MIN_PERL_VERSION" => "5.010",
   "NAME" => "YAML::PP",
   "PREREQ_PM" => {
+    "Carp" => 0,
     "Data::Dumper" => 0,
     "Encode" => 0,
     "Exporter" => 0,
     "base" => 0,
     "constant" => 0,
+    "overload" => 0,
     "strict" => 0,
     "warnings" => 0
   },
@@ -49,6 +51,7 @@ my %WriteMakefileArgs = (
 
 
 my %FallbackPrereqs = (
+  "Carp" => 0,
   "Data::Dumper" => 0,
   "Encode" => 0,
   "Exporter" => 0,
@@ -62,6 +65,7 @@ my %FallbackPrereqs = (
   "blib" => "1.01",
   "constant" => 0,
   "lib" => 0,
+  "overload" => 0,
   "strict" => 0,
   "warnings" => 0
 );
