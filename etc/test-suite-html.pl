@@ -146,21 +146,22 @@ sub highlight_test {
         $error =~ s{\Q$Bin/../lib/}{};
         $class = "error";
         my $remaining_tokens = $ypp->parser->lexer->next_tokens;
-        push @$tokens, map { [ ERROR => $_->[1] ] } @$remaining_tokens;
+        push @$tokens, map {
+            { name => 'ERROR', value => $_->{value} } } @$remaining_tokens;
         my $remaining = $ypp->parser->yaml;
         $remaining = $$remaining;
-        push @$tokens, ['ERROR', $remaining];
-        my $out = join '', map { $_->[1] } @$tokens;
+        push @$tokens, { name => 'ERROR', value => $remaining };
+        my $out = join '', map { $_->{value} } @$tokens;
         if ($out ne $yaml) {
             warn "$id error diff";
             $diff = 1;
         }
     }
     else {
-        my $out = join '', map { $_->[1] } @$tokens;
+        my $out = join '', map { $_->{value} } @$tokens;
         if ($out ne $yaml) {
             $class = "diff";
-            say "$id diff";
+            warn "$id diff";
             $diff = 1;
         }
     }

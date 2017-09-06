@@ -40,12 +40,14 @@ sub ansicolored {
     my $highlighted = '';
     for my $token (@$tokens) {
         my @list = map {
-                $_ =~ tr/\t/\t/ ? [ 'TAB', $_ ] : [ $token->[0], $_ ]
-            } split m/(\t+)/, $token->[1];
+                $_ =~ tr/\t/\t/
+                ? { name => 'TAB', value => $_ }
+                : { name => $token->{name}, value => $_ }
+            } split m/(\t+)/, $token->{value};
         for my $token (@list) {
-            my $type = $token->[0];
+            my $type = $token->{name};
             my $color = $ansicolors{ $type };
-            my $str = $token->[1];
+            my $str = $token->{value};
             if ($color) {
                 unless (ref $color) {
                     $color = [$color];
@@ -90,8 +92,8 @@ sub htmlcolored {
     my $html = '';
     for my $token (@$tokens) {
         my @list = map {
-                $_ =~ tr/\t/\t/ ? [ 'TAB', $_ ] : [ $token->[0], $_ ]
-            } split m/(\t+)/, $token->[1];
+                $_ =~ tr/\t/\t/ ? [ 'TAB', $_ ] : [ $token->{name}, $_ ]
+            } split m/(\t+)/, $token->{value};
         for my $token (@list) {
             my ($type, $str) = @$token;
             my $colorclass = $htmlcolors{ $type } || 'default';

@@ -158,12 +158,12 @@ sub parse_tokens {
             my $success;
             my $next = $next_tokens->[0];
             TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next], ['next']);
-            my $def = $next_rule->{ $next->[0] };
+            my $def = $next_rule->{ $next->{name} };
             if ($def) {
                 shift @$next_tokens;
                 push @$tokens, $next;
             }
-            if (not $def and $next->[0] eq 'WS') {
+            if (not $def and $next->{name} eq 'WS') {
                 $def = $next_rule->{ 'WS?' };
                 shift @$next_tokens;
                 push @$tokens, $next;
@@ -176,7 +176,7 @@ sub parse_tokens {
                 TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$def], ['def']);
             }
             if ($def) {
-                DEBUG and $parser->got("---got $next->[0]");
+                DEBUG and $parser->got("---got $next->{name}");
                 my ($sub, $next_rule) = @$def;
                 $ok = 1;
                 $success = 1;
@@ -191,7 +191,7 @@ sub parse_tokens {
                 }
             }
             else {
-                DEBUG and $parser->not("---not $next->[0]");
+                DEBUG and $parser->not("---not $next->{name}");
                 unless (@$rules) {
                     return (0);
                 }
@@ -238,23 +238,23 @@ sub parse_block_scalar {
     my $exp_indent;
     my $chomp = '';
     my $next_tokens = $self->next_tokens;
-    if ($next_tokens->[0]->[0] eq 'BLOCK_SCALAR_INDENT') {
-        $exp_indent = $next_tokens->[0]->[1];
+    if ($next_tokens->[0]->{name} eq 'BLOCK_SCALAR_INDENT') {
+        $exp_indent = $next_tokens->[0]->{value};
         shift @$next_tokens;
-        if ($next_tokens->[0]->[0] eq 'BLOCK_SCALAR_CHOMP') {
-            $chomp = $next_tokens->[0]->[1];
+        if ($next_tokens->[0]->{name} eq 'BLOCK_SCALAR_CHOMP') {
+            $chomp = $next_tokens->[0]->{value};
             push @$tokens, shift @$next_tokens;
         }
     }
-    elsif ($next_tokens->[0]->[0] eq 'BLOCK_SCALAR_CHOMP') {
-        $chomp = $next_tokens->[0]->[1];
+    elsif ($next_tokens->[0]->{name} eq 'BLOCK_SCALAR_CHOMP') {
+        $chomp = $next_tokens->[0]->{value};
         shift @$next_tokens;
-        if ($next_tokens->[0]->[0] eq 'BLOCK_SCALAR_INDENT') {
-            $exp_indent = $next_tokens->[0]->[1];
+        if ($next_tokens->[0]->{name} eq 'BLOCK_SCALAR_INDENT') {
+            $exp_indent = $next_tokens->[0]->{value};
             push @$tokens, shift @$next_tokens;
         }
     }
-    if ($next_tokens->[0]->[0] eq 'EOL') {
+    if ($next_tokens->[0]->{name} eq 'EOL') {
         push @$tokens, shift @$next_tokens;
     }
     else {
@@ -688,7 +688,7 @@ my %is_new_line = (
 sub push_token {
     my ($self, $type, $value) = @_;
     my $next = $self->next_tokens;
-    push @$next, [ $type => $value ];
+    push @$next, { name => $type, value => $value };
     if ($is_new_line{ $type }) {
         $self->inc_line;
     }
@@ -696,7 +696,7 @@ sub push_token {
 
 sub new_token {
     my ($self, $type, $value) = @_;
-    return [ $type => $value ];
+    return { name => $type, value => $value };
 }
 
 1;

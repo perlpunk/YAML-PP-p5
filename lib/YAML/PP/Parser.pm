@@ -156,14 +156,14 @@ sub parse_document_start {
 
     my ($start, $start_line) = (0, 0);
     my $next_tokens = $self->lexer->next_tokens;
-    if (@$next_tokens and $next_tokens->[0]->[0] eq 'DOC_START') {
+    if (@$next_tokens and $next_tokens->[0]->{name} eq 'DOC_START') {
         push @{ $self->tokens }, shift @$next_tokens;
         $start = 1;
-        if ($next_tokens->[0]->[0] eq 'EOL') {
+        if ($next_tokens->[0]->{name} eq 'EOL') {
             push @{ $self->tokens }, shift @$next_tokens;
             $self->lexer->fetch_next_tokens(0, $self->yaml);
         }
-        elsif ($next_tokens->[0]->[0] eq 'WS') {
+        elsif ($next_tokens->[0]->{name} eq 'WS') {
             push @{ $self->tokens }, shift @$next_tokens;
             $start_line = 1;
         }
@@ -185,13 +185,13 @@ sub parse_document_head {
         if ($self->parse_empty($next_tokens)) {
             next;
         }
-        if ($next_tokens->[0]->[0] eq 'YAML_DIRECTIVE') {
+        if ($next_tokens->[0]->{name} eq 'YAML_DIRECTIVE') {
         }
-        elsif ($next_tokens->[0]->[0] eq 'TAG_DIRECTIVE') {
-            my ($name, $tag_alias, $tag_url) = split ' ', $next_tokens->[0]->[1];
+        elsif ($next_tokens->[0]->{name} eq 'TAG_DIRECTIVE') {
+            my ($name, $tag_alias, $tag_url) = split ' ', $next_tokens->[0]->{value};
             $self->tagmap->{ $tag_alias } = $tag_url;
         }
-        elsif ($next_tokens->[0]->[0] eq 'RESERVED_DIRECTIVE') {
+        elsif ($next_tokens->[0]->{name} eq 'RESERVED_DIRECTIVE') {
         }
         else {
             last;
@@ -249,7 +249,7 @@ sub parse_document {
             offset => $offset,
         );
 
-        $next_full_line = $is_new_line{ $self->tokens->[-1]->[0] };
+        $next_full_line = $is_new_line{ $self->tokens->[-1]->{name} };
     }
 
     TRACE and $self->debug_events;
@@ -287,8 +287,8 @@ sub check_indent {
     while ($self->parse_empty($next_tokens)) {
     }
     if (@$next_tokens) {
-        if ($next_tokens->[0]->[0] eq 'INDENT') {
-            $offset = length $next_tokens->[0]->[1];
+        if ($next_tokens->[0]->{name} eq 'INDENT') {
+            $offset = length $next_tokens->[0]->{value};
             $space = $offset;
             push @$tokens, shift @$next_tokens;
         }
@@ -312,12 +312,12 @@ sub check_indent {
 
     if ($space <= 0) {
         #warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
-        if (@$next_tokens and $next_tokens->[0]->[0] eq 'DOC_START') {
+        if (@$next_tokens and $next_tokens->[0]->{name} eq 'DOC_START') {
             $end = 1;
         }
-        elsif (@$next_tokens and $next_tokens->[0]->[0] eq 'DOC_END') {
+        elsif (@$next_tokens and $next_tokens->[0]->{name} eq 'DOC_END') {
             push @$tokens, shift @$next_tokens;
-            if (@$next_tokens and $next_tokens->[0]->[0] eq 'EOL') {
+            if (@$next_tokens and $next_tokens->[0]->{name} eq 'EOL') {
                 push @$tokens, shift @$next_tokens;
             }
             else {
@@ -348,7 +348,7 @@ sub check_indent {
         }
 
         my $seq_start = 0;
-        if (not $end and $next_tokens->[0]->[0] eq 'DASH') {
+        if (not $end and $next_tokens->[0]->{name} eq 'DASH') {
             $seq_start = 1;
         }
         TRACE and $self->info("SEQSTART: $seq_start");
@@ -623,7 +623,7 @@ sub reset_indent {
 sub parse_empty {
     TRACE and warn "=== parse_empty()\n";
     my ($self, $next_tokens) = @_;
-    if (@$next_tokens == 1 and ($next_tokens->[0]->[0] eq 'EMPTY' or $next_tokens->[0]->[0] eq 'EOL')) {
+    if (@$next_tokens == 1 and ($next_tokens->[0]->{name} eq 'EMPTY' or $next_tokens->[0]->{name} eq 'EOL')) {
         push @{ $self->tokens }, shift @$next_tokens;
         $self->lexer->fetch_next_tokens(0, $self->yaml);
         return 1;
@@ -910,12 +910,12 @@ sub debug_tokens {
     require Term::ANSIColor;
     for my $token (@$tokens) {
         my $type = Term::ANSIColor::colored(["green"],
-            sprintf "%-20s", $token->[0] . ':'
+            sprintf "%-20s", $token->{name} . ':'
         );
         local $Data::Dumper::Useqq = 1;
         local $Data::Dumper::Terse = 1;
         require Data::Dumper;
-        my $str = Data::Dumper->Dump([$token->[1]], ['str']);
+        my $str = Data::Dumper->Dump([$token->{value}], ['str']);
         chomp $str;
         $str =~ s/(^.|.$)/Term::ANSIColor::colored(['blue'], $1)/ge;
         warn "$type$str\n";
@@ -940,13 +940,13 @@ sub exception {
 sub cb_tag {
     my ($self, $res) = @_;
     my $props = $self->stack->{properties} ||= {};
-    $props->{tag} = $self->tokens->[-1]->[1];
+    $props->{tag} = $self->tokens->[-1]->{value};
 }
 
 sub cb_anchor {
     my ($self, $res) = @_;
     my $props = $self->stack->{properties} ||= {};
-    my $anchor = $self->tokens->[-1]->[1];
+    my $anchor = $self->tokens->[-1]->{value};
     $anchor = substr($anchor, 1);
     $props->{anchor} = $anchor;
 }
@@ -966,17 +966,17 @@ sub cb_property_eol {
 sub cb_ws {
     my ($self, $res, $props) = @_;
     if ($res) {
-        $res->{ws} = length $self->tokens->[-1]->[1];
+        $res->{ws} = length $self->tokens->[-1]->{value};
     }
 }
 
 sub cb_mapkey {
     my ($self, $res) = @_;
-    my $value = $self->tokens->[-1]->[1];
+    my $value = $self->tokens->[-1]->{value};
     $res->{name} = 'MAPKEY';
     push @{ $self->stack->{events} }, [ value => undef, {
         style => ':',
-        value => $self->tokens->[-1]->[1],
+        value => $self->tokens->[-1]->{value},
     }];
 }
 
@@ -995,7 +995,7 @@ sub cb_mapkeystart {
         [ begin => 'MAP', { }],
         [ value => undef, {
             style => ':',
-            value => $self->tokens->[-1]->[1],
+            value => $self->tokens->[-1]->{value},
         }];
     $res->{name} = 'MAPSTART';
 }
@@ -1005,13 +1005,13 @@ sub cb_doublequoted_key {
     $res->{name} = 'MAPKEY';
     push @{ $self->stack->{events} }, [ value => undef, {
         style => '"',
-        value => [ $self->tokens->[-1]->[1] ],
+        value => [ $self->tokens->[-1]->{value} ],
     }];
 }
 
 sub cb_doublequotedstart {
     my ($self, $res) = @_;
-    my $value = $self->tokens->[-1]->[1];
+    my $value = $self->tokens->[-1]->{value};
     push @{ $self->stack->{events} },
         [ begin => 'MAP', { }],
         [ value => undef, {
@@ -1026,7 +1026,7 @@ sub cb_singlequoted_key {
     $res->{name} = 'MAPKEY';
     push @{ $self->stack->{events} }, [ value => undef, {
         style => "'",
-        value => [ $self->tokens->[-1]->[1] ],
+        value => [ $self->tokens->[-1]->{value} ],
     }];
 }
 
@@ -1036,14 +1036,14 @@ sub cb_singleequotedstart {
         [ begin => 'MAP', { }],
         [ value => undef, {
             style => "'",
-            value => [ $self->tokens->[-1]->[1] ],
+            value => [ $self->tokens->[-1]->{value} ],
         }];
     $res->{name} = 'MAPSTART';
 }
 
 sub cb_mapkey_alias {
     my ($self, $res) = @_;
-    my $alias = $self->tokens->[-1]->[1];
+    my $alias = $self->tokens->[-1]->{value};
     $alias = substr($alias, 1);
     $res->{name} = 'MAPKEY';
     push @{ $self->stack->{events} }, [ alias => undef, {
@@ -1107,7 +1107,7 @@ sub cb_alias_from_stack {
 
 sub cb_stack_alias {
     my ($self, $res) = @_;
-    my $alias = $self->tokens->[-1]->[1];
+    my $alias = $self->tokens->[-1]->{value};
     $alias = substr($alias, 1);
     $self->stack->{res} ||= {
         alias => $alias,
@@ -1118,7 +1118,7 @@ sub cb_stack_singlequoted_single {
     my ($self, $res) = @_;
     $self->stack->{res} ||= {
         style => "'",
-        value => [$self->tokens->[-1]->[1]],
+        value => [$self->tokens->[-1]->{value}],
     };
 }
 
@@ -1128,14 +1128,14 @@ sub cb_stack_singlequoted {
         style => "'",
         value => [],
     };
-    push @{ $self->stack->{res}->{value} }, $self->tokens->[-1]->[1];
+    push @{ $self->stack->{res}->{value} }, $self->tokens->[-1]->{value};
 }
 
 sub cb_stack_doublequoted_single {
     my ($self, $res) = @_;
     $self->stack->{res} ||= {
         style => '"',
-        value => [$self->tokens->[-1]->[1]],
+        value => [$self->tokens->[-1]->{value}],
     };
 }
 
@@ -1145,7 +1145,7 @@ sub cb_stack_doublequoted {
         style => '"',
         value => [],
     };
-    push @{ $self->stack->{res}->{value} }, $self->tokens->[-1]->[1];
+    push @{ $self->stack->{res}->{value} }, $self->tokens->[-1]->{value};
 }
 
 sub cb_stack_plain {
@@ -1155,7 +1155,7 @@ sub cb_stack_plain {
         style => ':',
         value => [],
     };
-    push @{ $self->stack->{res}->{value} }, $self->tokens->[-1]->[1];
+    push @{ $self->stack->{res}->{value} }, $self->tokens->[-1]->{value};
 }
 
 sub cb_plain_single {
@@ -1206,7 +1206,7 @@ sub cb_multiscalar_from_stack {
 
 sub cb_block_scalar {
     my ($self, $res) = @_;
-    my $type = $self->tokens->[-1]->[1];
+    my $type = $self->tokens->[-1]->{value};
     my $block = $self->lexer->parse_block_scalar(
         $self,
         type => $type,
