@@ -76,12 +76,6 @@ sub set_rules { $_[0]->{rules} = $_[1] }
 sub stack { return $_[0]->{stack} }
 sub set_stack { $_[0]->{stack} = $_[1] }
 
-our $RE_INT = '[+-]?[1-9]\d*';
-our $RE_OCT = '0o[1-7][0-7]*';
-our $RE_HEX = '0x[1-9a-fA-F][0-9a-fA-F]*';
-our $RE_FLOAT = '[+-]?(?:\.\d+|\d+\.\d*)(?:[eE][+-]?\d+)?';
-our $RE_NUMBER ="'(?:$RE_INT|$RE_OCT|$RE_HEX|$RE_FLOAT)";
-
 sub init {
     my ($self) = @_;
     $self->set_level(-1);

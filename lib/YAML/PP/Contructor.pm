@@ -8,6 +8,13 @@ our $VERSION = '0.000'; # VERSION
 use constant DEBUG => ($ENV{YAML_PP_LOAD_DEBUG} or $ENV{YAML_PP_LOAD_TRACE}) ? 1 : 0;
 use constant TRACE => $ENV{YAML_PP_LOAD_TRACE} ? 1 : 0;
 
+my $RE_INT = '[+-]?[1-9]\d*';
+my $RE_OCT = '0o[1-7][0-7]*';
+my $RE_HEX = '0x[1-9a-fA-F][0-9a-fA-F]*';
+my $RE_FLOAT = '[+-]?(?:\.\d+|\d+\.\d*)(?:[eE][+-]?\d+)?';
+my $RE_NUMBER ="'(?:$RE_INT|$RE_OCT|$RE_HEX|$RE_FLOAT)";
+
+
 sub new {
     my ($class, %args) = @_;
 
@@ -227,13 +234,13 @@ sub render_plain_scalar {
     my ($self, $content) = @_;
     return unless defined $content;
     my $value;
-    if ($content =~ m/^($YAML::PP::Parser::RE_INT|$YAML::PP::Parser::RE_FLOAT)$/){
+    if ($content =~ m/^($RE_INT|$RE_FLOAT)$/){
         $value = 0 + $1;
     }
-    elsif ($content =~ m/^($YAML::PP::Parser::RE_HEX)/) {
+    elsif ($content =~ m/^($RE_HEX)/) {
         $value = hex $content;
     }
-    elsif ($content =~ m/^($YAML::PP::Parser::RE_OCT)/) {
+    elsif ($content =~ m/^($RE_OCT)/) {
         my $oct = 0 . substr($content, 2);
         $value = oct $oct;
     }
