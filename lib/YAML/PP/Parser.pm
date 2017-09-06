@@ -664,33 +664,33 @@ sub parse_plain_multi {
             last if $$yaml =~ $RE_DOC_END;
             last if $$yaml =~ $RE_DOC_START;
         }
-        push @$tokens, ['INDENT', $1];
+        push @$tokens, $self->lexer->new_token( INDENT => $1 );
         if ($$yaml =~ s/\A($RE_WS+)//) {
-            push @$tokens, ['WS', $1];
+            push @$tokens, $self->lexer->new_token( WS => $1 );
         }
         if ($$yaml =~ s/\A(#.*)($RE_LB|\z)//) {
-            push @$tokens, ['COMMENT', $1];
-            push @$tokens, ['LB', $2];
+            push @$tokens, $self->lexer->new_token( COMMENT => $1 );
+            push @$tokens, $self->lexer->new_token( LB => $2 );
             $self->lexer->inc_line;
             last;
         }
 
         if ($$yaml =~ s/\A($RE_LB|\z)//) {
-            push @$tokens, ['LB', $1];
+            push @$tokens, $self->lexer->new_token( LB => $1 );
             $self->lexer->inc_line;
             push @multi, '';
         }
         elsif ($$yaml =~ s/\A($plain_word_re)//) {
             my $string = $1;
-            push @$tokens, ['PLAIN', $string];
+            push @$tokens, $self->lexer->new_token( PLAIN => $string );
             if ($string =~ m/:$/) {
                 $self->exception("Unexpected content: '$string'");
             }
             while ($$yaml =~ s/\A($RE_WS+)//) {
-                push @$tokens, ['WS', $1];
+                push @$tokens, $self->lexer->new_token( WS => $1 );
                 my $sp = $1;
                 $$yaml =~ s/\A($plain_word_re)// or last;
-                push @$tokens, ['PLAIN', $1];
+                push @$tokens, $self->lexer->new_token( PLAIN => $1 );
                 my $value = $sp . $1;
                 if ($value =~ m/:$/) {
                     $self->exception("Unexpected content: '$value'");
@@ -699,8 +699,8 @@ sub parse_plain_multi {
             }
             push @multi, $string;
             if ($$yaml =~ s/\A(#.*)($RE_LB|\z)//) {
-                push @$tokens, ['COMMENT', $1];
-                push @$tokens, ['LB', $2];
+                push @$tokens, $self->lexer->new_token( COMMENT => $1 );
+                push @$tokens, $self->lexer->new_token( LB => $2 );
                 $self->lexer->inc_line;
                 last;
             }
@@ -708,7 +708,7 @@ sub parse_plain_multi {
                 warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
                 $self->exception("Unexpected content");
             }
-            push @$tokens, ['LB', $1];
+            push @$tokens, $self->lexer->new_token( LB => $1 );
             $self->lexer->inc_line;
         }
         else {
@@ -792,8 +792,8 @@ sub parse_block_scalar {
         if ($$yaml =~ s/\A($indent_re)($RE_WS*)//) {
             $pre = $1;
             $space = $2;
-            push @$tokens, ['INDENT', $pre];
-            push @$tokens, ['WS', $space];
+            push @$tokens, $self->lexer->new_token( INDENT => $pre );
+            push @$tokens, $self->lexer->new_token( WS => $space );
             $length = length $space;
         }
         elsif ($$yaml =~ m/\A$RE_WS*#.*$RE_LB/) {
@@ -801,8 +801,8 @@ sub parse_block_scalar {
         }
         elsif ($$yaml =~ s/\A($RE_WS*)($RE_LB)//) {
             $pre = $1;
-            push @$tokens, ['WS', $pre];
-            push @$tokens, ['LB', $2];
+            push @$tokens, $self->lexer->new_token( WS => $pre );
+            push @$tokens, $self->lexer->new_token( LB => $2 );
             $self->lexer->inc_line;
             $space = '';
             $type = 'EMPTY';
@@ -813,7 +813,7 @@ sub parse_block_scalar {
             last;
         }
         if ($$yaml =~ s/\A($RE_LB)//) {
-            push @$tokens, ['LB', $1];
+            push @$tokens, $self->lexer->new_token( LB => $1 );
             $self->lexer->inc_line;
             $type = 'EMPTY';
             if ($got_indent) {
@@ -834,8 +834,8 @@ sub parse_block_scalar {
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
         if ($$yaml =~ s/\A(.*)($RE_LB|\z)//) {
             my $value = $1;
-            push @$tokens, ['BLOCK_SCALAR_CONTENT', $value];
-            push @$tokens, ['LB', $2];
+            push @$tokens, $self->lexer->new_token( BLOCK_SCALAR_CONTENT => $value );
+            push @$tokens, $self->lexer->new_token( LB => $2 );
             $self->lexer->inc_line;
             $type = length $space ? 'MORE' : 'CONTENT';
             push @lines, [ $type => $pre, $space . $value ];

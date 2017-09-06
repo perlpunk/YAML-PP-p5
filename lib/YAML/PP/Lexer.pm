@@ -248,9 +248,6 @@ sub _fetch_next_tokens {
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$offset], ['offset']);
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
     if (not length $$yaml) {
-        if ($offset != 0) {
-            push @$next, [ 'EOL' => '' ];
-        }
         return;
     }
     my $first = substr($$yaml, 0, 1);
@@ -258,35 +255,31 @@ sub _fetch_next_tokens {
     if ($offset == 0) {
         if ($first eq "%") {
             if ($$yaml =~ s/\A(\s*%YAML ?1\.2$RE_WS*)//) {
-                push @$next, ['YAML_DIRECTIVE', $1];
+                $self->push_token( YAML_DIRECTIVE => $1 );
             }
             elsif ($$yaml =~ s/\A(\s*%TAG +(!$RE_NS_WORD_CHAR*!|!) +(tag:\S+|!$RE_URI_CHAR+)$RE_WS*)//) {
-                push @$next, ['TAG_DIRECTIVE', $1];
+                $self->push_token( TAG_DIRECTIVE => $1 );
                 my $tag_alias = $2;
                 my $tag_url = $3;
             }
             elsif ($$yaml =~ s/\A(\s*\A%(?:\w+).*)//) {
-                push @$next, ['RESERVED_DIRECTIVE', $1];
+                $self->push_token( RESERVED_DIRECTIVE => $1 );
                 warn "Found reserved directive '$1'";
             }
             else {
                 die "Invalid directive";
             }
             if ($$yaml =~ s/\A([\r\n]|\z)//) {
-                push @$next, [ 'EMPTY' => $1 ];
-                $self->inc_line;
+                $self->push_token( EMPTY => $1 );
             }
             else {
                 die "Invalid directive";
             }
             return;
         }
-        elsif ($first eq "\n") {
-        }
         elsif ($first eq "#") {
             if ($$yaml =~ s/\A(#.*(?:[\r\n]|\z))//) {
-                push @$next, [ 'EMPTY' => $1 ];
-                $self->inc_line;
+                $self->push_token( EMPTY => $1 );
                 return;
             }
         }
@@ -296,31 +289,28 @@ sub _fetch_next_tokens {
                 $ws = $1;
             }
             if ($$yaml =~ s/\A(#.*(?:[\r\n]|\z))//) {
-                push @$next, [ 'EMPTY' => $ws . $1 ];
-                $self->inc_line;
+                $self->push_token( EMPTY => $ws . $1 );
                 return;
             }
             elsif ($$yaml =~ s/\A([\r\n]|\z)//) {
-                push @$next, [ 'EMPTY' => $ws . $1 ];
-                $self->inc_line;
+                $self->push_token( EMPTY => $ws . $1 );
                 return;
             }
             else {
-                push @$next, [ 'INDENT', $ws ];
+                $self->push_token( INDENT => $ws );
             }
         }
         elsif ($first eq '-') {
             if ($$yaml =~ s/$RE_DOC_START//) {
-                push @$next, ['DOC_START', $1];
+                $self->push_token( DOC_START => $1 );
                 my $eol = $$yaml =~ s/\A($RE_EOL|\z)//;
                 if ($eol) {
-                    push @$next, ['EOL', $1];
-                    $self->inc_line;
+                    $self->push_token( EOL => $1 );
                     return;
                 }
                 else {
                     if ($$yaml =~ s/\A($RE_WS+)//) {
-                        push @$next, ['WS', $1];
+                        $self->push_token( WS => $1 );
                     }
                     else {
                         warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
@@ -331,10 +321,9 @@ sub _fetch_next_tokens {
         }
         elsif ($first eq '.') {
             if ($$yaml =~ s/$RE_DOC_END//) {
-                push @$next, ['DOC_END', $1];
+                $self->push_token( DOC_END => $1 );
                 $$yaml =~ s/($RE_EOL|\z)// or die "Unexpected";
-                $self->inc_line;
-                push @$next, ['EOL', $1];
+                $self->push_token( EOL => $1 );
                 return;
             }
         }
@@ -351,26 +340,24 @@ sub _fetch_next_tokens {
         my $regex = $REGEXES{ $token_name2 };
         if ($$yaml =~ s/\A($first)$regex($first|[\r\n]|\z)//) {
             my $quote = $1;
-            push @$next, [ $token_name, $1 ];
+            $self->push_token( $token_name => $1 );
             if ($3 eq $first) {
-                push @$next, [ $token_name . 'D_SINGLE', $2 ];
-                push @$next, [ $token_name, $3 ];
+                $self->push_token( $token_name . 'D_SINGLE' => $2 );
+                $self->push_token( $token_name => $3 );
             }
             else {
-                push @$next, [ $token_name . 'D_LINE', $2 ];
-                push @$next, [ 'LB', $3 ];
-                $self->inc_line;
+                $self->push_token( $token_name . 'D_LINE' => $2 );
+                $self->push_token( LB => $3 );
                 while (1) {
                     if ($$yaml =~ s/\A$regex($first|[\r\n])//) {
                         if ($2 eq $first) {
-                            push @$next, [$token_name . 'D_END', => $1 ];
-                            push @$next, [$token_name, => $2 ];
+                            $self->push_token( $token_name . 'D_END' => $1 );
+                            $self->push_token( $token_name => $2 );
                             last;
                         }
                         else {
-                            push @$next, [$token_name . 'D_LINE' => $1 ];
-                            push @$next, ['LB' => $2 ];
-                            $self->inc_line;
+                            $self->push_token( $token_name . 'D_LINE' => $1 );
+                            $self->push_token( LB => $2 );
                         }
                     }
                     else {
@@ -386,21 +373,19 @@ sub _fetch_next_tokens {
     elsif ($first eq '-' or $first eq ':' or $first eq '?') {
         my $token_name = { '-' => 'DASH', ':' => 'COLON', '?' => 'QUESTION' }->{ $first };
         if ($$yaml =~ s/\A(\Q$first\E)(?:($RE_WS+)|([\r\n]|\z))//) {
-            push @$next, [ $token_name => $1 ];
+            $self->push_token( $token_name => $1 );
             if (defined $2) {
                 my $ws = $2;
                 if ($$yaml =~ s/\A(#.*|)([\r\n]|\z)//) {
-                    push @$next, [ 'EOL' => $ws . ($1 // '') . $2 ];
-                    $self->inc_line;
+                    $self->push_token( EOL => $ws . ($1 // '') . $2 );
                     return;
                 }
                 else {
-                    push @$next, [ 'WS' => $ws ];
+                    $self->push_token( WS => $ws );
                 }
             }
             else {
-                push @$next, [ 'EOL' => $3 ];
-                $self->inc_line;
+                $self->push_token( EOL => $3 );
                 return;
             }
         }
@@ -410,62 +395,58 @@ sub _fetch_next_tokens {
     }
     elsif ($first eq '#') {
         if ($$yaml =~ s/\A(#.*(?:[\r\n]|\z))//) {
-            push @$next, [ 'EMPTY' => $1 ];
-            $self->inc_line;
+            $self->push_token( EMPTY => $1 );
             return;
         }
     }
     elsif ($first eq '|' or $first eq '>') {
         my $token_name = { '|' => 'LITERAL', '>' => 'FOLDED' }->{ $first };
         if ($$yaml =~ s/\A(\Q$first\E)//) {
-            push @$next, [ $token_name => $1 ];
+            $self->push_token( $token_name => $1 );
             if ($$yaml =~ s/\A([1-9]\d*)([+-]?)//) {
-                push @$next, ['BLOCK_SCALAR_INDENT', $1];
-                push @$next, ['BLOCK_SCALAR_CHOMP', $2] if $2;
+                $self->push_token( BLOCK_SCALAR_INDENT => $1 );
+                $self->push_token( BLOCK_SCALAR_CHOMP => $2 ) if $2;
             }
             elsif ($$yaml =~ s/\A([+-])([1-9]\d*)?//) {
-                push @$next, ['BLOCK_SCALAR_CHOMP', $1];
-                push @$next, ['BLOCK_SCALAR_INDENT', $2] if $2;
+                $self->push_token( BLOCK_SCALAR_CHOMP => $1 );
+                $self->push_token( BLOCK_SCALAR_INDENT => $2 ) if $2;
             }
             if ($$yaml =~ s/\A($RE_WS+#.*|$RE_WS*)([\r\n]|\z)//) {
-                push @$next, [ 'EOL' => $1 . $2 ];
-                $self->inc_line;
+                $self->push_token( EOL => $1 . $2 );
                 return;
             }
         }
     }
     elsif ($first eq '!') {
         if ($$yaml =~ s/\A($RE_TAG)//) {
-            push @$next, [ 'TAG' => $1 ];
+            $self->push_token( TAG => $1 );
         }
     }
     elsif ($first eq '&') {
         if ($$yaml =~ s/\A(\&$RE_ANCHOR)//) {
-            push @$next, [ 'ANCHOR' => $1 ];
+            $self->push_token( ANCHOR => $1 );
         }
     }
     elsif ($first eq '*') {
         if ($$yaml =~ s/\A(\*$RE_ANCHOR)//) {
-            push @$next, [ 'ALIAS' => $1 ];
+            $self->push_token( ALIAS => $1 );
         }
     }
     elsif ($first eq ' ') {
         if ($$yaml =~ s/\A($RE_WS+)//) {
             my $ws = $1;
             if ($$yaml =~ s/\A(#.*)?([\r\n]|\z)//) {
-                push @$next, [ 'EOL' => $ws . ($1 // '') . $2 ];
-                $self->inc_line;
+                $self->push_token( EOL => $ws . ($1 // '') . $2 );
                 return;
             }
             else {
-                push @$next, [ 'WS' => $ws ];
+                $self->push_token( WS => $ws );
             }
         }
     }
     elsif ($first eq "\n") {
         if ($$yaml =~ s/\A(\n)//) {
-            push @$next, [ 'EOL', $1 ];
-            $self->inc_line;
+            $self->push_token( EOL => $1 );
             return;
         }
     }
@@ -479,16 +460,14 @@ sub _fetch_next_tokens {
     }
     else {
         if ($$yaml =~ s/\A($RE_PLAIN_KEY)// and (length $1) > 0) {
-            push @$next, [ 'SCALAR' => $1 ];
+            $self->push_token( SCALAR => $1 );
             if ($$yaml =~ s/\A(?:($RE_WS+#.*)|($RE_WS*))([\r\n]|\z)//) {
                 if (defined $1) {
-                    push @$next, [ 'COMMENT_EOL', $1 . $3 ];
-                    $self->inc_line;
+                    $self->push_token( COMMENT_EOL => $1 . $3 );
                     return;
                 }
                 else {
-                    push @$next, [ 'EOL' => $2 . $3 ];
-                    $self->inc_line;
+                    $self->push_token( EOL => $2 . $3 );
                     return;
                 }
             }
@@ -501,11 +480,30 @@ sub _fetch_next_tokens {
 
         $first = substr($$yaml, 0, 1);
     }
-    unless (length $$yaml) {
-        push @$next, [ 'EOL' => '' ];
-    }
+    push @$next, $self->new_token( EOL => '' );
 
     return;
+}
+
+my %is_new_line = (
+    EOL => 1,
+    COMMENT_EOL => 1,
+    LB => 1,
+    EMPTY => 1,
+);
+
+sub push_token {
+    my ($self, $type, $value) = @_;
+    my $next = $self->next_tokens;
+    push @$next, [ $type => $value ];
+    if ($is_new_line{ $type }) {
+        $self->inc_line;
+    }
+}
+
+sub new_token {
+    my ($self, $type, $value) = @_;
+    return [ $type => $value ];
 }
 
 1;
