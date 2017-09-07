@@ -435,16 +435,24 @@ sub fetch_next_tokens {
     return $next;
 }
 
+my %TOKEN_NAMES = (
+    '"' => 'DOUBLEQUOTE',
+    "'" => 'SINGLEQUOTE',
+    '|' => 'LITERAL',
+    '>' => 'FOLDED',
+    '!' => 'TAG',
+    '*' => 'ALIAS',
+    '&' => 'ANCHOR',
+);
 sub _fetch_next_tokens {
     my ($self, $offset, $yaml) = @_;
     my $next = $self->next_tokens;
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$offset], ['offset']);
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
+
     if (not length $$yaml) {
         return;
     }
     my $first = substr($$yaml, 0, 1);
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$first], ['first']);
+
     if ($offset == 0) {
         if ($first eq "%") {
             if ($$yaml =~ s/\A(\s*%YAML ?1\.2$RE_WS*)//) {
@@ -452,6 +460,7 @@ sub _fetch_next_tokens {
             }
             elsif ($$yaml =~ s/\A(\s*%TAG +(!$RE_NS_WORD_CHAR*!|!) +(tag:\S+|!$RE_URI_CHAR+)$RE_WS*)//) {
                 $self->push_token( TAG_DIRECTIVE => $1 );
+                # TODO
                 my $tag_alias = $2;
                 my $tag_url = $3;
             }
@@ -485,13 +494,11 @@ sub _fetch_next_tokens {
                 $self->push_token( EMPTY => $ws . $1 );
                 return;
             }
-            elsif ($$yaml =~ s/\A([\r\n]|\z)//) {
+            if ($$yaml =~ s/\A([\r\n]|\z)//) {
                 $self->push_token( EMPTY => $ws . $1 );
                 return;
             }
-            else {
-                $self->push_token( INDENT => $ws );
-            }
+            $self->push_token( INDENT => $ws );
         }
         elsif ($first eq '-') {
             if ($$yaml =~ s/$RE_DOC_START//) {
@@ -524,32 +531,32 @@ sub _fetch_next_tokens {
 
     $first = substr($$yaml, 0, 1);
     while (length $$yaml) {
-        my $rule;
+        my $plain = 0;
 #        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$first], ['first']);
 
         if ($first eq '"' or $first eq "'") {
-            my $token_name = $first eq '"' ? 'DOUBLEQUOTE' : 'SINGLEQUOTE';
+            my $token_name = $TOKEN_NAMES{ $first };
             my $token_name2 = $token_name . 'D';
             my $regex = $REGEXES{ $token_name2 };
             if ($$yaml =~ s/\A($first)$regex($first|[\r\n]|\z)//) {
                 my $quote = $1;
                 $self->push_token( $token_name => $1 );
                 if ($3 eq $first) {
-                    $self->push_token( $token_name . 'D_SINGLE' => $2 );
+                    $self->push_token( $token_name2 . '_SINGLE' => $2 );
                     $self->push_token( $token_name => $3 );
                 }
                 else {
-                    $self->push_token( $token_name . 'D_LINE' => $2 );
+                    $self->push_token( $token_name2 . '_LINE' => $2 );
                     $self->push_token( LB => $3 );
                     while (1) {
                         if ($$yaml =~ s/\A$regex($first|[\r\n])//) {
                             if ($2 eq $first) {
-                                $self->push_token( $token_name . 'D_END' => $1 );
+                                $self->push_token( $token_name2 . '_END' => $1 );
                                 $self->push_token( $token_name => $2 );
                                 last;
                             }
                             else {
-                                $self->push_token( $token_name . 'D_LINE' => $1 );
+                                $self->push_token( $token_name2 . '_LINE' => $1 );
                                 $self->push_token( LB => $2 );
                             }
                         }
@@ -564,36 +571,26 @@ sub _fetch_next_tokens {
             }
         }
         elsif ($first eq '-' or $first eq ':' or $first eq '?') {
-            my $token_name = { '-' => 'DASH', ':' => 'COLON', '?' => 'QUESTION' }->{ $first };
             if ($$yaml =~ s/\A(\Q$first\E)(?:($RE_WS+)|([\r\n]|\z))//) {
+                my $token_name = { '-' => 'DASH', ':' => 'COLON', '?' => 'QUESTION' }->{ $first };
                 $self->push_token( $token_name => $1 );
-                if (defined $2) {
-                    my $ws = $2;
-                    if ($$yaml =~ s/\A(#.*|)([\r\n]|\z)//) {
-                        $self->push_token( EOL => $ws . ($1 // '') . $2 );
-                        return;
-                    }
-                    else {
-                        $self->push_token( WS => $ws );
-                    }
-                }
-                else {
+                if (not defined $2) {
                     $self->push_token( EOL => $3 );
                     return;
                 }
+                my $ws = $2;
+                if ($$yaml =~ s/\A(#.*|)([\r\n]|\z)//) {
+                    $self->push_token( EOL => $ws . ($1 // '') . $2 );
+                    return;
+                }
+                $self->push_token( WS => $ws );
             }
             else {
-                $rule = 'SCALAR';
-            }
-        }
-        elsif ($first eq '#') {
-            if ($$yaml =~ s/\A(#.*(?:[\r\n]|\z))//) {
-                $self->push_token( EMPTY => $1 );
-                return;
+                $plain = 1;
             }
         }
         elsif ($first eq '|' or $first eq '>') {
-            my $token_name = { '|' => 'LITERAL', '>' => 'FOLDED' }->{ $first };
+            my $token_name = $TOKEN_NAMES{ $first };
             if ($$yaml =~ s/\A(\Q$first\E)//) {
                 $self->push_token( $token_name => $1 );
                 if ($$yaml =~ s/\A([1-9]\d*)([+-]?)//) {
@@ -604,37 +601,43 @@ sub _fetch_next_tokens {
                     $self->push_token( BLOCK_SCALAR_CHOMP => $1 );
                     $self->push_token( BLOCK_SCALAR_INDENT => $2 ) if $2;
                 }
-                if ($$yaml =~ s/\A($RE_WS+#.*|$RE_WS*)([\r\n]|\z)//) {
-                    $self->push_token( EOL => $1 . $2 );
-                    return;
-                }
             }
         }
         elsif ($first eq '!') {
+            my $token_name = $TOKEN_NAMES{ $first };
             if ($$yaml =~ s/\A($RE_TAG)//) {
-                $self->push_token( TAG => $1 );
+                $self->push_token( $token_name => $1 );
+            }
+            else {
+                die "Invalid tag";
             }
         }
         elsif ($first eq '&') {
+            my $token_name = $TOKEN_NAMES{ $first };
             if ($$yaml =~ s/\A(\&$RE_ANCHOR)//) {
-                $self->push_token( ANCHOR => $1 );
+                $self->push_token( $token_name => $1 );
+            }
+            else {
+                die "Invalid anchor";
             }
         }
         elsif ($first eq '*') {
+            my $token_name = $TOKEN_NAMES{ $first };
             if ($$yaml =~ s/\A(\*$RE_ANCHOR)//) {
-                $self->push_token( ALIAS => $1 );
+                $self->push_token( $token_name => $1 );
+            }
+            else {
+                die "Invalid alias";
             }
         }
         elsif ($first eq ' ') {
             if ($$yaml =~ s/\A($RE_WS+)//) {
                 my $ws = $1;
-                if ($$yaml =~ s/\A(#.*)?([\r\n]|\z)//) {
-                    $self->push_token( EOL => $ws . ($1 // '') . $2 );
+                if ($$yaml =~ s/\A((?:#.*)?(?:[\r\n]|\z))//) {
+                    $self->push_token( EOL => $ws . $1 );
                     return;
                 }
-                else {
-                    $self->push_token( WS => $ws );
-                }
+                $self->push_token( WS => $ws );
             }
         }
         elsif ($first eq "\n") {
@@ -647,10 +650,10 @@ sub _fetch_next_tokens {
             die "Not Implemented: Flow Style";
         }
         else {
-            $rule = 'SCALAR';
+            $plain = 1;
         }
 
-        if ($rule) {
+        if ($plain) {
             if ($$yaml =~ s/\A($RE_PLAIN_KEY)// and (length $1) > 0) {
                 $self->push_token( SCALAR => $1 );
                 if ($$yaml =~ s/\A(?:($RE_WS+#.*)|($RE_WS*))([\r\n]|\z)//) {
@@ -658,10 +661,8 @@ sub _fetch_next_tokens {
                         $self->push_token( COMMENT_EOL => $1 . $3 );
                         return;
                     }
-                    else {
-                        $self->push_token( EOL => $2 . $3 );
-                        return;
-                    }
+                    $self->push_token( EOL => $2 . $3 );
+                    return;
                 }
             }
             else {
