@@ -10,7 +10,7 @@ plan tests => 16 + ($ENV{AUTHOR_TESTING} ? 1 : 0);
 
 my @module_files = (
     'YAML/PP.pm',
-    'YAML/PP/Contructor.pm',
+    'YAML/PP/Constructor.pm',
     'YAML/PP/Dumper.pm',
     'YAML/PP/Emitter.pm',
     'YAML/PP/Exception.pm',

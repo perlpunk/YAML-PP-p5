@@ -6,14 +6,14 @@ package YAML::PP::Loader;
 our $VERSION = '0.000'; # VERSION
 
 use YAML::PP::Parser;
-use YAML::PP::Contructor;
+use YAML::PP::Constructor;
 
 sub new {
     my ($class, %args) = @_;
 
     my $bool = delete $args{boolean} // 'perl';
     my $parser = delete $args{parser} || YAML::PP::Parser->new;
-    my $constructor = delete $args{constructor} || YAML::PP::Contructor->new(
+    my $constructor = delete $args{constructor} || YAML::PP::Constructor->new(
         boolean => $bool,
     );
     if (keys %args) {

@@ -1,7 +1,7 @@
 # ABSTRACT: Construct data structure from Parser Events
 use strict;
 use warnings;
-package YAML::PP::Contructor;
+package YAML::PP::Constructor;
 
 our $VERSION = '0.000'; # VERSION
 
