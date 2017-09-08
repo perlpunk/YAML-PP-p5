@@ -50,13 +50,13 @@ Here are a few examples of what you can do right now:
 Some utility scripts:
 
     # Load YAML into a very simple data structure
-    yaml-pp-p5-load < file.yaml
+    yamlpp5-load < file.yaml
 
     # Load and dump
-    yaml-pp-p5-load-dump < file.yaml
+    yamlpp5-load-dump < file.yaml
 
     # Print the events from the parser in yaml-test-suite format
-    yaml-pp-p5-events < file.yaml
+    yamlpp5-events < file.yaml
 
 
 =head1 DESCRIPTION

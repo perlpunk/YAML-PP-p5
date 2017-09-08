@@ -24,10 +24,10 @@ my @module_files = (
 );
 
 my @scripts = (
-    'bin/yaml-pp-p5-events',
-    'bin/yaml-pp-p5-load',
-    'bin/yaml-pp-p5-load-dump',
-    'bin/yamlpp5-highlight'
+    'bin/yamlpp5-events',
+    'bin/yamlpp5-highlight',
+    'bin/yamlpp5-load',
+    'bin/yamlpp5-load-dump'
 );
 
 # no fake home requested

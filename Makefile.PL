@@ -14,10 +14,10 @@ my %WriteMakefileArgs = (
   },
   "DISTNAME" => "YAML-PP",
   "EXE_FILES" => [
-    "bin/yaml-pp-p5-events",
-    "bin/yaml-pp-p5-load",
-    "bin/yaml-pp-p5-load-dump",
-    "bin/yamlpp5-highlight"
+    "bin/yamlpp5-events",
+    "bin/yamlpp5-highlight",
+    "bin/yamlpp5-load",
+    "bin/yamlpp5-load-dump"
   ],
   "LICENSE" => "perl",
   "MIN_PERL_VERSION" => "5.010",
