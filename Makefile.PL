@@ -7,7 +7,7 @@ use 5.010;
 use ExtUtils::MakeMaker;
 
 my %WriteMakefileArgs = (
-  "ABSTRACT" => "YAML Parser and Loader",
+  "ABSTRACT" => "YAML Framework",
   "AUTHOR" => "Tina M\x{fc}ller <tinita\@cpan.org>",
   "CONFIGURE_REQUIRES" => {
     "ExtUtils::MakeMaker" => 0
