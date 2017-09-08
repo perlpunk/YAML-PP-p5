@@ -496,7 +496,7 @@ sub emit_tag {
         $tag = "$1";
     }
     else {
-        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$tag], ['tag']);
+#        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$tag], ['tag']);
         $tag = "!$tag";
     }
     return $tag;
