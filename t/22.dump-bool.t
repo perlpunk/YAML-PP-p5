@@ -14,18 +14,18 @@ TRUE: true
 EOM
 
 SKIP: {
-    skip "boolean not installed", 3 unless $boolean;
+    skip "boolean not installed", 1 unless $boolean;
     my $data = {
         TRUE => JSON::PP::true(),
         FALSE => JSON::PP::false(),
     };
     my $yppd = YAML::PP::Dumper->new(boolean => 'boolean');
     my $yaml = $yppd->dump($data);
-    cmp_ok($yaml, 'eq', $exp_yaml, "JSON::PP::Boolean dump");
+    cmp_ok($yaml, 'eq', $exp_yaml, "boolean.pm dump");
 }
 
 SKIP: {
-    skip "JSON::PP not installed", 3 unless $json_pp;
+    skip "JSON::PP not installed", 1 unless $json_pp;
     my $data = {
         TRUE => JSON::PP::true(),
         FALSE => JSON::PP::false(),

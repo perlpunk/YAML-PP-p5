@@ -24,11 +24,11 @@ my @dirs = YAML::PP::Test->get_tests(
 @dirs = sort @dirs;
 
 my @skip = qw/
-    4ABK 54T7 5C5M 5KJE 5TRB 6HB6 87E4 8UDB 9MMW
+    4ABK 54T7 5C5M 5KJE 6HB6 87E4 8UDB 9MMW
     C2DT C4HZ CT4Q D88J DBG4 DFF7 DHP8
     EHF6 FRK4 FUP4
     KZN9 L9U5 LP6E LQZ7 LX3P
-    M5DY M7A3 MXS3 N782
+    M5DY M7A3 MXS3
     Q88A Q9WF QF4Y
     R4YG SBG9 UDR7 UT92 WZ62 X38W YD5X ZF4X
 
@@ -51,7 +51,7 @@ if (my $dir = $ENV{YAML_TEST_DIR}) {
     @$skipped = ();
 }
 my %skip;
-@skip{ @$skipped } = ();
+@skip{ @$skipped } = (1) x @$skipped;
 my %todo;
 @todo{ @todo } = ();
 
@@ -60,10 +60,11 @@ my %todo;
 my %results;
 my %errors;
 @results{qw/ DIFF OK ERROR TODO /} = ([], (0) x 3);
+my $skip_count = keys %skip;
 for my $item (@dirs) {
     my $dir = dirname $item;
     my $id = basename $item;
-    my $skip = exists $skip{ $id };
+    my $skip = delete $skip{ $id };
     my $todo = exists $todo{ $id };
     next if $skip;
 
@@ -96,7 +97,9 @@ for my $item (@dirs) {
     }
 
 }
-my $skip_count = keys %skip;
+if (keys %skip) {
+    warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\%skip], ['skip']);
+}
 diag "Skipped $skip_count tests";
 
 sub test {
@@ -141,6 +144,8 @@ sub test {
     }
     if ($ok) {
         $results{OK}++;
+        my $lines = $parser->lexer->line - 1;
+        cmp_ok($lines, '==', $exp_lines, "$name - Line count $lines == $exp_lines");
     }
     else {
         push @{ $results{DIFF} }, $name unless $error;
@@ -153,8 +158,6 @@ sub test {
             diag "GOT EVENTS:\n" . join '', map { "$_\n" } @events;
         }
     }
-    my $lines = $parser->lexer->line - 1;
-    cmp_ok($lines, '==', $exp_lines, "$name - Line count $lines == $exp_lines");
 }
 my $diff_count = @{ $results{DIFF} };
 diag "OK: $results{OK} DIFF: $diff_count ERROR: $results{ERROR} TODO: $results{TODO}";

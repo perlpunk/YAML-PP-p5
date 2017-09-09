@@ -29,14 +29,13 @@ sub get_tests {
 
     my @dirs;
     if (-d $test_suite_dir) {
-        my %id_tags = $class->get_tags( test_suite_dir => $test_suite_dir );
 
         opendir my $dh, $test_suite_dir or die $!;
         my @ids = grep { m/^[A-Z0-9]{4}\z/ } readdir $dh;
         @ids = grep {
             $valid
-            ? not $id_tags{ $_ }->{error}
-            : $id_tags{ $_ }->{error}
+            ? not -f "$test_suite_dir/$_/error"
+            : -f "$test_suite_dir/$_/error"
         } @ids;
         if ($json) {
             @ids = grep {
