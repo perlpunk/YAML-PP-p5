@@ -23,9 +23,14 @@ my @docs = eval {
 };
 my $error = $@;
 my $tokens = $ypp->parser->tokens;
+my $next = $ypp->parser->lexer->next_tokens;
+push @$tokens, @$next;
 my $remaining = $ypp->parser->yaml;
 if ($error) {
-    push @$tokens, [ERROR => $$remaining];
+    push @$tokens, { name => "ERROR", value => $$remaining };
 }
 my $highlighted = YAML::PP::Highlight->ansicolored($tokens);
 print $highlighted;
+if ($error) {
+    die $error;
+}
