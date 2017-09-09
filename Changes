@@ -1,3 +1,13 @@
+0.003_002 2017-09-09 16:27:28+02:00
+    - Lots of refactoring
+    - Lots of little bugfixes
+    - Split Loader into Constructor
+    - Add yaml-test-suite to release tarball
+    - Add a Lexer
+    - Better error messages
+    - Add a highlighter for HTML and ANSI colors
+    - Dumper can dump aliases/anchors now
+
 0.003_001 2017-08-07 23:29:51+02:00
     - Fix some parsing bugs for quoted strings
     - Add Dumper and Emitter
