@@ -24,6 +24,9 @@ sub render_tag {
             $tag = "<" . $map->{ $alias }. $name . ">";
         }
         else {
+            if ($alias ne '!' and $alias ne '!!') {
+                die "Found undefined tag handle '$alias'";
+            }
             $tag = "<!$name>";
         }
     }
