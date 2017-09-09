@@ -10,6 +10,7 @@ sub new {
     my ($class, %args) = @_;
     my $self = bless {
         refs => {},
+        seen => {},
         emitter => YAML::PP::Emitter->new(
             indent => $args{indent} // 2,
         ),
@@ -48,8 +49,26 @@ sub dump_document {
 sub dump_node {
     my ($self, $node) = @_;
 
+    my $seen = $self->{seen};
+    my $anchor;
+    if (ref $node) {
+
+        if ($seen->{ $node } > 1) {
+            $anchor = $self->{refs}->{ $node };
+            unless (defined $anchor) {
+                my $num = ++$self->{anchor_num};
+                $self->{refs}->{ $node } = $num;
+                $anchor = $num;
+            }
+            else {
+                $self->emitter->alias_event({ content => $anchor });
+                return;
+            }
+
+        }
+    }
     if (ref $node eq 'HASH') {
-        $self->emitter->mapping_start_event();
+        $self->emitter->mapping_start_event({ anchor => $anchor });
         for my $key (sort keys %$node) {
             $self->dump_node($key);
             $self->dump_node($node->{ $key });
@@ -57,7 +76,7 @@ sub dump_node {
         $self->emitter->mapping_end_event;
     }
     elsif (ref $node eq 'ARRAY') {
-        $self->emitter->sequence_start_event;
+        $self->emitter->sequence_start_event({ anchor => $anchor });
         for my $elem (@$node) {
             $self->dump_node($elem);
         }
@@ -68,6 +87,7 @@ sub dump_node {
             $self->emitter->scalar_event({
                 content => $node ? 'true' : 'false',
                 style => ':',
+                anchor => $anchor,
             });
         }
         else {
@@ -83,13 +103,12 @@ sub dump_node {
 sub check_references {
     my ($self, $doc) = @_;
     if (ref $doc) {
-        my $count = $self->{refs}->{ $doc };
-        if ($count) {
+        my $seen = $self->{seen};
+        # check which references are used more than once
+        if (++$seen->{ $doc } > 1) {
             # seen already
             return;
         }
-        my $num = $self->{anchor_num}++;
-        $self->{refs}->{ $doc } = $num;
         if (ref $doc eq 'HASH') {
             for my $key (keys %$doc) {
                 $self->check_references($doc->{ $key });
