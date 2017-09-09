@@ -32,7 +32,6 @@ my @skip = qw/
     Q88A Q9WF QF4Y
     R4YG SBG9 UDR7 UT92 WZ62 X38W YD5X ZF4X
 
-    v018
 
 /;
 
@@ -97,7 +96,7 @@ for my $item (@dirs) {
     }
 
 }
-my $skip_count = @$skipped;
+my $skip_count = keys %skip;
 diag "Skipped $skip_count tests";
 
 sub test {

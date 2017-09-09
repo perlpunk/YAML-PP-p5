@@ -5,5 +5,4 @@ dev.sh
 nytprof
 nytprof.out
 pod2htmd.tmp
-^valid.*.yaml
-^invalid.*.yaml
+new_tests
