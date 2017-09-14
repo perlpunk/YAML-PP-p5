@@ -10,7 +10,7 @@ use YAML::PP::Test;
 use YAML::PP::Loader;
 use Encode;
 use File::Basename qw/ dirname basename /;
-my $json_xs = eval "use JSON::XS; 1";
+my $json_xs = eval "use JSON::PP; 1";
 
 my $yts = "$Bin/../yaml-test-suite";
 my @dirs = YAML::PP::Test->get_tests(
@@ -79,8 +79,8 @@ if (my $dir = $ENV{YAML_TEST_DIR}) {
 }
 
 SKIP: {
-    skip "JSON::XS not installed", scalar(@dirs) unless $json_xs;
-    my $coder = JSON::XS->new->ascii->pretty->allow_nonref->canonical;
+    skip "JSON::PP not installed", scalar(@dirs) unless $json_xs;
+    my $coder = JSON::PP->new->ascii->pretty->allow_nonref->canonical;
 
 for my $item (@dirs) {
     my $dir = dirname $item;

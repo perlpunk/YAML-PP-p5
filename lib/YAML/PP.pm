@@ -166,7 +166,7 @@ own boolean handling.
 =item Numbers
 
 Numbers are created as real numbers instead of strings, so that they are
-dumped correctly by modules like L<JSON::XS>, for example.
+dumped correctly by modules like L<JSON::PP> or L<JSON::XS>, for example.
 
 See L<"NUMBERS"> for an example.
 
@@ -186,9 +186,9 @@ I would like to add a possibility to specify a method for stringification.
 Example:
 
     use YAML::PP::Loader;
-    use JSON::XS;
+    use JSON::PP;
     my $yppl = YAML::PP::Loader->new;
-    my $coder = JSON::XS->new->ascii->pretty->allow_nonref->canonical;
+    my $coder = JSON::PP->new->ascii->pretty->allow_nonref->canonical;
     my $yaml = <<'EOM';
     complex:
         ?
@@ -247,9 +247,9 @@ The layout is like libyaml output:
 
 =head1 NUMBERS
 
-Compare the output of the following YAML Loaders and JSON::XS dump:
+Compare the output of the following YAML Loaders and JSON::PP dump:
 
-    use JSON::XS;
+    use JSON::PP;
     use Devel::Peek;
 
     use YAML::XS ();
