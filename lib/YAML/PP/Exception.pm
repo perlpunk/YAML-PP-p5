@@ -29,9 +29,10 @@ sub to_string {
     $yaml .= $remaining_yaml;
     $yaml =~ s/[\r\n].*//s;
     {
+        local $@; # avoid bug in old Data::Dumper
+        require Data::Dumper;
         local $Data::Dumper::Useqq = 1;
         local $Data::Dumper::Terse = 1;
-        require Data::Dumper;
         $yaml = Data::Dumper->Dump([$yaml], ['yaml']);
         chomp $yaml;
     }
