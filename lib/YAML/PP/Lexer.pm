@@ -75,24 +75,10 @@ my $RE_PLAIN_FIRST = '[\x24\x28-\x29\x2B\x2E-\x39\x3B-\x3D\x41-\x5A\x5C\x5E-\x5F
 #} 7D FLOW
 
 
-#my $RE_PLAIN_WORD = "$RE_PLAIN_START(?:$RE_PLAIN_END|$RE_PLAIN*$RE_PLAIN_END)?";
-my $RE_PLAIN_WORD = "(?::$RE_PLAIN_START|$RE_PLAIN_START)(?::$RE_PLAIN_END|$RE_PLAIN_END)*";
-my $RE_PLAIN_FIRST_WORD1 = "(?:[:]$RE_PLAIN_END|$RE_PLAIN_FIRST)(?::$RE_PLAIN_END|$RE_PLAIN_END)*";
-my $RE_PLAIN_FIRST_WORD2 = "(?:[?-]$RE_PLAIN_END|$RE_PLAIN_FIRST)(?::$RE_PLAIN_END|$RE_PLAIN_END)*";
-#my $RE_PLAIN_FIRST_WORD2 = "(?:$RE_PLAIN_FIRST$RE_PLAIN*$RE_PLAIN_END)";
-#my $RE_PLAIN_FIRST_WORD3 = "(?:$RE_PLAIN_FIRST$RE_PLAIN_END?)";
-#my $RE_PLAIN_FIRST_WORD = "(?:$RE_PLAIN_FIRST_WORD1|$RE_PLAIN_FIRST_WORD2|$RE_PLAIN_FIRST_WORD3)";
-my $RE_PLAIN_FIRST_WORD = "(?:$RE_PLAIN_FIRST_WORD1|$RE_PLAIN_FIRST_WORD2)";
-my $RE_PLAIN_KEY = "(?:$RE_PLAIN_FIRST_WORD(?:$RE_WS+$RE_PLAIN_WORD)*|)";
-#my $key_content_re_dq = '[^"\r\n\\\\]';
-#my $key_content_re_sq = q{[^'\r\n]};
-#my $key_re_double_quotes = qr{"(?:\\\\|\\[^\r\n]|$key_content_re_dq)*"};
-#my $key_re_single_quotes = qr{'(?:\\\\|''|$key_content_re_sq)*'};
-#my $key_full_re = qr{(?:$key_re_double_quotes|$key_re_single_quotes|$RE_PLAIN_KEY)};
-my $key_full_re = qr{$RE_PLAIN_KEY};
-
-my $plain_start_word_re = '[^*!&\s#][^\r\n\s]*';
-my $plain_word_re = '[^#\r\n\s][^\r\n\s]*';
+my $RE_PLAIN_WORD = "(?::+$RE_PLAIN_END|$RE_PLAIN_START)(?::+$RE_PLAIN_END|$RE_PLAIN_END)*";
+my $RE_PLAIN_FIRST_WORD = "(?:[:?-]+$RE_PLAIN_END|$RE_PLAIN_FIRST)(?::+$RE_PLAIN_END|$RE_PLAIN_END)*";
+my $RE_PLAIN_WORDS = "(?:$RE_PLAIN_FIRST_WORD(?:$RE_WS+$RE_PLAIN_WORD)*|)";
+my $RE_PLAIN_WORDS2 = "(?:$RE_PLAIN_WORD(?:$RE_WS+$RE_PLAIN_WORD)*|)";
 
 
 #c-secondary-tag-handle  ::= “!” “!”
@@ -122,7 +108,7 @@ my %REGEXES = (
     LB => qr{($RE_LB)},
     WS => qr{($RE_WS*)},
     'WS' => qr{($RE_WS+)},
-    SCALAR => qr{($RE_PLAIN_KEY)},
+    SCALAR => qr{($RE_PLAIN_WORDS)},
     ALIAS => qr{$RE_ALIAS},
     QUESTION => qr{$RE_COMPLEX},
     COLON => qr{(?m:(:)(?=$RE_WS|$))},
@@ -380,22 +366,11 @@ sub parse_plain_multi {
             $self->inc_line;
             push @multi, '';
         }
-        elsif ($$yaml =~ s/\A($plain_word_re)//) {
+        elsif ($$yaml =~ s/\A($RE_PLAIN_WORDS2)//) {
             my $string = $1;
             push @$tokens, $self->new_token( PLAIN => $string );
-            if ($string =~ m/:$/) {
-                $parser->exception("Unexpected content: '$string'");
-            }
-            while ($$yaml =~ s/\A($RE_WS+)//) {
+            if ($$yaml =~ s/\A($RE_WS+)//) {
                 push @$tokens, $self->new_token( WS => $1 );
-                my $sp = $1;
-                $$yaml =~ s/\A($plain_word_re)// or last;
-                push @$tokens, $self->new_token( PLAIN => $1 );
-                my $value = $sp . $1;
-                if ($value =~ m/:$/) {
-                    $parser->exception("Unexpected content: '$value'");
-                }
-                $string .= $value;
             }
             push @multi, $string;
             if ($$yaml =~ s/\A(#.*)($RE_LB|\z)//) {
@@ -405,7 +380,6 @@ sub parse_plain_multi {
                 last;
             }
             unless ($$yaml =~ s/\A($RE_LB|\z)//) {
-                warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
                 $parser->exception("Unexpected content");
             }
             push @$tokens, $self->new_token( LB => $1 );
@@ -515,7 +489,6 @@ sub _fetch_next_tokens {
                         $self->push_token( WS => $1 );
                     }
                     else {
-                        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
                         $self->exception("Unexpected content after ---");
                     }
                 }
@@ -656,7 +629,7 @@ sub _fetch_next_tokens {
         }
 
         if ($plain) {
-            if ($$yaml =~ s/\A($RE_PLAIN_KEY)// and (length $1) > 0) {
+            if ($$yaml =~ s/\A($RE_PLAIN_WORDS)// and (length $1) > 0) {
                 $self->push_token( SCALAR => $1 );
                 if ($$yaml =~ s/\A(?:($RE_WS+#.*)|($RE_WS*))([\r\n]|\z)//) {
                     if (defined $1) {
@@ -668,7 +641,6 @@ sub _fetch_next_tokens {
                 }
             }
             else {
-                warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
                 $self->exception("Invalid plain scalar");
             }
         }
