@@ -35,6 +35,12 @@ my @skip = qw/
     i031
 /;
 
+# Invalid, but wrong test.event output
+push @skip, qw/
+    SU5Z
+    X4QW
+/;
+
 
 my @todo = ();
 
