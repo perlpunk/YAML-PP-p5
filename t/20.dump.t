@@ -81,6 +81,7 @@ for my $item (@dirs) {
     open my $fh, "<", "$dir/$id/in.yaml" or die $!;
     my $yaml = do { local $/; <$fh> };
     close $fh;
+    $yaml = decode_utf8 $yaml;
     open $fh, "<", "$dir/$id/===" or die $!;
     chomp(my $title = <$fh>);
     close $fh;

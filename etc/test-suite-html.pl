@@ -133,6 +133,7 @@ sub highlight_test {
 
     warn "$id\n";
     $yaml = do { open my $fh, '<', $file or die $!; local $/; <$fh> };
+    $yaml = decode_utf8 $yaml;
 
     my $class = "ok";
     my @docs;
@@ -175,7 +176,6 @@ sub highlight_test {
     $title = encode_entities($title);
     $error =~ s{\Q$Bin/../lib/}{}g;
     $error = encode_entities($error);
-    $yaml = decode_utf8($yaml);
     $yaml = encode_entities($yaml);
     $data_dump = encode_entities($data_dump);
     my $taglist = join ', ', @{ $tags{ $id } || [] };

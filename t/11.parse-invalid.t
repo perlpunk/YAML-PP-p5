@@ -110,7 +110,7 @@ diag "Skipped $skip_count tests";
 
 sub test {
     my ($title, $name, $yaml, $test_events) = @_;
-#    @$test_events = grep { m/DOC|STR/ } @$test_events;
+    $yaml = decode_utf8($yaml);
     my @events;
     my $parser = YAML::PP::Parser->new(
         receiver => sub {

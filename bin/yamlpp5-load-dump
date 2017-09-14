@@ -5,6 +5,7 @@ use 5.010;
 
 use YAML::PP::Loader;
 use YAML::PP::Dumper;
+use Encode;
 
 my ($file) = @ARGV;
 my $yaml;
@@ -15,10 +16,11 @@ if ($file) {
 else {
     $yaml = do { local $/; <STDIN> };
 }
+$yaml = decode_utf8($yaml);
 
 my $yppl = YAML::PP::Loader->new(boolean => 'JSON::PP');
 my $yppd = YAML::PP::Dumper->new;
 my @docs = $yppl->load($yaml);
 my $out_yaml = $yppd->dump(@docs);
 
-print $out_yaml;
+print encode_utf8 $out_yaml;

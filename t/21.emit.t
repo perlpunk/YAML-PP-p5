@@ -80,8 +80,9 @@ S3PD
 K858
 
 /;
-# nested seq
+# unicode
 push @skip, qw/
+H3Z8
 /;
 
 my $skipped = \@skip;
@@ -119,6 +120,7 @@ for my $item (@dirs) {
     open my $fh, "<", "$dir/$id/in.yaml" or die $!;
     my $yaml = do { local $/; <$fh> };
     close $fh;
+    $yaml = decode_utf8 $yaml;
     open $fh, "<", "$dir/$id/===" or die $!;
     chomp(my $title = <$fh>);
     close $fh;
@@ -134,6 +136,7 @@ for my $item (@dirs) {
     open $fh, "<", $out_yaml_file or die $!;
     my $out_yaml = do { local $/; <$fh> };
     close $fh;
+    $out_yaml = decode_utf8 $out_yaml;
 
     open $fh, "<", "$dir/$id/test.event" or die $!;
     chomp(my @test_events = <$fh>);

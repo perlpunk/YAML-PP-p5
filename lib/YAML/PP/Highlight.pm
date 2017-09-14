@@ -97,7 +97,6 @@ sub htmlcolored {
         for my $token (@list) {
             my ($type, $str) = @$token;
             my $colorclass = $htmlcolors{ $type } || 'default';
-            $str = decode_utf8($str);
             $str = HTML::Entities::encode_entities($str);
             $html .= qq{<span class="$colorclass">$str</span>};
         }

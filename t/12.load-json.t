@@ -89,6 +89,7 @@ for my $item (@dirs) {
     open my $fh, "<", "$dir/$id/in.yaml" or die $!;
     my $yaml = do { local $/; <$fh> };
     close $fh;
+    $yaml = decode_utf8 $yaml;
     open $fh, "<", "$dir/$id/===" or die $!;
     chomp(my $title = <$fh>);
     close $fh;
@@ -96,6 +97,7 @@ for my $item (@dirs) {
     open $fh, "<", "$dir/$id/in.json" or die $!;
     my $exp_json = do { local $/; <$fh> };
     close $fh;
+    $exp_json = decode_utf8 $exp_json;
 
 #    diag "------------------------------ $id";
     my $ypp = YAML::PP::Loader->new(boolean => 'JSON::PP');

@@ -15,6 +15,7 @@ if ($file) {
 else {
     $yaml = do { local $/; <STDIN> };
 }
+$yaml = decode_utf8($yaml);
 
 my $parser = YAML::PP::Parser->new(
   receiver => sub {

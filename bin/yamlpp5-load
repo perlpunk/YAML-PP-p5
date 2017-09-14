@@ -5,6 +5,7 @@ use 5.010;
 
 use Data::Dumper;
 use YAML::PP::Loader;
+use Encode;
 
 my ($file) = @ARGV;
 my $yaml;
@@ -15,6 +16,7 @@ if ($file) {
 else {
     $yaml = do { local $/; <STDIN> };
 }
+$yaml = decode_utf8($yaml);
 
 my $ypp = YAML::PP::Loader->new;
 my @docs = $ypp->load($yaml);

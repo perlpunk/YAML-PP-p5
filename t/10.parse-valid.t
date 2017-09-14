@@ -104,7 +104,7 @@ diag "Skipped $skip_count tests";
 
 sub test {
     my ($title, $name, $yaml, $test_events) = @_;
-#    warn __PACKAGE__.':'.__LINE__.": ================================ $name\n";
+    $yaml = decode_utf8($yaml);
     my $exp_lines = () = $yaml =~ m/[\r\n]/g;
     my @events;
     my $parser = YAML::PP::Parser->new(
