@@ -452,6 +452,10 @@ sub _fetch_next_tokens {
     if (not length $$yaml) {
         return;
     }
+    # $ESCAPE_CHAR from YAML.pm
+    if ($$yaml =~ tr/\x00-\x08\x0b-\x0c\x0e-\x1f//) {
+        $self->exception("Control characters are not allowed");
+    }
     my $first = substr($$yaml, 0, 1);
 
     if ($offset == 0) {
