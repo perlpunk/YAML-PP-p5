@@ -1,3 +1,10 @@
+0.004 2017-09-15 13:30:50+02:00
+    - Improve regex for plain scalars
+    - Support literal unicode characters
+    - Reject undefined tag shorthand handles
+    - Fix JSON test
+    - Update yaml-test-suite
+
 0.003_002 2017-09-09 16:27:28+02:00
     - Lots of refactoring
     - Lots of little bugfixes
