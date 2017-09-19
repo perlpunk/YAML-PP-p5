@@ -281,7 +281,8 @@ sub check_indent {
     my $tokens = $self->tokens;
 
     $self->lexer->fetch_next_tokens(0);
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
+    #TRACE and $self->info("NEXT TOKENS:");
+    #TRACE and $self->debug_tokens($next_tokens);
     my $space = 0;
     my $offset = $space;
     while ($self->parse_empty($next_tokens)) {
@@ -890,7 +891,6 @@ sub debug_rules {
             }
         }
         else {
-            warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$rule], ['rule']);
             eval {
                 my @keys = sort keys %$rule;
                 $self->info("@keys");

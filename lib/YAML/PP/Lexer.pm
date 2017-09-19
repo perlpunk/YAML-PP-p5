@@ -149,25 +149,29 @@ sub parse_tokens {
             my $success;
             my $next = $next_tokens->[0];
             TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next], ['next']);
-            my $def = $next_rule->{ $next->{name} };
+            my $got = $next->{name};
+            my $def = $next_rule->{ $got };
             if ($def) {
                 shift @$next_tokens;
                 push @$tokens, $next;
             }
-            if (not $def and $next->{name} eq 'WS') {
+            if (not $def and $got eq 'WS') {
+                $got = 'WS?';
                 $def = $next_rule->{ 'WS?' };
                 shift @$next_tokens;
                 push @$tokens, $next;
             }
             if (not $def) {
                 $def = $next_rule->{ 'WS?' };
+                $got = 'WS?';
             }
             if (not $def) {
                 $def = $next_rule->{DEFAULT};
+                $got = 'DEFAULT';
                 TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$def], ['def']);
             }
             if ($def) {
-                DEBUG and $parser->got("---got $next->{name}");
+                DEBUG and $parser->got("---got $got");
                 my ($sub, $next_rule) = @$def;
                 $ok = 1;
                 $success = 1;
