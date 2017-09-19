@@ -58,8 +58,6 @@ sub reader {
 sub lexer { return $_[0]->{lexer} }
 sub callback { return $_[0]->{callback} }
 sub set_callback { $_[0]->{callback} = $_[1] }
-sub yaml { return $_[0]->{yaml} }
-sub set_yaml { $_[0]->{yaml} = $_[1] }
 sub level { return $_[0]->{level} }
 sub set_level { $_[0]->{level} = $_[1] }
 sub offset { return $_[0]->{offset} }
@@ -97,7 +95,8 @@ sub parse {
     if (defined $yaml) {
         $self->{input} = $yaml;
     }
-    $self->set_yaml(\$self->reader->read);
+    $yaml = $self->reader->read;
+    $self->lexer->set_yaml(\$yaml);
     $self->init;
     eval {
         $self->parse_stream;
@@ -125,7 +124,7 @@ sub parse_stream {
 
     my $exp_start = 0;
     while (1) {
-        my $next_tokens = $self->lexer->fetch_next_tokens(0, $self->yaml);
+        my $next_tokens = $self->lexer->fetch_next_tokens(0);
         last unless @$next_tokens;
         my ($start, $start_line) = $self->parse_document_head($exp_start);
 
@@ -170,7 +169,7 @@ sub parse_document_start {
         $start = 1;
         if ($next_tokens->[0]->{name} eq 'EOL') {
             push @{ $self->tokens }, shift @$next_tokens;
-            $self->lexer->fetch_next_tokens(0, $self->yaml);
+            $self->lexer->fetch_next_tokens(0);
         }
         elsif ($next_tokens->[0]->{name} eq 'WS') {
             push @{ $self->tokens }, shift @$next_tokens;
@@ -211,7 +210,7 @@ sub parse_document_head {
         $exp_start = 1;
         push @$tokens, shift @$next_tokens;
         push @$tokens, shift @$next_tokens;
-        $self->lexer->fetch_next_tokens(0, $self->yaml);
+        $self->lexer->fetch_next_tokens(0);
     }
     my ($start, $start_line) = $self->parse_document_start;
     if ($exp_start and not $start) {
@@ -289,7 +288,7 @@ sub check_indent {
     my $indent = 0;
     my $tokens = $self->tokens;
 
-    $self->lexer->fetch_next_tokens(0, $self->yaml);
+    $self->lexer->fetch_next_tokens(0);
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
     my $space = 0;
     my $offset = $space;
@@ -638,7 +637,7 @@ sub parse_empty {
     my ($self, $next_tokens) = @_;
     if (@$next_tokens == 1 and ($next_tokens->[0]->{name} eq 'EMPTY' or $next_tokens->[0]->{name} eq 'EOL')) {
         push @{ $self->tokens }, shift @$next_tokens;
-        $self->lexer->fetch_next_tokens(0, $self->yaml);
+        $self->lexer->fetch_next_tokens(0);
         return 1;
     }
     return 0;
@@ -835,7 +834,7 @@ sub debug_offset {
 
 sub debug_yaml {
     my ($self) = @_;
-    my $yaml = $self->yaml;
+    my $yaml = $self->lexer->yaml;
     my $line = $self->lexer->line;
     $self->note("LINE NUMBER: $line");
     my $next_tokens = $self->lexer->next_tokens;
@@ -855,7 +854,7 @@ sub debug_yaml {
 
 sub debug_next_line {
     my ($self) = @_;
-    my $yaml = $self->yaml;
+    my $yaml = $self->lexer->yaml;
     my ($line) = $$yaml =~ m/\A(.*)/;
     $self->note("NEXT LINE: $line");
 }
@@ -954,7 +953,7 @@ sub exception {
         msg => $msg,
         next => $next,
         where => $caller[1] . ' line ' . $caller[2],
-        yaml => $self->yaml,
+        yaml => $self->lexer->yaml,
     );
     croak $e;
 }

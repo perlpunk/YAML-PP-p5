@@ -27,7 +27,7 @@ my $error = $@;
 my $tokens = $ypp->parser->tokens;
 my $next = $ypp->parser->lexer->next_tokens;
 push @$tokens, @$next;
-my $remaining = $ypp->parser->yaml;
+my $remaining = $ypp->parser->lexer->yaml;
 if ($error) {
     push @$tokens, { name => "ERROR", value => $$remaining };
 }

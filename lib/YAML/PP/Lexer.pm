@@ -25,6 +25,10 @@ sub init {
     $_[0]->{line} = 1;
 }
 
+sub yaml { return $_[0]->{yaml} }
+sub set_yaml { $_[0]->{yaml} = $_[1] }
+sub next_line { return $_[0]->{next_line} }
+sub set_next_line { $_[0]->{next_line} = $_[1] }
 sub next_tokens { return $_[0]->{next_tokens} }
 sub line { return $_[0]->{line} }
 sub set_line { $_[0]->{line} = $_[1] }
@@ -214,7 +218,6 @@ sub parse_tokens {
 sub parse_block_scalar {
     TRACE and warn "=== parse_block_scalar()\n";
     my ($self, $parser, %args) = @_;
-    my $yaml = $parser->yaml;
     my $tokens = $parser->tokens;
     my $indent = $parser->offset->[-1] + 1;
 
@@ -258,7 +261,8 @@ sub parse_block_scalar {
     my $indent_re = $RE_WS ."{$indent}";
     TRACE and local $Data::Dumper::Useqq = 1;
     my $type;
-    while (length $$yaml) {
+    my $yaml = $self->fetch_next_line;
+    while (defined $yaml) {
         TRACE and warn __PACKAGE__.':'.__LINE__.": RE: $indent_re\n";
         TRACE and $parser->debug_yaml;
         my $pre;
@@ -281,6 +285,7 @@ sub parse_block_scalar {
             push @$tokens, $self->new_token( WS => $pre );
             push @$tokens, $self->new_token( LB => $2 );
             $self->inc_line;
+            $yaml = $self->fetch_next_line;
             $space = '';
             $type = 'EMPTY';
             push @lines, [$type => $pre, $space];
@@ -292,6 +297,7 @@ sub parse_block_scalar {
         if ($$yaml =~ s/\A($RE_LB)//) {
             push @$tokens, $self->new_token( LB => $1 );
             $self->inc_line;
+            $yaml = $self->fetch_next_line;
             $type = 'EMPTY';
             if ($got_indent) {
                 push @lines, [$type => $pre, $space];
@@ -309,11 +315,13 @@ sub parse_block_scalar {
             $got_indent = 1;
         }
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
+
         if ($$yaml =~ s/\A(.*)($RE_LB|\z)//) {
             my $value = $1;
             push @$tokens, $self->new_token( BLOCK_SCALAR_CONTENT => $value );
             push @$tokens, $self->new_token( LB => $2 );
             $self->inc_line;
+            $yaml = $self->fetch_next_line;
             $type = length $space ? 'MORE' : 'CONTENT';
             push @lines, [ $type => $pre, $space . $value ];
         }
@@ -333,14 +341,14 @@ sub parse_block_scalar {
 sub parse_plain_multi {
     TRACE and warn "=== parse_plain_multi()\n";
     my ($self, $parser) = @_;
-    my $yaml = $parser->yaml;
+    my $yaml = $self->fetch_next_line;
     my @multi;
     my $indent = $parser->offset->[ -1 ] + 1;
     my $tokens = $parser->tokens;
 
     my $indent_re = $RE_WS . '{' . $indent . '}';
     while (1) {
-        last if not length $$yaml;
+        last if not defined $$yaml;
 
         unless ($$yaml =~ s/\A($indent_re)//) {
             last;
@@ -364,6 +372,7 @@ sub parse_plain_multi {
         if ($$yaml =~ s/\A($RE_LB|\z)//) {
             push @$tokens, $self->new_token( LB => $1 );
             $self->inc_line;
+            $yaml = $self->fetch_next_line;
             push @multi, '';
         }
         elsif ($$yaml =~ s/\A($RE_PLAIN_WORDS2)//) {
@@ -377,6 +386,7 @@ sub parse_plain_multi {
                 push @$tokens, $self->new_token( COMMENT => $1 );
                 push @$tokens, $self->new_token( LB => $2 );
                 $self->inc_line;
+                $yaml = $self->fetch_next_line;
                 last;
             }
             unless ($$yaml =~ s/\A($RE_LB|\z)//) {
@@ -384,6 +394,7 @@ sub parse_plain_multi {
             }
             push @$tokens, $self->new_token( LB => $1 );
             $self->inc_line;
+            $yaml = $self->fetch_next_line;
         }
         else {
             TRACE and $parser->debug_yaml;
@@ -398,11 +409,31 @@ sub parse_plain_multi {
 }
 
 
+sub fetch_next_line {
+    my ($self) = @_;
+    my $next_line = $self->next_line;
+    if (not defined $next_line or (length $$next_line) == 0) {
+        my $yaml = $self->yaml;
+        unless (length $$yaml) {
+            return;
+        }
+        $$yaml =~ s/\A([^\r\n]*(?:[\r\n]|\z))// or die "Unexpected";
+        my $match = $1;
+        $next_line = \$match;
+        $self->set_next_line($next_line);
+    }
+    return $next_line;
+}
+
 sub fetch_next_tokens {
-    my ($self, $offset, $yaml) = @_;
+    my ($self, $offset) = @_;
     my $next = $self->next_tokens;
     unless (@$next) {
-        $self->_fetch_next_tokens($offset, $yaml);
+        my $next_line = $self->fetch_next_line;
+        unless (defined $next_line) {
+            return $next;
+        }
+        $self->_fetch_next_tokens($offset, $next_line);
     }
     return $next;
 }
@@ -523,6 +554,7 @@ sub _fetch_next_tokens {
                 else {
                     $self->push_token( $token_name2 . '_LINE' => $2 );
                     $self->push_token( LB => $3 );
+                    $yaml = $self->fetch_next_line;
                     while (1) {
                         if ($$yaml =~ s/\A$regex($first|[\r\n])//) {
                             if ($2 eq $first) {
@@ -533,6 +565,7 @@ sub _fetch_next_tokens {
                             else {
                                 $self->push_token( $token_name2 . '_LINE' => $1 );
                                 $self->push_token( LB => $2 );
+                                $yaml = $self->fetch_next_line;
                             }
                         }
                         else {
