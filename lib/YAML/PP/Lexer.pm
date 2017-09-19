@@ -15,20 +15,26 @@ use constant NODE_OFFSET => 1;
 
 sub new {
     my ($class, %args) = @_;
-    my $self = bless {}, $class;
+    my $self = bless {
+        reader => $args{reader},
+    }, $class;
     $self->init;
     return $self;
 }
 
 sub init {
-    $_[0]->{next_tokens} = [];
-    $_[0]->{line} = 1;
+    my ($self) = @_;
+    $self->{next_tokens} = [];
+    $self->{line} = 1;
+    my $yaml = $self->reader->read;
+    $self->set_yaml(\$yaml);
 }
 
 sub yaml { return $_[0]->{yaml} }
 sub set_yaml { $_[0]->{yaml} = $_[1] }
 sub next_line { return $_[0]->{next_line} }
 sub set_next_line { $_[0]->{next_line} = $_[1] }
+sub reader { return $_[0]->{reader} }
 sub next_tokens { return $_[0]->{next_tokens} }
 sub line { return $_[0]->{line} }
 sub set_line { $_[0]->{line} = $_[1] }

@@ -12,15 +12,17 @@ use YAML::PP::Render;
 use YAML::PP::Lexer;
 use YAML::PP::Grammar qw/ $GRAMMAR /;
 use YAML::PP::Exception;
+use YAML::PP::Reader;
 use Carp qw/ croak /;
 
 
 sub new {
     my ($class, %args) = @_;
-    my $reader = delete $args{reader};
+    my $reader = delete $args{reader} || YAML::PP::Reader->new;
     my $self = bless {
-        reader => $reader,
-        lexer => YAML::PP::Lexer->new,
+        lexer => YAML::PP::Lexer->new(
+            reader => $reader,
+        ),
     }, $class;
     my $receiver = delete $args{receiver};
     if ($receiver) {
@@ -44,17 +46,7 @@ sub set_receiver {
     $self->{callback} = $callback;
     $self->{receiver} = $receiver;
 }
-sub reader {
-    my ($self) = @_;
-    if (defined $self->{reader}) {
-        return $self->{reader};
-    }
-
-    my $input = $self->{input} // die "No input";
-
-    require YAML::PP::Reader;
-    return YAML::PP::Reader->new(input => $input);
-}
+sub reader { return $_[0]->{reader} }
 sub lexer { return $_[0]->{lexer} }
 sub callback { return $_[0]->{callback} }
 sub set_callback { $_[0]->{callback} = $_[1] }
@@ -92,12 +84,12 @@ sub init {
 
 sub parse {
     my ($self, $yaml) = @_;
+    my $reader = $self->lexer->reader;
     if (defined $yaml) {
-        $self->{input} = $yaml;
+        $reader->set_input($yaml);
     }
-    $yaml = $self->reader->read;
-    $self->lexer->set_yaml(\$yaml);
     $self->init;
+    $self->lexer->init;
     eval {
         $self->parse_stream;
     };
