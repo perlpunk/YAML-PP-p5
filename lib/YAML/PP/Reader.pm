@@ -17,7 +17,17 @@ sub new {
 }
 
 sub read {
-    $_[0]->{input};
+    return $_[0]->{input};
+}
+
+sub readline {
+    my ($self) = @_;
+    unless (length $self->{input}) {
+        return;
+    }
+    $self->{input} =~ s/\A([^\r\n]*(?:[\r\n]|\z))// or die "Unexpected";
+    my $line = $1;
+    return $line;
 }
 
 1;

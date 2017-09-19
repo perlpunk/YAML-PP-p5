@@ -25,13 +25,10 @@ sub new {
 sub init {
     my ($self) = @_;
     $self->{next_tokens} = [];
+    $self->{next_line} = undef;
     $self->{line} = 1;
-    my $yaml = $self->reader->read;
-    $self->set_yaml(\$yaml);
 }
 
-sub yaml { return $_[0]->{yaml} }
-sub set_yaml { $_[0]->{yaml} = $_[1] }
 sub next_line { return $_[0]->{next_line} }
 sub set_next_line { $_[0]->{next_line} = $_[1] }
 sub reader { return $_[0]->{reader} }
@@ -419,14 +416,12 @@ sub fetch_next_line {
     my ($self) = @_;
     my $next_line = $self->next_line;
     if (not defined $next_line or (length $$next_line) == 0) {
-        my $yaml = $self->yaml;
-        unless (length $$yaml) {
+        my $line = $self->reader->readline;
+        unless (defined $line) {
             return;
         }
-        $$yaml =~ s/\A([^\r\n]*(?:[\r\n]|\z))// or die "Unexpected";
-        my $match = $1;
-        $next_line = \$match;
-        $self->set_next_line($next_line);
+        $next_line = \$line;
+        $self->set_next_line(\$line);
     }
     return $next_line;
 }

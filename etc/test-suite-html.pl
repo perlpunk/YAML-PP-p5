@@ -149,9 +149,9 @@ sub highlight_test {
         my $remaining_tokens = $ypp->parser->lexer->next_tokens;
         push @$tokens, map {
             { name => 'ERROR', value => $_->{value} } } @$remaining_tokens;
-        my $remaining = $ypp->parser->lexer->yaml;
-        $remaining = $$remaining;
-        push @$tokens, { name => 'ERROR', value => $remaining };
+        my $remaining = $ypp->parser->lexer->next_line;
+        $$remaining .= $ypp->parser->lexer->reader->read;
+        push @$tokens, { name => 'ERROR', value => $$remaining };
         my $out = join '', map { $_->{value} } @$tokens;
         if ($out ne $yaml) {
             warn "$id error diff";

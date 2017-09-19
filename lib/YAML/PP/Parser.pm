@@ -826,29 +826,20 @@ sub debug_offset {
 
 sub debug_yaml {
     my ($self) = @_;
-    my $yaml = $self->lexer->yaml;
     my $line = $self->lexer->line;
     $self->note("LINE NUMBER: $line");
     my $next_tokens = $self->lexer->next_tokens;
     if (@$next_tokens) {
         $self->debug_tokens($next_tokens);
     }
-    if (length $$yaml) {
-        my $output = $$yaml;
-        $output =~ s/( +)$/'·' x length $1/gem;
-        $output =~ s/\t/▸/g;
-        $self->note("YAML:\n$output\nEOYAML");
-    }
-    else {
-        $self->note("YAML: EMPTY");
-    }
 }
 
 sub debug_next_line {
     my ($self) = @_;
-    my $yaml = $self->lexer->yaml;
-    my ($line) = $$yaml =~ m/\A(.*)/;
-    $self->note("NEXT LINE: $line");
+    my $line = $self->lexer->next_line // '';
+    $line =~ s/( +)$/'·' x length $1/e;
+    $line =~ s/\t/▸/g;
+    $self->note("NEXT LINE: >>$$line<<");
 }
 
 sub note {
@@ -945,7 +936,7 @@ sub exception {
         msg => $msg,
         next => $next,
         where => $caller[1] . ' line ' . $caller[2],
-        yaml => $self->lexer->yaml,
+        yaml => $self->lexer->next_line,
     );
     croak $e;
 }
