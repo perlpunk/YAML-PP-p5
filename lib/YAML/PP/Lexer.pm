@@ -32,6 +32,7 @@ sub init {
 sub next_line { return $_[0]->{next_line} }
 sub set_next_line { $_[0]->{next_line} = $_[1] }
 sub reader { return $_[0]->{reader} }
+sub set_reader { $_[0]->{reader} = $_[1] }
 sub next_tokens { return $_[0]->{next_tokens} }
 sub line { return $_[0]->{line} }
 sub set_line { $_[0]->{line} = $_[1] }

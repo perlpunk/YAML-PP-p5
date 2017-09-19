@@ -30,4 +30,34 @@ sub readline {
     return $line;
 }
 
+package YAML::PP::Reader::File;
+
+our @ISA = qw/ YAML::PP::Reader /;
+
+sub open_handle {
+    my $fh;
+    unless ($fh) {
+        open $fh, '<:encoding(UTF-8)', $_[0]->{input};
+    }
+    return $fh;
+}
+
+sub read {
+    my $fh = $_[0]->{filehandle} ||= $_[0]->open_handle;
+    if (wantarray) {
+        my @yaml = <$fh>;
+        return @yaml;
+    }
+    else {
+        local $/;
+        my $yaml = <$fh>;
+        return $yaml;
+    }
+}
+
+sub readline {
+    my $fh = $_[0]->{filehandle} ||= $_[0]->open_handle;
+    return $fh->getline;
+}
+
 1;

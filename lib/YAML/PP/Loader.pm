@@ -7,6 +7,7 @@ our $VERSION = '0.000'; # VERSION
 
 use YAML::PP::Parser;
 use YAML::PP::Constructor;
+use YAML::PP::Reader;
 
 sub new {
     my ($class, %args) = @_;
@@ -29,6 +30,18 @@ sub new {
 
 sub parser { return $_[0]->{parser} }
 sub constructor { return $_[0]->{constructor} }
+
+sub load_string {
+    my ($self, $yaml) = @_;
+    $self->parser->lexer->set_reader(YAML::PP::Reader->new);
+    $self->load($yaml);
+}
+
+sub load_file {
+    my ($self, $yaml) = @_;
+    $self->parser->lexer->set_reader(YAML::PP::Reader::File->new);
+    $self->load($yaml);
+}
 
 sub load {
     my ($self, $yaml) = @_;

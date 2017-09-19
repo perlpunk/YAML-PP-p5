@@ -7,21 +7,21 @@ use Encode;
 use YAML::PP::Parser;
 
 my ($file) = @ARGV;
-my $yaml;
-
-if ($file) {
-    $yaml = do { open my $fh, '<', $file or die $!; local $/; <$fh> };
-}
-else {
-    $yaml = do { local $/; <STDIN> };
-}
-$yaml = decode_utf8($yaml);
 
 my $parser = YAML::PP::Parser->new(
-  receiver => sub {
-    my ($self, @args) = @_;
-    say encode_utf8(YAML::PP::Parser->event_to_test_suite(\@args));
-  },
+    receiver => sub {
+      my ($self, @args) = @_;
+      say encode_utf8(YAML::PP::Parser->event_to_test_suite(\@args));
+    },
+    $file ? (reader => YAML::PP::Reader::File->new) : (),
 );
+if ($file) {
+    $parser->parse($file);
+}
+else {
+    my $yaml;
+    $yaml = do { local $/; <STDIN> };
+    $yaml = decode_utf8($yaml);
+    $parser->parse($yaml);
+}
 
-$parser->parse($yaml);

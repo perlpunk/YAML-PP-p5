@@ -1,3 +1,6 @@
+NEXT
+    - Support reading files
+
 0.004 2017-09-15 13:30:50+02:00
     - Improve regex for plain scalars
     - Support literal unicode characters
