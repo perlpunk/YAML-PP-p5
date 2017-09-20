@@ -26,10 +26,14 @@ my @docs = eval {
 my $error = $@;
 my $tokens = $ypp->parser->tokens;
 my $next = $ypp->parser->lexer->next_tokens;
-push @$tokens, @$next;
-my $remaining = $ypp->parser->yaml;
 if ($error) {
+    push @$tokens, map { +{ %$_, name => 'ERROR' } } @$next;
+    my $remaining = $ypp->parser->lexer->next_line;
+    $$remaining .= $ypp->parser->lexer->reader->read;
     push @$tokens, { name => "ERROR", value => $$remaining };
+}
+else {
+    push @$tokens, @$next;
 }
 my $highlighted = YAML::PP::Highlight->ansicolored($tokens);
 print encode_utf8 $highlighted;
