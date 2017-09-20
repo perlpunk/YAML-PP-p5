@@ -5,6 +5,9 @@ package YAML::PP;
 
 our $VERSION = '0.000'; # VERSION
 
+use base 'Exporter';
+our @EXPORT_OK = qw/ Load LoadFile Dump DumpFile /;
+
 sub new {
     my ($class, %args) = @_;
     my $self = bless {
@@ -14,11 +17,26 @@ sub new {
 
 sub loader { return $_[0]->{loader} }
 
+# legagy interface
 sub Load {
     require YAML::PP::Loader;
-    my ($self, $yaml) = @_;
-    $self->{loader} = YAML::PP::Loader->new;
-    return $self->loader->load($yaml);
+    my ($yaml) = @_;
+    my $loader = YAML::PP::Loader->new;
+    return $loader->load_string($yaml);
+}
+
+sub LoadFile {
+    require YAML::PP::Loader;
+    my ($file) = @_;
+    my $loader = YAML::PP::Loader->new;
+    return $loader->load_file($file);
+}
+
+sub Dump {
+    require YAML::PP::Dumper;
+    my (@data) = @_;
+    my $dumper = YAML::PP::Dumper->new;
+    return $dumper->dump_string(@data);
 }
 
 1;
@@ -52,7 +70,7 @@ Here are a few examples of what you can do right now:
     my ($data1, $data2) = $yppl->load_string($yaml);
 
     my $yppd = YAML::PP::Dumper->new();
-    my $yaml = $yppd->dump($data1, $data2);
+    my $yaml = $yppd->dump_string($data1, $data2);
 
 Some utility scripts:
 
