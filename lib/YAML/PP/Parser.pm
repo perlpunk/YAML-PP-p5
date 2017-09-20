@@ -484,13 +484,11 @@ sub parse_next {
     my ($self, %args) = @_;
     my $node_type = ($self->new_node ? $self->new_node->[NODE_TYPE] : undef);
     my $exp = $self->events->[-1];
-    my $rules = $self->rules;
 
     my $expected_type = $exp;
     if ($node_type or $exp eq 'MAP') {
         unless ($node_type) {
-            $rules = $GRAMMAR->{FULL_MAPKEY};
-            $self->set_rules($rules);
+            $self->set_rules($GRAMMAR->{FULL_MAPKEY});
         }
         my ($success, $new_type) = $self->lexer->parse_tokens($self,
             callback => sub {
@@ -505,8 +503,7 @@ sub parse_next {
         if ($new_type and $node_type) {
             if ($new_type =~ s/^TYPE_//) {
                 $return = 1;
-                $rules = \$new_type;
-                $self->set_rules($rules);
+                $self->set_rules($GRAMMAR->{ $new_type });
             }
             elsif ($new_type eq 'PREVIOUS') {
                 $new_type = $node_type;
@@ -520,7 +517,6 @@ sub parse_next {
 
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$new_type], ['new_type']);
         unless ($new_type) {
-            warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$rules], ['rules']);
             die "This should never happen";
         }
         # we got an anchor or tag
@@ -529,8 +525,7 @@ sub parse_next {
     }
 
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$expected_type], ['expected_type']);
-    $rules = $GRAMMAR->{ "NODETYPE_$expected_type" };
-    $self->set_rules($rules);
+    $self->set_rules($GRAMMAR->{ "NODETYPE_$expected_type" });
 
     my $res = {};
     my ($success, $new_type) = $self->lexer->parse_tokens($self,

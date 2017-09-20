@@ -173,12 +173,23 @@ sub parse_tokens {
                 $next_rule = $def;
                 my $sub = $next_rule->{match};
                 my $new = $next_rule->{new};
-                if ($new) {
-                    $next_rule = $new;
-                }
                 $ok = 1;
                 if ($sub) {
                     $callback->($parser, $sub);
+                }
+                if ($new) {
+                    $next_rule = $new;
+                    DEBUG and $parser->got("NEW: $$next_rule");
+                    if (exists $GRAMMAR->{ $$next_rule }) {
+                        $next_rule = $GRAMMAR->{ $$next_rule };
+                        $parser->set_rules($next_rule);
+                        next RULE;
+                    }
+                    else {
+                        $new_type = $$next_rule;
+                        $parser->set_rules(undef);
+                        last RULE;
+                    }
                 }
                 $parser->set_rules($next_rule);
             }
@@ -188,21 +199,6 @@ sub parse_tokens {
                 return (0);
             }
             next RULE;
-        }
-        elsif (ref $next_rule eq 'SCALAR') {
-            TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([$next_rule], ['next_rule']);
-            DEBUG and $parser->got("NEW: $$next_rule");
-            if (exists $GRAMMAR->{ $$next_rule }) {
-                my $new = $GRAMMAR->{ $$next_rule };
-                $next_rule = $new;
-                $parser->set_rules($next_rule);
-                next RULE;
-            }
-            else {
-                $new_type = $$next_rule;
-                $parser->set_rules(undef);
-                last RULE;
-            }
         }
         else {
             croak "Unexpected";

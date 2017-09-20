@@ -57,10 +57,6 @@ our $GRAMMAR = {
                             EOL => { new => \'TYPE_FULLNODE' },
                             WS => { new => \'MAPVALUE' },
                         },
-                        EOL => {
-                            match => 'cb_scalar_from_stack',
-                            new => \'TYPE_FULLNODE',
-                        },
                     },
                 },
             },
