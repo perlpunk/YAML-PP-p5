@@ -15,7 +15,7 @@ our $GRAMMAR = {
             WS => [0, {
                 COLON => [ 'cb_alias_key_from_stack', {
                     EOL => [0, [ \'TYPE_FULLNODE' ]],
-                    WS => ['cb_ws', [ \'MAPVALUE' ]],
+                    WS => [0, [ \'MAPVALUE' ]],
                 }],
             }],
         }],
@@ -23,18 +23,18 @@ our $GRAMMAR = {
     RULE_COMPLEX => {
         QUESTION => [ 'cb_questionstart', {
             EOL => [0, [ \'TYPE_FULLNODE' ]],
-            WS => ['cb_ws', [\'TYPE_FULLNODE']],
+            WS => [0, [\'TYPE_FULLNODE']],
         }],
     },
     RULE_COMPLEXVALUE => {
         COLON => [ 'cb_complexcolon', {
             EOL => [0, [ \'TYPE_FULLNODE' ]],
-            WS => ['cb_ws', [ \'TYPE_FULLNODE' ]],
+            WS => [0, [ \'TYPE_FULLNODE' ]],
         }],
         DEFAULT => ['cb_empty_complexvalue', {
             QUESTION => ['cb_question', {
                 EOL => [0, [ \'TYPE_FULLNODE' ]],
-                WS => ['cb_ws', [ \'TYPE_FULLNODE' ]],
+                WS => [0, [ \'TYPE_FULLNODE' ]],
             }],
             DEFAULT => [0, [
                 \'RULE_MAPKEY',
@@ -49,7 +49,7 @@ our $GRAMMAR = {
                     'WS?' => [0, {
                         COLON => [ 'cb_mapkey_from_stack', {
                             EOL => [0, [ \'TYPE_FULLNODE' ]],
-                            WS => ['cb_ws', [ \'MAPVALUE' ]],
+                            WS => [0, [ \'MAPVALUE' ]],
                         }],
                         EOL => [ 'cb_scalar_from_stack', [
                             \'TYPE_FULLNODE',
@@ -80,7 +80,7 @@ our $GRAMMAR = {
                     'WS?' => [0, {
                         COLON => [ 'cb_mapkey_from_stack', {
                             EOL => [0, [ \'TYPE_FULLNODE' ]],
-                            WS => ['cb_ws', [ \'MAPVALUE' ]],
+                            WS => [0, [ \'MAPVALUE' ]],
                         }],
                         DEFAULT => [ 'cb_scalar_from_stack', [
                             \'ERROR',
@@ -110,13 +110,13 @@ our $GRAMMAR = {
             'WS?' => [0, {
                 COLON => [ 'cb_mapkey_from_stack', {
                     EOL => [ 0, [ \'TYPE_FULLNODE' ]],
-                    'WS?' => [ 'cb_ws', [ \'MAPVALUE' ]],
+                    'WS?' => [ 0, [ \'MAPVALUE' ]],
                 }],
             }],
         }],
         COLON => [ 'cb_mapkey_from_stack', {
             EOL => [ 0, [ \'TYPE_FULLNODE' ]],
-            'WS?' => [ 'cb_ws', [ \'MAPVALUE' ]],
+            'WS?' => [ 0, [ \'MAPVALUE' ]],
         }],
     },
     RULE_PLAIN => {
@@ -128,13 +128,13 @@ our $GRAMMAR = {
     RULE_MAPKEY => {
         QUESTION => ['cb_question', {
             EOL => [0, [ \'TYPE_FULLNODE' ]],
-            WS => ['cb_ws', [ \'TYPE_FULLNODE' ]],
+            WS => [0, [ \'TYPE_FULLNODE' ]],
         }],
         ALIAS => [ 'cb_mapkey_alias', {
             WS => [0, {
                 COLON => [0, {
                     EOL => [0, [ \'TYPE_FULLNODE' ]],
-                    WS => ['cb_ws', [ \'MAPVALUE' ]],
+                    WS => [0, [ \'MAPVALUE' ]],
                 }],
             }],
         }],
@@ -144,7 +144,7 @@ our $GRAMMAR = {
                     'WS?' => [0, {
                         COLON => [0, {
                             EOL => [0, [ \'TYPE_FULLNODE' ]],
-                            WS => ['cb_ws', [ \'MAPVALUE' ]],
+                            WS => [0, [ \'MAPVALUE' ]],
                         }],
                     }],
                 }],
@@ -156,7 +156,7 @@ our $GRAMMAR = {
                     'WS?' => [0, {
                         COLON => [0, {
                             EOL => [0, [ \'TYPE_FULLNODE' ]],
-                            WS => ['cb_ws', [ \'MAPVALUE' ]],
+                            WS => [0, [ \'MAPVALUE' ]],
                         }],
                     }],
                 }],
@@ -166,19 +166,19 @@ our $GRAMMAR = {
             'WS?' => [ 0, {
                 COLON => [0, {
                     EOL => [0, [ \'TYPE_FULLNODE' ]],
-                    WS => ['cb_ws', [ \'MAPVALUE' ]],
+                    WS => [0, [ \'MAPVALUE' ]],
                 }],
             }],
         }],
         COLON => [ 'cb_empty_mapkey', {
             EOL => [0, [ \'TYPE_FULLNODE' ]],
-            WS => ['cb_ws', [ \'MAPVALUE' ]],
+            WS => [0, [ \'MAPVALUE' ]],
         }],
     },
     RULE_MAPSTART => {
         QUESTION => [ 'cb_questionstart', {
             EOL => [0, [ \'TYPE_FULLNODE' ]],
-            WS => ['cb_ws', [ \'TYPE_FULLNODE' ]],
+            WS => [0, [ \'TYPE_FULLNODE' ]],
         }],
         DOUBLEQUOTE => [0, {
             DOUBLEQUOTED => [ 'cb_doublequotedstart', {
@@ -186,7 +186,7 @@ our $GRAMMAR = {
                     'WS?' => [0, {
                         COLON => [0, {
                             EOL => [0, [ \'TYPE_FULLNODE' ]],
-                            WS => ['cb_ws', [ \'MAPVALUE' ]],
+                            WS => [0, [ \'MAPVALUE' ]],
                         }],
                     }],
                 }],
@@ -198,7 +198,7 @@ our $GRAMMAR = {
                     'WS?' => [0, {
                         COLON => [0, {
                             EOL => [0, [ \'TYPE_FULLNODE' ]],
-                            WS => ['cb_ws', [ \'MAPVALUE' ]],
+                            WS => [0, [ \'MAPVALUE' ]],
                         }],
                     }],
                 }],
@@ -208,7 +208,7 @@ our $GRAMMAR = {
             'WS?' => [0, {
                 COLON => [0, {
                     EOL => [0, [ \'TYPE_FULLNODE' ]],
-                    WS => ['cb_ws', [ \'MAPVALUE' ]],
+                    WS => [0, [ \'MAPVALUE' ]],
                 }],
             }],
         }],
@@ -216,13 +216,13 @@ our $GRAMMAR = {
     RULE_SEQSTART => {
         DASH =>[ 'cb_seqstart', {
             EOL => [0, [ \'TYPE_FULLNODE' ]],
-            WS => ['cb_ws', [ \'TYPE_FULLNODE' ]],
+            WS => [0, [ \'TYPE_FULLNODE' ]],
         }],
     },
     RULE_SEQITEM => {
         DASH => [ 'cb_seqitem', {
             EOL => [0, [ \'TYPE_FULLNODE' ]],
-            WS => ['cb_ws', [ \'TYPE_FULLNODE' ]],
+            WS => [0, [ \'TYPE_FULLNODE' ]],
         }],
     },
     RULE_BLOCK_SCALAR => {

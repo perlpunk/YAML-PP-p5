@@ -472,7 +472,11 @@ sub process_result {
         $self->exception("Unexpected res $got");
     }
 
-    my $new_offset = $offset + 1 + ($res->{ws} || 0);
+    my $ws = 0;
+    if ($self->tokens->[-1]->{name} eq 'WS') {
+        $ws = length $self->tokens->[-1]->{value};
+    }
+    my $new_offset = $offset + 1 + $ws;
     my $new_type = $res->{new_type};
     my $new_node = [ $new_type => $new_offset ];
     $self->set_new_node($new_node);
@@ -978,13 +982,6 @@ sub cb_property_eol {
     }
     if (defined $props->{tag}) {
         $node_props->{tag} = delete $props->{tag};
-    }
-}
-
-sub cb_ws {
-    my ($self, $res, $props) = @_;
-    if ($res) {
-        $res->{ws} = length $self->tokens->[-1]->{value};
     }
 }
 
