@@ -138,7 +138,7 @@ sub highlight_test {
     my $class = "ok";
     my @docs;
     eval {
-        @docs = $ypp->load($yaml);
+        @docs = $ypp->load_string($yaml);
     };
     my $error = $@ || '';
     my $tokens = $ypp->parser->tokens;

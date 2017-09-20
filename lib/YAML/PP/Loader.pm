@@ -38,9 +38,9 @@ sub load_string {
 }
 
 sub load_file {
-    my ($self, $yaml) = @_;
+    my ($self, $file) = @_;
     $self->parser->lexer->set_reader(YAML::PP::Reader::File->new);
-    $self->load($yaml);
+    $self->load($file);
 }
 
 sub load {

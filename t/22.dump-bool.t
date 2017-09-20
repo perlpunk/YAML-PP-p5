@@ -20,7 +20,7 @@ SKIP: {
         FALSE => JSON::PP::false(),
     };
     my $yppd = YAML::PP::Dumper->new(boolean => 'boolean');
-    my $yaml = $yppd->dump($data);
+    my $yaml = $yppd->dump_string($data);
     cmp_ok($yaml, 'eq', $exp_yaml, "boolean.pm dump");
 }
 
@@ -31,7 +31,7 @@ SKIP: {
         FALSE => JSON::PP::false(),
     };
     my $yppd = YAML::PP::Dumper->new(boolean => 'JSON::PP');
-    my $yaml = $yppd->dump($data);
+    my $yaml = $yppd->dump_string($data);
     cmp_ok($yaml, 'eq', $exp_yaml, "JSON::PP::Boolean dump");
 }
 

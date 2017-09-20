@@ -21,7 +21,7 @@ sub new {
 sub emitter { return $_[0]->{emitter} }
 sub set_emitter { $_[0]->{emitter} = $_[1] }
 
-sub dump {
+sub dump_string {
     my ($self, @docs) = @_;
     $self->emitter->init;
     $self->emitter->document_start_event({ implicit => 1 });

@@ -18,7 +18,7 @@ copies:
 - *alias
 EOM
 
-my $data = YAML::PP::Loader->new->load($yaml);
+my $data = YAML::PP::Loader->new->load_string($yaml);
 cmp_ok($data->{copies}->[0],'eq', 'A', "Scalar anchor");
 cmp_ok($data->{copies}->[0],'eq', $data->{copies}->[1], "Scalar alias equals anchor");
 

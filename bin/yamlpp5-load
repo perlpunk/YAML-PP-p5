@@ -10,16 +10,13 @@ use Encode;
 my ($file) = @ARGV;
 my $yaml;
 
-if ($file) {
-    $yaml = do { open my $fh, '<', $file or die $!; local $/; <$fh> };
-}
-else {
+unless ($file) {
     $yaml = do { local $/; <STDIN> };
+    $yaml = decode_utf8($yaml);
 }
-$yaml = decode_utf8($yaml);
 
 my $ypp = YAML::PP::Loader->new;
-my @docs = $ypp->load($yaml);
+my @docs = $file ? $ypp->load_file($file) : $ypp->load_string($yaml);
 
 local $Data::Dumper::Useqq = 1;
 print Data::Dumper->Dump([$docs[ $_ ]], ["doc$_"]) for 0 ..$#docs;

@@ -121,12 +121,12 @@ sub test {
     my $ok = 0;
     my $loader = YAML::PP::Loader->new;
     my $dumper = YAML::PP::Dumper->new;
-    my @docs = eval { $loader->load($yaml) };
+    my @docs = eval { $loader->load_string($yaml) };
     my $error = $@;
     my $out_yaml;
     unless ($error) {
         eval {
-            $out_yaml = $dumper->dump(@docs);
+            $out_yaml = $dumper->dump_string(@docs);
         };
     }
     if ($@) {
@@ -153,7 +153,7 @@ sub test {
         ok(0, "$name - $title ERROR");
     }
     else {
-        @reload = eval { $loader->load($out_yaml) };
+        @reload = eval { $loader->load_string($out_yaml) };
         $reload_error = $@;
         if ($reload_error) {
             diag "RELOAD ERROR: $reload_error";

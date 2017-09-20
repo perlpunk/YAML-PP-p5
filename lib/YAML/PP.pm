@@ -40,12 +40,16 @@ WARNING: This is highly experimental.
 Here are a few examples of what you can do right now:
 
     my $yppl = YAML::PP::Loader->new;
-    my @documents = $yppl->load($yaml);
+    my @documents = $yppl->load_string($yaml);
+
+    # load file
+    my $yppl = YAML::PP::Loader->new;
+    my @documents = $yppl->load_file($filename);
 
     # The loader offers JSON::PP, boolean.pm or pureperl 1/0 (default)
     # for booleans
     my $yppl = YAML::PP::Loader->new(boolean => 'JSON::PP');
-    my ($data1, $data2) = $yppl->load($yaml);
+    my ($data1, $data2) = $yppl->load_string($yaml);
 
     my $yppd = YAML::PP::Dumper->new();
     my $yaml = $yppd->dump($data1, $data2);
@@ -198,7 +202,7 @@ Example:
             : 23
         : 42
     EOM
-    my $data = $yppl->load($yaml);
+    my $data = $yppl->load_string($yaml);
     say $coder->encode($data);
     __END__
     {
@@ -266,7 +270,7 @@ Compare the output of the following YAML Loaders and JSON::PP dump:
     my $d2 = YAML::Load($yaml);
     my $d3 = YAML::Syck::Load($yaml);
     my $d4 = YAML::Tiny->read_string($yaml)->[0];
-    my $d5 = YAML::PP::Loader->new->load($yaml);
+    my $d5 = YAML::PP::Loader->new->load_string($yaml);
 
     Dump $d1->{foo};
     Dump $d2->{foo};

@@ -1,5 +1,6 @@
 NEXT
     - Support reading files
+    - Replace load() with load_string(), dump() with dump_string()
 
 0.004 2017-09-15 13:30:50+02:00
     - Improve regex for plain scalars

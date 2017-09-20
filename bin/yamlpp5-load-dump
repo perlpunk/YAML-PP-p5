@@ -10,17 +10,14 @@ use Encode;
 my ($file) = @ARGV;
 my $yaml;
 
-if ($file) {
-    $yaml = do { open my $fh, '<', $file or die $!; local $/; <$fh> };
-}
-else {
+unless ($file) {
     $yaml = do { local $/; <STDIN> };
+    $yaml = decode_utf8($yaml);
 }
-$yaml = decode_utf8($yaml);
 
 my $yppl = YAML::PP::Loader->new(boolean => 'JSON::PP');
 my $yppd = YAML::PP::Dumper->new;
-my @docs = $yppl->load($yaml);
-my $out_yaml = $yppd->dump(@docs);
+my @docs = $file ? $yppl->load_file($file) : $yppl->load_string($yaml);
+my $out_yaml = $yppd->dump_string(@docs);
 
 print encode_utf8 $out_yaml;

@@ -11,17 +11,14 @@ use Encode;
 my ($file) = @ARGV;
 my $yaml;
 
-if ($file) {
-    $yaml = do { open my $fh, '<', $file or die $!; local $/; <$fh> };
-}
-else {
+unless ($file) {
     $yaml = do { local $/; <STDIN> };
+    $yaml = decode_utf8($yaml);
 }
-$yaml = decode_utf8($yaml);
 
 my $ypp = YAML::PP::Loader->new;
 my @docs = eval {
-    $ypp->load($yaml);
+    $file ? $ypp->load_file($file) : $ypp->load_string($yaml);
 };
 my $error = $@;
 my $tokens = $ypp->parser->tokens;
@@ -29,7 +26,7 @@ my $next = $ypp->parser->lexer->next_tokens;
 if ($error) {
     push @$tokens, map { +{ %$_, name => 'ERROR' } } @$next;
     my $remaining = $ypp->parser->lexer->next_line;
-    $$remaining .= $ypp->parser->lexer->reader->read;
+    $$remaining .= $ypp->parser->lexer->reader->read // '';
     push @$tokens, { name => "ERROR", value => $$remaining };
 }
 else {

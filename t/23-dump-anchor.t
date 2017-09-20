@@ -44,10 +44,10 @@ b: *2
 EOM
 
 my $yppd = YAML::PP::Dumper->new;
-my $yaml = $yppd->dump($data1);
+my $yaml = $yppd->dump_string($data1);
 cmp_ok($yaml, 'eq', $exp_yaml1, "dump anchors");
 
-$yaml = $yppd->dump($data2);
+$yaml = $yppd->dump_string($data2);
 cmp_ok($yaml, 'eq', $exp_yaml2, "dump cyclic data structure");
 
 done_testing;

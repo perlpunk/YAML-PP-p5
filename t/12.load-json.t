@@ -101,7 +101,7 @@ for my $item (@dirs) {
 
 #    diag "------------------------------ $id";
     my $ypp = YAML::PP::Loader->new(boolean => 'JSON::PP');
-    my $data = eval { $ypp->load($yaml) };
+    my $data = eval { $ypp->load_string($yaml) };
 #    warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$data], ['data']);
     if ($@) {
         warn __PACKAGE__.':'.__LINE__.": ERROR: $@\n";
