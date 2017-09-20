@@ -490,36 +490,25 @@ sub parse_next {
         unless ($node_type) {
             $self->set_rules($GRAMMAR->{FULL_MAPKEY});
         }
-        my ($success, $new_type) = $self->lexer->parse_tokens($self,
+        my ($new_type) = $self->lexer->parse_tokens($self,
             callback => sub {
                 my ($self, $sub) = @_;
                 $self->$sub(undef);
             },
         );
-        if (not $new_type and not $success) {
+        if (not $new_type) {
             $self->exception( "Expected " . ($node_type ? "new node ($node_type)" : $exp));
         }
-        my $return = 0;
-        if ($new_type and $node_type) {
+        if ($node_type) {
             if ($new_type =~ s/^TYPE_//) {
-                $return = 1;
                 $self->set_rules($GRAMMAR->{ $new_type });
+                return;
             }
             elsif ($new_type eq 'PREVIOUS') {
                 $new_type = $node_type;
                 $new_type =~ s/^FULL//;
             }
         }
-        if ($return) {
-            return;
-        }
-
-
-        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$new_type], ['new_type']);
-        unless ($new_type) {
-            die "This should never happen";
-        }
-        # we got an anchor or tag
 
         $expected_type = $new_type;
     }
@@ -528,20 +517,15 @@ sub parse_next {
     $self->set_rules($GRAMMAR->{ "NODETYPE_$expected_type" });
 
     my $res = {};
-    my ($success, $new_type) = $self->lexer->parse_tokens($self,
+    my ($new_type) = $self->lexer->parse_tokens($self,
         callback => sub {
             my ($self, $sub) = @_;
             $self->$sub($res);
         },
     );
 
-    unless ($success) {
-        $self->exception("Expected $expected_type");
-    }
-
     if (not $new_type) {
-        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$new_type], ['new_type']);
-        die "This should never happen";
+        $self->exception("Expected $expected_type");
     }
 
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$new_type], ['new_type']);

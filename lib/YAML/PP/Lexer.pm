@@ -137,7 +137,6 @@ sub parse_tokens {
     my $callback = $args{callback};
     my $tokens = $parser->tokens;
     my $new_type;
-    my $ok = 0;
 
     TRACE and $parser->debug_rules($next_rule);
     TRACE and $parser->debug_yaml;
@@ -147,68 +146,55 @@ sub parse_tokens {
     RULE: while (1) {
         last unless $next_rule;
 
-        if (ref $next_rule eq 'HASH') {
-            my $next = $next_tokens->[0];
-            TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next], ['next']);
-            my $got = $next->{name};
-            my $def = $next_rule->{ $got };
-            if ($def) {
-                shift @$next_tokens;
-                push @$tokens, $next;
+        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens->[0]], ['next_token']);
+        my $got = $next_tokens->[0]->{name};
+        my $def = $next_rule->{ $got };
+        if ($def) {
+            push @$tokens, shift @$next_tokens;
+        }
+        elsif ($def = $next_rule->{ 'WS?' }) {
+            if ($got eq 'WS') {
+                push @$tokens, shift @$next_tokens;
             }
-            elsif ($def = $next_rule->{ 'WS?' }) {
-                if ($got eq 'WS') {
-                    shift @$next_tokens;
-                    push @$tokens, $next;
-                }
-                $got = 'WS?';
-            }
-            else {
-                $def = $next_rule->{DEFAULT};
-                $got = 'DEFAULT';
-            }
-
-            if ($def) {
-                DEBUG and $parser->got("---got $got");
-                $next_rule = $def;
-                my $sub = $next_rule->{match};
-                my $new = $next_rule->{new};
-                $ok = 1;
-                if ($sub) {
-                    $callback->($parser, $sub);
-                }
-                if ($new) {
-                    $next_rule = $new;
-                    DEBUG and $parser->got("NEW: $$next_rule");
-                    if (exists $GRAMMAR->{ $$next_rule }) {
-                        $next_rule = $GRAMMAR->{ $$next_rule };
-                        $parser->set_rules($next_rule);
-                        next RULE;
-                    }
-                    else {
-                        $new_type = $$next_rule;
-                        $parser->set_rules(undef);
-                        last RULE;
-                    }
-                }
-                $parser->set_rules($next_rule);
-            }
-            else {
-                DEBUG and $parser->not("---not $next->{name}");
-                $parser->set_rules(undef);
-                return (0);
-            }
-            next RULE;
+            $got = 'WS?';
         }
         else {
-            croak "Unexpected";
+            $def = $next_rule->{DEFAULT};
+            $got = 'DEFAULT';
         }
 
+        unless ($def) {
+            DEBUG and $parser->not("---not $next_tokens->[0]->{name}");
+            $parser->set_rules(undef);
+            return;
+        }
+
+        DEBUG and $parser->got("---got $got");
+        if (my $sub = $def->{match}) {
+            $callback->($parser, $sub);
+        }
+        if (my $new = $def->{new}) {
+            $next_rule = $new;
+            DEBUG and $parser->got("NEW: $$next_rule");
+            if (exists $GRAMMAR->{ $$next_rule }) {
+                $next_rule = $GRAMMAR->{ $$next_rule };
+                next RULE;
+            }
+            else {
+                $new_type = $$next_rule;
+                undef $next_rule;
+                last RULE;
+            }
+        }
+        $next_rule = $def;
+        next RULE;
+
     }
+    $parser->set_rules($next_rule);
     TRACE and $parser->highlight_yaml;
     TRACE and $parser->debug_tokens;
 
-    return ($ok, $new_type);
+    return $new_type;
 }
 
 sub parse_block_scalar {
