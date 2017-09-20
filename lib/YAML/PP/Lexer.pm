@@ -133,21 +133,21 @@ my %REGEXES = (
 
 sub parse_tokens {
     my ($self, $parser, %args) = @_;
-    my $rules = $parser->rules;
+    my $next_rule = $parser->rules;
     my $callback = $args{callback};
     my $tokens = $parser->tokens;
     my $new_type;
     my $ok = 0;
 
-    TRACE and $parser->debug_rules($rules);
+    TRACE and $parser->debug_rules($next_rule);
     TRACE and $parser->debug_yaml;
     DEBUG and $parser->debug_next_line;
 
     my $next_tokens = $self->next_tokens;
-    RULE: while (my $next_rule = shift @$rules) {
-        TRACE and warn __PACKAGE__.':'.__LINE__.": !!!!! $next_rule\n";
+    RULE: while (1) {
+        last unless $next_rule;
+
         if (ref $next_rule eq 'HASH') {
-            my $success;
             my $next = $next_tokens->[0];
             TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next], ['next']);
             my $got = $next->{name};
@@ -156,41 +156,36 @@ sub parse_tokens {
                 shift @$next_tokens;
                 push @$tokens, $next;
             }
-            if (not $def and $got eq 'WS') {
-                $got = 'WS?';
-                $def = $next_rule->{ 'WS?' };
-                shift @$next_tokens;
-                push @$tokens, $next;
-            }
-            if (not $def) {
-                $def = $next_rule->{ 'WS?' };
+            elsif ($def = $next_rule->{ 'WS?' }) {
+                if ($got eq 'WS') {
+                    shift @$next_tokens;
+                    push @$tokens, $next;
+                }
                 $got = 'WS?';
             }
-            if (not $def) {
+            else {
                 $def = $next_rule->{DEFAULT};
                 $got = 'DEFAULT';
-                TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$def], ['def']);
             }
+
             if ($def) {
                 DEBUG and $parser->got("---got $got");
-                my ($sub, $next_rule) = @$def;
+                $next_rule = $def;
+                my $sub = $next_rule->{match};
+                my $new = $next_rule->{new};
+                if ($new) {
+                    $next_rule = $new;
+                }
                 $ok = 1;
-                $success = 1;
                 if ($sub) {
                     $callback->($parser, $sub);
                 }
-                if (ref $next_rule eq 'HASH') {
-                    @$rules = $next_rule;
-                }
-                else {
-                    @$rules = @$next_rule;
-                }
+                $parser->set_rules($next_rule);
             }
             else {
                 DEBUG and $parser->not("---not $next->{name}");
-                unless (@$rules) {
-                    return (0);
-                }
+                $parser->set_rules(undef);
+                return (0);
             }
             next RULE;
         }
@@ -199,16 +194,13 @@ sub parse_tokens {
             DEBUG and $parser->got("NEW: $$next_rule");
             if (exists $GRAMMAR->{ $$next_rule }) {
                 my $new = $GRAMMAR->{ $$next_rule };
-                if (ref $new eq 'HASH') {
-                    unshift @$rules, $new;
-                }
-                else {
-                    unshift @$rules, @$new;
-                }
+                $next_rule = $new;
+                $parser->set_rules($next_rule);
                 next RULE;
             }
             else {
                 $new_type = $$next_rule;
+                $parser->set_rules(undef);
                 last RULE;
             }
         }

@@ -77,7 +77,7 @@ sub init {
         '!!' => "tag:yaml.org,2002:",
     });
     $self->set_tokens([]);
-    $self->set_rules([]);
+    $self->set_rules({});
     $self->set_stack({});
     $self->lexer->init;
 }
@@ -134,7 +134,7 @@ sub parse_stream {
 
         my $new_type = $start_line ? 'FULLSTARTNODE' : 'FULLNODE';
         my $new_node = [ $new_type => 0 ];
-        $self->set_rules([ $GRAMMAR->{ FULLNODE } ]);
+        $self->set_rules( $GRAMMAR->{ FULLNODE } );
         $self->set_new_node($new_node);
         my ($end) = $self->parse_document();
         if ($end) {
@@ -475,7 +475,7 @@ sub process_result {
 #    if ($new_type eq 'MAPVALUE') {
 #        $new_type = 'FULLMAPVALUE';
 #    }
-    $self->set_rules([ $GRAMMAR->{ FULLNODE } ]);
+    $self->set_rules( $GRAMMAR->{ FULLNODE } );
     return;
 }
 
@@ -489,7 +489,8 @@ sub parse_next {
     my $expected_type = $exp;
     if ($node_type or $exp eq 'MAP') {
         unless ($node_type) {
-            @$rules = $GRAMMAR->{FULL_MAPKEY};
+            $rules = $GRAMMAR->{FULL_MAPKEY};
+            $self->set_rules($rules);
         }
         my ($success, $new_type) = $self->lexer->parse_tokens($self,
             callback => sub {
@@ -504,7 +505,8 @@ sub parse_next {
         if ($new_type and $node_type) {
             if ($new_type =~ s/^TYPE_//) {
                 $return = 1;
-                @$rules = \$new_type;
+                $rules = \$new_type;
+                $self->set_rules($rules);
             }
             elsif ($new_type eq 'PREVIOUS') {
                 $new_type = $node_type;
@@ -527,7 +529,8 @@ sub parse_next {
     }
 
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$expected_type], ['expected_type']);
-    @$rules = $GRAMMAR->{ "NODETYPE_$expected_type" };
+    $rules = $GRAMMAR->{ "NODETYPE_$expected_type" };
+    $self->set_rules($rules);
 
     my $res = {};
     my ($success, $new_type) = $self->lexer->parse_tokens($self,
@@ -877,7 +880,7 @@ sub debug_rules {
     my ($self, $rules) = @_;
     local $Data::Dumper::Maxdepth = 2;
     $self->note("RULES:");
-    for my $rule (@$rules) {
+    for my $rule ($rules) {
         if (ref $rule eq 'ARRAY') {
             my $first = $rule->[0];
             if (ref $first eq 'SCALAR') {
@@ -1167,12 +1170,13 @@ sub cb_plain_single {
 
 sub cb_mapkey_from_stack {
     my ($self, $res) = @_;
-    my $stack = $self->stack->{res} || { style => ':', value => undef };
-    undef $self->stack->{res};
-    push @{ $self->stack->{events} },
+    my $stack = $self->stack;
+    my $stack_res = $stack->{res} || { style => ':', value => undef };
+    undef $stack->{res};
+    push @{ $stack->{events} },
         [ begin => 'MAP', { }],
         [ value => undef, {
-            %$stack,
+            %$stack_res,
         }];
     $res->{name} = 'MAPSTART';
 

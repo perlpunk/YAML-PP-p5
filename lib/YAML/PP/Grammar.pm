@@ -10,224 +10,253 @@ our @EXPORT_OK = qw/ $GRAMMAR /;
 
 our $GRAMMAR = {
     RULE_ALIAS_KEY_OR_NODE => {
-        ALIAS => ['cb_stack_alias', {
-            EOL => [ 'cb_alias_from_stack', [ \'NODE' ]],
-            WS => [0, {
-                COLON => [ 'cb_alias_key_from_stack', {
-                    EOL => [0, [ \'TYPE_FULLNODE' ]],
-                    WS => [0, [ \'MAPVALUE' ]],
-                }],
-            }],
-        }],
+        ALIAS => {
+            match => 'cb_stack_alias',
+            EOL => { match => 'cb_alias_from_stack', new => \'NODE' },
+            WS => {
+                COLON => {
+                    match => 'cb_alias_key_from_stack',
+                    EOL => { new => \'TYPE_FULLNODE' },
+                    WS => { new => \'MAPVALUE' },
+                },
+            },
+        },
     },
     RULE_COMPLEX => {
-        QUESTION => [ 'cb_questionstart', {
-            EOL => [0, [ \'TYPE_FULLNODE' ]],
-            WS => [0, [\'TYPE_FULLNODE']],
-        }],
+        QUESTION => {
+            match => 'cb_questionstart',
+            EOL => { new => \'TYPE_FULLNODE' },
+            WS => { new => \'TYPE_FULLNODE'},
+        },
     },
     RULE_COMPLEXVALUE => {
-        COLON => [ 'cb_complexcolon', {
-            EOL => [0, [ \'TYPE_FULLNODE' ]],
-            WS => [0, [ \'TYPE_FULLNODE' ]],
-        }],
-        DEFAULT => ['cb_empty_complexvalue', {
-            QUESTION => ['cb_question', {
-                EOL => [0, [ \'TYPE_FULLNODE' ]],
-                WS => [0, [ \'TYPE_FULLNODE' ]],
-            }],
-            DEFAULT => [0, [
-                \'RULE_MAPKEY',
-            ]],
-        }],
+        COLON => {
+            match => 'cb_complexcolon',
+            EOL => { new => \'TYPE_FULLNODE' },
+            WS => { new => \'TYPE_FULLNODE' },
+        },
+        DEFAULT => {
+            match => 'cb_empty_complexvalue',
+            QUESTION => {
+                match => 'cb_question',
+                EOL => { new => \'TYPE_FULLNODE' },
+                WS => { new => \'TYPE_FULLNODE' },
+            },
+            DEFAULT => { new => \'RULE_MAPKEY' },
+        },
     },
     RULE_SINGLEQUOTED_KEY_OR_NODE => {
-        SINGLEQUOTE => [0, {
-            SINGLEQUOTED_SINGLE => [ 'cb_stack_singlequoted_single', {
-                SINGLEQUOTE => [0, {
-                    EOL => [ 'cb_scalar_from_stack', [ \'NODE' ]],
-                    'WS?' => [0, {
-                        COLON => [ 'cb_mapkey_from_stack', {
-                            EOL => [0, [ \'TYPE_FULLNODE' ]],
-                            WS => [0, [ \'MAPVALUE' ]],
-                        }],
-                        EOL => [ 'cb_scalar_from_stack', [
-                            \'TYPE_FULLNODE',
-                        ]],
-                    }],
-                }],
-            }],
-            SINGLEQUOTED_LINE => [ 'cb_stack_singlequoted', {
-                LB => [0, [ \'MULTILINE_SINGLEQUOTED' ] ],
-            }],
-        }],
+        SINGLEQUOTE => {
+            SINGLEQUOTED_SINGLE => {
+                match => 'cb_stack_singlequoted_single',
+                SINGLEQUOTE => {
+                    EOL => { match => 'cb_scalar_from_stack', new => \'NODE' },
+                    'WS?' => {
+                        COLON => {
+                            match => 'cb_mapkey_from_stack',
+                            EOL => { new => \'TYPE_FULLNODE' },
+                            WS => { new => \'MAPVALUE' },
+                        },
+                        EOL => {
+                            match => 'cb_scalar_from_stack',
+                            new => \'TYPE_FULLNODE',
+                        },
+                    },
+                },
+            },
+            SINGLEQUOTED_LINE => {
+                match => 'cb_stack_singlequoted',
+                LB => { new => \'MULTILINE_SINGLEQUOTED'  },
+            },
+        },
     },
     MULTILINE_SINGLEQUOTED => {
-        SINGLEQUOTED_END => [ 'cb_stack_singlequoted', {
-            SINGLEQUOTE => [0, {
-                EOL => [ 'cb_scalar_from_stack', [ \'NODE' ]],
-            }],
-        }],
-        SINGLEQUOTED_LINE => [ 'cb_stack_singlequoted', {
-            LB => [0, [ \'MULTILINE_SINGLEQUOTED' ]],
-        }],
+        SINGLEQUOTED_END => {
+            match => 'cb_stack_singlequoted',
+            SINGLEQUOTE => {
+                EOL => { match => 'cb_scalar_from_stack', new => \'NODE' },
+            },
+        },
+        SINGLEQUOTED_LINE => {
+            match => 'cb_stack_singlequoted',
+            LB => { new => \'MULTILINE_SINGLEQUOTED' },
+        },
     },
     RULE_DOUBLEQUOTED_KEY_OR_NODE => {
-        DOUBLEQUOTE => [0, {
-            DOUBLEQUOTED_SINGLE => [ 'cb_stack_doublequoted_single', {
-                DOUBLEQUOTE => [ 0, {
-                    EOL => [ 'cb_scalar_from_stack', [ \'NODE' ]],
-                    'WS?' => [0, {
-                        COLON => [ 'cb_mapkey_from_stack', {
-                            EOL => [0, [ \'TYPE_FULLNODE' ]],
-                            WS => [0, [ \'MAPVALUE' ]],
-                        }],
-                        DEFAULT => [ 'cb_scalar_from_stack', [
-                            \'ERROR',
-                        ]],
-                    }],
-                }],
-            }],
-            DOUBLEQUOTED_LINE => [ 'cb_stack_doublequoted', {
-                LB => [0, [ \'MULTILINE_DOUBLEQUOTED' ] ],
-            }],
-        }],
+        DOUBLEQUOTE => {
+            DOUBLEQUOTED_SINGLE => {
+                match => 'cb_stack_doublequoted_single',
+                DOUBLEQUOTE => {
+                    EOL => { match => 'cb_scalar_from_stack', new => \'NODE' },
+                    'WS?' => {
+                        COLON => {
+                            match => 'cb_mapkey_from_stack',
+                            EOL => { new => \'TYPE_FULLNODE' },
+                            WS => { new => \'MAPVALUE' },
+                        },
+                        DEFAULT => { match => 'cb_scalar_from_stack', new => \'ERROR' },
+                    },
+                },
+            },
+            DOUBLEQUOTED_LINE => {
+                match => 'cb_stack_doublequoted',
+                LB => { new => \'MULTILINE_DOUBLEQUOTED'  },
+            },
+        },
     },
     MULTILINE_DOUBLEQUOTED => {
-        DOUBLEQUOTED_END => [ 'cb_stack_doublequoted', {
-            DOUBLEQUOTE => [0, {
-                EOL => [ 'cb_scalar_from_stack', [ \'NODE' ]],
-            }],
-        }],
-        DOUBLEQUOTED_LINE => [ 'cb_stack_doublequoted', {
-            LB => [0, [ \'MULTILINE_DOUBLEQUOTED' ] ],
-        }],
+        DOUBLEQUOTED_END => {
+            match => 'cb_stack_doublequoted',
+            DOUBLEQUOTE => {
+                EOL => { match => 'cb_scalar_from_stack', new => \'NODE' },
+            },
+        },
+        DOUBLEQUOTED_LINE => {
+            match => 'cb_stack_doublequoted',
+            LB => { new => \'MULTILINE_DOUBLEQUOTED'  },
+        },
     },
     RULE_PLAIN_KEY_OR_NODE => {
-        SCALAR => [ 'cb_stack_plain', {
-            COMMENT_EOL => [ 'cb_plain_single', [ \'NODE' ]],
-            EOL => [ 'cb_multiscalar_from_stack', [ \'NODE' ]],
-            'WS?' => [0, {
-                COLON => [ 'cb_mapkey_from_stack', {
-                    EOL => [ 0, [ \'TYPE_FULLNODE' ]],
-                    'WS?' => [ 0, [ \'MAPVALUE' ]],
-                }],
-            }],
-        }],
-        COLON => [ 'cb_mapkey_from_stack', {
-            EOL => [ 0, [ \'TYPE_FULLNODE' ]],
-            'WS?' => [ 0, [ \'MAPVALUE' ]],
-        }],
+        SCALAR => {
+            match => 'cb_stack_plain',
+            COMMENT_EOL => { match => 'cb_plain_single', new => \'NODE' },
+            EOL => { match => 'cb_multiscalar_from_stack', new => \'NODE' },
+            'WS?' => {
+                COLON => {
+                    match => 'cb_mapkey_from_stack',
+                    EOL => { new => \'TYPE_FULLNODE' },
+                    'WS?' => { new => \'MAPVALUE' },
+                },
+            },
+        },
+        COLON => {
+            match => 'cb_mapkey_from_stack',
+            EOL => { new => \'TYPE_FULLNODE' },
+            'WS?' => { new => \'MAPVALUE' },
+        },
     },
     RULE_PLAIN => {
-        SCALAR => ['cb_stack_plain', {
-            COMMENT_EOL => ['cb_multiscalar_from_stack', [ \'NODE' ]],
-            EOL => [ 'cb_multiscalar_from_stack', [ \'NODE' ]],
-        }],
+        SCALAR => {
+            match => 'cb_stack_plain',
+            COMMENT_EOL => { match => 'cb_multiscalar_from_stack', new => \'NODE' },
+            EOL => { match => 'cb_multiscalar_from_stack', new => \'NODE' },
+        },
     },
     RULE_MAPKEY => {
-        QUESTION => ['cb_question', {
-            EOL => [0, [ \'TYPE_FULLNODE' ]],
-            WS => [0, [ \'TYPE_FULLNODE' ]],
-        }],
-        ALIAS => [ 'cb_mapkey_alias', {
-            WS => [0, {
-                COLON => [0, {
-                    EOL => [0, [ \'TYPE_FULLNODE' ]],
-                    WS => [0, [ \'MAPVALUE' ]],
-                }],
-            }],
-        }],
-        DOUBLEQUOTE => [0, {
-            DOUBLEQUOTED_SINGLE => ['cb_doublequoted_key', {
-                DOUBLEQUOTE => [ 0, {
-                    'WS?' => [0, {
-                        COLON => [0, {
-                            EOL => [0, [ \'TYPE_FULLNODE' ]],
-                            WS => [0, [ \'MAPVALUE' ]],
-                        }],
-                    }],
-                }],
-            }],
-        }],
-        SINGLEQUOTE => [0, {
-            SINGLEQUOTED_SINGLE => [ 'cb_singlequoted_key', {
-                SINGLEQUOTE => [0, {
-                    'WS?' => [0, {
-                        COLON => [0, {
-                            EOL => [0, [ \'TYPE_FULLNODE' ]],
-                            WS => [0, [ \'MAPVALUE' ]],
-                        }],
-                    }],
-                }],
-            }],
-        }],
-        SCALAR => ['cb_mapkey', {
-            'WS?' => [ 0, {
-                COLON => [0, {
-                    EOL => [0, [ \'TYPE_FULLNODE' ]],
-                    WS => [0, [ \'MAPVALUE' ]],
-                }],
-            }],
-        }],
-        COLON => [ 'cb_empty_mapkey', {
-            EOL => [0, [ \'TYPE_FULLNODE' ]],
-            WS => [0, [ \'MAPVALUE' ]],
-        }],
+        QUESTION => {
+            match => 'cb_question',
+            EOL => { new => \'TYPE_FULLNODE' },
+            WS => { new => \'TYPE_FULLNODE' },
+        },
+        ALIAS => {
+            match => 'cb_mapkey_alias',
+            WS => {
+                COLON => {
+                    EOL => { new => \'TYPE_FULLNODE' },
+                    WS => { new => \'MAPVALUE' },
+                },
+            },
+        },
+        DOUBLEQUOTE => {
+            DOUBLEQUOTED_SINGLE => {
+                match => 'cb_doublequoted_key',
+                DOUBLEQUOTE => {
+                    'WS?' => {
+                        COLON => {
+                            EOL => { new => \'TYPE_FULLNODE' },
+                            WS => { new => \'MAPVALUE' },
+                        },
+                    },
+                },
+            },
+        },
+        SINGLEQUOTE => {
+            SINGLEQUOTED_SINGLE => {
+                match => 'cb_singlequoted_key',
+                SINGLEQUOTE => {
+                    'WS?' => {
+                        COLON => {
+                            EOL => { new => \'TYPE_FULLNODE' },
+                            WS => { new => \'MAPVALUE' },
+                        },
+                    },
+                },
+            },
+        },
+        SCALAR => {
+            match => 'cb_mapkey',
+            'WS?' => {
+                COLON => {
+                    EOL => { new => \'TYPE_FULLNODE' },
+                    WS => { new => \'MAPVALUE' },
+                },
+            },
+        },
+        COLON => {
+            match => 'cb_empty_mapkey',
+            EOL => { new => \'TYPE_FULLNODE' },
+            WS => { new => \'MAPVALUE' },
+        },
     },
     RULE_MAPSTART => {
-        QUESTION => [ 'cb_questionstart', {
-            EOL => [0, [ \'TYPE_FULLNODE' ]],
-            WS => [0, [ \'TYPE_FULLNODE' ]],
-        }],
-        DOUBLEQUOTE => [0, {
-            DOUBLEQUOTED => [ 'cb_doublequotedstart', {
-                DOUBLEQUOTE => [0, {
-                    'WS?' => [0, {
-                        COLON => [0, {
-                            EOL => [0, [ \'TYPE_FULLNODE' ]],
-                            WS => [0, [ \'MAPVALUE' ]],
-                        }],
-                    }],
-                }],
-            }],
-        }],
-        SINGLEQUOTE => [0, {
-            SINGLEQUOTED => [ 'cb_singleequotedstart', {
-                SINGLEQUOTE => [0, {
-                    'WS?' => [0, {
-                        COLON => [0, {
-                            EOL => [0, [ \'TYPE_FULLNODE' ]],
-                            WS => [0, [ \'MAPVALUE' ]],
-                        }],
-                    }],
-                }],
-            }],
-        }],
-        SCALAR => [ 'cb_mapkeystart', {
-            'WS?' => [0, {
-                COLON => [0, {
-                    EOL => [0, [ \'TYPE_FULLNODE' ]],
-                    WS => [0, [ \'MAPVALUE' ]],
-                }],
-            }],
-        }],
+        QUESTION => {
+            match => 'cb_questionstart',
+            EOL => { new => \'TYPE_FULLNODE' },
+            WS => { new => \'TYPE_FULLNODE' },
+        },
+        DOUBLEQUOTE => {
+            DOUBLEQUOTED => {
+                match => 'cb_doublequotedstart',
+                DOUBLEQUOTE => {
+                    'WS?' => {
+                        COLON => {
+                            EOL => { new => \'TYPE_FULLNODE' },
+                            WS => { new => \'MAPVALUE' },
+                        },
+                    },
+                },
+            },
+        },
+        SINGLEQUOTE => {
+            SINGLEQUOTED => {
+                match => 'cb_singleequotedstart',
+                SINGLEQUOTE => {
+                    'WS?' => {
+                        COLON => {
+                            EOL => { new => \'TYPE_FULLNODE' },
+                            WS => { new => \'MAPVALUE' },
+                        },
+                    },
+                },
+            },
+        },
+        SCALAR => {
+            match => 'cb_mapkeystart',
+            'WS?' => {
+                COLON => {
+                    EOL => { new => \'TYPE_FULLNODE' },
+                    WS => { new => \'MAPVALUE' },
+                },
+            },
+        },
     },
     RULE_SEQSTART => {
-        DASH =>[ 'cb_seqstart', {
-            EOL => [0, [ \'TYPE_FULLNODE' ]],
-            WS => [0, [ \'TYPE_FULLNODE' ]],
-        }],
+        DASH => {
+            match => 'cb_seqstart',
+            EOL => { new => \'TYPE_FULLNODE' },
+            WS => { new => \'TYPE_FULLNODE' },
+        },
     },
     RULE_SEQITEM => {
-        DASH => [ 'cb_seqitem', {
-            EOL => [0, [ \'TYPE_FULLNODE' ]],
-            WS => [0, [ \'TYPE_FULLNODE' ]],
-        }],
+        DASH => {
+            match => 'cb_seqitem',
+            EOL => { new => \'TYPE_FULLNODE' },
+            WS => { new => \'TYPE_FULLNODE' },
+        },
     },
     RULE_BLOCK_SCALAR => {
-        LITERAL => [ 'cb_block_scalar', [ \'NODE' ]],
-        FOLDED => [ 'cb_block_scalar', [ \'NODE' ]],
+        LITERAL => { match => 'cb_block_scalar', new => \'NODE' },
+        FOLDED => { match => 'cb_block_scalar', new => \'NODE' },
     },
 #    RULE_FLOW_MAP => [
 #        [['FLOW_MAP_START', 'cb_flow_map'],
@@ -241,130 +270,131 @@ our $GRAMMAR = {
 #    ],
 
 
-    ANCHOR_MAPKEY => {
-        ANCHOR => ['cb_anchor', {
-            WS => [0, [ \'MAPSTART' ] ],
-        }],
-    },
-    TAG_MAPKEY => {
-        TAG => ['cb_tag', {
-            WS => [0, [ \'MAPSTART' ] ],
-        }],
-    },
     FULL_MAPKEY => {
-        ANCHOR => ['cb_anchor', {
-            WS => [0, {
-                TAG => ['cb_tag', {
-                    WS => [0, [ \'MAPKEY' ] ],
-                }],
-                DEFAULT => [0, [ \'MAPKEY' ]],
-            }],
-        }],
-        TAG => ['cb_tag', {
-            WS => [0, {
-                ANCHOR => ['cb_anchor', {
-                    WS => [0, [ \'MAPKEY' ] ],
-                }],
-                DEFAULT => [0, [ \'MAPKEY' ]],
-            }],
-        }],
-        DEFAULT => [0, [ \'MAPKEY' ]],
-    },
-    PROP_MAPKEY => {
-        ANCHOR => ['cb_anchor', {
-            WS => [0, {
-                TAG => ['cb_tag', {
-                    WS => [0, [ \'MAPSTART' ] ],
-                }],
-                DEFAULT => [0, [ \'MAPSTART' ]],
-            }],
-        }],
-        TAG => ['cb_tag', {
-            WS => [0, {
-                ANCHOR => ['cb_anchor', {
-                    WS => [0, [ \'MAPSTART' ] ],
-                }],
-                DEFAULT => [0, [ \'MAPSTART' ]],
-            }],
-        }],
+        ANCHOR => {
+            match => 'cb_anchor',
+            WS => {
+                TAG => {
+                    match => 'cb_tag',
+                    WS => { new => \'MAPKEY'  },
+                },
+                DEFAULT => { new => \'MAPKEY' },
+            },
+        },
+        TAG => {
+            match => 'cb_tag',
+            WS => {
+                ANCHOR => {
+                    match => 'cb_anchor',
+                    WS => { new => \'MAPKEY'  },
+                },
+                DEFAULT => { new => \'MAPKEY' },
+            },
+        },
+        DEFAULT => { new => \'MAPKEY' },
     },
 
     FULLNODE_ANCHOR => {
-        TAG => ['cb_tag', {
-            EOL => ['cb_property_eol', [ \'TYPE_FULLNODE_TAG_ANCHOR' ]],
-            WS => [0, [
-                \'ANCHOR_MAPKEY',
-                # SCALAR
-                \'NODE',
-            ]],
-        }],
-        ANCHOR => ['cb_anchor', {
-            WS => [0, [
-                \'TAG_MAPKEY',
-                \'MAPSTART',
-            ]],
-        }],
-        DEFAULT => [0, [
-            \'NODE',
-        ]],
+        TAG => {
+            match => 'cb_tag',
+            EOL => { match => 'cb_property_eol', new => \'TYPE_FULLNODE_TAG_ANCHOR' },
+            WS => {
+                ANCHOR => {
+                    match => 'cb_anchor',
+                    WS => { new => \'MAPSTART'  },
+                },
+                DEFAULT => { new => \'NODE' }
+            },
+        },
+        ANCHOR => {
+            match => 'cb_anchor',
+            WS => {
+                TAG => {
+                    match => 'cb_tag',
+                    WS => { new => \'MAPSTART'  },
+                },
+                DEFAULT => { new => \'MAPSTART' },
+            },
+        },
+        DEFAULT => { new => \'NODE' },
     },
     FULLNODE_TAG => {
-        ANCHOR => ['cb_anchor', {
-            EOL => ['cb_property_eol', [ \'TYPE_FULLNODE_TAG_ANCHOR' ]],
-            WS => [0, [
-                \'TAG_MAPKEY',
-                # SCALAR
-                \'NODE',
-            ]],
-        }],
-        TAG => ['cb_tag', {
-            WS => [0, [
-                \'ANCHOR_MAPKEY',
-                \'MAPSTART',
-            ]],
-        }],
-        DEFAULT => [0, [ \'NODE' ]],
+        ANCHOR => {
+            match => 'cb_anchor',
+            EOL => { match => 'cb_property_eol', new => \'TYPE_FULLNODE_TAG_ANCHOR' },
+            WS => {
+                TAG => {
+                    match => 'cb_tag',
+                    WS => { new => \'MAPSTART'  },
+                },
+                DEFAULT => { new => \'NODE', },
+            },
+        },
+        TAG => {
+            match => 'cb_tag',
+            WS => {
+                ANCHOR => {
+                    match => 'cb_anchor',
+                    WS => { new => \'MAPSTART'  },
+                },
+                DEFAULT => { new => \'MAPSTART' },
+            },
+        },
+        DEFAULT => { new => \'NODE' },
     },
-    FULLNODE_TAG_ANCHOR => [
-        \'PROP_MAPKEY',
-        \'NODE',
-    ],
+    FULLNODE_TAG_ANCHOR => {
+        ANCHOR => {
+            match => 'cb_anchor',
+            WS => {
+                TAG => {
+                    match => 'cb_tag',
+                    WS => { new => \'MAPSTART'  },
+                },
+                DEFAULT => { new => \'MAPSTART' },
+            },
+        },
+        TAG => {
+            match => 'cb_tag',
+            WS => {
+                ANCHOR => {
+                    match => 'cb_anchor',
+                    WS => { new => \'MAPSTART'  },
+                },
+                DEFAULT => { new => \'MAPSTART' },
+            },
+        },
+        DEFAULT => { new => \'NODE' }
+    },
     FULLNODE => {
-        ANCHOR => ['cb_anchor', {
-            EOL => ['cb_property_eol', [
-                \'TYPE_FULLNODE_ANCHOR',
-            ]],
-            WS => [0, {
-                TAG => ['cb_tag', {
-                    EOL => ['cb_property_eol', [
-                        \'TYPE_FULLNODE_TAG_ANCHOR'
-                    ]],
+        ANCHOR => {
+            match => 'cb_anchor',
+            EOL => { match => 'cb_property_eol', new => \'TYPE_FULLNODE_ANCHOR' },
+            WS => {
+                TAG => {
+                    match => 'cb_tag',
+                    EOL => { match => 'cb_property_eol', new => \'TYPE_FULLNODE_TAG_ANCHOR' },
                     # SCALAR
-                    WS => [0, [ \'NODE' ] ],
-                }],
+                    WS => { new => \'NODE'  },
+                },
                 # SCALAR
-                DEFAULT => [0, [
-                    \'NODE',
-                ]],
-            }],
-        }],
-        TAG => ['cb_tag', {
-            EOL => ['cb_property_eol', [ \'TYPE_FULLNODE_TAG' ]],
-            WS => [0, {
-                ANCHOR => ['cb_anchor', {
-                    EOL => ['cb_property_eol', [
-                        \'TYPE_FULLNODE_TAG_ANCHOR'
-                    ]],
+                DEFAULT => { new => \'NODE' },
+            },
+        },
+        TAG => {
+            match => 'cb_tag',
+            EOL => { match => 'cb_property_eol', new => \'TYPE_FULLNODE_TAG' },
+            WS => {
+                ANCHOR => {
+                    match => 'cb_anchor',
+                    EOL => { match => 'cb_property_eol', new => \'TYPE_FULLNODE_TAG_ANCHOR' },
                     # SCALAR
-                    WS => [0, [ \'NODE' ] ],
-                }],
+                    WS => { new => \'NODE'  },
+                },
                 # SCALAR
-                DEFAULT => [0, [ \'NODE' ]],
-            }],
-        }],
-        DEFAULT => [0, [
-            \'PREVIOUS',
-        ]],
+                DEFAULT => { new => \'NODE' },
+            },
+        },
+        DEFAULT => { new => \'PREVIOUS' },
     },
 #    FULLMAPVALUE => [
 #        [\'RULE_ANCHOR'],
