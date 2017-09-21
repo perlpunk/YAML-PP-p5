@@ -240,7 +240,7 @@ sub parse_block_scalar {
         $got_indent = 1;
     }
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$indent], ['indent']);
-    my $indent_re = $RE_WS ."{$indent}";
+    my $indent_re = '[ ]' ."{$indent}";
     TRACE and local $Data::Dumper::Useqq = 1;
     my $type;
     my $yaml = $self->fetch_next_line;
@@ -291,9 +291,12 @@ sub parse_block_scalar {
         }
         if ($length and not $got_indent) {
             $indent += $length;
-            $indent_re = $RE_WS . "{$indent}";
+            $indent_re = '[ ]' . "{$indent}";
             $pre = $space;
             $space = '';
+            $got_indent = 1;
+        }
+        elsif (not $got_indent) {
             $got_indent = 1;
         }
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
