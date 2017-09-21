@@ -67,6 +67,15 @@ sub set_rules { $_[0]->{rules} = $_[1] }
 sub stack { return $_[0]->{stack} }
 sub set_stack { $_[0]->{stack} = $_[1] }
 
+sub rule { return $_[0]->{rule} }
+sub set_rule {
+    my ($self, $name) = @_;
+    DEBUG and $self->info("set_rule($name)");
+    $self->{rule} = $name;
+    return unless $name;
+    $self->set_rules($GRAMMAR->{ $name });
+}
+
 sub init {
     my ($self) = @_;
     $self->set_level(-1);
@@ -77,6 +86,7 @@ sub init {
         '!!' => "tag:yaml.org,2002:",
     });
     $self->set_tokens([]);
+    $self->set_rule(undef);
     $self->set_rules({});
     $self->set_stack({});
     $self->lexer->init;
@@ -134,7 +144,7 @@ sub parse_stream {
 
         my $new_type = $start_line ? 'FULLSTARTNODE' : 'FULLNODE';
         my $new_node = [ $new_type => 0 ];
-        $self->set_rules( $GRAMMAR->{ FULLNODE } );
+        $self->set_rule( 'FULLNODE' );
         $self->set_new_node($new_node);
         my ($end) = $self->parse_document();
         if ($end) {
@@ -260,8 +270,8 @@ sub next_result {
     my ($self, %args) = @_;
     my $offset = $args{offset};
 
-    my ($res) = $self->parse_next();
-    return unless $res;
+    my $res = $self->parse_next();
+    return unless $res->{name};
 
     $self->process_result(
         result => $res,
@@ -451,7 +461,6 @@ sub process_result {
         }
     }
     elsif ($got eq 'NOOP') { }
-    elsif ($got eq 'SEQITEM') { }
     elsif ($got eq 'COMPLEX') {
         if ($exp eq 'MAP') {
             $self->events->[-1] = 'COMPLEX';
@@ -472,69 +481,117 @@ sub process_result {
     my $new_type = $res->{new_type};
     my $new_node = [ $new_type => $new_offset ];
     $self->set_new_node($new_node);
-#    if ($new_type eq 'MAPVALUE') {
-#        $new_type = 'FULLMAPVALUE';
-#    }
-    $self->set_rules( $GRAMMAR->{ FULLNODE } );
+    $self->set_rule( 'FULLNODE' );
     return;
 }
 
 sub parse_next {
-    TRACE and warn "=== parse_next()\n";
     my ($self, %args) = @_;
+    DEBUG and $self->info("----------------> parse_next()");
     my $node_type = ($self->new_node ? $self->new_node->[NODE_TYPE] : undef);
     my $exp = $self->events->[-1];
 
-    my $expected_type = $exp;
-    if ($node_type or $exp eq 'MAP') {
-        unless ($node_type) {
-            $self->set_rules($GRAMMAR->{FULL_MAPKEY});
-        }
-        my ($new_type) = $self->lexer->parse_tokens($self,
-            callback => sub {
-                my ($self, $sub) = @_;
-                $self->$sub(undef);
-            },
-        );
-        if (not $new_type) {
-            $self->exception( "Expected " . ($node_type ? "new node ($node_type)" : $exp));
-        }
-        if ($node_type) {
-            if ($new_type =~ s/^TYPE_//) {
-                $self->set_rules($GRAMMAR->{ $new_type });
-                return;
-            }
-            elsif ($new_type eq 'PREVIOUS') {
-                $new_type = $node_type;
-                $new_type =~ s/^FULL//;
-            }
-        }
-
-        $expected_type = $new_type;
-    }
-
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$expected_type], ['expected_type']);
-    $self->set_rules($GRAMMAR->{ "NODETYPE_$expected_type" });
-
     my $res = {};
-    my ($new_type) = $self->lexer->parse_tokens($self,
-        callback => sub {
-            my ($self, $sub) = @_;
-            $self->$sub($res);
-        },
-    );
+    my $expected_type = $exp;
 
-    if (not $new_type) {
-        $self->exception("Expected $expected_type");
+    unless ($node_type) {
+        if ($exp eq 'MAP') {
+            $self->set_rule( 'FULL_MAPKEY' );
+        }
+        else {
+            $node_type = $self->rule;
+
+            $self->set_rule( "NODETYPE_$expected_type" );
+        }
+
+    }
+    my $success = $self->parse_tokens(
+        res => $res,
+        node_type => $node_type,
+    );
+    if (not $success) {
+        $self->exception( "Expected " . ($node_type ? "new node ($node_type)" : $exp));
     }
 
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$new_type], ['new_type']);
-    $new_type =~ s/^TYPE_//;
-    my $stack = $self->stack;
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$stack], ['stack']);
+    return $res;
+}
 
-    $res->{new_type}= $new_type;
-    return ($res);
+sub parse_tokens {
+    my ($self, %args) = @_;
+    my $res = $args{res};
+    my $node_type = $args{node_type};
+    my $next_rule_name = $self->rule;
+    DEBUG and $self->info("----------------> parse_tokens($next_rule_name)");
+    my $next_rule = $self->rules;
+
+    TRACE and $self->debug_rules($next_rule);
+    TRACE and $self->debug_yaml;
+    DEBUG and $self->debug_next_line;
+
+    my $tokens = $self->tokens;
+    my $next_tokens = $self->lexer->next_tokens;
+    RULE: while (1) {
+        last unless $next_rule_name;
+
+        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens->[0]], ['next_token']);
+        my $got = $next_tokens->[0]->{name};
+        my $def = $next_rule->{ $got };
+        if ($def) {
+            push @$tokens, shift @$next_tokens;
+        }
+        elsif ($def = $next_rule->{ 'WS?' }) {
+            if ($got eq 'WS') {
+                push @$tokens, shift @$next_tokens;
+            }
+            $got = 'WS?';
+        }
+        else {
+            $def = $next_rule->{DEFAULT};
+            $got = 'DEFAULT';
+        }
+
+        unless ($def) {
+            DEBUG and $self->not("---not $next_tokens->[0]->{name}");
+            $self->set_rules(undef);
+            return;
+        }
+
+        DEBUG and $self->got("---got $got");
+        if (my $sub = $def->{match}) {
+            $self->$sub($res);
+        }
+        if (my $new = $def->{new}) {
+            $next_rule_name = $new;
+            DEBUG and $self->got("NEW: $next_rule_name");
+
+            if ($def->{return}) {
+                $self->set_rule($next_rule_name);
+                $res->{new_type}= $next_rule_name;
+                return 1;
+            }
+
+            if ($next_rule_name eq 'PREVIOUS') {
+                $next_rule_name = $node_type;
+                $next_rule_name =~ s/^FULL//;
+
+                $next_rule_name = "NODETYPE_$next_rule_name";
+                $self->set_rule($next_rule_name);
+            }
+            if (exists $GRAMMAR->{ $next_rule_name }) {
+                $next_rule = $GRAMMAR->{ $next_rule_name };
+                next RULE;
+            }
+
+            $self->set_rule($next_rule_name);
+            $res->{new_type}= $next_rule_name;
+            return 1;
+        }
+        $next_rule_name .= " - $got"; # for debugging
+        $next_rule = $def;
+
+    }
+
+    return;
 }
 
 sub res_to_event {
@@ -695,7 +752,10 @@ sub begin {
     elsif ($event_name eq 'DOC') {
         $info{implicit} = $info->{implicit};
     }
-    TRACE and $self->debug_event("------------->> BEGIN $event ($offset) $content");
+    if (DEBUG) {
+        my $str = $self->event_to_test_suite([$event_to_method{ $event_name } . "_start_event", \%info]);
+        $self->debug_event("------------->> BEGIN $str");
+    }
     $self->callback->($self, $event_to_method{ $event_name } . "_start_event"
         => { %info, content => $content });
     $self->push_events($event, $offset);
@@ -709,7 +769,7 @@ sub end {
         $info{implicit} = $info->{implicit};
     }
     $self->pop_events($event);
-    TRACE and $self->debug_event("-------------<< END   $event");
+    DEBUG and $self->debug_event("-------------<< END   $event");
     $self->callback->($self, $event_to_method{ $event } . "_end_event"
         => { type => $event, %info });
     if ($event eq 'DOC') {
@@ -721,7 +781,7 @@ sub end {
 
 sub event {
     my ($self, $event) = @_;
-    TRACE and $self->debug_event("------------- EVENT @{[ $self->event_to_test_suite($event)]}");
+    DEBUG and $self->debug_event("------------- EVENT @{[ $self->event_to_test_suite($event)]}");
 
     my ($type, $info) = @$event;
     $self->callback->($self, $event_to_method{ $type } . "_event", $info);
@@ -1060,7 +1120,7 @@ sub cb_seqstart {
 
 sub cb_seqitem {
     my ($self, $res) = @_;
-    $res->{name} = 'SEQITEM';
+    $res->{name} = 'NOOP';
 }
 
 sub cb_alias_key_from_stack {
