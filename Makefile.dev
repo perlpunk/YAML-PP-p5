@@ -31,3 +31,6 @@ gh-pages-push: gh-pages
 
 test-suite-html: gh-pages
 	perl etc/test-suite-html.pl > gh-pages/test-suite.html
+
+grammar:
+	perl etc/generate-grammar.pl
