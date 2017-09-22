@@ -247,6 +247,7 @@ sub parse_block_scalar {
     while (defined $yaml) {
         TRACE and warn __PACKAGE__.':'.__LINE__.": RE: $indent_re\n";
         TRACE and $parser->debug_yaml;
+        my $column = 1;
         my $pre;
         my $space;
         my $length;
@@ -255,17 +256,21 @@ sub parse_block_scalar {
         if ($$yaml =~ s/\A($indent_re)($RE_WS*)//) {
             $pre = $1;
             $space = $2;
-            push @$tokens, $self->new_token( INDENT => $pre );
-            push @$tokens, $self->new_token( WS => $space );
+            push @$tokens, $self->new_token( INDENT => $pre, column => $column );
+            $column += length $pre;
+            push @$tokens, $self->new_token( WS => $space, column => $column );
             $length = length $space;
+            $column += $length;
         }
         elsif ($$yaml =~ m/\A$RE_WS*#.*$RE_LB/) {
             last;
         }
         elsif ($$yaml =~ s/\A($RE_WS*)($RE_LB)//) {
             $pre = $1;
-            push @$tokens, $self->new_token( WS => $pre );
-            push @$tokens, $self->new_token( LB => $2 );
+            push @$tokens, $self->new_token( WS => $pre, column => $column );
+            $column += length $pre;
+            push @$tokens, $self->new_token( LB => $2, column => $column );
+            $column += length $2;
             $self->inc_line;
             $yaml = $self->fetch_next_line;
             $space = '';
@@ -277,7 +282,7 @@ sub parse_block_scalar {
             last;
         }
         if ($$yaml =~ s/\A($RE_LB)//) {
-            push @$tokens, $self->new_token( LB => $1 );
+            push @$tokens, $self->new_token( LB => $1, column => $column );
             $self->inc_line;
             $yaml = $self->fetch_next_line;
             $type = 'EMPTY';
@@ -303,8 +308,10 @@ sub parse_block_scalar {
 
         if ($$yaml =~ s/\A(.*)($RE_LB|\z)//) {
             my $value = $1;
-            push @$tokens, $self->new_token( BLOCK_SCALAR_CONTENT => $value );
-            push @$tokens, $self->new_token( LB => $2 );
+            push @$tokens, $self->new_token( BLOCK_SCALAR_CONTENT => $value, column => $column );
+            $column += length $value;
+            push @$tokens, $self->new_token( LB => $2, column => $column );
+            $column += length $2;
             $self->inc_line;
             $yaml = $self->fetch_next_line;
             $type = length $space ? 'MORE' : 'CONTENT';
@@ -334,6 +341,7 @@ sub parse_plain_multi {
     my $indent_re = $RE_WS . '{' . $indent . '}';
     while (1) {
         last if not defined $$yaml;
+        my $column = 1;
 
         unless ($$yaml =~ s/\A($indent_re)//) {
             last;
@@ -343,33 +351,39 @@ sub parse_plain_multi {
             last if $$yaml =~ $RE_DOC_END;
             last if $$yaml =~ $RE_DOC_START;
         }
-        push @$tokens, $self->new_token( INDENT => $1 );
+        push @$tokens, $self->new_token( INDENT => $1, column => $column );
+        $column += length $1;
         if ($$yaml =~ s/\A($RE_WS+)//) {
-            push @$tokens, $self->new_token( WS => $1 );
+            push @$tokens, $self->new_token( WS => $1, column => $column );
+            $column += length $1;
         }
         if ($$yaml =~ s/\A(#.*)($RE_LB|\z)//) {
-            push @$tokens, $self->new_token( COMMENT => $1 );
-            push @$tokens, $self->new_token( LB => $2 );
+            push @$tokens, $self->new_token( COMMENT => $1, column => $column );
+            $column += length $1;
+            push @$tokens, $self->new_token( LB => $2, column => $column );
             $self->inc_line;
             last;
         }
 
         if ($$yaml =~ s/\A($RE_LB|\z)//) {
-            push @$tokens, $self->new_token( LB => $1 );
+            push @$tokens, $self->new_token( LB => $1, column => $column );
             $self->inc_line;
             $yaml = $self->fetch_next_line;
             push @multi, '';
         }
         elsif ($$yaml =~ s/\A($RE_PLAIN_WORDS2)//) {
             my $string = $1;
-            push @$tokens, $self->new_token( PLAIN => $string );
+            push @$tokens, $self->new_token( PLAIN => $string, column => $column );
+            $column += length $string;
             if ($$yaml =~ s/\A($RE_WS+)//) {
-                push @$tokens, $self->new_token( WS => $1 );
+                push @$tokens, $self->new_token( WS => $1, column => $column );
+                $column += length $1;
             }
             push @multi, $string;
             if ($$yaml =~ s/\A(#.*)($RE_LB|\z)//) {
-                push @$tokens, $self->new_token( COMMENT => $1 );
-                push @$tokens, $self->new_token( LB => $2 );
+                push @$tokens, $self->new_token( COMMENT => $1, column => $column );
+                $column += length $1;
+                push @$tokens, $self->new_token( LB => $2, column => $column );
                 $self->inc_line;
                 $yaml = $self->fetch_next_line;
                 last;
@@ -377,7 +391,7 @@ sub parse_plain_multi {
             unless ($$yaml =~ s/\A($RE_LB|\z)//) {
                 $parser->exception("Unexpected content");
             }
-            push @$tokens, $self->new_token( LB => $1 );
+            push @$tokens, $self->new_token( LB => $1, column => $column );
             $self->inc_line;
             $yaml = $self->fetch_next_line;
         }
@@ -678,15 +692,30 @@ my %is_new_line = (
 sub push_token {
     my ($self, $type, $value) = @_;
     my $next = $self->next_tokens;
-    push @$next, { name => $type, value => $value, line => $self->line };
+    my $column = 1;
+    if (@$next) {
+        my $previous = $next->[-1];
+        if ($is_new_line{ $previous->{name} }) {
+            $column = 1;
+        }
+        else {
+            $column = $previous->{column} + length( $previous->{value} );
+        }
+    }
+    push @$next, {
+        name => $type,
+        value => $value,
+        line => $self->line,
+        column => $column,
+    };
     if ($is_new_line{ $type }) {
         $self->inc_line;
     }
 }
 
 sub new_token {
-    my ($self, $type, $value) = @_;
-    return { name => $type, value => $value, line => $self->line };
+    my ($self, $type, $value, %args) = @_;
+    return { name => $type, value => $value, line => $self->line, %args };
 }
 
 sub exception {

@@ -887,7 +887,8 @@ sub debug_tokens {
     require Term::ANSIColor;
     for my $token (@$tokens) {
         my $type = Term::ANSIColor::colored(["green"],
-            sprintf "%-22s L %3d ", $token->{name}, $token->{line}
+            sprintf "%-22s L %2d C %2d ",
+                $token->{name}, $token->{line}, $token->{column}
         );
         local $Data::Dumper::Useqq = 1;
         local $Data::Dumper::Terse = 1;
