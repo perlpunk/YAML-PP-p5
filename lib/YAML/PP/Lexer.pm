@@ -503,10 +503,9 @@ sub _fetch_next_tokens {
             my $token_name2 = $token_name . 'D';
             my $regex = $REGEXES{ $token_name2 };
             if ($$yaml =~ s/\A($first)$regex($first|\z)//) {
-                my $quote = $1;
                 $self->push_token( $token_name => $1 );
                 if ($3 eq $first) {
-                    $self->push_token( $token_name2 . '_SINGLE' => $2 );
+                    $self->push_token( $token_name2 => $2 );
                     $self->push_token( $token_name => $3 );
                 }
                 else {
@@ -518,13 +517,12 @@ sub _fetch_next_tokens {
                     $lb = $next_line->[1];
                     while (1) {
                         if ($$yaml =~ s/\A$regex($first|\z)//) {
+                            $self->push_token( $token_name2 . '_LINE' => $1 );
                             if ($2 eq $first) {
-                                $self->push_token( $token_name2 . '_END' => $1 );
                                 $self->push_token( $token_name => $2 );
                                 last;
                             }
                             else {
-                                $self->push_token( $token_name2 . '_LINE' => $1 );
                                 $self->push_token( LB => $lb );
                                 @$next_line = ();
                                 $next_line = $self->fetch_next_line;

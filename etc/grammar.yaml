@@ -30,7 +30,7 @@ NODETYPE_COMPLEX:
 
 RULE_SINGLEQUOTED_KEY_OR_NODE:
   SINGLEQUOTE:
-    SINGLEQUOTED_SINGLE:
+    SINGLEQUOTED:
       match: cb_stack_singlequoted_single
       SINGLEQUOTE:
         EOL: { match: cb_scalar_from_stack, new: NODE }
@@ -48,17 +48,15 @@ RULE_SINGLEQUOTED_KEY_OR_NODE:
       LB: { new: MULTILINE_SINGLEQUOTED }
 
 MULTILINE_SINGLEQUOTED:
-  SINGLEQUOTED_END:
-    match: cb_stack_singlequoted
-    SINGLEQUOTE:
-      EOL: { match: cb_scalar_from_stack, new: NODE }
   SINGLEQUOTED_LINE:
     match: cb_stack_singlequoted
     LB: { new: MULTILINE_SINGLEQUOTED }
+    SINGLEQUOTE:
+      EOL: { match: cb_scalar_from_stack, new: NODE }
 
 RULE_DOUBLEQUOTED_KEY_OR_NODE:
   DOUBLEQUOTE:
-    DOUBLEQUOTED_SINGLE:
+    DOUBLEQUOTED:
       match: cb_stack_doublequoted_single
       DOUBLEQUOTE:
         EOL: { match: cb_scalar_from_stack, new: NODE }
@@ -78,13 +76,11 @@ RULE_DOUBLEQUOTED_KEY_OR_NODE:
       LB: { new: MULTILINE_DOUBLEQUOTED  }
 
 MULTILINE_DOUBLEQUOTED:
-  DOUBLEQUOTED_END:
-    match: cb_stack_doublequoted
-    DOUBLEQUOTE:
-      EOL: { match: cb_scalar_from_stack, new: NODE }
   DOUBLEQUOTED_LINE:
     match: cb_stack_doublequoted
     LB: { new: MULTILINE_DOUBLEQUOTED  }
+    DOUBLEQUOTE:
+      EOL: { match: cb_scalar_from_stack, new: NODE }
 
 RULE_PLAIN_KEY_OR_NODE:
   SCALAR:
@@ -123,7 +119,7 @@ NODETYPE_MAP:
         EOL: { new: FULLNODE , return: 1}
         WS: { new: FULLMAPVALUE, return: 1 }
   DOUBLEQUOTE:
-    DOUBLEQUOTED_SINGLE:
+    DOUBLEQUOTED:
       match: cb_doublequoted_key
       DOUBLEQUOTE:
         WS:
@@ -134,7 +130,7 @@ NODETYPE_MAP:
           EOL: { new: FULLNODE , return: 1}
           WS: { new: FULLMAPVALUE, return: 1 }
   SINGLEQUOTE:
-    SINGLEQUOTED_SINGLE:
+    SINGLEQUOTED:
       match: cb_singlequoted_key
       SINGLEQUOTE:
         WS:

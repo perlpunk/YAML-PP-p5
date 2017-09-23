@@ -212,16 +212,13 @@ $GRAMMAR = {
     }
   },
   'MULTILINE_DOUBLEQUOTED' => {
-    'DOUBLEQUOTED_END' => {
+    'DOUBLEQUOTED_LINE' => {
       'DOUBLEQUOTE' => {
         'EOL' => {
           'match' => 'cb_scalar_from_stack',
           'new' => 'NODE'
         }
       },
-      'match' => 'cb_stack_doublequoted'
-    },
-    'DOUBLEQUOTED_LINE' => {
       'LB' => {
         'new' => 'MULTILINE_DOUBLEQUOTED'
       },
@@ -229,18 +226,15 @@ $GRAMMAR = {
     }
   },
   'MULTILINE_SINGLEQUOTED' => {
-    'SINGLEQUOTED_END' => {
+    'SINGLEQUOTED_LINE' => {
+      'LB' => {
+        'new' => 'MULTILINE_SINGLEQUOTED'
+      },
       'SINGLEQUOTE' => {
         'EOL' => {
           'match' => 'cb_scalar_from_stack',
           'new' => 'NODE'
         }
-      },
-      'match' => 'cb_stack_singlequoted'
-    },
-    'SINGLEQUOTED_LINE' => {
-      'LB' => {
-        'new' => 'MULTILINE_SINGLEQUOTED'
       },
       'match' => 'cb_stack_singlequoted'
     }
@@ -303,7 +297,7 @@ $GRAMMAR = {
       'match' => 'cb_empty_mapkey'
     },
     'DOUBLEQUOTE' => {
-      'DOUBLEQUOTED_SINGLE' => {
+      'DOUBLEQUOTED' => {
         'DOUBLEQUOTE' => {
           'COLON' => {
             'EOL' => {
@@ -368,7 +362,7 @@ $GRAMMAR = {
       'match' => 'cb_mapkey'
     },
     'SINGLEQUOTE' => {
-      'SINGLEQUOTED_SINGLE' => {
+      'SINGLEQUOTED' => {
         'SINGLEQUOTE' => {
           'COLON' => {
             'EOL' => {
@@ -544,13 +538,7 @@ $GRAMMAR = {
   },
   'RULE_DOUBLEQUOTED_KEY_OR_NODE' => {
     'DOUBLEQUOTE' => {
-      'DOUBLEQUOTED_LINE' => {
-        'LB' => {
-          'new' => 'MULTILINE_DOUBLEQUOTED'
-        },
-        'match' => 'cb_stack_doublequoted'
-      },
-      'DOUBLEQUOTED_SINGLE' => {
+      'DOUBLEQUOTED' => {
         'DOUBLEQUOTE' => {
           'COLON' => {
             'EOL' => {
@@ -590,6 +578,12 @@ $GRAMMAR = {
           }
         },
         'match' => 'cb_stack_doublequoted_single'
+      },
+      'DOUBLEQUOTED_LINE' => {
+        'LB' => {
+          'new' => 'MULTILINE_DOUBLEQUOTED'
+        },
+        'match' => 'cb_stack_doublequoted'
       }
     }
   },
@@ -669,13 +663,7 @@ $GRAMMAR = {
   },
   'RULE_SINGLEQUOTED_KEY_OR_NODE' => {
     'SINGLEQUOTE' => {
-      'SINGLEQUOTED_LINE' => {
-        'LB' => {
-          'new' => 'MULTILINE_SINGLEQUOTED'
-        },
-        'match' => 'cb_stack_singlequoted'
-      },
-      'SINGLEQUOTED_SINGLE' => {
+      'SINGLEQUOTED' => {
         'SINGLEQUOTE' => {
           'COLON' => {
             'EOL' => {
@@ -707,6 +695,12 @@ $GRAMMAR = {
           }
         },
         'match' => 'cb_stack_singlequoted_single'
+      },
+      'SINGLEQUOTED_LINE' => {
+        'LB' => {
+          'new' => 'MULTILINE_SINGLEQUOTED'
+        },
+        'match' => 'cb_stack_singlequoted'
       }
     }
   }
@@ -801,7 +795,7 @@ This is the Grammar in YAML
     
     RULE_SINGLEQUOTED_KEY_OR_NODE:
       SINGLEQUOTE:
-        SINGLEQUOTED_SINGLE:
+        SINGLEQUOTED:
           match: cb_stack_singlequoted_single
           SINGLEQUOTE:
             EOL: { match: cb_scalar_from_stack, new: NODE }
@@ -819,17 +813,15 @@ This is the Grammar in YAML
           LB: { new: MULTILINE_SINGLEQUOTED }
     
     MULTILINE_SINGLEQUOTED:
-      SINGLEQUOTED_END:
-        match: cb_stack_singlequoted
-        SINGLEQUOTE:
-          EOL: { match: cb_scalar_from_stack, new: NODE }
       SINGLEQUOTED_LINE:
         match: cb_stack_singlequoted
         LB: { new: MULTILINE_SINGLEQUOTED }
+        SINGLEQUOTE:
+          EOL: { match: cb_scalar_from_stack, new: NODE }
     
     RULE_DOUBLEQUOTED_KEY_OR_NODE:
       DOUBLEQUOTE:
-        DOUBLEQUOTED_SINGLE:
+        DOUBLEQUOTED:
           match: cb_stack_doublequoted_single
           DOUBLEQUOTE:
             EOL: { match: cb_scalar_from_stack, new: NODE }
@@ -849,13 +841,11 @@ This is the Grammar in YAML
           LB: { new: MULTILINE_DOUBLEQUOTED  }
     
     MULTILINE_DOUBLEQUOTED:
-      DOUBLEQUOTED_END:
-        match: cb_stack_doublequoted
-        DOUBLEQUOTE:
-          EOL: { match: cb_scalar_from_stack, new: NODE }
       DOUBLEQUOTED_LINE:
         match: cb_stack_doublequoted
         LB: { new: MULTILINE_DOUBLEQUOTED  }
+        DOUBLEQUOTE:
+          EOL: { match: cb_scalar_from_stack, new: NODE }
     
     RULE_PLAIN_KEY_OR_NODE:
       SCALAR:
@@ -894,7 +884,7 @@ This is the Grammar in YAML
             EOL: { new: FULLNODE , return: 1}
             WS: { new: FULLMAPVALUE, return: 1 }
       DOUBLEQUOTE:
-        DOUBLEQUOTED_SINGLE:
+        DOUBLEQUOTED:
           match: cb_doublequoted_key
           DOUBLEQUOTE:
             WS:
@@ -905,7 +895,7 @@ This is the Grammar in YAML
               EOL: { new: FULLNODE , return: 1}
               WS: { new: FULLMAPVALUE, return: 1 }
       SINGLEQUOTE:
-        SINGLEQUOTED_SINGLE:
+        SINGLEQUOTED:
           match: cb_singlequoted_key
           SINGLEQUOTE:
             WS:
