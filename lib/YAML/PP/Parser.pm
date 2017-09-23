@@ -239,6 +239,8 @@ sub parse_document {
 
             my $end;
             my $explicit_end;
+            my $next_tokens = $self->lexer->next_tokens;
+            #warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
             ($offset, $end, $explicit_end) = $self->check_indent();
             if ($end) {
                 return $explicit_end;
@@ -854,10 +856,11 @@ sub debug_yaml {
 
 sub debug_next_line {
     my ($self) = @_;
-    my $line = $self->lexer->next_line // '';
+    my $next_line = $self->lexer->next_line // [];
+    my $line = $next_line->[0] // '';
     $line =~ s/( +)$/'·' x length $1/e;
     $line =~ s/\t/▸/g;
-    $self->note("NEXT LINE: >>$$line<<");
+    $self->note("NEXT LINE: >>$line<<");
 }
 
 sub note {
@@ -948,13 +951,14 @@ sub exception {
     my ($self, $msg) = @_;
     my $next = $self->lexer->next_tokens;
     my $line = @$next ? $next->[0]->{line} : $self->lexer->line;
+    my $next_line = $self->lexer->next_line;
     my @caller = caller(0);
     my $e = YAML::PP::Exception->new(
         line => $line,
         msg => $msg,
         next => $next,
         where => $caller[1] . ' line ' . $caller[2],
-        yaml => $self->lexer->next_line,
+        yaml => $next_line,
     );
     croak $e;
 }
