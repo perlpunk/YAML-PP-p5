@@ -62,8 +62,6 @@ sub tagmap { return $_[0]->{tagmap} }
 sub set_tagmap { $_[0]->{tagmap} = $_[1] }
 sub tokens { return $_[0]->{tokens} }
 sub set_tokens { $_[0]->{tokens} = $_[1] }
-sub rules { return $_[0]->{rules} }
-sub set_rules { $_[0]->{rules} = $_[1] }
 sub stack { return $_[0]->{stack} }
 sub set_stack { $_[0]->{stack} = $_[1] }
 
@@ -72,8 +70,6 @@ sub set_rule {
     my ($self, $name) = @_;
     DEBUG and $self->info("set_rule($name)");
     $self->{rule} = $name;
-    return unless $name;
-    $self->set_rules($GRAMMAR->{ $name });
 }
 
 sub init {
@@ -87,7 +83,6 @@ sub init {
     });
     $self->set_tokens([]);
     $self->set_rule(undef);
-    $self->set_rules({});
     $self->set_stack({});
     $self->lexer->init;
 }
@@ -144,7 +139,7 @@ sub parse_stream {
 
         my $new_type = $start_line ? 'FULLSTARTNODE' : 'FULLNODE';
         my $new_node = [ $new_type => 0 ];
-        $self->set_rule( 'FULLNODE' );
+        $self->set_rule( $new_type );
         $self->set_new_node($new_node);
         my ($end) = $self->parse_document();
         if ($end) {
@@ -236,7 +231,6 @@ sub parse_document {
     while (1) {
 
         TRACE and $self->info("----------------------- LOOP");
-#        TRACE and $self->info("EXPECTED: (@$new_node)") if $new_node;
         TRACE and $self->debug_yaml;
         TRACE and $self->debug_events;
 
@@ -255,29 +249,18 @@ sub parse_document {
             $offset = $self->new_node->[NODE_OFFSET];
         }
 
-        $self->next_result(
+        my $res = $self->parse_next();
+        $next_full_line = $is_new_line{ $self->tokens->[-1]->{name} };
+        next unless $res->{name};
+
+        $self->process_result(
+            result => $res,
             offset => $offset,
         );
-
-        $next_full_line = $is_new_line{ $self->tokens->[-1]->{name} };
     }
 
     TRACE and $self->debug_events;
     return 0;
-}
-
-sub next_result {
-    my ($self, %args) = @_;
-    my $offset = $args{offset};
-
-    my $res = $self->parse_next();
-    return unless $res->{name};
-
-    $self->process_result(
-        result => $res,
-        offset => $offset,
-    );
-    return;
 }
 
 sub check_indent {
@@ -473,43 +456,43 @@ sub process_result {
         $self->exception("Unexpected res $got");
     }
 
-    my $ws = 0;
-    if ($self->tokens->[-1]->{name} eq 'WS') {
-        $ws = length $self->tokens->[-1]->{value};
+    my $new_offset = 1;
+    my $last = $self->tokens->[-1];
+    if ($last->{name} eq 'WS') {
+        my $ws = length $last->{value};
+        $new_offset = $last->{column} + $ws;
     }
-    my $new_offset = $offset + 1 + $ws;
+
     my $new_type = $res->{new_type};
     my $new_node = [ $new_type => $new_offset ];
     $self->set_new_node($new_node);
-    $self->set_rule( 'FULLNODE' );
+    $self->set_rule( $new_type );
     return;
 }
 
 sub parse_next {
-    my ($self, %args) = @_;
+    my ($self) = @_;
     DEBUG and $self->info("----------------> parse_next()");
-    my $node_type = ($self->new_node ? $self->new_node->[NODE_TYPE] : undef);
-    my $exp = $self->events->[-1];
+    my $new_node = $self->new_node;
 
-    my $res = {};
-    my $expected_type = $exp;
-
-    unless ($node_type) {
+    unless ($new_node) {
+        my $exp = $self->events->[-1];
         if ($exp eq 'MAP') {
             $self->set_rule( 'FULL_MAPKEY' );
         }
         else {
-            $node_type = $self->rule;
-
-            $self->set_rule( "NODETYPE_$expected_type" );
+            $self->set_rule( "NODETYPE_$exp" );
         }
 
     }
+
+    my $res = {};
     my $success = $self->parse_tokens(
         res => $res,
-        node_type => $node_type,
     );
     if (not $success) {
+        my $exp = $self->events->[-1];
+        my $node_type = ($new_node ? $new_node->[NODE_TYPE] : undef);
         $self->exception( "Expected " . ($node_type ? "new node ($node_type)" : $exp));
     }
 
@@ -519,10 +502,9 @@ sub parse_next {
 sub parse_tokens {
     my ($self, %args) = @_;
     my $res = $args{res};
-    my $node_type = $args{node_type};
     my $next_rule_name = $self->rule;
     DEBUG and $self->info("----------------> parse_tokens($next_rule_name)");
-    my $next_rule = $self->rules;
+    my $next_rule = $GRAMMAR->{ $next_rule_name };
 
     TRACE and $self->debug_rules($next_rule);
     TRACE and $self->debug_yaml;
@@ -539,12 +521,6 @@ sub parse_tokens {
         if ($def) {
             push @$tokens, shift @$next_tokens;
         }
-        elsif ($def = $next_rule->{ 'WS?' }) {
-            if ($got eq 'WS') {
-                push @$tokens, shift @$next_tokens;
-            }
-            $got = 'WS?';
-        }
         else {
             $def = $next_rule->{DEFAULT};
             $got = 'DEFAULT';
@@ -552,7 +528,6 @@ sub parse_tokens {
 
         unless ($def) {
             DEBUG and $self->not("---not $next_tokens->[0]->{name}");
-            $self->set_rules(undef);
             return;
         }
 
@@ -571,11 +546,11 @@ sub parse_tokens {
             }
 
             if ($next_rule_name eq 'PREVIOUS') {
+                my $node_type = ($self->new_node ? $self->new_node->[NODE_TYPE] : undef);
                 $next_rule_name = $node_type;
                 $next_rule_name =~ s/^FULL//;
 
                 $next_rule_name = "NODETYPE_$next_rule_name";
-                $self->set_rule($next_rule_name);
             }
             if (exists $GRAMMAR->{ $next_rule_name }) {
                 $next_rule = $GRAMMAR->{ $next_rule_name };
@@ -948,7 +923,7 @@ sub debug_tokens {
     for my $token (@$tokens) {
         my $type = Term::ANSIColor::colored(["green"],
             sprintf "%-22s L %2d C %2d ",
-                $token->{name}, $token->{line}, $token->{column}
+                $token->{name}, $token->{line}, $token->{column} + 1
         );
         local $Data::Dumper::Useqq = 1;
         local $Data::Dumper::Terse = 1;

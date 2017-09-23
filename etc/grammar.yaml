@@ -7,7 +7,7 @@ RULE_ALIAS_KEY_OR_NODE:
       COLON:
         match: cb_alias_key_from_stack
         EOL: { new: FULLNODE, return: 1 }
-        WS: { new: MAPVALUE }
+        WS: { new: FULLMAPVALUE, return: 1 }
 
 RULE_COMPLEX:
   QUESTION:
@@ -34,11 +34,15 @@ RULE_SINGLEQUOTED_KEY_OR_NODE:
       match: cb_stack_singlequoted_single
       SINGLEQUOTE:
         EOL: { match: cb_scalar_from_stack, new: NODE }
-        WS?:
+        COLON:
+          match: cb_mapkey_from_stack
+          EOL: { new: FULLNODE, return: 1 }
+          WS: { new: FULLMAPVALUE, return: 1 }
+        WS:
           COLON:
             match: cb_mapkey_from_stack
             EOL: { new: FULLNODE, return: 1 }
-            WS: { new: MAPVALUE }
+            WS: { new: FULLMAPVALUE, return: 1 }
     SINGLEQUOTED_LINE:
       match: cb_stack_singlequoted
       LB: { new: MULTILINE_SINGLEQUOTED }
@@ -58,12 +62,17 @@ RULE_DOUBLEQUOTED_KEY_OR_NODE:
       match: cb_stack_doublequoted_single
       DOUBLEQUOTE:
         EOL: { match: cb_scalar_from_stack, new: NODE }
-        WS?:
+        WS:
           COLON:
             match: cb_mapkey_from_stack
             EOL: { new: FULLNODE , return: 1}
-            WS: { new: MAPVALUE }
+            WS: { new: FULLMAPVALUE, return: 1 }
           DEFAULT: { match: cb_scalar_from_stack, new: ERROR }
+        COLON:
+          match: cb_mapkey_from_stack
+          EOL: { new: FULLNODE , return: 1}
+          WS: { new: FULLMAPVALUE, return: 1 }
+        DEFAULT: { match: cb_scalar_from_stack, new: ERROR }
     DOUBLEQUOTED_LINE:
       match: cb_stack_doublequoted
       LB: { new: MULTILINE_DOUBLEQUOTED  }
@@ -82,15 +91,19 @@ RULE_PLAIN_KEY_OR_NODE:
     match: cb_stack_plain
     COMMENT_EOL: { match: cb_plain_single, new: NODE }
     EOL: { match: cb_multiscalar_from_stack, new: NODE }
-    WS?:
+    WS:
       COLON:
         match: cb_mapkey_from_stack
         EOL: { new: FULLNODE , return: 1}
-        WS: { new: MAPVALUE }
+        WS: { new: FULLMAPVALUE, return: 1 }
+    COLON:
+      match: cb_mapkey_from_stack
+      EOL: { new: FULLNODE , return: 1}
+      WS: { new: FULLMAPVALUE, return: 1 }
   COLON:
     match: cb_mapkey_from_stack
     EOL: { new: FULLNODE , return: 1}
-    WS: { new: MAPVALUE }
+    WS: { new: FULLMAPVALUE, return: 1 }
 
 RULE_PLAIN:
   SCALAR:
@@ -108,33 +121,42 @@ NODETYPE_MAP:
     WS:
       COLON:
         EOL: { new: FULLNODE , return: 1}
-        WS: { new: MAPVALUE }
+        WS: { new: FULLMAPVALUE, return: 1 }
   DOUBLEQUOTE:
     DOUBLEQUOTED_SINGLE:
       match: cb_doublequoted_key
       DOUBLEQUOTE:
-        WS?:
+        WS:
           COLON:
             EOL: { new: FULLNODE , return: 1}
-            WS: { new: MAPVALUE }
+            WS: { new: FULLMAPVALUE, return: 1 }
+        COLON:
+          EOL: { new: FULLNODE , return: 1}
+          WS: { new: FULLMAPVALUE, return: 1 }
   SINGLEQUOTE:
     SINGLEQUOTED_SINGLE:
       match: cb_singlequoted_key
       SINGLEQUOTE:
-        WS?:
+        WS:
           COLON:
             EOL: { new: FULLNODE , return: 1}
-            WS: { new: MAPVALUE }
+            WS: { new: FULLMAPVALUE, return: 1 }
+        COLON:
+          EOL: { new: FULLNODE , return: 1}
+          WS: { new: FULLMAPVALUE, return: 1 }
   SCALAR:
     match: cb_mapkey
-    WS?:
+    WS:
       COLON:
         EOL: { new: FULLNODE , return: 1}
-        WS: { new: MAPVALUE }
+        WS: { new: FULLMAPVALUE, return: 1 }
+    COLON:
+      EOL: { new: FULLNODE , return: 1}
+      WS: { new: FULLMAPVALUE, return: 1 }
   COLON:
     match: cb_empty_mapkey
     EOL: { new: FULLNODE , return: 1}
-    WS: { new: MAPVALUE }
+    WS: { new: FULLMAPVALUE, return: 1 }
 
 NODETYPE_MAPSTART:
   QUESTION:
@@ -145,24 +167,31 @@ NODETYPE_MAPSTART:
     DOUBLEQUOTED:
       match: cb_doublequotedstart
       DOUBLEQUOTE:
-        WS?:
+        WS:
           COLON:
             EOL: { new: FULLNODE , return: 1}
-            WS: { new: MAPVALUE }
+            WS: { new: FULLMAPVALUE, return: 1 }
+        COLON:
+          EOL: { new: FULLNODE , return: 1}
+          WS: { new: FULLMAPVALUE, return: 1 }
   SINGLEQUOTE:
     SINGLEQUOTED:
       match: cb_singleequotedstart
       SINGLEQUOTE:
-        WS?:
+        WS:
           COLON:
             EOL: { new: FULLNODE , return: 1}
-            WS: { new: MAPVALUE }
+            WS: { new: FULLMAPVALUE, return: 1 }
+        COLON:
+          EOL: { new: FULLNODE , return: 1}
+          WS: { new: FULLMAPVALUE, return: 1 }
   SCALAR:
     match: cb_mapkeystart
-    WS?:
-      COLON:
+    WS:
+      COLON: &new-mapvalue
         EOL: { new: FULLNODE , return: 1}
-        WS: { new: MAPVALUE }
+        WS: { new: FULLMAPVALUE, return: 1 }
+    COLON: *new-mapvalue
 
 RULE_SEQSTART:
   DASH:
@@ -186,16 +215,16 @@ FULL_MAPKEY:
     WS:
       TAG:
         match: cb_tag
-        WS: { new: NODETYPE_MAPKEY  }
-      DEFAULT: { new: NODETYPE_MAPKEY }
+        WS: { new: NODETYPE_MAP  }
+      DEFAULT: { new: NODETYPE_MAP }
   TAG:
     match: cb_tag
     WS:
       ANCHOR:
         match: cb_anchor
-        WS: { new: NODETYPE_MAPKEY  }
-      DEFAULT: { new: NODETYPE_MAPKEY }
-  DEFAULT: { new: NODETYPE_MAPKEY }
+        WS: { new: NODETYPE_MAP  }
+      DEFAULT: { new: NODETYPE_MAP }
+  DEFAULT: { new: NODETYPE_MAP }
 
 FULLNODE_ANCHOR:
   TAG:

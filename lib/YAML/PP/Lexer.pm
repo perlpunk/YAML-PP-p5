@@ -181,7 +181,7 @@ sub parse_block_scalar {
     while (defined $yaml) {
         TRACE and warn __PACKAGE__.':'.__LINE__.": RE: $indent_re\n";
         TRACE and $parser->debug_yaml;
-        my $column = 1;
+        my $column = 0;
         my $pre;
         my $space;
         my $length;
@@ -275,7 +275,7 @@ sub parse_plain_multi {
     my $indent_re = $RE_WS . '{' . $indent . '}';
     while (1) {
         last if not defined $$yaml;
-        my $column = 1;
+        my $column = 0;
 
         unless ($$yaml =~ s/\A($indent_re)//) {
             last;
@@ -626,11 +626,11 @@ my %is_new_line = (
 sub push_token {
     my ($self, $type, $value) = @_;
     my $next = $self->next_tokens;
-    my $column = 1;
+    my $column = 0;
     if (@$next) {
         my $previous = $next->[-1];
         if ($is_new_line{ $previous->{name} }) {
-            $column = 1;
+            $column = 0;
         }
         else {
             $column = $previous->{column} + length( $previous->{value} );
