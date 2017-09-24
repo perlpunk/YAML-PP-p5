@@ -33,6 +33,7 @@ my %ansicolors = (
     EOL => [qw/ grey12 /],
     EMPTY => [qw/ grey12 /],
     COMMENT_EOL => [qw/ grey12 /],
+    TRAILING_SPACE => [qw/ on_grey6 /],
 );
 
 sub ansicolored {
@@ -40,28 +41,24 @@ sub ansicolored {
     require Term::ANSIColor;
 
     local $Term::ANSIColor::EACHLINE = "\n";
-    my $ansi = Term::ANSIColor::colored([qw/ bold /], '-' x 30);
-    $ansi .= "\n";
+    my $ansi = '';
     my $highlighted = '';
-    for my $token (@$tokens) {
-        my @list = map {
-                $_ =~ tr/\t/\t/
-                ? { name => 'TAB', value => $_ }
-                : { name => $token->{name}, value => $_ }
-            } split m/(\t+)/, $token->{value};
-        for my $token (@list) {
-            my $type = $token->{name};
-            my $color = $ansicolors{ $type };
-            my $str = $token->{value};
-            if ($color) {
-                $str = Term::ANSIColor::colored($color, $str);
-            }
-            $highlighted .= $str;
+
+    my @list = $class->transform($tokens);
+
+
+    for my $token (@list) {
+        my $name = $token->{name};
+        my $str = $token->{value};
+
+        my $color = $ansicolors{ $name };
+        if ($color) {
+            $str = Term::ANSIColor::colored($color, $str);
         }
+        $highlighted .= $str;
     }
+
     $ansi .= "$highlighted\n";
-    $ansi .= Term::ANSIColor::colored([qw/ bold /], '-' x 30);
-    $ansi .= "\n";
     return $ansi;
 }
 
@@ -92,23 +89,52 @@ my %htmlcolors = (
     COMMENT_EOL => 'comment',
     EOL => 'comment',
     EMPTY => 'comment',
+    TRAILING_SPACE => 'trailing_space',
 );
 sub htmlcolored {
     require HTML::Entities;
     my ($class, $tokens) = @_;
     my $html = '';
-    for my $token (@$tokens) {
-        my @list = map {
-                $_ =~ tr/\t/\t/ ? [ 'TAB', $_ ] : [ $token->{name}, $_ ]
-            } split m/(\t+)/, $token->{value};
-        for my $token (@list) {
-            my ($type, $str) = @$token;
-            my $colorclass = $htmlcolors{ $type } || 'default';
-            $str = HTML::Entities::encode_entities($str);
-            $html .= qq{<span class="$colorclass">$str</span>};
-        }
+    my @list = $class->transform($tokens);
+    for my $token (@list) {
+        my $name = $token->{name};
+        my $str = $token->{value};
+        my $colorclass = $htmlcolors{ $name } || 'default';
+        $str = HTML::Entities::encode_entities($str);
+        $html .= qq{<span class="$colorclass">$str</span>};
     }
     return $html;
 }
 
+sub transform {
+    my ($class, $tokens) = @_;
+    my @list;
+    for my $token (@$tokens) {
+        push @list, map {
+                $_ =~ tr/\t/\t/
+                ? { name => 'TAB', value => $_ }
+                : { name => $token->{name}, value => $_ }
+            } split m/(\t+)/, $token->{value};
+    }
+    for my $i (0 .. $#list) {
+        my $token = $list[ $i ];
+        my $name = $token->{name};
+        my $str = $token->{value};
+        my $trailing_space = 0;
+        if ($token->{name} =~ m/EOL|LB|EMPTY/) {
+            if ($str =~ m/ +([\r\n]|\z)/) {
+                $token->{name} = "TRAILING_SPACE";
+            }
+        }
+        elsif ($i < $#list) {
+            my $next = $list[ $i + 1];
+            if ($next->{name} =~ m/EOL|LB|EMPTY/) {
+                if ($next->{value} =~ m/\A([\r\n]|\z)/ and $name eq 'WS') {
+                    $token->{name} = "TRAILING_SPACE";
+                }
+            }
+        }
+    }
+    return @list;
+}
 1;

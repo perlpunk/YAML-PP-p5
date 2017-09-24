@@ -8,9 +8,11 @@ use lib "$Bin/../lib";
 use IO::All;
 use Data::Dumper;
 use YAML::PP::Loader;
+use YAML::PP::Dumper;
 use File::Basename qw/ basename /;
 use HTML::Entities qw/ encode_entities /;
 use YAML::PP::Highlight;
+use JSON::XS ();
 use Encode;
 
 chomp(my $version = qx{git describe --dirty});
@@ -77,6 +79,7 @@ span.doc_end { font-weight: bold; }
 span.block_scalar_content { color: #aa7700; }
 span.tab { background-color: lightblue; }
 span.error { background-color: #ff8888; }
+span.trailing_space { background-color: magenta; }
 
 pre {
     background-color: white;
@@ -107,6 +110,13 @@ for my $dir (sort @valid) {
 $html .= <<"EOM";
 <h1><a name="valid">Valid</a></h1>
 <table class="highlight">
+<tr>
+<td></td>
+<td>YAML::PP::Highlight</td>
+<td>YAML::PP::Loader | Data::Dump</td>
+<td>YAML::PP::Loader | JSON::XS</td>
+<td>YAML::PP::Loader | YAML::PP::Dumper</td>
+</tr>
 $table
 </table>
 EOM
@@ -119,6 +129,13 @@ for my $dir (sort @invalid) {
 $html .= <<"EOM";
 <h1><a name="invalid">Invalid</a></h1>
 <table class="highlight">
+<tr>
+<td></td>
+<td>YAML::PP::Highlight</td>
+<td>YAML::PP::Loader | Data::Dump</td>
+<td>YAML::PP::Loader | JSON::XS</td>
+<td>YAML::PP::Loader | YAML::PP::Dumper</td>
+</tr>
 $table
 </table>
 EOM
@@ -150,8 +167,9 @@ sub highlight_test {
         push @$tokens, map {
             { name => 'ERROR', value => $_->{value} } } @$remaining_tokens;
         my $remaining = $ypp->parser->lexer->next_line;
-        $$remaining .= $ypp->parser->lexer->reader->read;
-        push @$tokens, { name => 'ERROR', value => $$remaining };
+        $remaining = join '', @$remaining;
+        $remaining .= $ypp->parser->lexer->reader->read;
+        push @$tokens, { name => 'ERROR', value => $remaining };
         my $out = join '', map { $_->{value} } @$tokens;
         if ($out ne $yaml) {
             warn "$id error diff";
@@ -166,10 +184,28 @@ sub highlight_test {
             $diff = 1;
         }
     }
+
+    my $coder = JSON::XS->new->ascii->pretty->allow_nonref->canonical;
+    my $json_dump = join "\n", map {
+        "Doc " . ($_+1) . ': ' . $coder->encode( $docs[ $_ ] );
+    } 0 .. $#docs;
+
+    my $yppd = YAML::PP::Dumper->new( bool => 'JSON::PP' );
+    my $yaml_dump = $yppd->dump_string(@docs);
+
+    my @reload_docs = $ypp->load_string($yaml_dump);
+    my $reload_tokens = $ypp->parser->tokens;
+
+    my $dd = eval { require Data::Dump; 1 };
     my $data_dump = join "\n", map {
-        local $Data::Dumper::Useqq = 1;
-        local $Data::Dumper::Sortkeys = 1;
-        Data::Dumper->Dump([$docs[ $_ ]], ['doc' . ($_ + 1)]);
+        if ($dd) {
+            '$doc' . ($_ + 1) . ' = ' . Data::Dump::dump( $docs[ $_ ] );
+        }
+        else {
+            local $Data::Dumper::Useqq = 1;
+            local $Data::Dumper::Sortkeys = 1;
+            Data::Dumper->Dump([$docs[ $_ ]], ['doc' . ($_ + 1)]);
+        }
     } 0 .. $#docs;
 
     $title = decode_utf8($title);
@@ -178,23 +214,35 @@ sub highlight_test {
     $error = encode_entities($error);
     $yaml = encode_entities($yaml);
     $data_dump = encode_entities($data_dump);
+    $json_dump = encode_entities($json_dump);
+    $yaml_dump = encode_entities($yaml_dump);
     my $taglist = join ', ', @{ $tags{ $id } || [] };
     $html .= <<"EOM";
-<tr><td style="width: 30em;" valign="top" ><b>$id - $title</b><br>
-Tags: $taglist<br>
+<tr>
+<td colspan="5" valign="top" style="background-color: #dddddd"><b>$id - $title</b></td></tr>
+<tr>
+<td style="max-width: 15em;" valign="top" >Tags:<br>$taglist<br>
 <a href="https://github.com/yaml/yaml-test-suite/blob/master/test/$id.tml">View source</a><br>
 </td>
 EOM
     my $high = YAML::PP::Highlight->htmlcolored($tokens);
+    my $reload_high = YAML::PP::Highlight->htmlcolored($reload_tokens);
     my $orig = $diff ? qq{<br><pre>$yaml</pre>} : '';
     $html .= <<"EOM";
-<td valign="top"><pre class="$class">$high</pre>
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="$class">$high</pre>
 <pre>$error</pre>
 $orig
 </td>
-<td valign="top" style="max-width: 30em; overflow-x: auto;">
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
 <pre>$data_dump</pre>
-</td></tr>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>$json_dump</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>$reload_high</pre>
+</td>
+</tr>
 EOM
     return $html;
 
