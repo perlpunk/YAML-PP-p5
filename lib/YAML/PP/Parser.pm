@@ -50,8 +50,7 @@ sub reader { return $_[0]->{reader} }
 sub lexer { return $_[0]->{lexer} }
 sub callback { return $_[0]->{callback} }
 sub set_callback { $_[0]->{callback} = $_[1] }
-sub level { return $_[0]->{level} }
-sub set_level { $_[0]->{level} = $_[1] }
+sub level { return $#{ $_[0]->{offset} } }
 sub offset { return $_[0]->{offset} }
 sub set_offset { $_[0]->{offset} = $_[1] }
 sub events { return $_[0]->{events} }
@@ -74,8 +73,7 @@ sub set_rule {
 
 sub init {
     my ($self) = @_;
-    $self->set_level(-1);
-    $self->set_offset([0]);
+    $self->set_offset([]);
     $self->set_events([]);
     $self->set_new_node(undef);
     $self->set_tagmap({
@@ -682,15 +680,12 @@ sub event_value {
 
 sub push_events {
     my ($self, $event, $offset) = @_;
-    my $level = $self->level;
-    $self->set_level( ++$level );
     push @{ $self->events }, $event;
-    $self->offset->[ $level ] = $offset;
+    push @{ $self->offset }, $offset;
 }
 
 sub pop_events {
     my ($self, $event) = @_;
-    $self->set_level($self->level - 1);
     pop @{ $self->offset };
 
     my $last = pop @{ $self->events };
