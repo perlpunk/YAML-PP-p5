@@ -10,9 +10,6 @@ use constant DEBUG => $ENV{YAML_PP_DEBUG} || $ENV{YAML_PP_TRACE};
 use YAML::PP::Grammar qw/ $GRAMMAR /;
 use Carp qw/ croak /;
 
-use constant NODE_TYPE => 0;
-use constant NODE_OFFSET => 1;
-
 sub new {
     my ($class, %args) = @_;
     my $self = bless {

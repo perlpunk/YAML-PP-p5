@@ -107,9 +107,6 @@ sub parse {
     TRACE and $self->debug_tokens;
 }
 
-use constant NODE_TYPE => 0;
-use constant NODE_OFFSET => 1;
-
 sub parse_stream {
     TRACE and warn "=== parse_stream()\n";
     my ($self) = @_;
@@ -136,7 +133,7 @@ sub parse_stream {
         }
 
         my $new_type = $start_line ? 'FULLSTARTNODE' : 'FULLNODE';
-        my $new_node = [ $new_type => 0 ];
+        my $new_node = $new_type;
         $self->set_rule( $new_type );
         $self->set_new_node($new_node);
         my ($end) = $self->parse_document();
@@ -232,21 +229,15 @@ sub parse_document {
         TRACE and $self->debug_yaml;
         TRACE and $self->debug_events;
 
-        my $offset = 0;
         if ($next_full_line) {
 
             my $end;
             my $explicit_end;
-            my $next_tokens = $self->lexer->next_tokens;
-            #warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
-            ($offset, $end, $explicit_end) = $self->check_indent();
+            ($end, $explicit_end) = $self->check_indent();
             if ($end) {
                 return $explicit_end;
             }
 
-        }
-        else {
-            $offset = $self->new_node->[NODE_OFFSET];
         }
 
         my $res = $self->parse_next();
@@ -255,7 +246,6 @@ sub parse_document {
 
         $self->process_result(
             result => $res,
-            offset => $offset,
         );
     }
 
@@ -389,13 +379,12 @@ sub check_indent {
         }
     }
 
-    return ($offset, $end, $explicit_end);
+    return ($end, $explicit_end);
 }
 
 sub process_result {
     my ($self, %args) = @_;
     my $res = $args{result};
-    my $offset = $args{offset};
     my $exp = $self->events->[-1];
 
     my $stack = $self->stack;
@@ -405,6 +394,7 @@ sub process_result {
 
     for my $event (@$stack_events) {
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$event], ['event']);
+        my $offset = $res->{offset};
         my ($type, $name, $res) = @$event;
         if ($type eq 'begin') {
             $self->$type($name, $offset, { %$res, %$props });
@@ -456,15 +446,8 @@ sub process_result {
         $self->exception("Unexpected res $got");
     }
 
-    my $new_offset = 1;
-    my $last = $self->tokens->[-1];
-    if ($last->{name} eq 'WS') {
-        my $ws = length $last->{value};
-        $new_offset = $last->{column} + $ws;
-    }
-
     my $new_type = $res->{new_type};
-    my $new_node = [ $new_type => $new_offset ];
+    my $new_node = $new_type;
     $self->set_new_node($new_node);
     $self->set_rule( $new_type );
     return;
@@ -492,7 +475,7 @@ sub parse_next {
     );
     if (not $success) {
         my $exp = $self->events->[-1];
-        my $node_type = ($new_node ? $new_node->[NODE_TYPE] : undef);
+        my $node_type = $new_node;
         $self->exception( "Expected " . ($node_type ? "new node ($node_type)" : $exp));
     }
 
@@ -512,6 +495,7 @@ sub parse_tokens {
 
     my $tokens = $self->tokens;
     my $next_tokens = $self->lexer->next_tokens;
+    $res->{offset} = $next_tokens->[0]->{column};
     RULE: while (1) {
         last unless $next_rule_name;
 
@@ -539,6 +523,9 @@ sub parse_tokens {
             $next_rule_name = $new;
             DEBUG and $self->got("NEW: $next_rule_name");
 
+            if ($next_rule_name eq 'ERROR') {
+                return;
+            }
             if ($def->{return}) {
                 $self->set_rule($next_rule_name);
                 $res->{new_type}= $next_rule_name;
@@ -546,7 +533,7 @@ sub parse_tokens {
             }
 
             if ($next_rule_name eq 'PREVIOUS') {
-                my $node_type = ($self->new_node ? $self->new_node->[NODE_TYPE] : undef);
+                my $node_type = $self->new_node;
                 $next_rule_name = $node_type;
                 $next_rule_name =~ s/^FULL//;
 
