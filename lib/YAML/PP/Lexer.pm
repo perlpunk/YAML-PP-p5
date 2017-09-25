@@ -206,7 +206,6 @@ sub parse_block_scalar {
             push @$tokens, $self->new_token( WS => $pre, column => $column );
             $column += length $pre;
             push @$tokens, $self->new_token( LB => $lb, column => $column );
-            $self->inc_line;
             @$next_line = ();
             $next_line = $self->fetch_next_line;
             $yaml = \$next_line->[0];
@@ -221,7 +220,6 @@ sub parse_block_scalar {
         }
         if ($$yaml =~ s/\A\z//) {
             push @$tokens, $self->new_token( LB => $lb, column => $column );
-            $self->inc_line;
             @$next_line = ();
             $next_line = $self->fetch_next_line;
             $lb = $next_line->[1];
@@ -252,7 +250,6 @@ sub parse_block_scalar {
             push @$tokens, $self->new_token( BLOCK_SCALAR_CONTENT => $value, column => $column );
             $column += length $value;
             push @$tokens, $self->new_token( LB => $lb, column => $column );
-            $self->inc_line;
             @$next_line = ();
             $next_line = $self->fetch_next_line;
             $yaml = \$next_line->[0];
@@ -306,13 +303,11 @@ sub parse_plain_multi {
             push @$tokens, $self->new_token( COMMENT => $1, column => $column );
             $column += length $1;
             push @$tokens, $self->new_token( LB => $lb, column => $column );
-            $self->inc_line;
             last;
         }
 
         if ($$yaml =~ s/\A\z//) {
             push @$tokens, $self->new_token( LB => $lb, column => $column );
-            $self->inc_line;
             @$next_line = ();
             $next_line = $self->fetch_next_line;
             $yaml = \$next_line->[0];
@@ -332,7 +327,6 @@ sub parse_plain_multi {
                 push @$tokens, $self->new_token( COMMENT => $1, column => $column );
                 $column += length $1;
                 push @$tokens, $self->new_token( LB => $lb, column => $column );
-                $self->inc_line;
                 @$next_line = ();
                 $next_line = $self->fetch_next_line;
                 $lb = $next_line->[1];
@@ -343,7 +337,6 @@ sub parse_plain_multi {
                 $parser->exception("Unexpected content");
             }
             push @$tokens, $self->new_token( LB => $lb, column => $column );
-            $self->inc_line;
             @$next_line = ();
             $next_line = $self->fetch_next_line;
             $lb = $next_line->[1];
@@ -371,6 +364,7 @@ sub fetch_next_line {
             $self->set_next_line([]);
             return;
         }
+        $self->inc_line;
         $line =~ m/\A( *[^\r\n]*)([\r\n]|\z)/ or die "Unexpected";
         @$next_line = ( $1,  $2 );
         $self->set_next_line($next_line);
@@ -668,9 +662,6 @@ sub push_token {
         line => $self->line,
         column => $column,
     };
-    if ($is_new_line{ $type }) {
-        $self->inc_line;
-    }
 }
 
 sub new_token {
