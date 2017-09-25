@@ -581,9 +581,6 @@ sub res_to_event {
             if (ref $value) {
                 $value = YAML::PP::Render::render_multi_val($value);
             }
-            elsif (defined $value) {
-                $value =~ s/\\/\\\\/g;
-            }
         }
         elsif ($style eq '"') {
             $value = YAML::PP::Render::render_quoted(
@@ -1122,7 +1119,7 @@ sub cb_stack_alias {
 
 sub cb_stack_singlequoted_single {
     my ($self, $res) = @_;
-    $self->stack->{res} ||= {
+    $self->stack->{res} = {
         style => "'",
         value => [$self->tokens->[-1]->{value}],
     };
@@ -1139,7 +1136,7 @@ sub cb_stack_singlequoted {
 
 sub cb_stack_doublequoted_single {
     my ($self, $res) = @_;
-    $self->stack->{res} ||= {
+    $self->stack->{res} = {
         style => '"',
         value => [$self->tokens->[-1]->{value}],
     };
@@ -1155,22 +1152,17 @@ sub cb_stack_doublequoted {
 }
 
 sub cb_stack_plain {
-    my ($self, $res) = @_;
-    my $t = $self->tokens->[-1];
-    $self->stack->{res} ||= {
+    my ($self) = @_;
+    $self->stack->{res} = {
         style => ':',
-        value => [],
+        value => $self->tokens->[-1]->{value},
     };
-    push @{ $self->stack->{res}->{value} }, $self->tokens->[-1]->{value};
 }
 
 sub cb_plain_single {
     my ($self, $res) = @_;
     $res->{name} = 'SCALAR';
-    push @{ $self->stack->{events} }, [ value => undef, {
-        style => ':',
-        value => $self->stack->{res}->{value},
-    }];
+    push @{ $self->stack->{events} }, [ value => undef, $self->stack->{res} ];
     undef $self->stack->{res};
 }
 
@@ -1181,9 +1173,7 @@ sub cb_mapkey_from_stack {
     undef $stack->{res};
     push @{ $stack->{events} },
         [ begin => 'MAP', { }],
-        [ value => undef, {
-            %$stack_res,
-        }];
+        [ value => undef, $stack_res ];
     $res->{name} = 'MAPSTART';
 
 }
@@ -1191,9 +1181,7 @@ sub cb_mapkey_from_stack {
 sub cb_scalar_from_stack {
     my ($self, $res) = @_;
     my $stack = $self->stack;
-    push @{ $self->stack->{events} }, [ value => undef, {
-        %{ $self->stack->{res} },
-    }];
+    push @{ $self->stack->{events} }, [ value => undef, $self->stack->{res} ];
     undef $self->stack->{res};
     $res->{name} = 'SCALAR';
 }
@@ -1202,11 +1190,9 @@ sub cb_multiscalar_from_stack {
     my ($self, $res) = @_;
     my $stack = $self->stack;
     my $multi = $self->lexer->parse_plain_multi($self);
-    my $first = $stack->{res}->{value}->[0];
+    my $first = $stack->{res}->{value};
     unshift @{ $multi->{value} }, $first;
-    push @{ $stack->{events} }, [ value => undef, {
-        %$multi,
-    }];
+    push @{ $stack->{events} }, [ value => undef, $multi ];
     undef $stack->{res};
     $res->{name} = 'SCALAR';
 }
