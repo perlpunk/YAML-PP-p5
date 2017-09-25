@@ -702,48 +702,37 @@ my %event_to_method = (
     STR => 'stream',
     VAL => 'scalar',
     ALI => 'alias',
+    COMPLEX => 'mapping',
 );
 
 sub begin {
     my ($self, $event, $offset, $info) = @_;
-    my $content = $info->{content};
-    my $event_name = $event;
-    $event_name =~ s/^COMPLEX/MAP/;
-    my %info = ( type => $event_name );
-    if ($event_name eq 'SEQ' or $event_name eq 'MAP') {
-        my $anchor = $info->{anchor};
-        my $tag = $info->{tag};
-        if (defined $tag) {
-            my $tag_str = YAML::PP::Render::render_tag($tag, $self->tagmap);
-            $info{tag} = $tag_str;
-        }
-        if (defined $anchor) {
-            $info{anchor} = $anchor;
-        }
-    }
-    elsif ($event_name eq 'DOC') {
-        $info{implicit} = $info->{implicit};
+    $info->{type} = $event;
+
+    my $tag = $info->{tag};
+    if (defined $tag) {
+        $info->{tag} = YAML::PP::Render::render_tag($tag, $self->tagmap);
     }
     if (DEBUG) {
-        my $str = $self->event_to_test_suite([$event_to_method{ $event_name } . "_start_event", \%info]);
+        my $str = $self->event_to_test_suite([$event_to_method{ $event } . "_start_event", $info]);
         $self->debug_event("------------->> BEGIN $str");
     }
-    $self->callback->($self, $event_to_method{ $event_name } . "_start_event"
-        => { %info, content => $content });
+    $self->callback->($self,
+        $event_to_method{ $event } . "_start_event" => $info
+    );
     $self->push_events($event, $offset);
     TRACE and $self->debug_events;
 }
 
 sub end {
     my ($self, $event, $info) = @_;
-    my %info;
-    if ($event eq 'DOC') {
-        $info{implicit} = $info->{implicit};
-    }
+    $info->{type} = $event;
+
     $self->pop_events($event);
     DEBUG and $self->debug_event("-------------<< END   $event");
-    $self->callback->($self, $event_to_method{ $event } . "_end_event"
-        => { type => $event, %info });
+    $self->callback->($self,
+        $event_to_method{ $event } . "_end_event" => $info
+    );
     if ($event eq 'DOC') {
         $self->set_tagmap({
             '!!' => "tag:yaml.org,2002:",
@@ -782,6 +771,9 @@ sub event_to_test_suite {
             }
         }
         elsif ($ev =~ m/start/) {
+            if ($type eq 'COMPLEX') {
+                $type = 'MAP';
+            }
             $string = "+$type";
             if (defined $info->{anchor}) {
                 $string .= " &$info->{anchor}";
