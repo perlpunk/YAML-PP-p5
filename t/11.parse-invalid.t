@@ -30,17 +30,9 @@ my @skip = qw/
     55WF
     5TRB
 
-    i035
+    SY6V i035
 
-    i031
 /;
-
-# Invalid, but wrong test.event output
-push @skip, qw/
-    SU5Z
-    X4QW
-/;
-
 
 my @todo = ();
 
@@ -64,6 +56,10 @@ my %todo;
 my %skip_events = (
     Q4CL => 1,
     JY7Z => 1,
+    '3HFZ' => 1,
+    X4QW => 1,
+    SU5Z => 1,
+    i031 => 1,
 );
 
 unless (@dirs) {
