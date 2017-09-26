@@ -114,36 +114,25 @@ sub parse_stream {
 
     TRACE and $self->debug_yaml;
 
-    my $exp_start = 0;
+    my $implicit = 0;
     while (1) {
         my $next_tokens = $self->lexer->fetch_next_tokens(0);
         last unless @$next_tokens;
-        my ($start, $start_line) = $self->parse_document_head($exp_start);
+        my ($start, $start_line) = $self->parse_document_head($implicit);
 
-        $exp_start = 0;
-        while( $self->parse_empty($next_tokens) ) {
+        if ( $self->parse_empty($next_tokens) ) {
         }
         last unless @$next_tokens;
 
-        if ($start) {
-            $self->begin('DOC', -1, { implicit => 0 });
-        }
-        else {
-            $self->begin('DOC', -1, { implicit => 1 });
-        }
+        $self->begin('DOC', -1, { implicit => $start ? 0 : 1 });
 
         my $new_type = $start_line ? 'FULLSTARTNODE' : 'FULLNODE';
-        my $new_node = $new_type;
         $self->set_rule( $new_type );
-        $self->set_new_node($new_node);
-        my ($end) = $self->parse_document();
-        if ($end) {
-            $self->end('DOC', { implicit => 0 });
-        }
-        else {
-            $exp_start = 1;
-            $self->end('DOC', { implicit => 1 });
-        }
+        $self->set_new_node($new_type);
+
+        $implicit = $self->parse_document();
+
+        $self->end('DOC', { implicit => $implicit });
 
     }
 
@@ -230,17 +219,14 @@ sub parse_document {
         TRACE and $self->debug_events;
 
         if ($next_full_line) {
-
-            my $end;
-            my $explicit_end;
-            ($end, $explicit_end) = $self->check_indent();
+            my ($end, $implicit_end) = $self->check_indent();
             if ($end) {
-                return $explicit_end;
+                return $implicit_end;
             }
-
         }
 
         my $res = $self->parse_next();
+
         $next_full_line = $is_new_line{ $self->tokens->[-1]->{name} };
         next unless $res->{name};
 
@@ -250,7 +236,7 @@ sub parse_document {
     }
 
     TRACE and $self->debug_events;
-    return 0;
+    return 1;
 }
 
 sub check_indent {
@@ -259,82 +245,68 @@ sub check_indent {
     my $new_node = $self->new_node;
     my $exp = $self->events->[-1];
     my $end = 0;
-    my $explicit_end = 0;
+    my $implicit_end = 1;
     my $indent = 0;
     my $tokens = $self->tokens;
 
     $self->lexer->fetch_next_tokens(0);
     #TRACE and $self->info("NEXT TOKENS:");
     #TRACE and $self->debug_tokens($next_tokens);
-    my $space = 0;
-    my $offset = $space;
-    while ($self->parse_empty($next_tokens)) {
+    if ($self->parse_empty($next_tokens)) {
     }
-    if (@$next_tokens) {
-        if ($next_tokens->[0]->{name} eq 'INDENT') {
-            $offset = length $next_tokens->[0]->{value};
-            $space = $offset;
-            push @$tokens, shift @$next_tokens;
-        }
-    }
-
-    unless (@$next_tokens) {
+    my $next_token = $next_tokens->[0];
+    if (not $next_token) {
         $end = 1;
     }
-
-    if ($end) {
+    elsif ($next_token->{name} eq 'DOC_START') {
+        $end = 1;
     }
-    else {
-
-        $indent = $self->offset->[ -1 ];
-        if ($indent == -1 and $space == 0 and not $new_node) {
-            $space = -1;
+    elsif ($next_token->{name} eq 'DOC_END') {
+        push @$tokens, shift @$next_tokens;
+        if (@$next_tokens and $next_tokens->[0]->{name} eq 'EOL') {
+            push @$tokens, shift @$next_tokens;
         }
+        else {
+            $self->exception("Expected EOL");
+        }
+        $end = 1;
+        $implicit_end = 0;
     }
+    elsif ($self->level < 2 and not $new_node) {
+        $end = 1;
+    }
+    if ($end) {
+        my $level = $self->level;
+        my $remove = $level - 1;
+        if ($new_node) {
+            my $properties = delete $self->stack->{node_properties} || {};
+            $self->set_new_node(undef);
+            $self->event_value({ style => ':', %$properties });
+        }
+        $exp = $self->remove_nodes($remove);
+        return ($end, $implicit_end);
+    }
+
+    my $space = 0;
+    if ($next_token->{name} eq 'INDENT') {
+        $space = length $next_token->{value};
+        push @$tokens, shift @$next_tokens;
+        $next_token = $next_tokens->[0];
+    }
+
+    $indent = $self->offset->[ -1 ];
 
     TRACE and $self->info("INDENT: space=$space indent=$indent");
-
-    if ($space <= 0) {
-        #warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
-        if (@$next_tokens and $next_tokens->[0]->{name} eq 'DOC_START') {
-            $end = 1;
-        }
-        elsif (@$next_tokens and $next_tokens->[0]->{name} eq 'DOC_END') {
-            push @$tokens, shift @$next_tokens;
-            if (@$next_tokens and $next_tokens->[0]->{name} eq 'EOL') {
-                push @$tokens, shift @$next_tokens;
-            }
-            else {
-                $self->exception("Unexpected");
-            }
-            $end = 1;
-            $explicit_end = 1;
-            $space = -1;
-        }
-    }
 
     if ($space > $indent) {
         unless ($new_node) {
             $self->exception("Bad indendation in $exp");
         }
+        return;
     }
     else {
 
-        if ($space <= 0) {
-            unless ($end) {
-                if ($self->level < 2 and not $new_node) {
-                    $end = 1;
-                }
-            }
-            if ($end) {
-                $space = -1;
-            }
-        }
-
-        my $seq_start = 0;
-        if (not $end and $next_tokens->[0]->{name} eq 'DASH') {
-            $seq_start = 1;
-        }
+        my $seq_start = $next_token->{name} eq 'DASH';
         TRACE and $self->info("SEQSTART: $seq_start");
 
         my $remove = $self->reset_indent($space);
@@ -355,31 +327,29 @@ sub check_indent {
             $exp = $self->remove_nodes($remove);
         }
 
-        unless ($end) {
 
-            unless ($new_node) {
-                if ($exp eq 'SEQ' and not $seq_start) {
-                    my $ui = $self->in_unindented_seq;
-                    if ($ui) {
-                        TRACE and $self->info("In unindented sequence");
-                        $self->end('SEQ');
-                        TRACE and $self->debug_events;
-                        $exp = $self->events->[-1];
-                    }
-                    else {
-                        $self->exception("Expected sequence item");
-                    }
+        unless ($new_node) {
+            if ($exp eq 'SEQ' and not $seq_start) {
+                my $ui = $self->in_unindented_seq;
+                if ($ui) {
+                    TRACE and $self->info("In unindented sequence");
+                    $self->end('SEQ');
+                    TRACE and $self->debug_events;
+                    $exp = $self->events->[-1];
                 }
-
-
-                if ($self->offset->[-1] != $space) {
-                    $self->exception("Expected $exp");
+                else {
+                    $self->exception("Expected sequence item");
                 }
+            }
+
+
+            if ($self->offset->[-1] != $space) {
+                $self->exception("Expected $exp");
             }
         }
     }
 
-    return ($end, $explicit_end);
+    return;
 }
 
 sub process_result {
@@ -626,12 +596,15 @@ sub reset_indent {
 sub parse_empty {
     TRACE and warn "=== parse_empty()\n";
     my ($self, $next_tokens) = @_;
-    if (@$next_tokens == 1 and ($next_tokens->[0]->{name} eq 'EMPTY' or $next_tokens->[0]->{name} eq 'EOL')) {
+    my $empty = 0;
+    while (@$next_tokens and
+        ($next_tokens->[0]->{name} eq 'EMPTY' or $next_tokens->[0]->{name} eq 'EOL'
+    )) {
         push @{ $self->tokens }, shift @$next_tokens;
         $self->lexer->fetch_next_tokens(0);
-        return 1;
+        $empty++;
     }
-    return 0;
+    return $empty;
 }
 
 sub in_unindented_seq {
