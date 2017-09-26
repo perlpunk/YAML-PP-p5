@@ -478,7 +478,7 @@ sub _fetch_next_tokens {
         elsif ($first eq '.') {
             if ($$yaml =~ s/$RE_DOC_END//) {
                 $self->push_token( DOC_END => $1 );
-                $$yaml =~ s/($RE_EOL|\z)// or croak "Unexpected";
+                $$yaml =~ s/\A($RE_EOL|\z)// or $self->exception("Expected EOL");
                 $self->push_token( EOL => $1 . $lb );
                 return;
             }
