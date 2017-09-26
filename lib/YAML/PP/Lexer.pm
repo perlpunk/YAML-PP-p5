@@ -119,9 +119,9 @@ my %REGEXES = (
     COLON => qr{(?m:(:)(?=$RE_WS|$))},
     DASH => qr{(?m:(-)(?=$RE_WS|$))},
     DOUBLEQUOTE => qr{(")},
-    DOUBLEQUOTED => qr{((?:\\(?:.|$)|[^"\r\n\\])*)}m,
+    DOUBLEQUOTED => qr{(?:\\(?:.|$)|[^"\r\n\\]+)*}m,
     SINGLEQUOTE => qr{(')},
-    SINGLEQUOTED => qr{((?:''|[^'\r\n])*)},
+    SINGLEQUOTED => qr{(?:''|[^'\r\n]+)*},
     LITERAL => qr{(\|)},
     FOLDED => qr{(>)},
     FLOW_MAP_START => qr{(\{)},
@@ -492,44 +492,43 @@ sub _fetch_next_tokens {
         if ($first eq '"' or $first eq "'") {
             my $token_name = $TOKEN_NAMES{ $first };
             my $token_name2 = $token_name . 'D';
+            $$yaml =~ s/\A$first//;
+            $self->push_token( $token_name => $first );
             my $regex = $REGEXES{ $token_name2 };
-            if ($$yaml =~ s/\A($first)$regex($first|\z)//) {
-                $self->push_token( $token_name => $1 );
-                if ($3 eq $first) {
-                    $self->push_token( $token_name2 => $2 );
-                    $self->push_token( $token_name => $3 );
+
+            my $first_line = 1;
+
+            QUOTED_LINE: while (1) {
+
+                my $quoted = '';
+                if ($$yaml =~ s/\A($regex)//) {
+                    $quoted .= $1;
                 }
-                else {
-                    $self->push_token( $token_name2 . '_LINE' => $2 );
+
+                if ($$yaml =~ s/\A$first//) {
+                    $self->push_token( $token_name2 => $quoted );
+                    $self->push_token( $token_name => $first );
+                    last QUOTED_LINE;
+                }
+                elsif ($$yaml eq '') {
+                    if ($first_line) {
+                        $token_name2 .= '_LINE';
+                        $first_line = 0;
+                    }
+                    $self->push_token( $token_name2 => $quoted );
                     $self->push_token( LB => $lb );
                     @$next_line = ();
                     $next_line = $self->fetch_next_line;
+                    return unless defined $next_line->[0];
                     $yaml = \$next_line->[0];
                     $lb = $next_line->[1];
-                    while (1) {
-                        if ($$yaml =~ s/\A$regex($first|\z)//) {
-                            $self->push_token( $token_name2 . '_LINE' => $1 );
-                            if ($2 eq $first) {
-                                $self->push_token( $token_name => $2 );
-                                last;
-                            }
-                            else {
-                                $self->push_token( LB => $lb );
-                                @$next_line = ();
-                                $next_line = $self->fetch_next_line;
-                                $yaml = \$next_line->[0];
-                                $lb = $next_line->[1];
-                            }
-                        }
-                        else {
-                            $self->exception("Invalid quoted string");
-                        }
-                    }
                 }
+                else {
+                    $self->exception("Invalid quoted string");
+                }
+
             }
-            else {
-                $self->exception("Invalid quoted string");
-            }
+
         }
         elsif ($first eq '-' or $first eq ':' or $first eq '?') {
             if ($$yaml =~ s/\A(\Q$first\E)(?:($RE_WS+)|\z)//) {

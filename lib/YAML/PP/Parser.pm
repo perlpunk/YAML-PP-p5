@@ -469,6 +469,9 @@ sub parse_tokens {
     RULE: while (1) {
         last unless $next_rule_name;
 
+        unless (@$next_tokens) {
+            return;
+        }
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens->[0]], ['next_token']);
         my $got = $next_tokens->[0]->{name};
         my $def = $next_rule->{ $got };
