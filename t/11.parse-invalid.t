@@ -30,17 +30,9 @@ my @skip = qw/
     55WF
     5TRB
 
-    i035
+    SY6V i035
 
-    i031
 /;
-
-# Invalid, but wrong test.event output
-push @skip, qw/
-    SU5Z
-    X4QW
-/;
-
 
 my @todo = ();
 
@@ -59,6 +51,16 @@ my %skip;
 @skip{ @skip } = ();
 my %todo;
 @todo{ @todo } = ();
+
+# in case of error events might not be exactly matching
+my %skip_events = (
+    Q4CL => 1,
+    JY7Z => 1,
+    '3HFZ' => 1,
+    X4QW => 1,
+    SU5Z => 1,
+    i031 => 1,
+);
 
 unless (@dirs) {
     ok(1);
@@ -143,7 +145,12 @@ sub test {
         ok(0, "$name - $title - should be invalid");
     }
     else {
-        $ok = is_deeply(\@events, $test_events, "$name - $title");
+        if ($skip_events{ $name }) {
+            $ok = ok(1, "$name - $title");
+        }
+        else {
+            $ok = is_deeply(\@events, $test_events, "$name - $title");
+        }
     }
     if ($ok) {
     }

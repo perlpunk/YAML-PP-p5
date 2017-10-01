@@ -24,7 +24,7 @@ my @dirs = YAML::PP::Test->get_tests(
 @dirs = sort @dirs;
 
 my @skip = qw/
-    4ABK 54T7 5C5M 5KJE 6HB6 87E4 8UDB 9MMW
+    4ABK 54T7 5C5M 5KJE 6HB6 87E4 8CWC 8UDB 9MMW
     C2DT C4HZ CT4Q D88J DBG4 DFF7 DHP8
     EHF6 FRK4 FUP4
     KZN9 L9U5 LP6E LQZ7 LX3P
@@ -144,7 +144,7 @@ sub test {
     }
     if ($ok) {
         $results{OK}++;
-        my $lines = $parser->lexer->line - 1;
+        my $lines = $parser->lexer->line;
         cmp_ok($lines, '==', $exp_lines, "$name - Line count $lines == $exp_lines");
     }
     else {

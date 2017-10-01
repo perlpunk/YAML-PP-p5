@@ -50,8 +50,7 @@ sub reader { return $_[0]->{reader} }
 sub lexer { return $_[0]->{lexer} }
 sub callback { return $_[0]->{callback} }
 sub set_callback { $_[0]->{callback} = $_[1] }
-sub level { return $_[0]->{level} }
-sub set_level { $_[0]->{level} = $_[1] }
+sub level { return $#{ $_[0]->{offset} } }
 sub offset { return $_[0]->{offset} }
 sub set_offset { $_[0]->{offset} = $_[1] }
 sub events { return $_[0]->{events} }
@@ -62,22 +61,26 @@ sub tagmap { return $_[0]->{tagmap} }
 sub set_tagmap { $_[0]->{tagmap} = $_[1] }
 sub tokens { return $_[0]->{tokens} }
 sub set_tokens { $_[0]->{tokens} = $_[1] }
-sub rules { return $_[0]->{rules} }
-sub set_rules { $_[0]->{rules} = $_[1] }
 sub stack { return $_[0]->{stack} }
 sub set_stack { $_[0]->{stack} = $_[1] }
 
+sub rule { return $_[0]->{rule} }
+sub set_rule {
+    my ($self, $name) = @_;
+    DEBUG and $self->info("set_rule($name)");
+    $self->{rule} = $name;
+}
+
 sub init {
     my ($self) = @_;
-    $self->set_level(-1);
-    $self->set_offset([0]);
+    $self->set_offset([]);
     $self->set_events([]);
     $self->set_new_node(undef);
     $self->set_tagmap({
         '!!' => "tag:yaml.org,2002:",
     });
     $self->set_tokens([]);
-    $self->set_rules({});
+    $self->set_rule(undef);
     $self->set_stack({});
     $self->lexer->init;
 }
@@ -104,9 +107,6 @@ sub parse {
     TRACE and $self->debug_tokens;
 }
 
-use constant NODE_TYPE => 0;
-use constant NODE_OFFSET => 1;
-
 sub parse_stream {
     TRACE and warn "=== parse_stream()\n";
     my ($self) = @_;
@@ -114,36 +114,25 @@ sub parse_stream {
 
     TRACE and $self->debug_yaml;
 
-    my $exp_start = 0;
+    my $implicit = 0;
     while (1) {
         my $next_tokens = $self->lexer->fetch_next_tokens(0);
         last unless @$next_tokens;
-        my ($start, $start_line) = $self->parse_document_head($exp_start);
+        my ($start, $start_line) = $self->parse_document_head($implicit);
 
-        $exp_start = 0;
-        while( $self->parse_empty($next_tokens) ) {
+        if ( $self->parse_empty($next_tokens) ) {
         }
         last unless @$next_tokens;
 
-        if ($start) {
-            $self->begin('DOC', -1, { implicit => 0 });
-        }
-        else {
-            $self->begin('DOC', -1, { implicit => 1 });
-        }
+        $self->begin('DOC', -1, { implicit => $start ? 0 : 1 });
 
         my $new_type = $start_line ? 'FULLSTARTNODE' : 'FULLNODE';
-        my $new_node = [ $new_type => 0 ];
-        $self->set_rules( $GRAMMAR->{ FULLNODE } );
-        $self->set_new_node($new_node);
-        my ($end) = $self->parse_document();
-        if ($end) {
-            $self->end('DOC', { implicit => 0 });
-        }
-        else {
-            $exp_start = 1;
-            $self->end('DOC', { implicit => 1 });
-        }
+        $self->set_rule( $new_type );
+        $self->set_new_node($new_type);
+
+        $implicit = $self->parse_document();
+
+        $self->end('DOC', { implicit => $implicit });
 
     }
 
@@ -226,48 +215,28 @@ sub parse_document {
     while (1) {
 
         TRACE and $self->info("----------------------- LOOP");
-#        TRACE and $self->info("EXPECTED: (@$new_node)") if $new_node;
         TRACE and $self->debug_yaml;
         TRACE and $self->debug_events;
 
-        my $offset = 0;
         if ($next_full_line) {
-
-            my $end;
-            my $explicit_end;
-            ($offset, $end, $explicit_end) = $self->check_indent();
+            my ($end, $implicit_end) = $self->check_indent();
             if ($end) {
-                return $explicit_end;
+                return $implicit_end;
             }
-
-        }
-        else {
-            $offset = $self->new_node->[NODE_OFFSET];
         }
 
-        $self->next_result(
-            offset => $offset,
-        );
+        my $res = $self->parse_next();
 
         $next_full_line = $is_new_line{ $self->tokens->[-1]->{name} };
+        next unless $res->{name};
+
+        $self->process_result(
+            result => $res,
+        );
     }
 
     TRACE and $self->debug_events;
-    return 0;
-}
-
-sub next_result {
-    my ($self, %args) = @_;
-    my $offset = $args{offset};
-
-    my ($res) = $self->parse_next();
-    return unless $res;
-
-    $self->process_result(
-        result => $res,
-        offset => $offset,
-    );
-    return;
+    return 1;
 }
 
 sub check_indent {
@@ -276,82 +245,68 @@ sub check_indent {
     my $new_node = $self->new_node;
     my $exp = $self->events->[-1];
     my $end = 0;
-    my $explicit_end = 0;
+    my $implicit_end = 1;
     my $indent = 0;
     my $tokens = $self->tokens;
 
     $self->lexer->fetch_next_tokens(0);
     #TRACE and $self->info("NEXT TOKENS:");
     #TRACE and $self->debug_tokens($next_tokens);
-    my $space = 0;
-    my $offset = $space;
-    while ($self->parse_empty($next_tokens)) {
+    if ($self->parse_empty($next_tokens)) {
     }
-    if (@$next_tokens) {
-        if ($next_tokens->[0]->{name} eq 'INDENT') {
-            $offset = length $next_tokens->[0]->{value};
-            $space = $offset;
-            push @$tokens, shift @$next_tokens;
-        }
-    }
-
-    unless (@$next_tokens) {
+    my $next_token = $next_tokens->[0];
+    if (not $next_token) {
         $end = 1;
     }
-
-    if ($end) {
+    elsif ($next_token->{name} eq 'DOC_START') {
+        $end = 1;
     }
-    else {
-
-        $indent = $self->offset->[ -1 ];
-        if ($indent == -1 and $space == 0 and not $new_node) {
-            $space = -1;
+    elsif ($next_token->{name} eq 'DOC_END') {
+        push @$tokens, shift @$next_tokens;
+        if (@$next_tokens and $next_tokens->[0]->{name} eq 'EOL') {
+            push @$tokens, shift @$next_tokens;
         }
+        else {
+            $self->exception("Expected EOL");
+        }
+        $end = 1;
+        $implicit_end = 0;
     }
+    elsif ($self->level < 2 and not $new_node) {
+        $end = 1;
+    }
+    if ($end) {
+        my $level = $self->level;
+        my $remove = $level - 1;
+        if ($new_node) {
+            my $properties = delete $self->stack->{node_properties} || {};
+            $self->set_new_node(undef);
+            $self->event_value({ style => ':', %$properties });
+        }
+        $exp = $self->remove_nodes($remove);
+        return ($end, $implicit_end);
+    }
+
+    my $space = 0;
+    if ($next_token->{name} eq 'INDENT') {
+        $space = length $next_token->{value};
+        push @$tokens, shift @$next_tokens;
+        $next_token = $next_tokens->[0];
+    }
+
+    $indent = $self->offset->[ -1 ];
 
     TRACE and $self->info("INDENT: space=$space indent=$indent");
-
-    if ($space <= 0) {
-        #warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens], ['next_tokens']);
-        if (@$next_tokens and $next_tokens->[0]->{name} eq 'DOC_START') {
-            $end = 1;
-        }
-        elsif (@$next_tokens and $next_tokens->[0]->{name} eq 'DOC_END') {
-            push @$tokens, shift @$next_tokens;
-            if (@$next_tokens and $next_tokens->[0]->{name} eq 'EOL') {
-                push @$tokens, shift @$next_tokens;
-            }
-            else {
-                $self->exception("Unexpected");
-            }
-            $end = 1;
-            $explicit_end = 1;
-            $space = -1;
-        }
-    }
 
     if ($space > $indent) {
         unless ($new_node) {
             $self->exception("Bad indendation in $exp");
         }
+        return;
     }
     else {
 
-        if ($space <= 0) {
-            unless ($end) {
-                if ($self->level < 2 and not $new_node) {
-                    $end = 1;
-                }
-            }
-            if ($end) {
-                $space = -1;
-            }
-        }
-
-        my $seq_start = 0;
-        if (not $end and $next_tokens->[0]->{name} eq 'DASH') {
-            $seq_start = 1;
-        }
+        my $seq_start = $next_token->{name} eq 'DASH';
         TRACE and $self->info("SEQSTART: $seq_start");
 
         my $remove = $self->reset_indent($space);
@@ -372,37 +327,34 @@ sub check_indent {
             $exp = $self->remove_nodes($remove);
         }
 
-        unless ($end) {
 
-            unless ($new_node) {
-                if ($exp eq 'SEQ' and not $seq_start) {
-                    my $ui = $self->in_unindented_seq;
-                    if ($ui) {
-                        TRACE and $self->info("In unindented sequence");
-                        $self->end('SEQ');
-                        TRACE and $self->debug_events;
-                        $exp = $self->events->[-1];
-                    }
-                    else {
-                        $self->exception("Expected sequence item");
-                    }
+        unless ($new_node) {
+            if ($exp eq 'SEQ' and not $seq_start) {
+                my $ui = $self->in_unindented_seq;
+                if ($ui) {
+                    TRACE and $self->info("In unindented sequence");
+                    $self->end('SEQ');
+                    TRACE and $self->debug_events;
+                    $exp = $self->events->[-1];
                 }
-
-
-                if ($self->offset->[-1] != $space) {
-                    $self->exception("Expected $exp");
+                else {
+                    $self->exception("Expected sequence item");
                 }
+            }
+
+
+            if ($self->offset->[-1] != $space) {
+                $self->exception("Expected $exp");
             }
         }
     }
 
-    return ($offset, $end, $explicit_end);
+    return;
 }
 
 sub process_result {
     my ($self, %args) = @_;
     my $res = $args{result};
-    my $offset = $args{offset};
     my $exp = $self->events->[-1];
 
     my $stack = $self->stack;
@@ -412,6 +364,7 @@ sub process_result {
 
     for my $event (@$stack_events) {
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$event], ['event']);
+        my $offset = $res->{offset};
         my ($type, $name, $res) = @$event;
         if ($type eq 'begin') {
             $self->$type($name, $offset, { %$res, %$props });
@@ -451,7 +404,6 @@ sub process_result {
         }
     }
     elsif ($got eq 'NOOP') { }
-    elsif ($got eq 'SEQITEM') { }
     elsif ($got eq 'COMPLEX') {
         if ($exp eq 'MAP') {
             $self->events->[-1] = 'COMPLEX';
@@ -464,77 +416,117 @@ sub process_result {
         $self->exception("Unexpected res $got");
     }
 
-    my $ws = 0;
-    if ($self->tokens->[-1]->{name} eq 'WS') {
-        $ws = length $self->tokens->[-1]->{value};
-    }
-    my $new_offset = $offset + 1 + $ws;
     my $new_type = $res->{new_type};
-    my $new_node = [ $new_type => $new_offset ];
+    my $new_node = $new_type;
     $self->set_new_node($new_node);
-#    if ($new_type eq 'MAPVALUE') {
-#        $new_type = 'FULLMAPVALUE';
-#    }
-    $self->set_rules( $GRAMMAR->{ FULLNODE } );
+    $self->set_rule( $new_type );
     return;
 }
 
 sub parse_next {
-    TRACE and warn "=== parse_next()\n";
-    my ($self, %args) = @_;
-    my $node_type = ($self->new_node ? $self->new_node->[NODE_TYPE] : undef);
-    my $exp = $self->events->[-1];
+    my ($self) = @_;
+    DEBUG and $self->info("----------------> parse_next()");
+    my $new_node = $self->new_node;
 
-    my $expected_type = $exp;
-    if ($node_type or $exp eq 'MAP') {
-        unless ($node_type) {
-            $self->set_rules($GRAMMAR->{FULL_MAPKEY});
+    unless ($new_node) {
+        my $exp = $self->events->[-1];
+        if ($exp eq 'MAP') {
+            $self->set_rule( 'FULL_MAPKEY' );
         }
-        my ($new_type) = $self->lexer->parse_tokens($self,
-            callback => sub {
-                my ($self, $sub) = @_;
-                $self->$sub(undef);
-            },
-        );
-        if (not $new_type) {
-            $self->exception( "Expected " . ($node_type ? "new node ($node_type)" : $exp));
-        }
-        if ($node_type) {
-            if ($new_type =~ s/^TYPE_//) {
-                $self->set_rules($GRAMMAR->{ $new_type });
-                return;
-            }
-            elsif ($new_type eq 'PREVIOUS') {
-                $new_type = $node_type;
-                $new_type =~ s/^FULL//;
-            }
+        else {
+            $self->set_rule( "NODETYPE_$exp" );
         }
 
-        $expected_type = $new_type;
     }
-
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$expected_type], ['expected_type']);
-    $self->set_rules($GRAMMAR->{ "NODETYPE_$expected_type" });
 
     my $res = {};
-    my ($new_type) = $self->lexer->parse_tokens($self,
-        callback => sub {
-            my ($self, $sub) = @_;
-            $self->$sub($res);
-        },
+    my $success = $self->parse_tokens(
+        res => $res,
     );
-
-    if (not $new_type) {
-        $self->exception("Expected $expected_type");
+    if (not $success) {
+        my $exp = $self->events->[-1];
+        my $node_type = $new_node;
+        $self->exception( "Expected " . ($node_type ? "new node ($node_type)" : $exp));
     }
 
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$new_type], ['new_type']);
-    $new_type =~ s/^TYPE_//;
-    my $stack = $self->stack;
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$stack], ['stack']);
+    return $res;
+}
 
-    $res->{new_type}= $new_type;
-    return ($res);
+sub parse_tokens {
+    my ($self, %args) = @_;
+    my $res = $args{res};
+    my $next_rule_name = $self->rule;
+    DEBUG and $self->info("----------------> parse_tokens($next_rule_name)");
+    my $next_rule = $GRAMMAR->{ $next_rule_name };
+
+    TRACE and $self->debug_rules($next_rule);
+    TRACE and $self->debug_yaml;
+    DEBUG and $self->debug_next_line;
+
+    my $tokens = $self->tokens;
+    my $next_tokens = $self->lexer->next_tokens;
+    $res->{offset} = $next_tokens->[0]->{column};
+    RULE: while (1) {
+        last unless $next_rule_name;
+
+        unless (@$next_tokens) {
+            return;
+        }
+        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens->[0]], ['next_token']);
+        my $got = $next_tokens->[0]->{name};
+        my $def = $next_rule->{ $got };
+        if ($def) {
+            push @$tokens, shift @$next_tokens;
+        }
+        else {
+            $def = $next_rule->{DEFAULT};
+            $got = 'DEFAULT';
+        }
+
+        unless ($def) {
+            DEBUG and $self->not("---not $next_tokens->[0]->{name}");
+            return;
+        }
+
+        DEBUG and $self->got("---got $got");
+        if (my $sub = $def->{match}) {
+            $self->$sub($res);
+        }
+        if (my $new = $def->{new}) {
+            $next_rule_name = $new;
+            DEBUG and $self->got("NEW: $next_rule_name");
+
+            if ($next_rule_name eq 'ERROR') {
+                return;
+            }
+            if ($def->{return}) {
+                $self->set_rule($next_rule_name);
+                $res->{new_type}= $next_rule_name;
+                return 1;
+            }
+
+            if ($next_rule_name eq 'PREVIOUS') {
+                my $node_type = $self->new_node;
+                $next_rule_name = $node_type;
+                $next_rule_name =~ s/^FULL//;
+
+                $next_rule_name = "NODETYPE_$next_rule_name";
+            }
+            if (exists $GRAMMAR->{ $next_rule_name }) {
+                $next_rule = $GRAMMAR->{ $next_rule_name };
+                next RULE;
+            }
+
+            $self->set_rule($next_rule_name);
+            $res->{new_type}= $next_rule_name;
+            return 1;
+        }
+        $next_rule_name .= " - $got"; # for debugging
+        $next_rule = $def;
+
+    }
+
+    return;
 }
 
 sub res_to_event {
@@ -548,9 +540,6 @@ sub res_to_event {
         if ($style eq ':') {
             if (ref $value) {
                 $value = YAML::PP::Render::render_multi_val($value);
-            }
-            elsif (defined $value) {
-                $value =~ s/\\/\\\\/g;
             }
         }
         elsif ($style eq '"') {
@@ -610,12 +599,15 @@ sub reset_indent {
 sub parse_empty {
     TRACE and warn "=== parse_empty()\n";
     my ($self, $next_tokens) = @_;
-    if (@$next_tokens == 1 and ($next_tokens->[0]->{name} eq 'EMPTY' or $next_tokens->[0]->{name} eq 'EOL')) {
+    my $empty = 0;
+    while (@$next_tokens and
+        ($next_tokens->[0]->{name} eq 'EMPTY' or $next_tokens->[0]->{name} eq 'EOL'
+    )) {
         push @{ $self->tokens }, shift @$next_tokens;
         $self->lexer->fetch_next_tokens(0);
-        return 1;
+        $empty++;
     }
-    return 0;
+    return $empty;
 }
 
 sub in_unindented_seq {
@@ -648,15 +640,12 @@ sub event_value {
 
 sub push_events {
     my ($self, $event, $offset) = @_;
-    my $level = $self->level;
-    $self->set_level( ++$level );
     push @{ $self->events }, $event;
-    $self->offset->[ $level ] = $offset;
+    push @{ $self->offset }, $offset;
 }
 
 sub pop_events {
     my ($self, $event) = @_;
-    $self->set_level($self->level - 1);
     pop @{ $self->offset };
 
     my $last = pop @{ $self->events };
@@ -673,45 +662,37 @@ my %event_to_method = (
     STR => 'stream',
     VAL => 'scalar',
     ALI => 'alias',
+    COMPLEX => 'mapping',
 );
 
 sub begin {
     my ($self, $event, $offset, $info) = @_;
-    my $content = $info->{content};
-    my $event_name = $event;
-    $event_name =~ s/^COMPLEX/MAP/;
-    my %info = ( type => $event_name );
-    if ($event_name eq 'SEQ' or $event_name eq 'MAP') {
-        my $anchor = $info->{anchor};
-        my $tag = $info->{tag};
-        if (defined $tag) {
-            my $tag_str = YAML::PP::Render::render_tag($tag, $self->tagmap);
-            $info{tag} = $tag_str;
-        }
-        if (defined $anchor) {
-            $info{anchor} = $anchor;
-        }
+    $info->{type} = $event;
+
+    my $tag = $info->{tag};
+    if (defined $tag) {
+        $info->{tag} = YAML::PP::Render::render_tag($tag, $self->tagmap);
     }
-    elsif ($event_name eq 'DOC') {
-        $info{implicit} = $info->{implicit};
+    if (DEBUG) {
+        my $str = $self->event_to_test_suite([$event_to_method{ $event } . "_start_event", $info]);
+        $self->debug_event("------------->> BEGIN $str");
     }
-    TRACE and $self->debug_event("------------->> BEGIN $event ($offset) $content");
-    $self->callback->($self, $event_to_method{ $event_name } . "_start_event"
-        => { %info, content => $content });
+    $self->callback->($self,
+        $event_to_method{ $event } . "_start_event" => $info
+    );
     $self->push_events($event, $offset);
     TRACE and $self->debug_events;
 }
 
 sub end {
     my ($self, $event, $info) = @_;
-    my %info;
-    if ($event eq 'DOC') {
-        $info{implicit} = $info->{implicit};
-    }
+    $info->{type} = $event;
+
     $self->pop_events($event);
-    TRACE and $self->debug_event("-------------<< END   $event");
-    $self->callback->($self, $event_to_method{ $event } . "_end_event"
-        => { type => $event, %info });
+    DEBUG and $self->debug_event("-------------<< END   $event");
+    $self->callback->($self,
+        $event_to_method{ $event } . "_end_event" => $info
+    );
     if ($event eq 'DOC') {
         $self->set_tagmap({
             '!!' => "tag:yaml.org,2002:",
@@ -721,7 +702,7 @@ sub end {
 
 sub event {
     my ($self, $event) = @_;
-    TRACE and $self->debug_event("------------- EVENT @{[ $self->event_to_test_suite($event)]}");
+    DEBUG and $self->debug_event("------------- EVENT @{[ $self->event_to_test_suite($event)]}");
 
     my ($type, $info) = @$event;
     $self->callback->($self, $event_to_method{ $type } . "_event", $info);
@@ -750,6 +731,9 @@ sub event_to_test_suite {
             }
         }
         elsif ($ev =~ m/start/) {
+            if ($type eq 'COMPLEX') {
+                $type = 'MAP';
+            }
             $string = "+$type";
             if (defined $info->{anchor}) {
                 $string .= " &$info->{anchor}";
@@ -819,10 +803,11 @@ sub debug_yaml {
 
 sub debug_next_line {
     my ($self) = @_;
-    my $line = $self->lexer->next_line // '';
+    my $next_line = $self->lexer->next_line // [];
+    my $line = $next_line->[0] // '';
     $line =~ s/( +)$/'·' x length $1/e;
     $line =~ s/\t/▸/g;
-    $self->note("NEXT LINE: >>$$line<<");
+    $self->note("NEXT LINE: >>$line<<");
 }
 
 sub note {
@@ -888,7 +873,7 @@ sub debug_tokens {
     for my $token (@$tokens) {
         my $type = Term::ANSIColor::colored(["green"],
             sprintf "%-22s L %2d C %2d ",
-                $token->{name}, $token->{line}, $token->{column}
+                $token->{name}, $token->{line}, $token->{column} + 1
         );
         local $Data::Dumper::Useqq = 1;
         local $Data::Dumper::Terse = 1;
@@ -913,13 +898,14 @@ sub exception {
     my ($self, $msg) = @_;
     my $next = $self->lexer->next_tokens;
     my $line = @$next ? $next->[0]->{line} : $self->lexer->line;
+    my $next_line = $self->lexer->next_line;
     my @caller = caller(0);
     my $e = YAML::PP::Exception->new(
         line => $line,
         msg => $msg,
         next => $next,
         where => $caller[1] . ' line ' . $caller[2],
-        yaml => $self->lexer->next_line,
+        yaml => $next_line,
     );
     croak $e;
 }
@@ -1060,7 +1046,7 @@ sub cb_seqstart {
 
 sub cb_seqitem {
     my ($self, $res) = @_;
-    $res->{name} = 'SEQITEM';
+    $res->{name} = 'NOOP';
 }
 
 sub cb_alias_key_from_stack {
@@ -1096,7 +1082,7 @@ sub cb_stack_alias {
 
 sub cb_stack_singlequoted_single {
     my ($self, $res) = @_;
-    $self->stack->{res} ||= {
+    $self->stack->{res} = {
         style => "'",
         value => [$self->tokens->[-1]->{value}],
     };
@@ -1113,7 +1099,7 @@ sub cb_stack_singlequoted {
 
 sub cb_stack_doublequoted_single {
     my ($self, $res) = @_;
-    $self->stack->{res} ||= {
+    $self->stack->{res} = {
         style => '"',
         value => [$self->tokens->[-1]->{value}],
     };
@@ -1129,22 +1115,17 @@ sub cb_stack_doublequoted {
 }
 
 sub cb_stack_plain {
-    my ($self, $res) = @_;
-    my $t = $self->tokens->[-1];
-    $self->stack->{res} ||= {
+    my ($self) = @_;
+    $self->stack->{res} = {
         style => ':',
-        value => [],
+        value => $self->tokens->[-1]->{value},
     };
-    push @{ $self->stack->{res}->{value} }, $self->tokens->[-1]->{value};
 }
 
 sub cb_plain_single {
     my ($self, $res) = @_;
     $res->{name} = 'SCALAR';
-    push @{ $self->stack->{events} }, [ value => undef, {
-        style => ':',
-        value => $self->stack->{res}->{value},
-    }];
+    push @{ $self->stack->{events} }, [ value => undef, $self->stack->{res} ];
     undef $self->stack->{res};
 }
 
@@ -1155,9 +1136,7 @@ sub cb_mapkey_from_stack {
     undef $stack->{res};
     push @{ $stack->{events} },
         [ begin => 'MAP', { }],
-        [ value => undef, {
-            %$stack_res,
-        }];
+        [ value => undef, $stack_res ];
     $res->{name} = 'MAPSTART';
 
 }
@@ -1165,9 +1144,7 @@ sub cb_mapkey_from_stack {
 sub cb_scalar_from_stack {
     my ($self, $res) = @_;
     my $stack = $self->stack;
-    push @{ $self->stack->{events} }, [ value => undef, {
-        %{ $self->stack->{res} },
-    }];
+    push @{ $self->stack->{events} }, [ value => undef, $self->stack->{res} ];
     undef $self->stack->{res};
     $res->{name} = 'SCALAR';
 }
@@ -1176,11 +1153,9 @@ sub cb_multiscalar_from_stack {
     my ($self, $res) = @_;
     my $stack = $self->stack;
     my $multi = $self->lexer->parse_plain_multi($self);
-    my $first = $stack->{res}->{value}->[0];
+    my $first = $stack->{res}->{value};
     unshift @{ $multi->{value} }, $first;
-    push @{ $stack->{events} }, [ value => undef, {
-        %$multi,
-    }];
+    push @{ $stack->{events} }, [ value => undef, $multi ];
     undef $stack->{res};
     $res->{name} = 'SCALAR';
 }

@@ -10,9 +10,6 @@ use constant DEBUG => $ENV{YAML_PP_DEBUG} || $ENV{YAML_PP_TRACE};
 use YAML::PP::Grammar qw/ $GRAMMAR /;
 use Carp qw/ croak /;
 
-use constant NODE_TYPE => 0;
-use constant NODE_OFFSET => 1;
-
 sub new {
     my ($class, %args) = @_;
     my $self = bless {
@@ -25,8 +22,8 @@ sub new {
 sub init {
     my ($self) = @_;
     $self->{next_tokens} = [];
-    $self->{next_line} = undef;
-    $self->{line} = 1;
+    $self->{next_line} = [];
+    $self->{line} = 0;
 }
 
 sub next_line { return $_[0]->{next_line} }
@@ -42,7 +39,7 @@ my $RE_WS = '[\t ]';
 my $RE_LB = '[\r\n]';
 my $RE_DOC_END = qr/\A(\.\.\.)(?=$RE_WS|$)/m;
 my $RE_DOC_START = qr/\A(---)(?=$RE_WS|$)/m;
-my $RE_EOL = qr/\A($RE_WS+#.*|$RE_WS+)?(?:$RE_LB|\z)/;
+my $RE_EOL = qr/\A($RE_WS+#.*|$RE_WS+)?\z/;
 my $RE_COMMENT_EOL = qr/\A(#.*)?(?:$RE_LB|\z)/;
 
 #ns-word-char    ::= ns-dec-digit | ns-ascii-letter | “-”
@@ -122,80 +119,14 @@ my %REGEXES = (
     COLON => qr{(?m:(:)(?=$RE_WS|$))},
     DASH => qr{(?m:(-)(?=$RE_WS|$))},
     DOUBLEQUOTE => qr{(")},
-    DOUBLEQUOTED => qr{((?:\\(?:.|$)|[^"\r\n\\])*)}m,
+    DOUBLEQUOTED => qr{(?:\\(?:.|$)|[^"\r\n\\]+)*}m,
     SINGLEQUOTE => qr{(')},
-    SINGLEQUOTED => qr{((?:''|[^'\r\n])*)},
+    SINGLEQUOTED => qr{(?:''|[^'\r\n]+)*},
     LITERAL => qr{(\|)},
     FOLDED => qr{(>)},
     FLOW_MAP_START => qr{(\{)},
     FLOW_SEQ_START => qr{(\[)},
 );
-
-sub parse_tokens {
-    my ($self, $parser, %args) = @_;
-    my $next_rule = $parser->rules;
-    my $callback = $args{callback};
-    my $tokens = $parser->tokens;
-    my $new_type;
-
-    TRACE and $parser->debug_rules($next_rule);
-    TRACE and $parser->debug_yaml;
-    DEBUG and $parser->debug_next_line;
-
-    my $next_tokens = $self->next_tokens;
-    RULE: while (1) {
-        last unless $next_rule;
-
-        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens->[0]], ['next_token']);
-        my $got = $next_tokens->[0]->{name};
-        my $def = $next_rule->{ $got };
-        if ($def) {
-            push @$tokens, shift @$next_tokens;
-        }
-        elsif ($def = $next_rule->{ 'WS?' }) {
-            if ($got eq 'WS') {
-                push @$tokens, shift @$next_tokens;
-            }
-            $got = 'WS?';
-        }
-        else {
-            $def = $next_rule->{DEFAULT};
-            $got = 'DEFAULT';
-        }
-
-        unless ($def) {
-            DEBUG and $parser->not("---not $next_tokens->[0]->{name}");
-            $parser->set_rules(undef);
-            return;
-        }
-
-        DEBUG and $parser->got("---got $got");
-        if (my $sub = $def->{match}) {
-            $callback->($parser, $sub);
-        }
-        if (my $new = $def->{new}) {
-            $next_rule = $new;
-            DEBUG and $parser->got("NEW: $$next_rule");
-            if (exists $GRAMMAR->{ $$next_rule }) {
-                $next_rule = $GRAMMAR->{ $$next_rule };
-                next RULE;
-            }
-            else {
-                $new_type = $$next_rule;
-                undef $next_rule;
-                last RULE;
-            }
-        }
-        $next_rule = $def;
-        next RULE;
-
-    }
-    $parser->set_rules($next_rule);
-    TRACE and $parser->highlight_yaml;
-    TRACE and $parser->debug_tokens;
-
-    return $new_type;
-}
 
 sub parse_block_scalar {
     TRACE and warn "=== parse_block_scalar()\n";
@@ -243,11 +174,13 @@ sub parse_block_scalar {
     my $indent_re = '[ ]' ."{$indent}";
     TRACE and local $Data::Dumper::Useqq = 1;
     my $type;
-    my $yaml = $self->fetch_next_line;
-    while (defined $yaml) {
+    my $next_line = $self->fetch_next_line;
+    my $yaml = \$next_line->[0];
+    my $lb = $next_line->[1];
+    while (defined $$yaml) {
         TRACE and warn __PACKAGE__.':'.__LINE__.": RE: $indent_re\n";
         TRACE and $parser->debug_yaml;
-        my $column = 1;
+        my $column = 0;
         my $pre;
         my $space;
         my $length;
@@ -262,17 +195,18 @@ sub parse_block_scalar {
             $length = length $space;
             $column += $length;
         }
-        elsif ($$yaml =~ m/\A$RE_WS*#.*$RE_LB/) {
+        elsif ($$yaml =~ m/\A$RE_WS*#.*\z/) {
             last;
         }
-        elsif ($$yaml =~ s/\A($RE_WS*)($RE_LB)//) {
+        elsif ($$yaml =~ s/\A($RE_WS*)\z//) {
             $pre = $1;
             push @$tokens, $self->new_token( WS => $pre, column => $column );
             $column += length $pre;
-            push @$tokens, $self->new_token( LB => $2, column => $column );
-            $column += length $2;
-            $self->inc_line;
-            $yaml = $self->fetch_next_line;
+            push @$tokens, $self->new_token( LB => $lb, column => $column );
+            @$next_line = ();
+            $next_line = $self->fetch_next_line;
+            $yaml = \$next_line->[0];
+            $lb = $next_line->[1];
             $space = '';
             $type = 'EMPTY';
             push @lines, [$type => $pre, $space];
@@ -281,10 +215,12 @@ sub parse_block_scalar {
         else {
             last;
         }
-        if ($$yaml =~ s/\A($RE_LB)//) {
-            push @$tokens, $self->new_token( LB => $1, column => $column );
-            $self->inc_line;
-            $yaml = $self->fetch_next_line;
+        if ($$yaml =~ s/\A\z//) {
+            push @$tokens, $self->new_token( LB => $lb, column => $column );
+            @$next_line = ();
+            $next_line = $self->fetch_next_line;
+            $lb = $next_line->[1];
+            $yaml = \$next_line->[0];
             $type = 'EMPTY';
             if ($got_indent) {
                 push @lines, [$type => $pre, $space];
@@ -306,14 +242,15 @@ sub parse_block_scalar {
         }
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
 
-        if ($$yaml =~ s/\A(.*)($RE_LB|\z)//) {
+        if ($$yaml =~ s/\A(.*)\z//) {
             my $value = $1;
             push @$tokens, $self->new_token( BLOCK_SCALAR_CONTENT => $value, column => $column );
             $column += length $value;
-            push @$tokens, $self->new_token( LB => $2, column => $column );
-            $column += length $2;
-            $self->inc_line;
-            $yaml = $self->fetch_next_line;
+            push @$tokens, $self->new_token( LB => $lb, column => $column );
+            @$next_line = ();
+            $next_line = $self->fetch_next_line;
+            $yaml = \$next_line->[0];
+            $lb = $next_line->[1];
             $type = length $space ? 'MORE' : 'CONTENT';
             push @lines, [ $type => $pre, $space . $value ];
         }
@@ -333,7 +270,9 @@ sub parse_block_scalar {
 sub parse_plain_multi {
     TRACE and warn "=== parse_plain_multi()\n";
     my ($self, $parser) = @_;
-    my $yaml = $self->fetch_next_line;
+    my $next_line = $self->fetch_next_line;
+    my $yaml = \$next_line->[0];
+    my $lb = $next_line->[1];
     my @multi;
     my $indent = $parser->offset->[ -1 ] + 1;
     my $tokens = $parser->tokens;
@@ -341,7 +280,7 @@ sub parse_plain_multi {
     my $indent_re = $RE_WS . '{' . $indent . '}';
     while (1) {
         last if not defined $$yaml;
-        my $column = 1;
+        my $column = 0;
 
         unless ($$yaml =~ s/\A($indent_re)//) {
             last;
@@ -357,18 +296,19 @@ sub parse_plain_multi {
             push @$tokens, $self->new_token( WS => $1, column => $column );
             $column += length $1;
         }
-        if ($$yaml =~ s/\A(#.*)($RE_LB|\z)//) {
+        if ($$yaml =~ s/\A(#.*)\z//) {
             push @$tokens, $self->new_token( COMMENT => $1, column => $column );
             $column += length $1;
-            push @$tokens, $self->new_token( LB => $2, column => $column );
-            $self->inc_line;
+            push @$tokens, $self->new_token( LB => $lb, column => $column );
             last;
         }
 
-        if ($$yaml =~ s/\A($RE_LB|\z)//) {
-            push @$tokens, $self->new_token( LB => $1, column => $column );
-            $self->inc_line;
-            $yaml = $self->fetch_next_line;
+        if ($$yaml =~ s/\A\z//) {
+            push @$tokens, $self->new_token( LB => $lb, column => $column );
+            @$next_line = ();
+            $next_line = $self->fetch_next_line;
+            $yaml = \$next_line->[0];
+            $lb = $next_line->[1];
             push @multi, '';
         }
         elsif ($$yaml =~ s/\A($RE_PLAIN_WORDS2)//) {
@@ -380,20 +320,24 @@ sub parse_plain_multi {
                 $column += length $1;
             }
             push @multi, $string;
-            if ($$yaml =~ s/\A(#.*)($RE_LB|\z)//) {
+            if ($$yaml =~ s/\A(#.*)\z//) {
                 push @$tokens, $self->new_token( COMMENT => $1, column => $column );
                 $column += length $1;
-                push @$tokens, $self->new_token( LB => $2, column => $column );
-                $self->inc_line;
-                $yaml = $self->fetch_next_line;
+                push @$tokens, $self->new_token( LB => $lb, column => $column );
+                @$next_line = ();
+                $next_line = $self->fetch_next_line;
+                $lb = $next_line->[1];
+                $yaml = \$next_line->[0];
                 last;
             }
-            unless ($$yaml =~ s/\A($RE_LB|\z)//) {
+            unless ($$yaml =~ s/\A\z//) {
                 $parser->exception("Unexpected content");
             }
-            push @$tokens, $self->new_token( LB => $1, column => $column );
-            $self->inc_line;
-            $yaml = $self->fetch_next_line;
+            push @$tokens, $self->new_token( LB => $lb, column => $column );
+            @$next_line = ();
+            $next_line = $self->fetch_next_line;
+            $lb = $next_line->[1];
+            $yaml = \$next_line->[0];
         }
         else {
             TRACE and $parser->debug_yaml;
@@ -411,13 +355,16 @@ sub parse_plain_multi {
 sub fetch_next_line {
     my ($self) = @_;
     my $next_line = $self->next_line;
-    if (not defined $next_line or (length $$next_line) == 0) {
+    if (not defined $next_line->[0] ) {
         my $line = $self->reader->readline;
         unless (defined $line) {
+            $self->set_next_line([]);
             return;
         }
-        $next_line = \$line;
-        $self->set_next_line(\$line);
+        $self->inc_line;
+        $line =~ m/\A( *[^\r\n]*)([\r\n]|\z)/ or die "Unexpected";
+        @$next_line = ( $1,  $2 );
+        $self->set_next_line($next_line);
     }
     return $next_line;
 }
@@ -431,6 +378,7 @@ sub fetch_next_tokens {
             return $next;
         }
         $self->_fetch_next_tokens($offset, $next_line);
+        @$next_line = ();
     }
     return $next;
 }
@@ -445,10 +393,15 @@ my %TOKEN_NAMES = (
     '&' => 'ANCHOR',
 );
 sub _fetch_next_tokens {
-    my ($self, $offset, $yaml) = @_;
+    my ($self, $offset, $next_line) = @_;
     my $next = $self->next_tokens;
 
+    my $yaml = \$next_line->[0];
+    my $lb = $next_line->[1];
     if (not length $$yaml) {
+        if (length $lb) {
+            $self->push_token( EMPTY => $lb );
+        }
         return;
     }
     # $ESCAPE_CHAR from YAML.pm
@@ -475,8 +428,8 @@ sub _fetch_next_tokens {
             else {
                 $self->exception("Invalid directive");
             }
-            if ($$yaml =~ s/\A([\r\n]|\z)//) {
-                $self->push_token( EMPTY => $1 );
+            if ($$yaml =~ s/\A\z//) {
+                $self->push_token( EMPTY =>  $lb );
             }
             else {
                 $self->exception("Invalid directive");
@@ -484,8 +437,8 @@ sub _fetch_next_tokens {
             return;
         }
         elsif ($first eq "#") {
-            if ($$yaml =~ s/\A(#.*(?:[\r\n]|\z))//) {
-                $self->push_token( EMPTY => $1 );
+            if ($$yaml =~ s/\A(#.*\z)//) {
+                $self->push_token( EMPTY => $1 . $lb );
                 return;
             }
         }
@@ -494,12 +447,12 @@ sub _fetch_next_tokens {
             if ($$yaml =~ s/\A( +)//) {
                 $ws = $1;
             }
-            if ($$yaml =~ s/\A(#.*(?:[\r\n]|\z))//) {
-                $self->push_token( EMPTY => $ws . $1 );
+            if ($$yaml =~ s/\A(#.*\z)//) {
+                $self->push_token( EMPTY => $ws . $1 . $lb );
                 return;
             }
-            if ($$yaml =~ s/\A([\r\n]|\z)//) {
-                $self->push_token( EMPTY => $ws . $1 );
+            if ($$yaml =~ s/\A\z//) {
+                $self->push_token( EMPTY => $ws . $lb );
                 return;
             }
             $self->push_token( INDENT => $ws );
@@ -509,7 +462,7 @@ sub _fetch_next_tokens {
                 $self->push_token( DOC_START => $1 );
                 my $eol = $$yaml =~ s/\A($RE_EOL|\z)//;
                 if ($eol) {
-                    $self->push_token( EOL => $1 );
+                    $self->push_token( EOL => $1 . $lb );
                     return;
                 }
                 else {
@@ -525,8 +478,8 @@ sub _fetch_next_tokens {
         elsif ($first eq '.') {
             if ($$yaml =~ s/$RE_DOC_END//) {
                 $self->push_token( DOC_END => $1 );
-                $$yaml =~ s/($RE_EOL|\z)// or croak "Unexpected";
-                $self->push_token( EOL => $1 );
+                $$yaml =~ s/\A($RE_EOL|\z)// or $self->exception("Expected EOL");
+                $self->push_token( EOL => $1 . $lb );
                 return;
             }
         }
@@ -535,57 +488,59 @@ sub _fetch_next_tokens {
     $first = substr($$yaml, 0, 1);
     while (length $$yaml) {
         my $plain = 0;
-#        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$first], ['first']);
 
         if ($first eq '"' or $first eq "'") {
             my $token_name = $TOKEN_NAMES{ $first };
             my $token_name2 = $token_name . 'D';
+            $$yaml =~ s/\A$first//;
+            $self->push_token( $token_name => $first );
             my $regex = $REGEXES{ $token_name2 };
-            if ($$yaml =~ s/\A($first)$regex($first|[\r\n]|\z)//) {
-                my $quote = $1;
-                $self->push_token( $token_name => $1 );
-                if ($3 eq $first) {
-                    $self->push_token( $token_name2 . '_SINGLE' => $2 );
-                    $self->push_token( $token_name => $3 );
+
+            my $first_line = 1;
+
+            QUOTED_LINE: while (1) {
+
+                my $quoted = '';
+                if ($$yaml =~ s/\A($regex)//) {
+                    $quoted .= $1;
+                }
+
+                if ($$yaml =~ s/\A$first//) {
+                    $self->push_token( $token_name2 => $quoted );
+                    $self->push_token( $token_name => $first );
+                    last QUOTED_LINE;
+                }
+                elsif ($$yaml eq '') {
+                    if ($first_line) {
+                        $token_name2 .= '_LINE';
+                        $first_line = 0;
+                    }
+                    $self->push_token( $token_name2 => $quoted );
+                    $self->push_token( LB => $lb );
+                    @$next_line = ();
+                    $next_line = $self->fetch_next_line;
+                    return unless defined $next_line->[0];
+                    $yaml = \$next_line->[0];
+                    $lb = $next_line->[1];
                 }
                 else {
-                    $self->push_token( $token_name2 . '_LINE' => $2 );
-                    $self->push_token( LB => $3 );
-                    $yaml = $self->fetch_next_line;
-                    while (1) {
-                        if ($$yaml =~ s/\A$regex($first|[\r\n])//) {
-                            if ($2 eq $first) {
-                                $self->push_token( $token_name2 . '_END' => $1 );
-                                $self->push_token( $token_name => $2 );
-                                last;
-                            }
-                            else {
-                                $self->push_token( $token_name2 . '_LINE' => $1 );
-                                $self->push_token( LB => $2 );
-                                $yaml = $self->fetch_next_line;
-                            }
-                        }
-                        else {
-                            $self->exception("Invalid quoted string");
-                        }
-                    }
+                    $self->exception("Invalid quoted string");
                 }
+
             }
-            else {
-                $self->exception("Invalid quoted string");
-            }
+
         }
         elsif ($first eq '-' or $first eq ':' or $first eq '?') {
-            if ($$yaml =~ s/\A(\Q$first\E)(?:($RE_WS+)|([\r\n]|\z))//) {
+            if ($$yaml =~ s/\A(\Q$first\E)(?:($RE_WS+)|\z)//) {
                 my $token_name = { '-' => 'DASH', ':' => 'COLON', '?' => 'QUESTION' }->{ $first };
                 $self->push_token( $token_name => $1 );
                 if (not defined $2) {
-                    $self->push_token( EOL => $3 );
+                    $self->push_token( EOL => $lb );
                     return;
                 }
                 my $ws = $2;
-                if ($$yaml =~ s/\A(#.*|)([\r\n]|\z)//) {
-                    $self->push_token( EOL => $ws . ($1 // '') . $2 );
+                if ($$yaml =~ s/\A(#.*|)\z//) {
+                    $self->push_token( EOL => $ws . ($1 // '') . $lb );
                     return;
                 }
                 $self->push_token( WS => $ws );
@@ -638,17 +593,11 @@ sub _fetch_next_tokens {
         elsif ($first eq ' ') {
             if ($$yaml =~ s/\A($RE_WS+)//) {
                 my $ws = $1;
-                if ($$yaml =~ s/\A((?:#.*)?(?:[\r\n]|\z))//) {
-                    $self->push_token( EOL => $ws . $1 );
+                if ($$yaml =~ s/\A((?:#.*)?\z)//) {
+                    $self->push_token( EOL => $ws . $1 . $lb );
                     return;
                 }
                 $self->push_token( WS => $ws );
-            }
-        }
-        elsif ($first eq "\n") {
-            if ($$yaml =~ s/\A(\n)//) {
-                $self->push_token( EOL => $1 );
-                return;
             }
         }
         elsif ($first eq '{' or $first eq '[') {
@@ -661,12 +610,12 @@ sub _fetch_next_tokens {
         if ($plain) {
             if ($$yaml =~ s/\A($RE_PLAIN_WORDS)//) {
                 $self->push_token( SCALAR => $1 );
-                if ($$yaml =~ s/\A(?:($RE_WS+#.*)|($RE_WS*))([\r\n]|\z)//) {
+                if ($$yaml =~ s/\A(?:($RE_WS+#.*)|($RE_WS*))\z//) {
                     if (defined $1) {
-                        $self->push_token( COMMENT_EOL => $1 . $3 );
+                        $self->push_token( COMMENT_EOL => $1 . $lb );
                         return;
                     }
-                    $self->push_token( EOL => $2 . $3 );
+                    $self->push_token( EOL => $2 . $lb );
                     return;
                 }
             }
@@ -677,7 +626,8 @@ sub _fetch_next_tokens {
 
         $first = substr($$yaml, 0, 1);
     }
-    push @$next, $self->new_token( EOL => '' );
+    $self->push_token( EOL => $lb );
+    @$next_line = ();
 
     return;
 }
@@ -692,11 +642,11 @@ my %is_new_line = (
 sub push_token {
     my ($self, $type, $value) = @_;
     my $next = $self->next_tokens;
-    my $column = 1;
+    my $column = 0;
     if (@$next) {
         my $previous = $next->[-1];
         if ($is_new_line{ $previous->{name} }) {
-            $column = 1;
+            $column = 0;
         }
         else {
             $column = $previous->{column} + length( $previous->{value} );
@@ -708,9 +658,6 @@ sub push_token {
         line => $self->line,
         column => $column,
     };
-    if ($is_new_line{ $type }) {
-        $self->inc_line;
-    }
 }
 
 sub new_token {
@@ -728,7 +675,7 @@ sub exception {
         msg => $msg,
         next => $next,
         where => $caller[1] . ' line ' . $caller[2],
-        yaml => \'',
+        yaml => [''],
     );
     croak $e;
 }

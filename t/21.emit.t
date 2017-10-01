@@ -25,7 +25,7 @@ my @dirs = YAML::PP::Test->get_tests(
 
 # skip tests that parser can't parse
 my @skip = qw/
-    4ABK 54T7 5C5M 5KJE 5TRB 6HB6 87E4 8UDB 9MMW
+    4ABK 54T7 5C5M 5KJE 5TRB 6HB6 87E4 8CWC 8UDB 9MMW
     C2DT C4HZ CT4Q D88J DBG4 DFF7 DHP8
     EHF6 FRK4 FUP4
     KZN9 L9U5 LP6E LQZ7 LX3P

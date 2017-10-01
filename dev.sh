@@ -1,11 +1,19 @@
 #!/bin/bash
 
-function is-valid() {
+function is-valid-trace() {
     YAML_PP_TRACE=1 YAML_TEST_DIR=$1 prove -lrv t/10.parse-valid.t
 }
 
-function is-invalid() {
+function is-valid() {
+    YAML_PP_DEBUG=1 YAML_TEST_DIR=$1 prove -lrv t/10.parse-valid.t
+}
+
+function is-invalid-trace() {
     YAML_PP_TRACE=1 YAML_TEST_DIR=$1 prove -lrv t/11.parse-invalid.t
+}
+
+function is-invalid() {
+    YAML_PP_DEBUG=1 YAML_TEST_DIR=$1 prove -lrv t/11.parse-invalid.t
 }
 
 function test-dump() {
