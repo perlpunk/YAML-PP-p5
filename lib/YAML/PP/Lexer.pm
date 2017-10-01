@@ -23,7 +23,7 @@ sub init {
     my ($self) = @_;
     $self->{next_tokens} = [];
     $self->{next_line} = [];
-    $self->{line} = 1;
+    $self->{line} = 0;
 }
 
 sub next_line { return $_[0]->{next_line} }

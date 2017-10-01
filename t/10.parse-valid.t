@@ -144,7 +144,7 @@ sub test {
     }
     if ($ok) {
         $results{OK}++;
-        my $lines = $parser->lexer->line - 1;
+        my $lines = $parser->lexer->line;
         cmp_ok($lines, '==', $exp_lines, "$name - Line count $lines == $exp_lines");
     }
     else {
