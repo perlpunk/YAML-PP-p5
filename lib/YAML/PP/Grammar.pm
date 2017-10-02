@@ -286,6 +286,34 @@ $GRAMMAR = {
       'new' => 'NODETYPE_MAP'
     }
   },
+  'NODETYPE_FLOWSEQ' => {
+    'EOL' => {
+      'new' => 'NODETYPE_FLOWSEQ',
+      'return' => 1
+    },
+    'FLOWSEQ_END' => {
+      'DEFAULT' => {
+        'return' => 1
+      },
+      'EOL' => {
+        'return' => 1
+      },
+      'match' => 'cb_end_flowseq'
+    },
+    'FLOWSEQ_START' => {
+      'DEFAULT' => {
+        'new' => 'NODETYPE_NEWFLOWSEQ'
+      },
+      'match' => 'cb_start_flowseq'
+    },
+    'FLOW_COMMA' => {
+      'match' => 'cb_flow_comma',
+      'new' => 'NODETYPE_NEWFLOWSEQ'
+    },
+    'WS' => {
+      'new' => 'NODETYPE_FLOWSEQ'
+    }
+  },
   'NODETYPE_MAP' => {
     'ANCHOR' => {
       'WS' => {
@@ -345,6 +373,12 @@ $GRAMMAR = {
       },
       'match' => 'cb_start_quoted'
     },
+    'FLOWSEQ_START' => {
+      'DEFAULT' => {
+        'new' => 'NODETYPE_NEWFLOWSEQ'
+      },
+      'match' => 'cb_start_flowseq'
+    },
     'FOLDED' => {
       'match' => 'cb_block_scalar',
       'new' => 'RULE_BLOCK_SCALAR_HEADER'
@@ -384,6 +418,38 @@ $GRAMMAR = {
         'match' => 'cb_take'
       },
       'match' => 'cb_start_quoted'
+    }
+  },
+  'NODETYPE_NEWFLOWSEQ' => {
+    'EOL' => {
+      'new' => 'NODETYPE_NEWFLOWSEQ',
+      'return' => 1
+    },
+    'FLOWSEQ_END' => {
+      'EOL' => {
+        'return' => 1
+      },
+      'match' => 'cb_end_flowseq'
+    },
+    'FLOWSEQ_START' => {
+      'DEFAULT' => {
+        'new' => 'NODETYPE_NEWFLOWSEQ'
+      },
+      'match' => 'cb_start_flowseq'
+    },
+    'PLAIN' => {
+      'DEFAULT' => {
+        'match' => 'cb_send_scalar',
+        'return' => 1
+      },
+      'EOL' => {
+        'match' => 'cb_fetch_tokens_plain',
+        'new' => 'RULE_PLAIN_MULTI'
+      },
+      'match' => 'cb_start_plain'
+    },
+    'WS' => {
+      'new' => 'NODETYPE_NEWFLOWSEQ'
     }
   },
   'NODETYPE_NODE' => {
@@ -474,6 +540,12 @@ $GRAMMAR = {
         'match' => 'cb_take'
       },
       'match' => 'cb_start_quoted'
+    },
+    'FLOWSEQ_START' => {
+      'DEFAULT' => {
+        'new' => 'NODETYPE_NEWFLOWSEQ'
+      },
+      'match' => 'cb_start_flowseq'
     },
     'FOLDED' => {
       'match' => 'cb_block_scalar',
@@ -954,6 +1026,10 @@ This is the Grammar in YAML
         match: cb_block_scalar
         new: RULE_BLOCK_SCALAR_HEADER
     
+      FLOWSEQ_START:
+        match: cb_start_flowseq
+        DEFAULT: { new: NODETYPE_NEWFLOWSEQ }
+    
     
     NODETYPE_COMPLEX:
       COLON:
@@ -979,6 +1055,38 @@ This is the Grammar in YAML
         DOUBLEQUOTE:
           EOL: { match: cb_send_scalar, return: 1 }
       EOL: { match: cb_empty_quoted_line, new: MULTILINE_DOUBLEQUOTED }
+    
+    
+    
+    NODETYPE_NEWFLOWSEQ:
+      EOL: { new: NODETYPE_NEWFLOWSEQ, return: 1 }
+      PLAIN:
+        match: cb_start_plain
+        EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+        DEFAULT:
+          match: cb_send_scalar
+          return: 1
+      WS: { new: NODETYPE_NEWFLOWSEQ }
+      FLOWSEQ_END:
+        match: cb_end_flowseq
+        EOL: { return: 1 }
+      FLOWSEQ_START:
+        match: cb_start_flowseq
+        DEFAULT: { new: NODETYPE_NEWFLOWSEQ }
+    
+    NODETYPE_FLOWSEQ:
+      EOL: { new: NODETYPE_FLOWSEQ, return: 1 }
+      WS: { new: NODETYPE_FLOWSEQ }
+      FLOWSEQ_END:
+        match: cb_end_flowseq
+    #    return: 1
+        EOL: { return: 1 }
+        DEFAULT: { return: 1 }
+      FLOWSEQ_START:
+        match: cb_start_flowseq
+        DEFAULT: { new: NODETYPE_NEWFLOWSEQ }
+      FLOW_COMMA: { match: cb_flow_comma, new: NODETYPE_NEWFLOWSEQ }
+    
     
     RULE_PLAIN_MULTI:
       END: { match: cb_send_scalar, return: 1 }
@@ -1253,6 +1361,9 @@ This is the Grammar in YAML
         match: cb_block_scalar
         new: RULE_BLOCK_SCALAR_HEADER
     
+      FLOWSEQ_START:
+        match: cb_start_flowseq
+        DEFAULT: { new: NODETYPE_NEWFLOWSEQ }
 
 
     # END OF YAML INLINE

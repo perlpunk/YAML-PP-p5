@@ -25,6 +25,7 @@ sub init {
     $self->{next_line} = [];
     $self->{line} = 0;
     $self->{context} = 'normal';
+    $self->{flowcontext} = 0;
 }
 
 sub next_line { return $_[0]->{next_line} }
@@ -37,6 +38,8 @@ sub set_line { $_[0]->{line} = $_[1] }
 sub inc_line { return $_[0]->{line}++ }
 sub context { return $_[0]->{context} }
 sub set_context { $_[0]->{context} = $_[1] }
+sub flowcontext { return $_[0]->{flowcontext} }
+sub set_flowcontext { $_[0]->{flowcontext} = $_[1] }
 
 my $RE_WS = '[\t ]';
 my $RE_LB = '[\r\n]';
@@ -61,6 +64,10 @@ my $RE_ANCHOR_CAR = '[\x21-\x2B\x2D-\x5A\x5C\x5E-\x7A\x7C\x7E\xA0-\xFF\x{100}-\x
 my $RE_PLAIN_START = '[\x21\x22\x24-\x39\x3B-\x7E\xA0-\xFF\x{100}-\x{10FFFF}]';
 my $RE_PLAIN_END = '[\x21-\x39\x3B-\x7E\xA0-\xFF\x{100}-\x{10FFFF}]';
 my $RE_PLAIN_FIRST = '[\x24\x28-\x29\x2B\x2E-\x39\x3B-\x3D\x41-\x5A\x5C\x5E-\x5F\x61-\x7A\x7E\x{100}-\x{10FFFF}]';
+
+my $RE_PLAIN_START_FLOW = '[\x21\x22\x24-\x2B\x2D-\x39\x3B-\x5A\x5C\x5E-\x7E\xA0-\xFF\x{100}-\x{10FFFF}]';
+my $RE_PLAIN_END_FLOW = '[\x21-\x2B\x2D-\x39\x3B-\x5A\x5C\x5E-\x7E\xA0-\xFF\x{100}-\x{10FFFF}]';
+my $RE_PLAIN_FIRST_FLOW = '[\x24\x28-\x29\x2B\x2E-\x39\x3B-\x3D\x41-\x5A\x5C\x5E-\x5F\x61-\x7A\x7E\x{100}-\x{10FFFF}]';
 # c-indicators
 #! 21
 #" 22
@@ -87,6 +94,10 @@ my $RE_PLAIN_WORD = "(?::+$RE_PLAIN_END|$RE_PLAIN_START)(?::+$RE_PLAIN_END|$RE_P
 my $RE_PLAIN_FIRST_WORD = "(?:[:?-]+$RE_PLAIN_END|$RE_PLAIN_FIRST)(?::+$RE_PLAIN_END|$RE_PLAIN_END)*";
 my $RE_PLAIN_WORDS = "(?:$RE_PLAIN_FIRST_WORD(?:$RE_WS+$RE_PLAIN_WORD)*)";
 my $RE_PLAIN_WORDS2 = "(?:$RE_PLAIN_WORD(?:$RE_WS+$RE_PLAIN_WORD)*)";
+
+my $RE_PLAIN_WORD_FLOW = "(?::+$RE_PLAIN_END_FLOW|$RE_PLAIN_START_FLOW)(?::+$RE_PLAIN_END_FLOW|$RE_PLAIN_END_FLOW)*";
+my $RE_PLAIN_FIRST_WORD_FLOW = "(?:[:?-]+$RE_PLAIN_END_FLOW|$RE_PLAIN_FIRST_FLOW)(?::+$RE_PLAIN_END_FLOW|$RE_PLAIN_END_FLOW)*";
+my $RE_PLAIN_WORDS_FLOW = "(?:$RE_PLAIN_FIRST_WORD_FLOW(?:$RE_WS+$RE_PLAIN_WORD_FLOW)*)";
 
 
 #c-secondary-tag-handle  ::= “!” “!”
@@ -298,6 +309,11 @@ my %TOKEN_NAMES = (
     ':' => 'COLON',
     '-' => 'DASH',
     '?' => 'QUESTION',
+    '[' => 'FLOWSEQ_START',
+    ']' => 'FLOWSEQ_END',
+    '{' => 'FLOWMAP_START',
+    '}' => 'FLOWMAP_END',
+    ',' => 'FLOW_COMMA',
 );
 
 my %ANCHOR_ALIAS_TAG =    ( '&' => 1, '*' => 1, '!' => 1 );
@@ -308,6 +324,7 @@ my %FLOW =                ( '{' => 1, '[' => 1, '}' => 1, ']' => 1 );
 
 sub _fetch_next_tokens {
     my ($self, $offset, $indent, $next_line) = @_;
+    my $flowcontext = $self->flowcontext;
     my $next = $self->next_tokens;
 
     my $spaces = $next_line->[0];
@@ -437,17 +454,34 @@ sub _fetch_next_tokens {
             }
         }
         elsif ($FLOW{ $first }) {
-            push @tokens, ( "Not Implemented: Flow Style" => $$yaml );
-            $self->push_tokens(\@tokens);
-            return;
+            if ($first eq '{' or $first eq '[') {
+                push @tokens, ( $TOKEN_NAMES{ $first } => $first );
+                substr($$yaml, 0, 1, '');
+                $self->set_flowcontext(++$flowcontext);
+            }
+            if ($first eq '}' or $first eq ']') {
+                push @tokens, ( $TOKEN_NAMES{ $first } => $first );
+                substr($$yaml, 0, 1, '');
+                $self->set_flowcontext(--$flowcontext);
+            }
+        }
+        elsif ($first eq ',') {
+            push @tokens, ( $TOKEN_NAMES{ $first } => $first );
+            substr($$yaml, 0, 1, '');
         }
         else {
             $plain = 1;
         }
 
         if ($plain) {
-            if ($$yaml =~ s/\A($RE_PLAIN_WORDS)//) {
+            my $RE = $RE_PLAIN_WORDS;
+#            warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$flowcontext], ['flowcontext']);
+            if ($flowcontext) {
+                $RE = $RE_PLAIN_WORDS_FLOW;
+            }
+            if ($$yaml =~ s/\A($RE)//) {
                 push @tokens, ( PLAIN => $1 );
+#                warn __PACKAGE__.':'.__LINE__.": PLAIN >>$1<<\n";
                 if ($$yaml =~ s/\A(?:($RE_WS+#.*)|($RE_WS*))\z//) {
                     if (defined $1) {
                         push @tokens, ( COMMENT => $1 );
