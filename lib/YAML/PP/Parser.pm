@@ -63,6 +63,8 @@ sub tokens { return $_[0]->{tokens} }
 sub set_tokens { $_[0]->{tokens} = $_[1] }
 sub stack { return $_[0]->{stack} }
 sub set_stack { $_[0]->{stack} = $_[1] }
+sub event_stack { return $_[0]->{event_stack} }
+sub set_event_stack { $_[0]->{event_stack} = $_[1] }
 
 sub rule { return $_[0]->{rule} }
 sub set_rule {
@@ -82,6 +84,7 @@ sub init {
     $self->set_tokens([]);
     $self->set_rule(undef);
     $self->set_stack({});
+    $self->set_event_stack([]);
     $self->lexer->init;
 }
 
@@ -358,34 +361,36 @@ sub process_result {
     my $exp = $self->events->[-1];
 
     my $stack = $self->stack;
+    my $event_stack = $self->event_stack;
     my $props = $stack->{node_properties} ||= {};
     my $properties = $stack->{properties} ||= {};
-    my $stack_events = $stack->{events} || [];
 
-    for my $event (@$stack_events) {
+    for my $event (@$event_stack) {
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$event], ['event']);
         my $offset = $res->{offset};
-        my ($type, $name, $res) = @$event;
-        if ($type eq 'begin') {
-            $self->$type($name, $offset, { %$res, %$props });
+        if ($event->[0] eq 'begin') {
+            my ($type, $name, $info) = @$event;
+            $self->$type($name, $offset, { %$info, %$props });
             %$props = ();
         }
-        elsif ($type eq 'value') {
+        elsif ($event->[0] eq 'scalar') {
+            my ($type, $info) = @$event;
             for my $key (keys %$properties) {
                 $props->{ $key } = $properties->{ $key };
             }
-            $self->res_to_event({ %$res, %$props });
+            $self->res_to_event({ %$info, %$props });
             %$properties = ();
             %$props = ();
         }
-        elsif ($type eq 'alias') {
+        elsif ($event->[0] eq 'alias') {
+            my ($type, $info) = @$event;
             if (keys %$props or keys %$properties) {
                 $self->exception("Parse error: Alias not allowed in this context");
             }
-            $self->res_to_event({ %$res });
+            $self->res_to_event({ %$info });
         }
     }
-    @$stack_events = ();
+    @$event_stack = ();
 
     my $got = $res->{name};
     TRACE and $self->got("GOT $got");
@@ -397,17 +402,12 @@ sub process_result {
         return;
     }
 
-    if ($got eq "MAPSTART") { }
+    if ($got eq 'NOOP') { }
     elsif ($got eq "MAPKEY") {
-        if ($exp eq 'COMPLEX') {
-            $self->events->[-1] = 'MAP';
-        }
+        $self->events->[-1] = 'MAP';
     }
-    elsif ($got eq 'NOOP') { }
     elsif ($got eq 'COMPLEX') {
-        if ($exp eq 'MAP') {
-            $self->events->[-1] = 'COMPLEX';
-        }
+        $self->events->[-1] = 'COMPLEX';
     }
     elsif ($got eq 'COMPLEXCOLON') {
         $self->events->[-1] = 'MAP';
@@ -417,9 +417,8 @@ sub process_result {
     }
 
     my $new_type = $res->{new_type};
-    my $new_node = $new_type;
-    $self->set_new_node($new_node);
-    $self->set_rule( $new_type );
+    $self->set_new_node($new_type);
+    $self->set_rule($new_type);
     return;
 }
 
@@ -490,6 +489,7 @@ sub parse_tokens {
 
         DEBUG and $self->got("---got $got");
         if (my $sub = $def->{match}) {
+            DEBUG and $self->info("CALLBACK $sub");
             $self->$sub($res);
         }
         if (my $new = $def->{new}) {
@@ -938,9 +938,8 @@ sub cb_property_eol {
 
 sub cb_mapkey {
     my ($self, $res) = @_;
-    my $value = $self->tokens->[-1]->{value};
     $res->{name} = 'MAPKEY';
-    push @{ $self->stack->{events} }, [ value => undef, {
+    push @{ $self->event_stack }, [ scalar => {
         style => ':',
         value => $self->tokens->[-1]->{value},
     }];
@@ -949,7 +948,7 @@ sub cb_mapkey {
 sub cb_empty_mapkey {
     my ($self, $res) = @_;
     $res->{name} = 'MAPKEY';
-    push @{ $self->stack->{events} }, [ value => undef, {
+    push @{ $self->event_stack }, [ scalar => {
         style => ':',
         value => undef,
     }];
@@ -957,19 +956,19 @@ sub cb_empty_mapkey {
 
 sub cb_mapkeystart {
     my ($self, $res) = @_;
-    push @{ $self->stack->{events} },
+    push @{ $self->event_stack },
         [ begin => 'MAP', { }],
-        [ value => undef, {
+        [ scalar => {
             style => ':',
             value => $self->tokens->[-1]->{value},
         }];
-    $res->{name} = 'MAPSTART';
+    $res->{name} = 'NOOP';
 }
 
 sub cb_doublequoted_key {
     my ($self, $res) = @_;
     $res->{name} = 'MAPKEY';
-    push @{ $self->stack->{events} }, [ value => undef, {
+    push @{ $self->event_stack }, [ scalar => {
         style => '"',
         value => [ $self->tokens->[-1]->{value} ],
     }];
@@ -978,19 +977,19 @@ sub cb_doublequoted_key {
 sub cb_doublequotedstart {
     my ($self, $res) = @_;
     my $value = $self->tokens->[-1]->{value};
-    push @{ $self->stack->{events} },
+    push @{ $self->event_stack },
         [ begin => 'MAP', { }],
-        [ value => undef, {
+        [ scalar => {
             style => '"',
             value => [ $value ],
         }];
-    $res->{name} = 'MAPSTART';
+    $res->{name} = 'NOOP';
 }
 
 sub cb_singlequoted_key {
     my ($self, $res) = @_;
     $res->{name} = 'MAPKEY';
-    push @{ $self->stack->{events} }, [ value => undef, {
+    push @{ $self->event_stack }, [ scalar => {
         style => "'",
         value => [ $self->tokens->[-1]->{value} ],
     }];
@@ -998,21 +997,21 @@ sub cb_singlequoted_key {
 
 sub cb_singleequotedstart {
     my ($self, $res) = @_;
-    push @{ $self->stack->{events} },
+    push @{ $self->event_stack },
         [ begin => 'MAP', { }],
-        [ value => undef, {
+        [ scalar => {
             style => "'",
             value => [ $self->tokens->[-1]->{value} ],
         }];
-    $res->{name} = 'MAPSTART';
+    $res->{name} = 'NOOP';
 }
 
 sub cb_mapkey_alias {
     my ($self, $res) = @_;
     my $alias = $self->tokens->[-1]->{value};
     $alias = substr($alias, 1);
-    $res->{name} = 'MAPKEY';
-    push @{ $self->stack->{events} }, [ alias => undef, {
+    $res->{name} = 'NOOP';
+    push @{ $self->event_stack }, [ alias => {
         alias => $alias,
     }];
 }
@@ -1024,12 +1023,12 @@ sub cb_question {
 
 sub cb_empty_complexvalue {
     my ($self, $res) = @_;
-    push @{ $self->stack->{events} }, [ value => undef, { style => ':' }];
+    push @{ $self->event_stack }, [ scalar => { style => ':' }];
 }
 
 sub cb_questionstart {
     my ($self, $res) = @_;
-    push @{ $self->stack->{events} }, [ begin => 'COMPLEX', { }];
+    push @{ $self->event_stack }, [ begin => 'COMPLEX', { }];
     $res->{name} = 'NOOP';
 }
 
@@ -1040,7 +1039,7 @@ sub cb_complexcolon {
 
 sub cb_seqstart {
     my ($self, $res) = @_;
-    push @{ $self->stack->{events} }, [ begin => 'SEQ', { }];
+    push @{ $self->event_stack }, [ begin => 'SEQ', { }];
     $res->{name} = 'NOOP';
 }
 
@@ -1049,114 +1048,67 @@ sub cb_seqitem {
     $res->{name} = 'NOOP';
 }
 
-sub cb_alias_key_from_stack {
+sub cb_start_quoted {
     my ($self, $res) = @_;
-    my $stack = delete $self->stack->{res};
-    push @{ $self->stack->{events} },
-        [ begin => 'MAP', { }],
-        [ alias => undef, {
-            alias => $stack->{alias},
-        }];
-    # TODO
-    $res->{name} = 'MAPKEY';
+    push @{ $self->event_stack }, [
+        scalar => {
+            style => $self->tokens->[-1]->{value},
+            value => [],
+        },
+    ];
 }
 
-sub cb_alias_from_stack {
+sub cb_start_plain {
     my ($self, $res) = @_;
-    my $stack = delete $self->stack->{res};
-    push @{ $self->stack->{events} }, [ alias => undef, {
-        alias => $stack->{alias},
-    }];
-    # TODO
-    $res->{name} = 'SCALAR';
+    push @{ $self->event_stack }, [
+        scalar => {
+            style => ':',
+            value => [ $self->tokens->[-1]->{value} ],
+        },
+    ];
 }
 
-sub cb_stack_alias {
+sub cb_start_alias {
     my ($self, $res) = @_;
     my $alias = $self->tokens->[-1]->{value};
     $alias = substr($alias, 1);
-    $self->stack->{res} ||= {
-        alias => $alias,
-    };
+    push @{ $self->event_stack }, [
+        alias => {
+            alias => $alias,
+        },
+    ];
 }
 
-sub cb_stack_singlequoted_single {
+sub cb_take {
     my ($self, $res) = @_;
-    $self->stack->{res} = {
-        style => "'",
-        value => [$self->tokens->[-1]->{value}],
-    };
+    my $stack = $self->event_stack;
+    push @{ $stack->[-1]->[1]->{value} }, $self->tokens->[-1]->{value};
 }
 
-sub cb_stack_singlequoted {
-    my ($self, $res) = @_;
-    $self->stack->{res} ||= {
-        style => "'",
-        value => [],
-    };
-    push @{ $self->stack->{res}->{value} }, $self->tokens->[-1]->{value};
-}
-
-sub cb_stack_doublequoted_single {
-    my ($self, $res) = @_;
-    $self->stack->{res} = {
-        style => '"',
-        value => [$self->tokens->[-1]->{value}],
-    };
-}
-
-sub cb_stack_doublequoted {
-    my ($self, $res) = @_;
-    $self->stack->{res} ||= {
-        style => '"',
-        value => [],
-    };
-    push @{ $self->stack->{res}->{value} }, $self->tokens->[-1]->{value};
-}
-
-sub cb_stack_plain {
-    my ($self) = @_;
-    $self->stack->{res} = {
-        style => ':',
-        value => $self->tokens->[-1]->{value},
-    };
-}
-
-sub cb_plain_single {
+sub cb_got_scalar {
     my ($self, $res) = @_;
     $res->{name} = 'SCALAR';
-    push @{ $self->stack->{events} }, [ value => undef, $self->stack->{res} ];
-    undef $self->stack->{res};
 }
 
-sub cb_mapkey_from_stack {
+sub cb_insert_map {
     my ($self, $res) = @_;
-    my $stack = $self->stack;
-    my $stack_res = $stack->{res} || { style => ':', value => undef };
-    undef $stack->{res};
-    push @{ $stack->{events} },
-        [ begin => 'MAP', { }],
-        [ value => undef, $stack_res ];
-    $res->{name} = 'MAPSTART';
-
+    my $stack = $self->event_stack;
+    if (@$stack) {
+        splice @$stack, -1, 0, [ begin => 'MAP' => {} ];
+    }
+    else {
+        push @$stack,
+        [ begin => 'MAP' => {} ],
+        [ scalar => { style => ':', value => undef } ];
+    }
+    $res->{name} = 'NOOP';
 }
 
-sub cb_scalar_from_stack {
+sub cb_got_multiscalar {
     my ($self, $res) = @_;
-    my $stack = $self->stack;
-    push @{ $self->stack->{events} }, [ value => undef, $self->stack->{res} ];
-    undef $self->stack->{res};
-    $res->{name} = 'SCALAR';
-}
-
-sub cb_multiscalar_from_stack {
-    my ($self, $res) = @_;
-    my $stack = $self->stack;
+    my $stack = $self->event_stack;
     my $multi = $self->lexer->parse_plain_multi($self);
-    my $first = $stack->{res}->{value};
-    unshift @{ $multi->{value} }, $first;
-    push @{ $stack->{events} }, [ value => undef, $multi ];
-    undef $stack->{res};
+    push @{ $stack->[-1]->[1]->{value} }, @{ $multi->{value} };
     $res->{name} = 'SCALAR';
 }
 
@@ -1167,7 +1119,7 @@ sub cb_block_scalar {
         $self,
         type => $type,
     );
-    push @{ $self->stack->{events} }, [ value => undef, {
+    push @{ $self->event_stack }, [ scalar => {
         %$block,
     }];
     $res->{name} = 'SCALAR';
