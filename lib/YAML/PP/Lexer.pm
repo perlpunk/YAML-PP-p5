@@ -24,6 +24,7 @@ sub init {
     $self->{next_tokens} = [];
     $self->{next_line} = [];
     $self->{line} = 0;
+    $self->{context} = 'normal';
 }
 
 sub next_line { return $_[0]->{next_line} }
@@ -34,6 +35,8 @@ sub next_tokens { return $_[0]->{next_tokens} }
 sub line { return $_[0]->{line} }
 sub set_line { $_[0]->{line} = $_[1] }
 sub inc_line { return $_[0]->{line}++ }
+sub context { return $_[0]->{context} }
+sub set_context { $_[0]->{context} = $_[1] }
 
 my $RE_WS = '[\t ]';
 my $RE_LB = '[\r\n]';
@@ -394,6 +397,7 @@ my %TOKEN_NAMES = (
 );
 sub _fetch_next_tokens {
     my ($self, $offset, $next_line) = @_;
+    my $context = $self->context;
     my $next = $self->next_tokens;
 
     my $yaml = \$next_line->[0];
@@ -410,7 +414,7 @@ sub _fetch_next_tokens {
     }
     my $first = substr($$yaml, 0, 1);
 
-    if ($offset == 0) {
+    if ($context eq 'normal') {
         if ($first eq "%") {
             if ($$yaml =~ s/\A(\s*%YAML ?1\.2$RE_WS*)//) {
                 $self->push_token( YAML_DIRECTIVE => $1 );
