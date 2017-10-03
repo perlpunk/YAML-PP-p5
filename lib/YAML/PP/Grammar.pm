@@ -216,7 +216,7 @@ $GRAMMAR = {
       'DOUBLEQUOTE' => {
         'EOL' => {
           'match' => 'cb_got_scalar',
-          'new' => 'NODE'
+          'new' => 'END'
         }
       },
       'LB' => {
@@ -233,7 +233,7 @@ $GRAMMAR = {
       'SINGLEQUOTE' => {
         'EOL' => {
           'match' => 'cb_got_scalar',
-          'new' => 'NODE'
+          'new' => 'END'
         }
       },
       'match' => 'cb_take'
@@ -495,7 +495,7 @@ $GRAMMAR = {
     'ALIAS' => {
       'EOL' => {
         'match' => 'cb_got_scalar',
-        'new' => 'NODE'
+        'new' => 'END'
       },
       'WS' => {
         'COLON' => {
@@ -516,11 +516,11 @@ $GRAMMAR = {
   'RULE_BLOCK_SCALAR' => {
     'FOLDED' => {
       'match' => 'cb_block_scalar',
-      'new' => 'NODE'
+      'new' => 'END'
     },
     'LITERAL' => {
       'match' => 'cb_block_scalar',
-      'new' => 'NODE'
+      'new' => 'END'
     }
   },
   'RULE_COMPLEX' => {
@@ -556,7 +556,7 @@ $GRAMMAR = {
           },
           'EOL' => {
             'match' => 'cb_got_scalar',
-            'new' => 'NODE'
+            'new' => 'END'
           },
           'WS' => {
             'COLON' => {
@@ -591,11 +591,11 @@ $GRAMMAR = {
     'SCALAR' => {
       'COMMENT_EOL' => {
         'match' => 'cb_got_multiscalar',
-        'new' => 'NODE'
+        'new' => 'END'
       },
       'EOL' => {
         'match' => 'cb_got_multiscalar',
-        'new' => 'NODE'
+        'new' => 'END'
       },
       'match' => 'cb_start_plain'
     }
@@ -626,11 +626,11 @@ $GRAMMAR = {
       },
       'COMMENT_EOL' => {
         'match' => 'cb_got_scalar',
-        'new' => 'NODE'
+        'new' => 'END'
       },
       'EOL' => {
         'match' => 'cb_got_multiscalar',
-        'new' => 'NODE'
+        'new' => 'END'
       },
       'WS' => {
         'COLON' => {
@@ -678,7 +678,7 @@ $GRAMMAR = {
           },
           'EOL' => {
             'match' => 'cb_got_scalar',
-            'new' => 'NODE'
+            'new' => 'END'
           },
           'WS' => {
             'COLON' => {
@@ -768,7 +768,7 @@ This is the Grammar in YAML
     RULE_ALIAS_KEY_OR_NODE:
       ALIAS:
         match: cb_start_alias
-        EOL: { match: cb_got_scalar, new: NODE }
+        EOL: { match: cb_got_scalar, new: END }
         WS:
           COLON:
             match: cb_insert_map
@@ -800,7 +800,7 @@ This is the Grammar in YAML
         SINGLEQUOTED:
           match: cb_take
           SINGLEQUOTE:
-            EOL: { match: cb_got_scalar, new: NODE }
+            EOL: { match: cb_got_scalar, new: END }
             COLON:
               match: cb_insert_map
               EOL: { new: FULLNODE, return: 1 }
@@ -819,7 +819,7 @@ This is the Grammar in YAML
         match: cb_take
         LB: { new: MULTILINE_SINGLEQUOTED }
         SINGLEQUOTE:
-          EOL: { match: cb_got_scalar, new: NODE }
+          EOL: { match: cb_got_scalar, new: END }
     
     RULE_DOUBLEQUOTED_KEY_OR_NODE:
       DOUBLEQUOTE:
@@ -827,7 +827,7 @@ This is the Grammar in YAML
         DOUBLEQUOTED:
           match: cb_take
           DOUBLEQUOTE:
-            EOL: { match: cb_got_scalar, new: NODE }
+            EOL: { match: cb_got_scalar, new: END }
             WS:
               COLON:
                 match: cb_insert_map
@@ -848,13 +848,13 @@ This is the Grammar in YAML
         match: cb_take
         LB: { new: MULTILINE_DOUBLEQUOTED  }
         DOUBLEQUOTE:
-          EOL: { match: cb_got_scalar, new: NODE }
+          EOL: { match: cb_got_scalar, new: END }
     
     RULE_PLAIN_KEY_OR_NODE:
       SCALAR:
         match: cb_start_plain
-        COMMENT_EOL: { match: cb_got_scalar, new: NODE }
-        EOL: { match: cb_got_multiscalar, new: NODE }
+        COMMENT_EOL: { match: cb_got_scalar, new: END }
+        EOL: { match: cb_got_multiscalar, new: END }
         WS:
           COLON:
             match: cb_insert_map
@@ -872,8 +872,8 @@ This is the Grammar in YAML
     RULE_PLAIN:
       SCALAR:
         match: cb_start_plain
-        COMMENT_EOL: { match: cb_got_multiscalar, new: NODE }
-        EOL: { match: cb_got_multiscalar, new: NODE }
+        COMMENT_EOL: { match: cb_got_multiscalar, new: END }
+        EOL: { match: cb_got_multiscalar, new: END }
     
     NODETYPE_MAP:
       QUESTION:
@@ -970,8 +970,8 @@ This is the Grammar in YAML
         WS: { new: FULLNODE , return: 1}
     
     RULE_BLOCK_SCALAR:
-      LITERAL: { match: cb_block_scalar, new: NODE }
-      FOLDED: { match: cb_block_scalar, new: NODE }
+      LITERAL: { match: cb_block_scalar, new: END }
+      FOLDED: { match: cb_block_scalar, new: END }
     
     FULL_MAPKEY:
       ANCHOR:

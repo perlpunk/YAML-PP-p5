@@ -2,7 +2,7 @@
 RULE_ALIAS_KEY_OR_NODE:
   ALIAS:
     match: cb_start_alias
-    EOL: { match: cb_got_scalar, new: NODE }
+    EOL: { match: cb_got_scalar, new: END }
     WS:
       COLON:
         match: cb_insert_map
@@ -34,7 +34,7 @@ RULE_SINGLEQUOTED_KEY_OR_NODE:
     SINGLEQUOTED:
       match: cb_take
       SINGLEQUOTE:
-        EOL: { match: cb_got_scalar, new: NODE }
+        EOL: { match: cb_got_scalar, new: END }
         COLON:
           match: cb_insert_map
           EOL: { new: FULLNODE, return: 1 }
@@ -53,7 +53,7 @@ MULTILINE_SINGLEQUOTED:
     match: cb_take
     LB: { new: MULTILINE_SINGLEQUOTED }
     SINGLEQUOTE:
-      EOL: { match: cb_got_scalar, new: NODE }
+      EOL: { match: cb_got_scalar, new: END }
 
 RULE_DOUBLEQUOTED_KEY_OR_NODE:
   DOUBLEQUOTE:
@@ -61,7 +61,7 @@ RULE_DOUBLEQUOTED_KEY_OR_NODE:
     DOUBLEQUOTED:
       match: cb_take
       DOUBLEQUOTE:
-        EOL: { match: cb_got_scalar, new: NODE }
+        EOL: { match: cb_got_scalar, new: END }
         WS:
           COLON:
             match: cb_insert_map
@@ -82,13 +82,13 @@ MULTILINE_DOUBLEQUOTED:
     match: cb_take
     LB: { new: MULTILINE_DOUBLEQUOTED  }
     DOUBLEQUOTE:
-      EOL: { match: cb_got_scalar, new: NODE }
+      EOL: { match: cb_got_scalar, new: END }
 
 RULE_PLAIN_KEY_OR_NODE:
   SCALAR:
     match: cb_start_plain
-    COMMENT_EOL: { match: cb_got_scalar, new: NODE }
-    EOL: { match: cb_got_multiscalar, new: NODE }
+    COMMENT_EOL: { match: cb_got_scalar, new: END }
+    EOL: { match: cb_got_multiscalar, new: END }
     WS:
       COLON:
         match: cb_insert_map
@@ -106,8 +106,8 @@ RULE_PLAIN_KEY_OR_NODE:
 RULE_PLAIN:
   SCALAR:
     match: cb_start_plain
-    COMMENT_EOL: { match: cb_got_multiscalar, new: NODE }
-    EOL: { match: cb_got_multiscalar, new: NODE }
+    COMMENT_EOL: { match: cb_got_multiscalar, new: END }
+    EOL: { match: cb_got_multiscalar, new: END }
 
 NODETYPE_MAP:
   QUESTION:
@@ -204,8 +204,8 @@ NODETYPE_SEQ:
     WS: { new: FULLNODE , return: 1}
 
 RULE_BLOCK_SCALAR:
-  LITERAL: { match: cb_block_scalar, new: NODE }
-  FOLDED: { match: cb_block_scalar, new: NODE }
+  LITERAL: { match: cb_block_scalar, new: END }
+  FOLDED: { match: cb_block_scalar, new: END }
 
 FULL_MAPKEY:
   ANCHOR:

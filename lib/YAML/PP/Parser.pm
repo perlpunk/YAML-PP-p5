@@ -284,7 +284,7 @@ sub check_indent {
         if ($new_node) {
             my $properties = delete $self->stack->{node_properties} || {};
             $self->set_new_node(undef);
-            $self->event_value({ style => ':', %$properties });
+            $self->scalar_event({ style => ':', %$properties });
         }
         $exp = $self->remove_nodes($remove);
         return ($end, $implicit_end);
@@ -322,7 +322,7 @@ sub check_indent {
                 my $properties = delete $self->stack->{node_properties} || {};
                 undef $new_node;
                 $self->set_new_node(undef);
-                $self->event_value({ style => ':', %$properties });
+                $self->scalar_event({ style => ':', %$properties });
             }
         }
 
@@ -397,7 +397,8 @@ sub process_result {
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$res], ['res']);
     TRACE and $self->highlight_yaml;
 
-    if ($got eq 'SCALAR') {
+    my $new_type = $res->{new_type};
+    if ($new_type eq 'END') {
         $self->set_new_node(undef);
         return;
     }
@@ -416,7 +417,6 @@ sub process_result {
         $self->exception("Unexpected res $got");
     }
 
-    my $new_type = $res->{new_type};
     $self->set_new_node($new_type);
     $self->set_rule($new_type);
     return;
@@ -532,7 +532,7 @@ sub parse_tokens {
 sub res_to_event {
     my ($self, $res) = @_;
     if (defined(my $alias = $res->{alias})) {
-        $self->event([ ALI => { content => $alias }]);
+        $self->alias_event({ content => $alias });
     }
     else {
         my $value = delete $res->{value};
@@ -555,7 +555,7 @@ sub res_to_event {
             );
         }
         $res->{content} = $value;
-        $self->event_value( $res );
+        $self->scalar_event( $res );
     }
 }
 
@@ -564,7 +564,7 @@ sub remove_nodes {
     my $exp = $self->events->[-1];
     for (1 .. $count) {
         if ($exp eq 'COMPLEX') {
-            $self->event_value({ style => ':' });
+            $self->scalar_event({ style => ':' });
             $self->events->[-1] = 'MAP';
             $self->end('MAP');
         }
@@ -627,34 +627,6 @@ sub in {
     return $self->events->[-1] eq $event;
 }
 
-sub event_value {
-    my ($self, $args) = @_;
-
-    my $tag = $args->{tag};
-    if (defined $tag) {
-        my $tag_str = YAML::PP::Render::render_tag($tag, $self->tagmap);
-        $args->{tag} = $tag_str;
-    }
-    $self->event([ VAL => $args]);
-}
-
-sub push_events {
-    my ($self, $event, $offset) = @_;
-    push @{ $self->events }, $event;
-    push @{ $self->offset }, $offset;
-}
-
-sub pop_events {
-    my ($self, $event) = @_;
-    pop @{ $self->offset };
-
-    my $last = pop @{ $self->events };
-    return $last unless $event;
-    if ($last ne $event) {
-        die "pop_events($event): Unexpected event '$last', expected $event";
-    }
-}
-
 my %event_to_method = (
     MAP => 'mapping',
     SEQ => 'sequence',
@@ -665,22 +637,36 @@ my %event_to_method = (
     COMPLEX => 'mapping',
 );
 
+sub scalar_event {
+    my ($self, $info) = @_;
+
+    if (defined $info->{tag}) {
+        $info->{tag} = YAML::PP::Render::render_tag($info->{tag}, $self->tagmap);
+    }
+    DEBUG and $self->debug_event( $event_to_method{VAL} . "_event" => $info );
+    $self->callback->($self, $event_to_method{VAL} . "_event", $info);
+}
+
+sub alias_event {
+    my ($self, $info) = @_;
+
+    DEBUG and $self->debug_event( $event_to_method{ALI} . "_event" => $info );
+    $self->callback->($self, $event_to_method{ALI} . "_event", $info);
+}
+
 sub begin {
     my ($self, $event, $offset, $info) = @_;
     $info->{type} = $event;
 
-    my $tag = $info->{tag};
-    if (defined $tag) {
-        $info->{tag} = YAML::PP::Render::render_tag($tag, $self->tagmap);
+    if (defined $info->{tag}) {
+        $info->{tag} = YAML::PP::Render::render_tag($info->{tag}, $self->tagmap);
     }
-    if (DEBUG) {
-        my $str = $self->event_to_test_suite([$event_to_method{ $event } . "_start_event", $info]);
-        $self->debug_event("------------->> BEGIN $str");
-    }
+    DEBUG and $self->debug_event( $event_to_method{ $event } . "_start_event" => $info );
     $self->callback->($self,
         $event_to_method{ $event } . "_start_event" => $info
     );
-    $self->push_events($event, $offset);
+    push @{ $self->events }, $event;
+    push @{ $self->offset }, $offset;
     TRACE and $self->debug_events;
 }
 
@@ -688,8 +674,14 @@ sub end {
     my ($self, $event, $info) = @_;
     $info->{type} = $event;
 
-    $self->pop_events($event);
-    DEBUG and $self->debug_event("-------------<< END   $event");
+    pop @{ $self->offset };
+
+    my $last = pop @{ $self->events };
+    if ($last ne $event) {
+        die "end($event): Unexpected event '$last', expected $event";
+    }
+
+    DEBUG and $self->debug_event( $event_to_method{ $event } . "_end_event" => $info );
     $self->callback->($self,
         $event_to_method{ $event } . "_end_event" => $info
     );
@@ -698,14 +690,6 @@ sub end {
             '!!' => "tag:yaml.org,2002:",
         });
     }
-}
-
-sub event {
-    my ($self, $event) = @_;
-    DEBUG and $self->debug_event("------------- EVENT @{[ $self->event_to_test_suite($event)]}");
-
-    my ($type, $info) = @$event;
-    $self->callback->($self, $event_to_method{ $type } . "_event", $info);
 }
 
 sub event_to_test_suite {
@@ -718,43 +702,42 @@ sub event_to_test_suite {
         my $string;
         my $type = $info->{type};
         my $content = $info->{content};
+
+        my $properties = '';
+        $properties .= " &$info->{anchor}" if defined $info->{anchor};
+        $properties .= " $info->{tag}" if defined $info->{tag};
+
         if ($ev eq 'document_start_event') {
-            $string = "+$type";
-            unless ($info->{implicit}) {
-                $string .= " ---";
-            }
+            $string = "+DOC";
+            $string .= " ---" unless $info->{implicit};
         }
         elsif ($ev eq 'document_end_event') {
-            $string = "-$type";
-            unless ($info->{implicit}) {
-                $string .= " ...";
-            }
+            $string = "-DOC";
+            $string .= " ..." unless $info->{implicit};
         }
-        elsif ($ev =~ m/start/) {
-            if ($type eq 'COMPLEX') {
-                $type = 'MAP';
-            }
-            $string = "+$type";
-            if (defined $info->{anchor}) {
-                $string .= " &$info->{anchor}";
-            }
-            if (defined $info->{tag}) {
-                $string .= " $info->{tag}";
-            }
-            $string .= " $content" if defined $content;
+        elsif ($ev eq 'stream_start_event') {
+            $string = "+STR";
         }
-        elsif ($ev =~ m/end/) {
-            $string = "-$type";
-            $string .= " $content" if defined $content;
+        elsif ($ev eq 'stream_end_event') {
+            $string = "-STR";
+        }
+        elsif ($ev eq 'mapping_start_event') {
+            $string = "+MAP";
+            $string .= $properties;
+        }
+        elsif ($ev eq 'sequence_start_event') {
+            $string = "+SEQ";
+            $string .= $properties;
+        }
+        elsif ($ev eq 'mapping_end_event') {
+            $string = "-MAP";
+        }
+        elsif ($ev eq 'sequence_end_event') {
+            $string = "-SEQ";
         }
         elsif ($ev eq 'scalar_event') {
             $string = '=VAL';
-            if (defined $info->{anchor}) {
-                $string .= " &$info->{anchor}";
-            }
-            if (defined $info->{tag}) {
-                $string .= " $info->{tag}";
-            }
+            $string .= $properties;
             if (defined $content) {
                 $content =~ s/\\/\\\\/g;
                 $content =~ s/\t/\\t/g;
@@ -829,9 +812,10 @@ sub got {
 }
 
 sub debug_event {
-    my ($self, $msg) = @_;
+    my ($self, $event, $info) = @_;
+    my $str = $self->event_to_test_suite([$event, $info]);
     require Term::ANSIColor;
-    warn Term::ANSIColor::colored(["magenta"], "============ $msg"), "\n";
+    warn Term::ANSIColor::colored(["magenta"], "============ $str"), "\n";
 }
 
 sub not {
@@ -1087,7 +1071,7 @@ sub cb_take {
 
 sub cb_got_scalar {
     my ($self, $res) = @_;
-    $res->{name} = 'SCALAR';
+    $res->{name} = 'NOOP';
 }
 
 sub cb_insert_map {
@@ -1109,7 +1093,7 @@ sub cb_got_multiscalar {
     my $stack = $self->event_stack;
     my $multi = $self->lexer->parse_plain_multi($self);
     push @{ $stack->[-1]->[1]->{value} }, @{ $multi->{value} };
-    $res->{name} = 'SCALAR';
+    $res->{name} = 'NOOP';
 }
 
 sub cb_block_scalar {
@@ -1122,7 +1106,7 @@ sub cb_block_scalar {
     push @{ $self->event_stack }, [ scalar => {
         %$block,
     }];
-    $res->{name} = 'SCALAR';
+    $res->{name} = 'NOOP';
 }
 
 sub cb_flow_map {
