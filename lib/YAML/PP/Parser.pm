@@ -133,7 +133,21 @@ sub parse_stream {
         $self->set_rule( $new_type );
         $self->set_new_node($new_type);
 
-        $implicit = $self->parse_document();
+        $self->parse_document();
+
+        if (@$next_tokens and $next_tokens->[0]->{name} eq 'DOC_END') {
+            $implicit = 0;
+            push @{ $self->tokens }, shift @$next_tokens;
+            if (@$next_tokens and $next_tokens->[0]->{name} eq 'EOL') {
+                push @{ $self->tokens }, shift @$next_tokens;
+            }
+            else {
+                $self->exception("Expected EOL");
+            }
+        }
+        else {
+            $implicit = 1;
+        }
 
         $self->end('DOC', { implicit => $implicit });
 
@@ -203,39 +217,26 @@ sub parse_document_head {
     return ($start, $start_line);
 }
 
-my %is_new_line = (
-    EOL => 1,
-    COMMENT_EOL => 1,
-    LB => 1,
-    EMPTY => 1,
-);
-
 sub parse_document {
     TRACE and warn "=== parse_document()\n";
     my ($self) = @_;
 
-    my $next_full_line = 1;
+    my $next_tokens = $self->lexer->next_tokens;
     while (1) {
 
         TRACE and $self->info("----------------------- LOOP");
         TRACE and $self->debug_yaml;
         TRACE and $self->debug_events;
 
-        if ($next_full_line) {
-            my ($end, $implicit_end) = $self->check_indent();
-            if ($end) {
-                return $implicit_end;
-            }
+
+        {
+            $self->lexer->fetch_next_tokens(0);
+            $self->parse_empty($next_tokens);
+            my $end = $self->check_indent();
+            return if $end;
         }
 
-        my $res = $self->parse_next();
-
-        $next_full_line = $is_new_line{ $self->tokens->[-1]->{name} };
-        next unless $res->{name};
-
-        $self->process_result(
-            result => $res,
-        );
+        $self->parse_next();
     }
 
     TRACE and $self->debug_events;
@@ -244,20 +245,21 @@ sub parse_document {
 
 sub check_indent {
     my ($self, %args) = @_;
+
     my $next_tokens = $self->lexer->next_tokens;
+    #TRACE and $self->info("NEXT TOKENS:");
+    #TRACE and $self->debug_tokens($next_tokens);
+    my $next_token = $next_tokens->[0];
+    if ($next_token and $next_token->{column} != 0) {
+        return;
+    }
+
     my $new_node = $self->new_node;
     my $exp = $self->events->[-1];
     my $end = 0;
-    my $implicit_end = 1;
     my $indent = 0;
     my $tokens = $self->tokens;
 
-    $self->lexer->fetch_next_tokens(0);
-    #TRACE and $self->info("NEXT TOKENS:");
-    #TRACE and $self->debug_tokens($next_tokens);
-    if ($self->parse_empty($next_tokens)) {
-    }
-    my $next_token = $next_tokens->[0];
     if (not $next_token) {
         $end = 1;
     }
@@ -265,15 +267,7 @@ sub check_indent {
         $end = 1;
     }
     elsif ($next_token->{name} eq 'DOC_END') {
-        push @$tokens, shift @$next_tokens;
-        if (@$next_tokens and $next_tokens->[0]->{name} eq 'EOL') {
-            push @$tokens, shift @$next_tokens;
-        }
-        else {
-            $self->exception("Expected EOL");
-        }
         $end = 1;
-        $implicit_end = 0;
     }
     elsif ($self->level < 2 and not $new_node) {
         $end = 1;
@@ -287,7 +281,7 @@ sub check_indent {
             $self->scalar_event({ style => ':', %$properties });
         }
         $exp = $self->remove_nodes($remove);
-        return ($end, $implicit_end);
+        return $end;
     }
 
     my $space = 0;
@@ -355,13 +349,52 @@ sub check_indent {
     return;
 }
 
-sub process_result {
+sub parse_next {
+    my ($self) = @_;
+    DEBUG and $self->info("----------------> parse_next()");
+    my $new_node = $self->new_node;
+
+    unless ($new_node) {
+        my $exp = $self->events->[-1];
+        if ($exp eq 'MAP') {
+            $self->set_rule( 'FULL_MAPKEY' );
+        }
+        else {
+            $self->set_rule( "NODETYPE_$exp" );
+        }
+
+    }
+
+    my $res = $self->parse_tokens();
+
+    return unless $res->{name};
+
+    $self->process_events( result => $res );
+
+    if ($res->{new_type} eq 'END') {
+        $self->set_new_node(undef);
+        return;
+    }
+
+    if ($res->{name} eq 'MAPKEY' or $res->{name} eq 'COMPLEXCOLON') {
+        $self->events->[-1] = 'MAP';
+    }
+    elsif ($res->{name} eq 'COMPLEX') {
+        $self->events->[-1] = 'COMPLEX';
+    }
+
+    $self->set_new_node($res->{new_type});
+
+    return;
+}
+
+sub process_events {
     my ($self, %args) = @_;
     my $res = $args{result};
-    my $exp = $self->events->[-1];
 
     my $stack = $self->stack;
     my $event_stack = $self->event_stack;
+    return unless @$event_stack;
     my $props = $stack->{node_properties} ||= {};
     my $properties = $stack->{properties} ||= {};
 
@@ -391,64 +424,11 @@ sub process_result {
         }
     }
     @$event_stack = ();
-
-    my $got = $res->{name};
-    TRACE and $self->got("GOT $got");
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$res], ['res']);
-    TRACE and $self->highlight_yaml;
-
-    my $new_type = $res->{new_type};
-    if ($new_type eq 'END') {
-        $self->set_new_node(undef);
-        return;
-    }
-
-    if ($got eq 'NOOP') { }
-    elsif ($got eq "MAPKEY") {
-        $self->events->[-1] = 'MAP';
-    }
-    elsif ($got eq 'COMPLEX') {
-        $self->events->[-1] = 'COMPLEX';
-    }
-    elsif ($got eq 'COMPLEXCOLON') {
-        $self->events->[-1] = 'MAP';
-    }
-    else {
-        $self->exception("Unexpected res $got");
-    }
-
-    $self->set_new_node($new_type);
-    $self->set_rule($new_type);
-    return;
-}
-
-sub parse_next {
-    my ($self) = @_;
-    DEBUG and $self->info("----------------> parse_next()");
-    my $new_node = $self->new_node;
-
-    unless ($new_node) {
-        my $exp = $self->events->[-1];
-        if ($exp eq 'MAP') {
-            $self->set_rule( 'FULL_MAPKEY' );
-        }
-        else {
-            $self->set_rule( "NODETYPE_$exp" );
-        }
-
-    }
-
-    my $res = {};
-    my $success = $self->parse_tokens(
-        res => $res,
-    );
-
-    return $res;
 }
 
 sub parse_tokens {
-    my ($self, %args) = @_;
-    my $res = $args{res};
+    my ($self) = @_;
+    my $res = {};
     my $next_rule_name = $self->rule;
     DEBUG and $self->info("----------------> parse_tokens($next_rule_name)");
     my $next_rule = $GRAMMAR->{ $next_rule_name };
@@ -503,7 +483,7 @@ sub parse_tokens {
             if ($def->{return}) {
                 $self->set_rule($next_rule_name);
                 $res->{new_type}= $next_rule_name;
-                return 1;
+                return $res;
             }
 
             if ($next_rule_name eq 'PREVIOUS') {
@@ -520,7 +500,7 @@ sub parse_tokens {
 
             $self->set_rule($next_rule_name);
             $res->{new_type}= $next_rule_name;
-            return 1;
+            return $res;
         }
         $next_rule_name .= " - $got"; # for debugging
         $next_rule = $def;
@@ -934,7 +914,7 @@ sub cb_property_eol {
 
 sub cb_mapkey {
     my ($self, $res) = @_;
-    $res->{name} = 'MAPKEY';
+    $res->{name} ||= 'NOOP';
     push @{ $self->event_stack }, [ scalar => {
         style => ':',
         value => $self->tokens->[-1]->{value},
@@ -1019,6 +999,7 @@ sub cb_question {
 
 sub cb_empty_complexvalue {
     my ($self, $res) = @_;
+    $res->{name} = 'MAPKEY';
     push @{ $self->event_stack }, [ scalar => { style => ':' }];
 }
 
