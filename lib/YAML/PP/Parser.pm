@@ -442,11 +442,6 @@ sub parse_next {
     my $success = $self->parse_tokens(
         res => $res,
     );
-    if (not $success) {
-        my $exp = $self->events->[-1];
-        my $node_type = $new_node;
-        $self->exception( "Expected " . ($node_type ? "new node ($node_type)" : $exp));
-    }
 
     return $res;
 }
@@ -469,6 +464,7 @@ sub parse_tokens {
         last unless $next_rule_name;
 
         unless (@$next_tokens) {
+            $self->exception("No more tokens");
             return;
         }
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens->[0]], ['next_token']);
@@ -484,6 +480,11 @@ sub parse_tokens {
 
         unless ($def) {
             DEBUG and $self->not("---not $next_tokens->[0]->{name}");
+            my @possible = sort grep { m/^[A-Z_]+$/ } keys %$next_rule;
+            $self->expected(
+                expected => \@possible,
+                got => $next_tokens->[0],
+            );
             return;
         }
 
@@ -497,7 +498,7 @@ sub parse_tokens {
             DEBUG and $self->got("NEW: $next_rule_name");
 
             if ($next_rule_name eq 'ERROR') {
-                return;
+                $self->exception("Got unexpected $next_tokens->[0]->{name}");
             }
             if ($def->{return}) {
                 $self->set_rule($next_rule_name);
@@ -526,6 +527,7 @@ sub parse_tokens {
 
     }
 
+    die "Unexpected";
     return;
 }
 
@@ -879,19 +881,29 @@ sub highlight_yaml {
 }
 
 sub exception {
-    my ($self, $msg) = @_;
+    my ($self, $msg, %args) = @_;
     my $next = $self->lexer->next_tokens;
     my $line = @$next ? $next->[0]->{line} : $self->lexer->line;
     my $next_line = $self->lexer->next_line;
-    my @caller = caller(0);
+    my $caller = $args{caller} || [ caller(0) ];
     my $e = YAML::PP::Exception->new(
         line => $line,
         msg => $msg,
         next => $next,
-        where => $caller[1] . ' line ' . $caller[2],
+        where => $caller->[1] . ' line ' . $caller->[2],
         yaml => $next_line,
     );
     croak $e;
+}
+
+sub expected {
+    my ($self, %args) = @_;
+    my $expected = $args{expected};
+    my $got = $args{got}->{name};
+    my @caller = caller(0);
+    $self->exception("Expected (@$expected), but got $got",
+        caller => \@caller,
+    );
 }
 
 sub cb_tag {
