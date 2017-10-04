@@ -16,6 +16,28 @@ our $GRAMMAR = {};
 # This grammar is automatically generated from etc/grammar.yaml
 
 $GRAMMAR = {
+  'FLOWMAP_VALUE' => {
+    'FLOWSEQ_START' => {
+      'DEFAULT' => {
+        'new' => 'NODETYPE_NEWFLOWSEQ'
+      },
+      'match' => 'cb_start_flowseq'
+    },
+    'PLAIN' => {
+      'DEFAULT' => {
+        'match' => 'cb_send_scalar',
+        'return' => 1
+      },
+      'EOL' => {
+        'match' => 'cb_fetch_tokens_plain',
+        'new' => 'RULE_PLAIN_MULTI'
+      },
+      'match' => 'cb_start_plain'
+    },
+    'WS' => {
+      'new' => 'FLOWMAP_VALUE'
+    }
+  },
   'FULLMAPVALUE_INLINE' => {
     'ANCHOR' => {
       'EOL' => {
@@ -286,10 +308,58 @@ $GRAMMAR = {
       'new' => 'NODETYPE_MAP'
     }
   },
+  'NODETYPE_FLOWMAP' => {
+    'EOL' => {
+      'new' => 'NODETYPE_FLOWMAP',
+      'return' => 1
+    },
+    'FLOWMAP_END' => {
+      'EOL' => {
+        'return' => 1
+      },
+      'match' => 'cb_end_flowmap'
+    },
+    'FLOWMAP_START' => {
+      'DEFAULT' => {
+        'new' => 'NODETYPE_FLOWMAP'
+      },
+      'match' => 'cb_start_flowmap'
+    },
+    'FLOWSEQ_START' => {
+      'DEFAULT' => {
+        'new' => 'NODETYPE_FLOWSEQ'
+      },
+      'match' => 'cb_start_flowseq'
+    },
+    'FLOW_COMMA' => {
+      'match' => 'cb_flow_comma',
+      'new' => 'NODETYPE_NEWFLOWMAP'
+    },
+    'PLAIN' => {
+      'COLON' => {
+        'new' => 'FLOWMAP_VALUE'
+      },
+      'WS' => {
+        'COLON' => {
+          'new' => 'FLOWMAP_VALUE'
+        }
+      },
+      'match' => 'cb_start_plain'
+    },
+    'WS' => {
+      'new' => 'NODETYPE_FLOWMAP'
+    }
+  },
   'NODETYPE_FLOWSEQ' => {
     'EOL' => {
       'new' => 'NODETYPE_FLOWSEQ',
       'return' => 1
+    },
+    'FLOWMAP_START' => {
+      'DEFAULT' => {
+        'new' => 'NODETYPE_NEWFLOWMAP'
+      },
+      'match' => 'cb_start_flowmap'
     },
     'FLOWSEQ_END' => {
       'DEFAULT' => {
@@ -373,6 +443,12 @@ $GRAMMAR = {
       },
       'match' => 'cb_start_quoted'
     },
+    'FLOWMAP_START' => {
+      'DEFAULT' => {
+        'new' => 'NODETYPE_NEWFLOWMAP'
+      },
+      'match' => 'cb_start_flowmap'
+    },
     'FLOWSEQ_START' => {
       'DEFAULT' => {
         'new' => 'NODETYPE_NEWFLOWSEQ'
@@ -420,10 +496,61 @@ $GRAMMAR = {
       'match' => 'cb_start_quoted'
     }
   },
+  'NODETYPE_NEWFLOWMAP' => {
+    'EOL' => {
+      'new' => 'NODETYPE_NEWFLOWMAP',
+      'return' => 1
+    },
+    'FLOWMAP_END' => {
+      'EOL' => {
+        'return' => 1
+      },
+      'match' => 'cb_end_flowmap'
+    },
+    'FLOWMAP_START' => {
+      'DEFAULT' => {
+        'new' => 'NODETYPE_FLOWMAP'
+      },
+      'match' => 'cb_start_flowmap'
+    },
+    'FLOWSEQ_START' => {
+      'DEFAULT' => {
+        'new' => 'NODETYPE_FLOWSEQ'
+      },
+      'match' => 'cb_start_flowseq'
+    },
+    'PLAIN' => {
+      'DEFAULT' => {
+        'COLON' => {
+          'new' => 'FLOWMAP_VALUE'
+        },
+        'WS' => {
+          'COLON' => {
+            'new' => 'FLOWMAP_VALUE'
+          }
+        },
+        'match' => 'cb_send_scalar'
+      },
+      'EOL' => {
+        'match' => 'cb_fetch_tokens_plain',
+        'new' => 'RULE_PLAIN_MULTI'
+      },
+      'match' => 'cb_start_plain'
+    },
+    'WS' => {
+      'new' => 'NODETYPE_NEWFLOWMAP'
+    }
+  },
   'NODETYPE_NEWFLOWSEQ' => {
     'EOL' => {
       'new' => 'NODETYPE_NEWFLOWSEQ',
       'return' => 1
+    },
+    'FLOWMAP_START' => {
+      'DEFAULT' => {
+        'new' => 'NODETYPE_NEWFLOWMAP'
+      },
+      'match' => 'cb_start_flowmap'
     },
     'FLOWSEQ_END' => {
       'EOL' => {
@@ -540,6 +667,12 @@ $GRAMMAR = {
         'match' => 'cb_take'
       },
       'match' => 'cb_start_quoted'
+    },
+    'FLOWMAP_START' => {
+      'DEFAULT' => {
+        'new' => 'NODETYPE_NEWFLOWMAP'
+      },
+      'match' => 'cb_start_flowmap'
     },
     'FLOWSEQ_START' => {
       'DEFAULT' => {
@@ -1030,6 +1163,9 @@ This is the Grammar in YAML
         match: cb_start_flowseq
         DEFAULT: { new: NODETYPE_NEWFLOWSEQ }
     
+      FLOWMAP_START:
+        match: cb_start_flowmap
+        DEFAULT: { new: NODETYPE_NEWFLOWMAP }
     
     NODETYPE_COMPLEX:
       COLON:
@@ -1073,6 +1209,9 @@ This is the Grammar in YAML
       FLOWSEQ_START:
         match: cb_start_flowseq
         DEFAULT: { new: NODETYPE_NEWFLOWSEQ }
+      FLOWMAP_START:
+        match: cb_start_flowmap
+        DEFAULT: { new: NODETYPE_NEWFLOWMAP }
     
     NODETYPE_FLOWSEQ:
       EOL: { new: NODETYPE_FLOWSEQ, return: 1 }
@@ -1086,6 +1225,67 @@ This is the Grammar in YAML
         match: cb_start_flowseq
         DEFAULT: { new: NODETYPE_NEWFLOWSEQ }
       FLOW_COMMA: { match: cb_flow_comma, new: NODETYPE_NEWFLOWSEQ }
+      FLOWMAP_START:
+        match: cb_start_flowmap
+        DEFAULT: { new: NODETYPE_NEWFLOWMAP }
+    
+    
+    
+    NODETYPE_NEWFLOWMAP:
+      EOL: { new: NODETYPE_NEWFLOWMAP, return: 1 }
+      PLAIN:
+        match: cb_start_plain
+        EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+        DEFAULT:
+          match: cb_send_scalar
+          WS:
+            COLON:
+              new: FLOWMAP_VALUE
+          COLON:
+            new: FLOWMAP_VALUE
+      WS: { new: NODETYPE_NEWFLOWMAP }
+      FLOWMAP_END:
+        match: cb_end_flowmap
+        EOL: { return: 1 }
+      FLOWSEQ_START:
+        match: cb_start_flowseq
+        DEFAULT: { new: NODETYPE_FLOWSEQ }
+      FLOWMAP_START:
+        match: cb_start_flowmap
+        DEFAULT: { new: NODETYPE_FLOWMAP }
+    
+    NODETYPE_FLOWMAP:
+      EOL: { new: NODETYPE_FLOWMAP, return: 1 }
+      PLAIN:
+        match: cb_start_plain
+        WS:
+          COLON:
+            new: FLOWMAP_VALUE
+        COLON:
+          new: FLOWMAP_VALUE
+      WS: { new: NODETYPE_FLOWMAP }
+      FLOWMAP_END:
+        match: cb_end_flowmap
+        EOL: { return: 1 }
+      FLOWSEQ_START:
+        match: cb_start_flowseq
+        DEFAULT: { new: NODETYPE_FLOWSEQ }
+      FLOWMAP_START:
+        match: cb_start_flowmap
+        DEFAULT: { new: NODETYPE_FLOWMAP }
+      FLOW_COMMA: { match: cb_flow_comma, new: NODETYPE_NEWFLOWMAP }
+    
+    FLOWMAP_VALUE:
+      WS: { new: FLOWMAP_VALUE }
+      PLAIN:
+        match: cb_start_plain
+        EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+        DEFAULT:
+          match: cb_send_scalar
+          return: 1
+      FLOWSEQ_START:
+        match: cb_start_flowseq
+        DEFAULT: { new: NODETYPE_NEWFLOWSEQ }
     
     
     RULE_PLAIN_MULTI:
@@ -1364,6 +1564,10 @@ This is the Grammar in YAML
       FLOWSEQ_START:
         match: cb_start_flowseq
         DEFAULT: { new: NODETYPE_NEWFLOWSEQ }
+    
+      FLOWMAP_START:
+        match: cb_start_flowmap
+        DEFAULT: { new: NODETYPE_NEWFLOWMAP }
 
 
     # END OF YAML INLINE

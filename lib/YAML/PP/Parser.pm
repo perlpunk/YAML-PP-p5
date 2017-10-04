@@ -367,6 +367,8 @@ my %next_event = (
     DOC => 'DOC',
     STR => 'STR',
     FLOWSEQ => 'FLOWSEQ',
+    FLOWMAP => 'FLOWMAPVALUE',
+    FLOWMAPVALUE => 'FLOWMAP',
 );
 
 my %render_methods = (
@@ -616,12 +618,36 @@ sub start_flow_sequence {
     $self->callback->($self, 'sequence_start_event', $info);
 }
 
+sub start_flow_mapping {
+    my ($self, $offset) = @_;
+    my $offsets = $self->offset;
+    push @{ $self->events }, 'FLOWMAP';
+    push @{ $offsets }, $offset;
+    my $event_stack = $self->event_stack;
+    my $info = { style => 'flow' };
+    if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
+        my $properties = pop @$event_stack;
+        $self->fetch_inline_properties($properties->[1], $info);
+    }
+    $self->callback->($self, 'mapping_start_event', $info);
+}
+
 sub end_flow_sequence {
     my ($self) = @_;
     my $event_types = $self->events;
     pop @{ $event_types };
     pop @{ $self->offset };
     my $info = { event_name => 'sequence_end_event' };
+    $self->callback->($self, $info->{event_name}, $info);
+    $event_types->[-1] = $next_event{ $event_types->[-1] };
+}
+
+sub end_flow_mapping {
+    my ($self) = @_;
+    my $event_types = $self->events;
+    pop @{ $event_types };
+    pop @{ $self->offset };
+    my $info = { event_name => 'mapping_end_event' };
     $self->callback->($self, $info->{event_name}, $info);
     $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
@@ -1151,6 +1177,12 @@ sub cb_start_flowseq {
     $self->set_new_node(1);
 }
 
+sub cb_start_flowmap {
+    my ($self, $token) = @_;
+    $self->start_flow_mapping($token->{column});
+    $self->set_new_node(1);
+}
+
 sub cb_end_flowseq {
     my ($self, $res) = @_;
     $self->end_flow_sequence;
@@ -1160,6 +1192,12 @@ sub cb_end_flowseq {
 sub cb_flow_comma {
     my ($self) = @_;
     $self->set_new_node(1);
+}
+
+sub cb_end_flowmap {
+    my ($self, $res) = @_;
+    $self->end_flow_mapping;
+    $self->set_new_node(undef);
 }
 
 sub cb_take {

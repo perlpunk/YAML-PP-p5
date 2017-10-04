@@ -92,6 +92,9 @@ NODETYPE_SCALAR_OR_MAP:
     match: cb_start_flowseq
     DEFAULT: { new: NODETYPE_NEWFLOWSEQ }
 
+  FLOWMAP_START:
+    match: cb_start_flowmap
+    DEFAULT: { new: NODETYPE_NEWFLOWMAP }
 
 NODETYPE_COMPLEX:
   COLON:
@@ -135,6 +138,9 @@ NODETYPE_NEWFLOWSEQ:
   FLOWSEQ_START:
     match: cb_start_flowseq
     DEFAULT: { new: NODETYPE_NEWFLOWSEQ }
+  FLOWMAP_START:
+    match: cb_start_flowmap
+    DEFAULT: { new: NODETYPE_NEWFLOWMAP }
 
 NODETYPE_FLOWSEQ:
   EOL: { new: NODETYPE_FLOWSEQ, return: 1 }
@@ -148,6 +154,67 @@ NODETYPE_FLOWSEQ:
     match: cb_start_flowseq
     DEFAULT: { new: NODETYPE_NEWFLOWSEQ }
   FLOW_COMMA: { match: cb_flow_comma, new: NODETYPE_NEWFLOWSEQ }
+  FLOWMAP_START:
+    match: cb_start_flowmap
+    DEFAULT: { new: NODETYPE_NEWFLOWMAP }
+
+
+
+NODETYPE_NEWFLOWMAP:
+  EOL: { new: NODETYPE_NEWFLOWMAP, return: 1 }
+  PLAIN:
+    match: cb_start_plain
+    EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+    DEFAULT:
+      match: cb_send_scalar
+      WS:
+        COLON:
+          new: FLOWMAP_VALUE
+      COLON:
+        new: FLOWMAP_VALUE
+  WS: { new: NODETYPE_NEWFLOWMAP }
+  FLOWMAP_END:
+    match: cb_end_flowmap
+    EOL: { return: 1 }
+  FLOWSEQ_START:
+    match: cb_start_flowseq
+    DEFAULT: { new: NODETYPE_FLOWSEQ }
+  FLOWMAP_START:
+    match: cb_start_flowmap
+    DEFAULT: { new: NODETYPE_FLOWMAP }
+
+NODETYPE_FLOWMAP:
+  EOL: { new: NODETYPE_FLOWMAP, return: 1 }
+  PLAIN:
+    match: cb_start_plain
+    WS:
+      COLON:
+        new: FLOWMAP_VALUE
+    COLON:
+      new: FLOWMAP_VALUE
+  WS: { new: NODETYPE_FLOWMAP }
+  FLOWMAP_END:
+    match: cb_end_flowmap
+    EOL: { return: 1 }
+  FLOWSEQ_START:
+    match: cb_start_flowseq
+    DEFAULT: { new: NODETYPE_FLOWSEQ }
+  FLOWMAP_START:
+    match: cb_start_flowmap
+    DEFAULT: { new: NODETYPE_FLOWMAP }
+  FLOW_COMMA: { match: cb_flow_comma, new: NODETYPE_NEWFLOWMAP }
+
+FLOWMAP_VALUE:
+  WS: { new: FLOWMAP_VALUE }
+  PLAIN:
+    match: cb_start_plain
+    EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+    DEFAULT:
+      match: cb_send_scalar
+      return: 1
+  FLOWSEQ_START:
+    match: cb_start_flowseq
+    DEFAULT: { new: NODETYPE_NEWFLOWSEQ }
 
 
 RULE_PLAIN_MULTI:
@@ -426,3 +493,7 @@ NODETYPE_MAPVALUE_INLINE:
   FLOWSEQ_START:
     match: cb_start_flowseq
     DEFAULT: { new: NODETYPE_NEWFLOWSEQ }
+
+  FLOWMAP_START:
+    match: cb_start_flowmap
+    DEFAULT: { new: NODETYPE_NEWFLOWMAP }
