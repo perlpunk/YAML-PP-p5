@@ -1085,7 +1085,7 @@ sub cb_got_multiscalar {
     my ($self, $res) = @_;
     my $stack = $self->event_stack;
     my $multi = $self->lexer->parse_plain_multi($self);
-    push @{ $stack->[-1]->[1]->{value} }, @{ $multi->{value} };
+    push @{ $stack->[-1]->[1]->{value} }, @{ $multi };
     $res->{name} = 'NOOP';
 }
 

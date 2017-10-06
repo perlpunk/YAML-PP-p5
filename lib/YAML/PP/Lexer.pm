@@ -280,7 +280,7 @@ sub parse_plain_multi {
     my $indent = $parser->offset->[ -1 ] + 1;
     my $tokens = $parser->tokens;
 
-    my $indent_re = $RE_WS . '{' . $indent . '}';
+    my $indent_re = '[ ]' . '{' . $indent . '}';
     while (1) {
         last if not defined $$yaml;
         my $column = 0;
@@ -329,12 +329,10 @@ sub parse_plain_multi {
                 push @$tokens, $self->new_token( LB => $lb, column => $column );
                 @$next_line = ();
                 $next_line = $self->fetch_next_line;
-                $lb = $next_line->[1];
-                $yaml = \$next_line->[0];
                 last;
             }
             unless ($$yaml =~ s/\A\z//) {
-                $parser->exception("Unexpected content");
+                $self->exception("Unexpected content");
             }
             push @$tokens, $self->new_token( LB => $lb, column => $column );
             @$next_line = ();
@@ -343,15 +341,10 @@ sub parse_plain_multi {
             $yaml = \$next_line->[0];
         }
         else {
-            TRACE and $parser->debug_yaml;
-            $parser->exception("Unexpected content");
+            $self->exception("Unexpected content");
         }
     }
-    return {
-        eol => 1,
-        style => ':',
-        value => \@multi,
-    };
+    return \@multi;
 }
 
 
