@@ -100,16 +100,16 @@ my $RE_TAG = "!(?:$RE_NS_WORD_CHAR*!$RE_NS_TAG_CHAR+|$RE_NS_TAG_CHAR+|<$RE_URI_C
 #ns-char ::= nb-char - s-white
 #ns-anchor-char  ::= ns-char - c-flow-indicator
 #ns-anchor-name  ::= ns-anchor-char+
-my $RE_ANCHOR = "$RE_ANCHOR_CAR+";
 
 my $RE_SEQSTART = qr/\A(-)(?=$RE_WS|$)/m;
 my $RE_COMPLEX = qr/(\?)(?=$RE_WS|$)/m;
 my $RE_COMPLEXCOLON = qr/\A(:)(?=$RE_WS|$)/m;
-my $RE_ALIAS = qr/(\*$RE_ANCHOR)/m;
+my $RE_ANCHOR = "&$RE_ANCHOR_CAR+";
+my $RE_ALIAS = "\\*$RE_ANCHOR_CAR+";
 
 
 my %REGEXES = (
-    ANCHOR => qr{(&$RE_ANCHOR)},
+    ANCHOR => qr{($RE_ANCHOR)},
     TAG => qr{($RE_TAG)},
     EOL => qr{($RE_EOL)},
     EMPTY => qr{($RE_COMMENT_EOL)},
@@ -117,7 +117,7 @@ my %REGEXES = (
     WS => qr{($RE_WS*)},
     'WS' => qr{($RE_WS+)},
     SCALAR => qr{($RE_PLAIN_WORDS)},
-    ALIAS => qr{$RE_ALIAS},
+    ALIAS => qr{($RE_ALIAS)},
     QUESTION => qr{$RE_COMPLEX},
     COLON => qr{(?m:(:)(?=$RE_WS|$))},
     DASH => qr{(?m:(-)(?=$RE_WS|$))},
@@ -387,7 +387,17 @@ my %TOKEN_NAMES = (
     '!' => 'TAG',
     '*' => 'ALIAS',
     '&' => 'ANCHOR',
+    ':' => 'COLON',
+    '-' => 'DASH',
+    '?' => 'QUESTION',
 );
+
+my %ANCHOR_ALIAS_TAG =    ( '&' => 1, '*' => 1, '!' => 1 );
+my %BLOCK_SCALAR =        ( '|' => 1, '>' => 1 );
+my %COLON_DASH_QUESTION = ( ':' => 1, '-' => 1, '?' => 1 );
+my %QUOTED =              ( '"' => 1, "'" => 1 );
+my %FLOW =                ( '{' => 1, '[' => 1, '}' => 1, ']' => 1 );
+
 sub _fetch_next_tokens {
     my ($self, $offset, $next_line) = @_;
     my $context = $self->context;
@@ -408,7 +418,46 @@ sub _fetch_next_tokens {
     my $first = substr($$yaml, 0, 1);
 
     if ($context eq 'normal') {
-        if ($first eq "%") {
+        if ($first eq ' ') {
+            my $ws = '';
+            if ($$yaml =~ s/\A( +)//) {
+                $ws = $1;
+            }
+            if ($$yaml =~ s/\A(#.*\z)//) {
+                $self->push_token( EMPTY => $ws . $1 . $lb );
+                return;
+            }
+            if (not length $$yaml) {
+                $self->push_token( EMPTY => $ws . $lb );
+                return;
+            }
+            $self->push_token( INDENT => $ws );
+        }
+        elsif ($first eq '-') {
+            if ($$yaml =~ s/$RE_DOC_START//) {
+                $self->push_token( DOC_START => $1 );
+                my $eol = $$yaml =~ s/\A($RE_EOL|\z)//;
+                if ($eol) {
+                    $self->push_token( EOL => $1 . $lb );
+                    return;
+                }
+                else {
+                    if ($$yaml =~ s/\A($RE_WS+)//) {
+                        $self->push_token( WS => $1 );
+                    }
+                    else {
+                        $self->exception("Unexpected content after ---");
+                    }
+                }
+            }
+        }
+        elsif ($first eq "#") {
+            if ($$yaml =~ s/\A(#.*\z)//) {
+                $self->push_token( EMPTY => $1 . $lb );
+                return;
+            }
+        }
+        elsif ($first eq "%") {
             if ($$yaml =~ s/\A(\s*%YAML ?1\.2$RE_WS*)//) {
                 $self->push_token( YAML_DIRECTIVE => $1 );
             }
@@ -433,45 +482,6 @@ sub _fetch_next_tokens {
             }
             return;
         }
-        elsif ($first eq "#") {
-            if ($$yaml =~ s/\A(#.*\z)//) {
-                $self->push_token( EMPTY => $1 . $lb );
-                return;
-            }
-        }
-        elsif ($first eq ' ') {
-            my $ws = '';
-            if ($$yaml =~ s/\A( +)//) {
-                $ws = $1;
-            }
-            if ($$yaml =~ s/\A(#.*\z)//) {
-                $self->push_token( EMPTY => $ws . $1 . $lb );
-                return;
-            }
-            if ($$yaml =~ s/\A\z//) {
-                $self->push_token( EMPTY => $ws . $lb );
-                return;
-            }
-            $self->push_token( INDENT => $ws );
-        }
-        elsif ($first eq '-') {
-            if ($$yaml =~ s/$RE_DOC_START//) {
-                $self->push_token( DOC_START => $1 );
-                my $eol = $$yaml =~ s/\A($RE_EOL|\z)//;
-                if ($eol) {
-                    $self->push_token( EOL => $1 . $lb );
-                    return;
-                }
-                else {
-                    if ($$yaml =~ s/\A($RE_WS+)//) {
-                        $self->push_token( WS => $1 );
-                    }
-                    else {
-                        $self->exception("Unexpected content after ---");
-                    }
-                }
-            }
-        }
         elsif ($first eq '.') {
             if ($$yaml =~ s/$RE_DOC_END//) {
                 $self->push_token( DOC_END => $1 );
@@ -483,10 +493,14 @@ sub _fetch_next_tokens {
     }
 
     $first = substr($$yaml, 0, 1);
-    while (length $$yaml) {
+    while (1) {
+        unless (length $$yaml) {
+            $self->push_token( EOL => $lb );
+            return;
+        }
         my $plain = 0;
 
-        if ($first eq '"' or $first eq "'") {
+        if ($QUOTED{ $first }) {
             my $token_name = $TOKEN_NAMES{ $first };
             my $token_name2 = $token_name . 'D';
             $$yaml =~ s/\A$first//;
@@ -527,17 +541,17 @@ sub _fetch_next_tokens {
             }
 
         }
-        elsif ($first eq '-' or $first eq ':' or $first eq '?') {
-            if ($$yaml =~ s/\A(\Q$first\E)(?:($RE_WS+)|\z)//) {
-                my $token_name = { '-' => 'DASH', ':' => 'COLON', '?' => 'QUESTION' }->{ $first };
-                $self->push_token( $token_name => $1 );
-                if (not defined $2) {
+        elsif ($COLON_DASH_QUESTION{ $first }) {
+            if ($$yaml =~ s/\A\Q$first\E(?:($RE_WS+)|\z)//) {
+                my $token_name = $TOKEN_NAMES{ $first };
+                $self->push_token( $token_name => $first );
+                if (not defined $1) {
                     $self->push_token( EOL => $lb );
                     return;
                 }
-                my $ws = $2;
+                my $ws = $1;
                 if ($$yaml =~ s/\A(#.*|)\z//) {
-                    $self->push_token( EOL => $ws . ($1 // '') . $lb );
+                    $self->push_token( EOL => $ws . $1 . $lb );
                     return;
                 }
                 $self->push_token( WS => $ws );
@@ -546,10 +560,10 @@ sub _fetch_next_tokens {
                 $plain = 1;
             }
         }
-        elsif ($first eq '|' or $first eq '>') {
+        elsif ($BLOCK_SCALAR{ $first }) {
             my $token_name = $TOKEN_NAMES{ $first };
-            if ($$yaml =~ s/\A(\Q$first\E)//) {
-                $self->push_token( $token_name => $1 );
+            if ($$yaml =~ s/\A\Q$first\E//) {
+                $self->push_token( $token_name => $first );
                 if ($$yaml =~ s/\A([1-9]\d*)([+-]?)//) {
                     $self->push_token( BLOCK_SCALAR_INDENT => $1 );
                     $self->push_token( BLOCK_SCALAR_CHOMP => $2 ) if $2;
@@ -560,31 +574,14 @@ sub _fetch_next_tokens {
                 }
             }
         }
-        elsif ($first eq '!') {
+        elsif ($ANCHOR_ALIAS_TAG{ $first }) {
             my $token_name = $TOKEN_NAMES{ $first };
-            if ($$yaml =~ s/\A($RE_TAG)//) {
+            my $REGEX = $REGEXES{ $token_name };
+            if ($$yaml =~ s/\A$REGEX//) {
                 $self->push_token( $token_name => $1 );
             }
             else {
-                $self->exception("Invalid tag");
-            }
-        }
-        elsif ($first eq '&') {
-            my $token_name = $TOKEN_NAMES{ $first };
-            if ($$yaml =~ s/\A(\&$RE_ANCHOR)//) {
-                $self->push_token( $token_name => $1 );
-            }
-            else {
-                $self->exception("Invalid anchor");
-            }
-        }
-        elsif ($first eq '*') {
-            my $token_name = $TOKEN_NAMES{ $first };
-            if ($$yaml =~ s/\A(\*$RE_ANCHOR)//) {
-                $self->push_token( $token_name => $1 );
-            }
-            else {
-                $self->exception("Invalid alias");
+                $self->exception("Invalid $token_name");
             }
         }
         elsif ($first eq ' ') {
@@ -597,7 +594,7 @@ sub _fetch_next_tokens {
                 $self->push_token( WS => $ws );
             }
         }
-        elsif ($first eq '{' or $first eq '[') {
+        elsif ($FLOW{ $first }) {
             $self->exception("Not Implemented: Flow Style");
         }
         else {
@@ -623,8 +620,6 @@ sub _fetch_next_tokens {
 
         $first = substr($$yaml, 0, 1);
     }
-    $self->push_token( EOL => $lb );
-    @$next_line = ();
 
     return;
 }
