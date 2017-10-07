@@ -390,29 +390,31 @@ sub parse_next {
 
 sub process_events {
     my ($self, %args) = @_;
+
+    my $event_stack = $self->event_stack;
+    return unless @$event_stack;
+
     my $res = $args{result};
 
     my $stack = $self->stack;
-    my $event_stack = $self->event_stack;
-    return unless @$event_stack;
     my $props = $stack->{node_properties} ||= {};
     my $properties = $stack->{properties} ||= {};
 
     for my $event (@$event_stack) {
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$event], ['event']);
-        my $offset = $res->{offset};
-        if ($event->[0] eq 'begin') {
-            my ($type, $name, $info) = @$event;
-            $self->$type($name, $offset, { %$info, %$props });
-            %$props = ();
-        }
-        elsif ($event->[0] eq 'scalar') {
+        if ($event->[0] eq 'scalar') {
             my ($type, $info) = @$event;
             for my $key (keys %$properties) {
                 $props->{ $key } = $properties->{ $key };
             }
-            $self->res_to_event({ %$info, %$props });
+            $self->scalar_event_render({ %$info, %$props });
             %$properties = ();
+            %$props = ();
+        }
+        elsif ($event->[0] eq 'begin') {
+            my $offset = $res->{offset};
+            my ($type, $name, $info) = @$event;
+            $self->$type($name, $offset, { %$info, %$props });
             %$props = ();
         }
         elsif ($event->[0] eq 'alias') {
@@ -420,7 +422,9 @@ sub process_events {
             if (keys %$props or keys %$properties) {
                 $self->exception("Parse error: Alias not allowed in this context");
             }
-            $self->res_to_event({ %$info });
+            $info->{content} = delete $info->{alias};
+            DEBUG and $self->debug_event( 'alias_event' => $info );
+            $self->callback->($self, 'alias_event', $info);
         }
     }
     @$event_stack = ();
@@ -511,34 +515,30 @@ sub parse_tokens {
     return;
 }
 
-sub res_to_event {
+sub scalar_event_render {
     my ($self, $res) = @_;
-    if (defined(my $alias = $res->{alias})) {
-        $self->alias_event({ content => $alias });
+
+    my $value = delete $res->{value};
+    my $style = $res->{style} // ':';
+    if ($style eq ':') {
+        if (ref $value) {
+            $value = YAML::PP::Render::render_multi_val($value);
+        }
     }
-    else {
-        my $value = delete $res->{value};
-        my $style = $res->{style} // ':';
-        if ($style eq ':') {
-            if (ref $value) {
-                $value = YAML::PP::Render::render_multi_val($value);
-            }
-        }
-        elsif ($style eq '"') {
-            $value = YAML::PP::Render::render_quoted(
-                double => 1,
-                lines => $value,
-            );
-        }
-        elsif ($style eq "'") {
-            $value = YAML::PP::Render::render_quoted(
-                double => 0,
-                lines => $value,
-            );
-        }
-        $res->{content} = $value;
-        $self->scalar_event( $res );
+    elsif ($style eq '"') {
+        $value = YAML::PP::Render::render_quoted(
+            double => 1,
+            lines => $value,
+        );
     }
+    elsif ($style eq "'") {
+        $value = YAML::PP::Render::render_quoted(
+            double => 0,
+            lines => $value,
+        );
+    }
+    $res->{content} = $value;
+    $self->scalar_event( $res );
 }
 
 sub remove_nodes {
