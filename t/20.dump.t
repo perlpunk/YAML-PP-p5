@@ -85,7 +85,6 @@ for my $item (@dirs) {
     open $fh, "<", "$dir/$id/===" or die $!;
     chomp(my $title = <$fh>);
     close $fh;
-    #diag "------------------------------ $id";
 
     my $out_yaml_file = "$dir/$id/out.yaml";
     $out_yaml_file = "$dir/$id/in.yaml" unless -f $out_yaml_file;
@@ -117,7 +116,6 @@ diag "Skipped $skip_count tests";
 sub test {
     my ($title, $name, $yaml, $exp_out_yaml) = @_;
 #    warn __PACKAGE__.':'.__LINE__.": ================================ $name\n";
-#    @$test_events = grep { m/DOC|STR/ } @$test_events;
     my $ok = 0;
     my $loader = YAML::PP::Loader->new;
     my $dumper = YAML::PP::Dumper->new;
@@ -130,23 +128,14 @@ sub test {
         };
     }
     if ($@) {
+        # should not happen though because we skip tests that cannot be parsed
         diag "ERROR: $@";
         $results{ERROR}++;
         my $error_type = 'unknown';
-        #if ($@ =~ m/(Expected .*?) at/) {
-        #    $error_type = "$1";
-        #}
-        #elsif ($@ =~ m/(Not Implemented: .*?) at/) {
-        #    $error_type = "$1";
-        #}
-        #elsif ($@ =~ m/(Unexpected .*?) at/) {
-        #    $error_type = "$1";
-        #}
         push @{ $errors{ $error_type } }, $name;
         $error = 1;
     }
 
-    #warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@docs], ['docs']);
     my $reload_error;
     my @reload;
     if ($error) {
@@ -163,7 +152,6 @@ sub test {
         else {
             $ok = is_deeply(\@reload, \@docs, "Reload - $name - $title");
         }
-#        $ok = cmp_ok($out_yaml, 'eq', $exp_out_yaml, "$name - $title");
     }
     if ($ok) {
         $results{OK}++;
@@ -179,8 +167,6 @@ sub test {
             diag "OUT YAML:\n$out_yaml" unless $TODO;
             my $reload_dump = Data::Dumper->Dump([\@reload], ['reload']);
             diag "RELOAD DATA:\n$reload_dump" unless $TODO;
-#            diag "EVENTS:\n" . join '', map { "$_\n" } @$test_events;
-#            diag "GOT EVENTS:\n" . join '', map { "$_\n" } @events;
         }
     }
 }

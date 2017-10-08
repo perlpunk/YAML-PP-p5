@@ -165,7 +165,6 @@ diag "Skipped $skip_count tests";
 sub test {
     my ($title, $name, $yaml, $exp_yaml, $test_events) = @_;
 #    warn __PACKAGE__.':'.__LINE__.": ================================ $name\n";
-#    @$test_events = grep { m/DOC|STR/ } @$test_events;
     my $ok = 0;
     my $error = 0;
     my @events;
@@ -183,20 +182,10 @@ sub test {
         diag "ERROR: $@";
         $results{ERROR}++;
         my $error_type = 'unknown';
-        #if ($@ =~ m/(Expected .*?) at/) {
-        #    $error_type = "$1";
-        #}
-        #elsif ($@ =~ m/(Not Implemented: .*?) at/) {
-        #    $error_type = "$1";
-        #}
-        #elsif ($@ =~ m/(Unexpected .*?) at/) {
-        #    $error_type = "$1";
-        #}
         push @{ $errors{ $error_type } }, $name;
         $error = 1;
     }
 
-    #warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@docs], ['docs']);
     my $out_yaml;
     if ($error) {
         ok(0, "$name - $title Parse ERROR");
@@ -204,7 +193,6 @@ sub test {
     else {
         my $yaml = emit_events($emitter, \@events);
         $out_yaml = $$yaml;
-    #    warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
         $ok = cmp_ok($out_yaml, 'eq', $exp_yaml, "$name - $title - Emit events");
     }
     if ($ok) {
@@ -234,9 +222,6 @@ sub emit_events {
     $emitter->init;
     for my $event (@$events) {
         my ($type, $info) = @$event;
-#        warn __PACKAGE__.':'.__LINE__.": $emitter->$type()\n";
-#        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$type], ['type']);
-#        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$info], ['info']);
         $emitter->$type($info);
     }
     my $yaml = $emitter->yaml;
