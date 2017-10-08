@@ -42,7 +42,7 @@ my $RE_WS = '[\t ]';
 my $RE_LB = '[\r\n]';
 my $RE_DOC_END = qr/\A(\.\.\.)(?=$RE_WS|$)/m;
 my $RE_DOC_START = qr/\A(---)(?=$RE_WS|$)/m;
-my $RE_EOL = qr/\A($RE_WS+#.*|$RE_WS+)?\z/;
+my $RE_EOL = qr/\A($RE_WS+#.*|$RE_WS+)\z/;
 my $RE_COMMENT_EOL = qr/\A(#.*)?(?:$RE_LB|\z)/;
 
 #ns-word-char    ::= ns-dec-digit | ns-ascii-letter | “-”
@@ -406,87 +406,82 @@ sub _fetch_next_tokens {
     my $yaml = \$next_line->[0];
     my $lb = $next_line->[1];
     if (not length $$yaml) {
-        if (length $lb) {
-            $self->push_token( EMPTY => $lb );
-        }
+        $self->push_token( EMPTY => $lb );
         return;
     }
     # $ESCAPE_CHAR from YAML.pm
     if ($$yaml =~ tr/\x00-\x08\x0b-\x0c\x0e-\x1f//) {
         $self->exception("Control characters are not allowed");
     }
+
     my $first = substr($$yaml, 0, 1);
 
-    if ($context eq 'normal') {
-        if ($first eq ' ') {
-            my $ws = '';
-            if ($$yaml =~ s/\A( +)//) {
-                $ws = $1;
-            }
-            if ($$yaml =~ s/\A(#.*\z)//) {
-                $self->push_token( EMPTY => $ws . $1 . $lb );
-                return;
-            }
-            if (not length $$yaml) {
-                $self->push_token( EMPTY => $ws . $lb );
-                return;
-            }
-            $self->push_token( INDENT => $ws );
-        }
-        elsif ($first eq '-') {
+    if ($offset == 0) {
+        if (substr($$yaml, 0, 3) eq '---') {
             if ($$yaml =~ s/$RE_DOC_START//) {
                 $self->push_token( DOC_START => $1 );
-                my $eol = $$yaml =~ s/\A($RE_EOL|\z)//;
-                if ($eol) {
+                if ($$yaml =~ s/\A($RE_EOL|\z)//) {
                     $self->push_token( EOL => $1 . $lb );
                     return;
                 }
-                else {
-                    if ($$yaml =~ s/\A($RE_WS+)//) {
-                        $self->push_token( WS => $1 );
-                    }
-                    else {
-                        $self->exception("Unexpected content after ---");
-                    }
+                if ($$yaml =~ s/\A($RE_WS+)//) {
+                    $self->push_token( WS => $1 );
                 }
             }
         }
-        elsif ($first eq "#") {
-            if ($$yaml =~ s/\A(#.*\z)//) {
-                $self->push_token( EMPTY => $1 . $lb );
-                return;
-            }
-        }
-        elsif ($first eq "%") {
-            if ($$yaml =~ s/\A(\s*%YAML ?1\.2$RE_WS*)//) {
-                $self->push_token( YAML_DIRECTIVE => $1 );
-            }
-            elsif ($$yaml =~ s/\A(\s*%TAG +(!$RE_NS_WORD_CHAR*!|!) +(tag:\S+|!$RE_URI_CHAR+)$RE_WS*)//) {
-                $self->push_token( TAG_DIRECTIVE => $1 );
-                # TODO
-                my $tag_alias = $2;
-                my $tag_url = $3;
-            }
-            elsif ($$yaml =~ s/\A(\s*\A%(?:\w+).*)//) {
-                $self->push_token( RESERVED_DIRECTIVE => $1 );
-                warn "Found reserved directive '$1'";
-            }
-            else {
-                $self->exception("Invalid directive");
-            }
-            if ($$yaml =~ s/\A\z//) {
-                $self->push_token( EMPTY =>  $lb );
-            }
-            else {
-                $self->exception("Invalid directive");
-            }
-            return;
-        }
-        elsif ($first eq '.') {
+        elsif (substr($$yaml, 0, 3) eq '...') {
             if ($$yaml =~ s/$RE_DOC_END//) {
                 $self->push_token( DOC_END => $1 );
                 $$yaml =~ s/\A($RE_EOL|\z)// or $self->exception("Expected EOL");
                 $self->push_token( EOL => $1 . $lb );
+                return;
+            }
+        }
+        elsif ($context eq 'normal') {
+            if ($first eq ' ') {
+                my $ws = '';
+                if ($$yaml =~ s/\A( +)//) {
+                    $ws = $1;
+                }
+                if ($$yaml =~ s/\A(#.*\z)//) {
+                    $self->push_token( EMPTY => $ws . $1 . $lb );
+                    return;
+                }
+                if (not length $$yaml) {
+                    $self->push_token( EMPTY => $ws . $lb );
+                    return;
+                }
+                $self->push_token( INDENT => $ws );
+            }
+            elsif ($first eq "#") {
+                if ($$yaml =~ s/\A(#.*\z)//) {
+                    $self->push_token( EMPTY => $1 . $lb );
+                    return;
+                }
+            }
+            elsif ($first eq "%") {
+                if ($$yaml =~ s/\A(\s*%YAML ?1\.2$RE_WS*)//) {
+                    $self->push_token( YAML_DIRECTIVE => $1 );
+                }
+                elsif ($$yaml =~ s/\A(\s*%TAG +(!$RE_NS_WORD_CHAR*!|!) +(tag:\S+|!$RE_URI_CHAR+)$RE_WS*)//) {
+                    $self->push_token( TAG_DIRECTIVE => $1 );
+                    # TODO
+                    my $tag_alias = $2;
+                    my $tag_url = $3;
+                }
+                elsif ($$yaml =~ s/\A(\s*\A%(?:\w+).*)//) {
+                    $self->push_token( RESERVED_DIRECTIVE => $1 );
+                    warn "Found reserved directive '$1'";
+                }
+                else {
+                    $self->exception("Invalid directive");
+                }
+                if ($$yaml =~ s/\A\z//) {
+                    $self->push_token( EMPTY =>  $lb );
+                }
+                else {
+                    $self->exception("Invalid directive");
+                }
                 return;
             }
         }
