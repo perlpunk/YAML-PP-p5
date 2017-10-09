@@ -356,11 +356,13 @@ sub fetch_next_tokens {
     my ($self, $offset) = @_;
     my $next = $self->next_tokens;
     unless (@$next) {
-        my $next_line = $self->fetch_next_line;
-        unless (defined $next_line) {
-            return $next;
+        my $next_line = $self->fetch_next_line
+            or return $next;
+
+        while ($self->_fetch_next_tokens($offset, $next_line)) {
+            $next_line = $self->fetch_next_line(1)
+                or last;
         }
-        $self->_fetch_next_tokens($offset, $next_line);
         @$next_line = ();
     }
     return $next;
@@ -393,8 +395,16 @@ sub _fetch_next_tokens {
     my $yaml = \$next_line->[0];
     my $lb = $next_line->[1];
     if (not length $$yaml) {
-        $self->push_token( EMPTY => $lb );
-        return;
+        if ($context eq "'" or $context eq '"') {
+            my $token_name = $TOKEN_NAMES{ $context } . 'D_LINE';
+            $self->push_token( $token_name => '' );
+            $self->push_token( LB => $lb );
+            return 1;
+        }
+        else {
+            $self->push_token( EMPTY => $lb );
+            return;
+        }
     }
     # $ESCAPE_CHAR from YAML.pm
     if ($$yaml =~ tr/\x00-\x08\x0b-\x0c\x0e-\x1f//) {
@@ -472,6 +482,33 @@ sub _fetch_next_tokens {
                 return;
             }
         }
+        elsif ($context eq "'" or $context eq '"') {
+            my $token_name = $TOKEN_NAMES{ $context };
+            my $token_name2 = $token_name . 'D';
+            my $regex = $REGEXES{ $token_name2 };
+            $token_name2 = $token_name . 'D_LINE';
+
+            my $quoted = '';
+            if ($$yaml =~ s/\A($regex)//) {
+                $quoted .= $1;
+            }
+
+            if ($$yaml =~ s/\A$context//) {
+                $self->push_token( $token_name2 => $quoted );
+                $self->push_token( $token_name => $context );
+                $context = 'normal';
+                $self->set_context('normal');
+            }
+            elsif ($$yaml eq '') {
+                $token_name2 = $token_name . 'D_LINE';
+                $self->push_token( $token_name2 => $quoted );
+                $self->push_token( LB => $lb );
+                return 1;
+            }
+            else {
+                $self->exception("Invalid quoted string");
+            }
+        }
     }
 
     $first = substr($$yaml, 0, 1);
@@ -505,9 +542,8 @@ sub _fetch_next_tokens {
                     $token_name2 = $token_name . 'D_LINE';
                     $self->push_token( $token_name2 => $quoted );
                     $self->push_token( LB => $lb );
-                    $next_line = $self->fetch_next_line(1) or return;
-                    $yaml = \$next_line->[0];
-                    $lb = $next_line->[1];
+                    $self->set_context($first);
+                    return 1;
                 }
                 else {
                     $self->exception("Invalid quoted string");

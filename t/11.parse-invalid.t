@@ -28,9 +28,7 @@ my @skip = qw/
     CML9 C2SP CTN5
     G9HC
     N782
-    RXY3
     55WF
-    5TRB
 
     SY6V i035
 

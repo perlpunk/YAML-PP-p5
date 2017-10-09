@@ -2,6 +2,7 @@ NEXT
     - Support reading files
     - Replace load() with load_string(), dump() with dump_string()
     - Support legacy interface functions Load, LoadFile, Dump
+    - ... and --- are now correctly invalid in quoted scalars
 
 0.004 2017-09-15 13:30:50+02:00
     - Improve regex for plain scalars
