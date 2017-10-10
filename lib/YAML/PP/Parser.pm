@@ -582,9 +582,7 @@ sub parse_empty {
     TRACE and warn "=== parse_empty()\n";
     my ($self, $next_tokens) = @_;
     my $empty = 0;
-    while (@$next_tokens and
-        ($next_tokens->[0]->{name} eq 'EMPTY' or $next_tokens->[0]->{name} eq 'EOL'
-    )) {
+    while ( @$next_tokens and ($next_tokens->[0]->{name} eq 'EOL' )) {
         push @{ $self->tokens }, shift @$next_tokens;
         $self->lexer->fetch_next_tokens(0);
         $empty++;

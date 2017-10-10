@@ -43,7 +43,7 @@ my $RE_LB = '[\r\n]';
 my $RE_DOC_END = qr/\A(\.\.\.)(?=$RE_WS|$)/m;
 my $RE_DOC_START = qr/\A(---)(?=$RE_WS|$)/m;
 my $RE_EOL = qr/\A($RE_WS+#.*|$RE_WS+)\z/;
-my $RE_COMMENT_EOL = qr/\A(#.*)?(?:$RE_LB|\z)/;
+#my $RE_COMMENT_EOL = qr/\A(#.*)?(?:$RE_LB|\z)/;
 
 #ns-word-char    ::= ns-dec-digit | ns-ascii-letter | “-”
 my $RE_NS_WORD_CHAR = '[0-9A-Za-z-]';
@@ -112,7 +112,7 @@ my %REGEXES = (
     ANCHOR => qr{($RE_ANCHOR)},
     TAG => qr{($RE_TAG)},
     EOL => qr{($RE_EOL)},
-    EMPTY => qr{($RE_COMMENT_EOL)},
+#    EMPTY => qr{($RE_COMMENT_EOL)},
     LB => qr{($RE_LB)},
     WS => qr{($RE_WS*)},
     'WS' => qr{($RE_WS+)},
@@ -205,7 +205,7 @@ sub parse_block_scalar {
             $pre = $1;
             push @$tokens, $self->new_token( WS => $pre, column => $column );
             $column += length $pre;
-            push @$tokens, $self->new_token( LB => $lb, column => $column );
+            push @$tokens, $self->new_token( EOL => $lb, column => $column );
             $space = '';
             $type = 'EMPTY';
             push @lines, [$type => $pre, $space];
@@ -217,7 +217,7 @@ sub parse_block_scalar {
             last;
         }
         if (not length $$yaml) {
-            push @$tokens, $self->new_token( LB => $lb, column => $column );
+            push @$tokens, $self->new_token( EOL => $lb, column => $column );
             $type = 'EMPTY';
             if ($got_indent) {
                 push @lines, [$type => $pre, $space];
@@ -245,7 +245,7 @@ sub parse_block_scalar {
             my $value = $1;
             push @$tokens, $self->new_token( BLOCK_SCALAR_CONTENT => $value, column => $column );
             $column += length $value;
-            push @$tokens, $self->new_token( LB => $lb, column => $column );
+            push @$tokens, $self->new_token( EOL => $lb, column => $column );
             $type = length $space ? 'MORE' : 'CONTENT';
             push @lines, [ $type => $pre, $space . $value ];
 
@@ -295,12 +295,12 @@ sub parse_plain_multi {
         if ($$yaml =~ s/\A(#.*)\z//) {
             push @$tokens, $self->new_token( COMMENT => $1, column => $column );
             $column += length $1;
-            push @$tokens, $self->new_token( LB => $lb, column => $column );
+            push @$tokens, $self->new_token( EOL => $lb, column => $column );
             last;
         }
 
         if (not length $$yaml) {
-            push @$tokens, $self->new_token( LB => $lb, column => $column );
+            push @$tokens, $self->new_token( EOL => $lb, column => $column );
             push @multi, '';
 
             $next_line = $self->fetch_next_line(1) or last;
@@ -317,14 +317,14 @@ sub parse_plain_multi {
             if ($$yaml =~ s/\A(#.*)\z//) {
                 push @$tokens, $self->new_token( COMMENT => $1, column => $column );
                 $column += length $1;
-                push @$tokens, $self->new_token( LB => $lb, column => $column );
+                push @$tokens, $self->new_token( EOL => $lb, column => $column );
                 $next_line = $self->fetch_next_line(1);
                 last;
             }
             if (length $$yaml) {
                 $self->exception("Unexpected content");
             }
-            push @$tokens, $self->new_token( LB => $lb, column => $column );
+            push @$tokens, $self->new_token( EOL => $lb, column => $column );
             $next_line = $self->fetch_next_line(1) or last;
         }
         else {
@@ -404,11 +404,11 @@ sub _fetch_next_tokens {
         if ($context eq "'" or $context eq '"') {
             my $token_name = $TOKEN_NAMES{ $context } . 'D_LINE';
             $self->push_token( $token_name => '' );
-            $self->push_token( LB => '' );
+            $self->push_token( EOL => '' );
             return 1;
         }
         else {
-            $self->push_token( EMPTY => '' );
+            $self->push_token( EOL => '' );
             return;
         }
     }
@@ -447,18 +447,18 @@ sub _fetch_next_tokens {
                     $ws = $1;
                 }
                 if ($$yaml =~ s/\A(#.*\z)//) {
-                    $self->push_token( EMPTY => $ws . $1 );
+                    $self->push_token( EOL => $ws . $1 );
                     return;
                 }
                 if (not length $$yaml) {
-                    $self->push_token( EMPTY => $ws );
+                    $self->push_token( EOL => $ws );
                     return;
                 }
                 $self->push_token( INDENT => $ws );
             }
             elsif ($first eq "#") {
                 if ($$yaml =~ s/\A(#.*\z)//) {
-                    $self->push_token( EMPTY => $1 );
+                    $self->push_token( EOL => $1 );
                     return;
                 }
             }
@@ -480,7 +480,7 @@ sub _fetch_next_tokens {
                     $self->exception("Invalid directive");
                 }
                 if (not length $$yaml) {
-                    $self->push_token( EMPTY => '' );
+                    $self->push_token( EOL => '' );
                 }
                 else {
                     $self->exception("Invalid directive");
@@ -508,7 +508,7 @@ sub _fetch_next_tokens {
             elsif ($$yaml eq '') {
                 $token_name2 = $token_name . 'D_LINE';
                 $self->push_token( $token_name2 => $quoted );
-                $self->push_token( LB => '' );
+                $self->push_token( EOL => '' );
                 return 1;
             }
             else {
@@ -547,7 +547,7 @@ sub _fetch_next_tokens {
                 elsif ($$yaml eq '') {
                     $token_name2 = $token_name . 'D_LINE';
                     $self->push_token( $token_name2 => $quoted );
-                    $self->push_token( LB => '' );
+                    $self->push_token( EOL => '' );
                     $self->set_context($first);
                     return 1;
                 }
@@ -623,7 +623,8 @@ sub _fetch_next_tokens {
                 $self->push_token( SCALAR => $1 );
                 if ($$yaml =~ s/\A(?:($RE_WS+#.*)|($RE_WS*))\z//) {
                     if (defined $1) {
-                        $self->push_token( COMMENT_EOL => $1 );
+                        $self->push_token( COMMENT => $1 );
+                        $self->push_token( EOL => '' );
                         return;
                     }
                     $self->push_token( EOL => $2 );
@@ -641,20 +642,13 @@ sub _fetch_next_tokens {
     return;
 }
 
-my %is_new_line = (
-    EOL => 1,
-    COMMENT_EOL => 1,
-    LB => 1,
-    EMPTY => 1,
-);
-
 sub push_token {
     my ($self, $type, $value) = @_;
     my $next = $self->next_tokens;
     my $column = 0;
     if (@$next) {
         my $previous = $next->[-1];
-        if ($is_new_line{ $previous->{name} }) {
+        if ($previous->{name} eq 'EOL') {
             $column = 0;
         }
         else {

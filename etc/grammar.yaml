@@ -46,12 +46,12 @@ RULE_SINGLEQUOTED_KEY_OR_NODE:
             WS: { new: FULLMAPVALUE, return: 1 }
     SINGLEQUOTED_LINE:
       match: cb_take
-      LB: { new: MULTILINE_SINGLEQUOTED }
+      EOL: { new: MULTILINE_SINGLEQUOTED }
 
 MULTILINE_SINGLEQUOTED:
   SINGLEQUOTED_LINE:
     match: cb_take
-    LB: { new: MULTILINE_SINGLEQUOTED }
+    EOL: { new: MULTILINE_SINGLEQUOTED }
     SINGLEQUOTE:
       EOL: { match: cb_got_scalar, new: END }
 
@@ -75,19 +75,21 @@ RULE_DOUBLEQUOTED_KEY_OR_NODE:
         DEFAULT: { new: ERROR }
     DOUBLEQUOTED_LINE:
       match: cb_take
-      LB: { new: MULTILINE_DOUBLEQUOTED  }
+      EOL: { new: MULTILINE_DOUBLEQUOTED  }
 
 MULTILINE_DOUBLEQUOTED:
   DOUBLEQUOTED_LINE:
     match: cb_take
-    LB: { new: MULTILINE_DOUBLEQUOTED  }
+    EOL: { new: MULTILINE_DOUBLEQUOTED  }
     DOUBLEQUOTE:
       EOL: { match: cb_got_scalar, new: END }
 
 RULE_PLAIN_KEY_OR_NODE:
   SCALAR:
     match: cb_start_plain
-    COMMENT_EOL: { match: cb_got_scalar, new: END }
+    COMMENT:
+      match: cb_got_scalar
+      EOL: { new: END }
     EOL: { match: cb_got_multiscalar, new: END }
     WS:
       COLON:
@@ -106,7 +108,9 @@ RULE_PLAIN_KEY_OR_NODE:
 RULE_PLAIN:
   SCALAR:
     match: cb_start_plain
-    COMMENT_EOL: { match: cb_got_multiscalar, new: END }
+    COMMENT:
+      match: cb_got_multiscalar
+      EOL: { new: END }
     EOL: { match: cb_got_multiscalar, new: END }
 
 NODETYPE_MAP:

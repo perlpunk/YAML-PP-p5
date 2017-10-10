@@ -31,8 +31,6 @@ my %ansicolors = (
     TAB => [qw/ on_blue /],
     ERROR => [qw/ bold red /],
     EOL => [qw/ grey12 /],
-    EMPTY => [qw/ grey12 /],
-    COMMENT_EOL => [qw/ grey12 /],
     TRAILING_SPACE => [qw/ on_grey6 /],
 );
 
@@ -86,9 +84,7 @@ my %htmlcolors = (
     BLOCK_SCALAR_CONTENT => 'block_scalar_content',
     TAB => 'tab',
     ERROR => 'error',
-    COMMENT_EOL => 'comment',
     EOL => 'comment',
-    EMPTY => 'comment',
     TRAILING_SPACE => 'trailing_space',
 );
 sub htmlcolored {
@@ -121,14 +117,14 @@ sub transform {
         my $name = $token->{name};
         my $str = $token->{value};
         my $trailing_space = 0;
-        if ($token->{name} =~ m/EOL|LB|EMPTY/) {
+        if ($token->{name} eq 'EOL') {
             if ($str =~ m/ +([\r\n]|\z)/) {
                 $token->{name} = "TRAILING_SPACE";
             }
         }
         elsif ($i < $#list) {
             my $next = $list[ $i + 1];
-            if ($next->{name} =~ m/EOL|LB|EMPTY/) {
+            if ($next->{name} eq 'EOL') {
                 if ($next->{value} =~ m/\A([\r\n]|\z)/ and $name eq 'WS') {
                     $token->{name} = "TRAILING_SPACE";
                 }

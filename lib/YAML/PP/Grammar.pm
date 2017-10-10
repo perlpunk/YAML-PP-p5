@@ -219,7 +219,7 @@ $GRAMMAR = {
           'new' => 'END'
         }
       },
-      'LB' => {
+      'EOL' => {
         'new' => 'MULTILINE_DOUBLEQUOTED'
       },
       'match' => 'cb_take'
@@ -227,7 +227,7 @@ $GRAMMAR = {
   },
   'MULTILINE_SINGLEQUOTED' => {
     'SINGLEQUOTED_LINE' => {
-      'LB' => {
+      'EOL' => {
         'new' => 'MULTILINE_SINGLEQUOTED'
       },
       'SINGLEQUOTE' => {
@@ -579,7 +579,7 @@ $GRAMMAR = {
         'match' => 'cb_take'
       },
       'DOUBLEQUOTED_LINE' => {
-        'LB' => {
+        'EOL' => {
           'new' => 'MULTILINE_DOUBLEQUOTED'
         },
         'match' => 'cb_take'
@@ -589,9 +589,11 @@ $GRAMMAR = {
   },
   'RULE_PLAIN' => {
     'SCALAR' => {
-      'COMMENT_EOL' => {
-        'match' => 'cb_got_multiscalar',
-        'new' => 'END'
+      'COMMENT' => {
+        'EOL' => {
+          'new' => 'END'
+        },
+        'match' => 'cb_got_multiscalar'
       },
       'EOL' => {
         'match' => 'cb_got_multiscalar',
@@ -624,9 +626,11 @@ $GRAMMAR = {
         },
         'match' => 'cb_insert_map'
       },
-      'COMMENT_EOL' => {
-        'match' => 'cb_got_scalar',
-        'new' => 'END'
+      'COMMENT' => {
+        'EOL' => {
+          'new' => 'END'
+        },
+        'match' => 'cb_got_scalar'
       },
       'EOL' => {
         'match' => 'cb_got_multiscalar',
@@ -697,7 +701,7 @@ $GRAMMAR = {
         'match' => 'cb_take'
       },
       'SINGLEQUOTED_LINE' => {
-        'LB' => {
+        'EOL' => {
           'new' => 'MULTILINE_SINGLEQUOTED'
         },
         'match' => 'cb_take'
@@ -812,12 +816,12 @@ This is the Grammar in YAML
                 WS: { new: FULLMAPVALUE, return: 1 }
         SINGLEQUOTED_LINE:
           match: cb_take
-          LB: { new: MULTILINE_SINGLEQUOTED }
+          EOL: { new: MULTILINE_SINGLEQUOTED }
     
     MULTILINE_SINGLEQUOTED:
       SINGLEQUOTED_LINE:
         match: cb_take
-        LB: { new: MULTILINE_SINGLEQUOTED }
+        EOL: { new: MULTILINE_SINGLEQUOTED }
         SINGLEQUOTE:
           EOL: { match: cb_got_scalar, new: END }
     
@@ -841,19 +845,21 @@ This is the Grammar in YAML
             DEFAULT: { new: ERROR }
         DOUBLEQUOTED_LINE:
           match: cb_take
-          LB: { new: MULTILINE_DOUBLEQUOTED  }
+          EOL: { new: MULTILINE_DOUBLEQUOTED  }
     
     MULTILINE_DOUBLEQUOTED:
       DOUBLEQUOTED_LINE:
         match: cb_take
-        LB: { new: MULTILINE_DOUBLEQUOTED  }
+        EOL: { new: MULTILINE_DOUBLEQUOTED  }
         DOUBLEQUOTE:
           EOL: { match: cb_got_scalar, new: END }
     
     RULE_PLAIN_KEY_OR_NODE:
       SCALAR:
         match: cb_start_plain
-        COMMENT_EOL: { match: cb_got_scalar, new: END }
+        COMMENT:
+          match: cb_got_scalar
+          EOL: { new: END }
         EOL: { match: cb_got_multiscalar, new: END }
         WS:
           COLON:
@@ -872,7 +878,9 @@ This is the Grammar in YAML
     RULE_PLAIN:
       SCALAR:
         match: cb_start_plain
-        COMMENT_EOL: { match: cb_got_multiscalar, new: END }
+        COMMENT:
+          match: cb_got_multiscalar
+          EOL: { new: END }
         EOL: { match: cb_got_multiscalar, new: END }
     
     NODETYPE_MAP:
