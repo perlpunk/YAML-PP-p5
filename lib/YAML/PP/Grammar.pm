@@ -253,7 +253,7 @@ $GRAMMAR = {
     },
     'DEFAULT' => {
       'DEFAULT' => {
-        'new' => 'NODETYPE_MAP'
+        'new' => 'FULL_MAPKEY'
       },
       'QUESTION' => {
         'EOL' => {
@@ -796,7 +796,7 @@ This is the Grammar in YAML
           match: cb_question
           EOL: { new: FULLNODE, return: 1 }
           WS: { new: FULLNODE, return: 1 }
-        DEFAULT: { new: NODETYPE_MAP }
+        DEFAULT: { new: FULL_MAPKEY }
     
     RULE_SINGLEQUOTED_KEY_OR_NODE:
       SINGLEQUOTE:
