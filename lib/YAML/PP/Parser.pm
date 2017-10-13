@@ -236,7 +236,7 @@ sub parse_document {
             return if $end;
         }
 
-        $self->parse_next();
+        $self->parse_next_line();
     }
 
     TRACE and $self->debug_events;
@@ -349,41 +349,46 @@ sub check_indent {
     return;
 }
 
-sub parse_next {
+sub parse_next_line {
     my ($self) = @_;
-    DEBUG and $self->info("----------------> parse_next()");
+    DEBUG and $self->info("----------------> parse_next_line()");
     my $new_node = $self->new_node;
+    my $tokens = $self->tokens;
 
-    unless ($new_node) {
-        my $exp = $self->events->[-1];
-        if ($exp eq 'MAP') {
-            $self->set_rule( 'FULL_MAPKEY' );
+    while (1) {
+        unless ($new_node) {
+            my $exp = $self->events->[-1];
+            if ($exp eq 'MAP') {
+                $self->set_rule( 'FULL_MAPKEY' );
+            }
+            else {
+                $self->set_rule( "NODETYPE_$exp" );
+            }
         }
-        else {
-            $self->set_rule( "NODETYPE_$exp" );
+
+        my $res = $self->parse_tokens();
+
+        return unless $res->{name};
+
+        $self->process_events( result => $res );
+
+        if ($res->{new_type} eq 'END') {
+            $self->set_new_node(undef);
+            return;
         }
 
+        if ($res->{name} eq 'MAPKEY' or $res->{name} eq 'COMPLEXCOLON') {
+            $self->events->[-1] = 'MAP';
+        }
+        elsif ($res->{name} eq 'COMPLEX') {
+            $self->events->[-1] = 'COMPLEX';
+        }
+
+        $new_node = $res->{new_type};
+        $self->set_new_node($res->{new_type});
+
+        return if $tokens->[-1]->{name} eq 'EOL';
     }
-
-    my $res = $self->parse_tokens();
-
-    return unless $res->{name};
-
-    $self->process_events( result => $res );
-
-    if ($res->{new_type} eq 'END') {
-        $self->set_new_node(undef);
-        return;
-    }
-
-    if ($res->{name} eq 'MAPKEY' or $res->{name} eq 'COMPLEXCOLON') {
-        $self->events->[-1] = 'MAP';
-    }
-    elsif ($res->{name} eq 'COMPLEX') {
-        $self->events->[-1] = 'COMPLEX';
-    }
-
-    $self->set_new_node($res->{new_type});
 
     return;
 }
