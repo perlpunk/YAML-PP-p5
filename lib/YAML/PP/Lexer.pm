@@ -500,7 +500,7 @@ sub _fetch_next_tokens {
                 return;
             }
         }
-        elsif ($context eq "'" or $context eq '"') {
+        elsif ($QUOTED{ $context }) {
             my $token_name = $TOKEN_NAMES{ $context };
             my $token_name2 = $token_name . 'D';
             my $regex = $REGEXES{ $token_name2 };
@@ -547,32 +547,27 @@ sub _fetch_next_tokens {
             push @tokens, ( $token_name => $first );
             my $regex = $REGEXES{ $token_name2 };
 
-            QUOTED_LINE: while (1) {
-
-                my $quoted = '';
-                if ($$yaml =~ s/\A($regex)//) {
-                    $quoted .= $1;
-                }
-
-                if ($$yaml =~ s/\A$first//) {
-                    push @tokens, ( $token_name2 => $quoted );
-                    push @tokens, ( $token_name => $first );
-                    last QUOTED_LINE;
-                }
-                elsif ($$yaml eq '') {
-                    $token_name2 = $token_name . 'D_LINE';
-                    push @tokens, ( $token_name2 => $quoted );
-                    push @tokens, ( EOL => '' );
-                    $self->push_tokens(\@tokens);
-                    $self->set_context($first);
-                    return 1;
-                }
-                else {
-                    $self->push_tokens(\@tokens);
-                    $self->exception("Invalid quoted string");
-                }
-
+            my $quoted = '';
+            if ($$yaml =~ s/\A($regex)//) {
+                $quoted .= $1;
             }
+
+            if ($$yaml =~ s/\A$first//) {
+                push @tokens, ( $token_name2 => $quoted );
+                push @tokens, ( $token_name => $first );
+            }
+            elsif ($$yaml eq '') {
+                push @tokens, ( $token_name . 'D_LINE' => $quoted );
+                push @tokens, ( EOL => '' );
+                $self->push_tokens(\@tokens);
+                $self->set_context($first);
+                return 1;
+            }
+            else {
+                $self->push_tokens(\@tokens);
+                $self->exception("Invalid quoted string");
+            }
+
 
         }
         elsif ($COLON_DASH_QUESTION{ $first }) {
