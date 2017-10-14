@@ -137,35 +137,8 @@ sub parse_block_scalar {
     my $tokens = $parser->tokens;
     my $indent = $parser->offset->[-1] + 1;
 
-    my $block_type = $args{type};
-    my $exp_indent;
-    my $chomp = '';
-    my $next_tokens = $self->next_tokens;
-    if ($next_tokens->[0]->{name} eq 'BLOCK_SCALAR_INDENT') {
-        $exp_indent = $next_tokens->[0]->{value};
-        push @$tokens, shift @$next_tokens;
-        if ($next_tokens->[0]->{name} eq 'BLOCK_SCALAR_CHOMP') {
-            $chomp = $next_tokens->[0]->{value};
-            push @$tokens, shift @$next_tokens;
-        }
-    }
-    elsif ($next_tokens->[0]->{name} eq 'BLOCK_SCALAR_CHOMP') {
-        $chomp = $next_tokens->[0]->{value};
-        push @$tokens, shift @$next_tokens;
-        if ($next_tokens->[0]->{name} eq 'BLOCK_SCALAR_INDENT') {
-            $exp_indent = $next_tokens->[0]->{value};
-            push @$tokens, shift @$next_tokens;
-        }
-    }
-    if ($next_tokens->[0]->{name} eq 'EOL') {
-        push @$tokens, shift @$next_tokens;
-    }
-    else {
-        $parser->exception("Invalid block scalar");
-    }
-    if (defined $exp_indent) {
-        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$exp_indent], ['exp_indent']);
-    }
+    my $exp_indent = $args{indent} || 0;
+
     my @lines;
 
     my $got_indent = 0;
@@ -255,13 +228,7 @@ sub parse_block_scalar {
     }
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@lines], ['lines']);
 
-    my $string = YAML::PP::Render::render_block_scalar(
-        block_type => $block_type,
-        chomp => $chomp,
-        lines => \@lines,
-    );
-
-    return { eol => 1, value => $string, style => $block_type };
+    return \@lines;
 }
 
 sub parse_plain_multi {

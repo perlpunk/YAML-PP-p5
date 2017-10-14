@@ -516,10 +516,44 @@ $GRAMMAR = {
   'RULE_BLOCK_SCALAR' => {
     'FOLDED' => {
       'match' => 'cb_block_scalar',
-      'new' => 'END'
+      'new' => 'RULE_BLOCK_SCALAR_HEADER'
     },
     'LITERAL' => {
       'match' => 'cb_block_scalar',
+      'new' => 'RULE_BLOCK_SCALAR_HEADER'
+    }
+  },
+  'RULE_BLOCK_SCALAR_HEADER' => {
+    'BLOCK_SCALAR_CHOMP' => {
+      'BLOCK_SCALAR_INDENT' => {
+        'EOL' => {
+          'match' => 'cb_read_block_scalar',
+          'new' => 'END'
+        },
+        'match' => 'cb_add_block_scalar_indent'
+      },
+      'EOL' => {
+        'match' => 'cb_read_block_scalar',
+        'new' => 'END'
+      },
+      'match' => 'cb_add_block_scalar_chomp'
+    },
+    'BLOCK_SCALAR_INDENT' => {
+      'BLOCK_SCALAR_CHOMP' => {
+        'EOL' => {
+          'match' => 'cb_read_block_scalar',
+          'new' => 'END'
+        },
+        'match' => 'cb_add_block_scalar_chomp'
+      },
+      'EOL' => {
+        'match' => 'cb_read_block_scalar',
+        'new' => 'END'
+      },
+      'match' => 'cb_add_block_scalar_indent'
+    },
+    'EOL' => {
+      'match' => 'cb_read_block_scalar',
       'new' => 'END'
     }
   },
@@ -978,8 +1012,37 @@ This is the Grammar in YAML
         WS: { new: FULLNODE , return: 1}
     
     RULE_BLOCK_SCALAR:
-      LITERAL: { match: cb_block_scalar, new: END }
-      FOLDED: { match: cb_block_scalar, new: END }
+      LITERAL:
+        match: cb_block_scalar
+        new: RULE_BLOCK_SCALAR_HEADER
+      FOLDED:
+        match: cb_block_scalar
+        new: RULE_BLOCK_SCALAR_HEADER
+    
+    RULE_BLOCK_SCALAR_HEADER:
+      BLOCK_SCALAR_INDENT:
+        match: cb_add_block_scalar_indent
+        BLOCK_SCALAR_CHOMP:
+          match: cb_add_block_scalar_chomp
+          EOL:
+            match: cb_read_block_scalar
+            new: END
+        EOL:
+          match: cb_read_block_scalar
+          new: END
+      BLOCK_SCALAR_CHOMP:
+        match: cb_add_block_scalar_chomp
+        BLOCK_SCALAR_INDENT:
+          match: cb_add_block_scalar_indent
+          EOL:
+            match: cb_read_block_scalar
+            new: END
+        EOL:
+          match: cb_read_block_scalar
+          new: END
+      EOL:
+        match: cb_read_block_scalar
+        new: END
     
     FULL_MAPKEY:
       ANCHOR:

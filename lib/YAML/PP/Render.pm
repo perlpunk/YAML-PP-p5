@@ -107,7 +107,7 @@ sub render_quoted {
 sub render_block_scalar {
     my (%args) = @_;
     my $block_type = $args{block_type};
-    my $chomp = $args{chomp};
+    my $chomp = $args{chomp} || '';
     my $lines = $args{lines};
 
     my ($folded, $keep, $trim);
@@ -131,7 +131,6 @@ sub render_block_scalar {
             pop @$lines;
         }
     }
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$lines], ['lines']);
     my $prev = 'START';
     for my $i (0 .. $#$lines) {
         my $item = $lines->[ $i ];
@@ -166,8 +165,8 @@ sub render_block_scalar {
         else {
             $string .= $line . "\n";
         }
-        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$string], ['string']);
     }
+    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$string], ['string']);
     if ($trim) {
         $string =~ s/\n$//;
     }

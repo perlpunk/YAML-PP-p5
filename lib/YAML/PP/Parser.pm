@@ -1095,14 +1095,37 @@ sub cb_got_multiscalar {
 sub cb_block_scalar {
     my ($self, $res) = @_;
     my $type = $self->tokens->[-1]->{value};
-    my $block = $self->lexer->parse_block_scalar(
-        $self,
-        type => $type,
-    );
     push @{ $self->event_stack }, [ scalar => {
-        %$block,
+        style => $type,
     }];
     $res->{name} = 'NOOP';
+}
+
+sub cb_add_block_scalar_indent {
+    my ($self, $res) = @_;
+    my $indent = $self->tokens->[-1]->{value};
+    $self->event_stack->[-1]->[1]->{block_indent} = $indent;
+}
+
+sub cb_add_block_scalar_chomp {
+    my ($self, $res) = @_;
+    my $chomp = $self->tokens->[-1]->{value};
+    $self->event_stack->[-1]->[1]->{block_chomp} = $chomp;
+}
+
+sub cb_read_block_scalar {
+    my ($self, $res) = @_;
+    my $event = $self->event_stack->[-1]->[1];
+    my $lines = $self->lexer->parse_block_scalar(
+        $self,
+        indent => $event->{block_indent},
+    );
+    my $string = YAML::PP::Render::render_block_scalar(
+        block_type => $event->{style},
+        chomp => $event->{block_chomp},
+        lines => $lines,
+    );
+    $event->{value} = $string;
 }
 
 sub cb_flow_map {
