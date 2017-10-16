@@ -61,8 +61,6 @@ sub tagmap { return $_[0]->{tagmap} }
 sub set_tagmap { $_[0]->{tagmap} = $_[1] }
 sub tokens { return $_[0]->{tokens} }
 sub set_tokens { $_[0]->{tokens} = $_[1] }
-sub stack { return $_[0]->{stack} }
-sub set_stack { $_[0]->{stack} = $_[1] }
 sub event_stack { return $_[0]->{event_stack} }
 sub set_event_stack { $_[0]->{event_stack} = $_[1] }
 
@@ -83,7 +81,6 @@ sub init {
     });
     $self->set_tokens([]);
     $self->set_rule(undef);
-    $self->set_stack({});
     $self->set_event_stack([]);
     $self->lexer->init;
 }
@@ -276,9 +273,9 @@ sub check_indent {
         my $level = $self->level;
         my $remove = $level - 1;
         if ($new_node) {
-            my $properties = delete $self->stack->{node_properties} || {};
             $self->set_new_node(undef);
-            $self->scalar_event({ style => ':', %$properties });
+            push @{ $self->event_stack }, [ scalar => { style => ':' } ];
+            $self->process_events(result => {});
         }
         $exp = $self->remove_nodes($remove);
         return $end;
@@ -313,10 +310,10 @@ sub check_indent {
             if ($remove == 0 and $seq_start and $exp eq 'MAP') {
             }
             else {
-                my $properties = delete $self->stack->{node_properties} || {};
                 undef $new_node;
                 $self->set_new_node(undef);
-                $self->scalar_event({ style => ':', %$properties });
+                push @{ $self->event_stack }, [ scalar => { style => ':' } ];
+                $self->process_events(result => {});
             }
         }
 
@@ -399,32 +396,51 @@ sub process_events {
     my $event_stack = $self->event_stack;
     return unless @$event_stack;
 
+    if (@$event_stack == 1 and $event_stack->[0]->[0] eq 'properties') {
+        return;
+    }
     my $res = $args{result};
 
-    my $stack = $self->stack;
-    my $props = $stack->{node_properties} ||= {};
-    my $properties = $stack->{properties} ||= {};
-
+    my $properties;
     for my $event (@$event_stack) {
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$event], ['event']);
-        if ($event->[0] eq 'scalar') {
+        if ($event->[0] eq 'properties') {
+            $properties = $event->[1];
+        }
+        elsif ($event->[0] eq 'scalar') {
             my ($type, $info) = @$event;
-            for my $key (keys %$properties) {
-                $props->{ $key } = $properties->{ $key };
+            if ($properties) {
+                for my $p (@{ $properties->{newline} }, @{ $properties->{inline} }) {
+                    my $type = $p->{type};
+                    if (exists $info->{ $type }) {
+                        $self->exception("A node can only have one $type");
+                    }
+                    $info->{ $type } = $p->{value};
+                }
+                undef $properties;
             }
-            $self->scalar_event_render({ %$info, %$props });
-            %$properties = ();
-            %$props = ();
+            $self->scalar_event_render( $info );
         }
         elsif ($event->[0] eq 'begin') {
             my $offset = $res->{offset};
             my ($type, $name, $info) = @$event;
-            $self->$type($name, $offset, { %$info, %$props });
-            %$props = ();
+            if ($properties and $properties->{newline}) {
+
+                for my $p (@{ $properties->{newline} }) {
+                    my $type = $p->{type};
+                    if (exists $info->{ $type }) {
+                        $self->exception("A node can only have one $type");
+                    }
+                    $info->{ $type } = $p->{value};
+                }
+                delete $properties->{newline};
+                undef $properties unless keys %$properties;
+            }
+            $self->$type($name, $offset, $info );
         }
         elsif ($event->[0] eq 'alias') {
             my ($type, $info) = @$event;
-            if (keys %$props or keys %$properties) {
+            if ($properties) {
                 $self->exception("Parse error: Alias not allowed in this context");
             }
             $info->{content} = delete $info->{alias};
@@ -625,9 +641,6 @@ my %event_to_method = (
 sub scalar_event {
     my ($self, $info) = @_;
 
-    if (defined $info->{tag}) {
-        $info->{tag} = YAML::PP::Render::render_tag($info->{tag}, $self->tagmap);
-    }
     DEBUG and $self->debug_event( $event_to_method{VAL} . "_event" => $info );
     $self->callback->($self, $event_to_method{VAL} . "_event", $info);
 }
@@ -643,9 +656,6 @@ sub begin {
     my ($self, $event, $offset, $info) = @_;
     $info->{type} = $event;
 
-    if (defined $info->{tag}) {
-        $info->{tag} = YAML::PP::Render::render_tag($info->{tag}, $self->tagmap);
-    }
     DEBUG and $self->debug_event( $event_to_method{ $event } . "_start_event" => $info );
     $self->callback->($self,
         $event_to_method{ $event } . "_start_event" => $info
@@ -891,28 +901,42 @@ sub expected {
 
 sub cb_tag {
     my ($self, $res) = @_;
-    my $props = $self->stack->{properties} ||= {};
-    $props->{tag} = $self->tokens->[-1]->{value};
+    my $stack = $self->event_stack;
+    if (! @$stack or $stack->[-1]->[0] ne 'properties') {
+        push @$stack, [ properties => {} ];
+    }
+    my $last = $stack->[-1]->[1];
+    my $tag = YAML::PP::Render::render_tag($self->tokens->[-1]->{value}, $self->tagmap);
+    $last->{inline} ||= [];
+    push @{ $last->{inline} }, {
+        type => 'tag',
+        value => $tag,
+    };
 }
 
 sub cb_anchor {
     my ($self, $res) = @_;
-    my $props = $self->stack->{properties} ||= {};
     my $anchor = $self->tokens->[-1]->{value};
     $anchor = substr($anchor, 1);
-    $props->{anchor} = $anchor;
+    my $stack = $self->event_stack;
+    if (! @$stack or $stack->[-1]->[0] ne 'properties') {
+        push @$stack, [ properties => {} ];
+    }
+    my $last = $stack->[-1]->[1];
+    $last->{inline} ||= [];
+    push @{ $last->{inline} }, {
+        type => 'anchor',
+        value => $anchor,
+    };
 }
 
 sub cb_property_eol {
     my ($self, $res) = @_;
-    my $node_props = $self->stack->{node_properties} ||= {};
-    my $props = $self->stack->{properties} ||= {};
-    if (defined $props->{anchor}) {
-        $node_props->{anchor} = delete $props->{anchor};
-    }
-    if (defined $props->{tag}) {
-        $node_props->{tag} = delete $props->{tag};
-    }
+    my $stack = $self->event_stack;
+    my $last = $stack->[-1]->[1];
+    my $inline = delete $last->{inline} or return;
+    my $newline = $last->{newline} ||= [];
+    push @$newline, @$inline;
 }
 
 sub cb_mapkey {
@@ -1073,7 +1097,7 @@ sub cb_got_scalar {
 sub cb_insert_map {
     my ($self, $res) = @_;
     my $stack = $self->event_stack;
-    if (@$stack) {
+    if (@$stack and $stack->[-1]->[0] ne 'properties') {
         splice @$stack, -1, 0, [ begin => 'MAP' => {} ];
     }
     else {
