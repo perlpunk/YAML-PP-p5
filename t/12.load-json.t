@@ -29,6 +29,7 @@ my @skip = qw/
     5C5M
     5KJE
     6HB6
+    7TMG
     87E4
     8CWC
     8UDB

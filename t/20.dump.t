@@ -37,6 +37,8 @@ my @skip = qw/
 
     v018
 
+    6BFJ
+    7TMG
 /;
 
 # dumper
