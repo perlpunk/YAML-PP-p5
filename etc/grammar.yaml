@@ -160,41 +160,6 @@ NODETYPE_MAP:
     EOL: { new: FULLNODE , return: 1}
     WS: { new: FULLMAPVALUE, return: 1 }
 
-NODETYPE_MAPSTART:
-  QUESTION:
-    match: cb_questionstart
-    EOL: { new: FULLNODE , return: 1}
-    WS: { new: FULLNODE , return: 1}
-  DOUBLEQUOTE:
-    DOUBLEQUOTED:
-      match: cb_doublequotedstart
-      DOUBLEQUOTE:
-        WS:
-          COLON:
-            EOL: { new: FULLNODE , return: 1}
-            WS: { new: FULLMAPVALUE, return: 1 }
-        COLON:
-          EOL: { new: FULLNODE , return: 1}
-          WS: { new: FULLMAPVALUE, return: 1 }
-  SINGLEQUOTE:
-    SINGLEQUOTED:
-      match: cb_singleequotedstart
-      SINGLEQUOTE:
-        WS:
-          COLON:
-            EOL: { new: FULLNODE , return: 1}
-            WS: { new: FULLMAPVALUE, return: 1 }
-        COLON:
-          EOL: { new: FULLNODE , return: 1}
-          WS: { new: FULLMAPVALUE, return: 1 }
-  SCALAR:
-    match: cb_mapkeystart
-    WS:
-      COLON: &new-mapvalue
-        EOL: { new: FULLNODE , return: 1}
-        WS: { new: FULLMAPVALUE, return: 1 }
-    COLON: *new-mapvalue
-
 RULE_SEQSTART:
   DASH:
     match: cb_seqstart
@@ -264,15 +229,15 @@ FULLNODE_ANCHOR:
     WS:
       ANCHOR:
         match: cb_anchor
-        WS: { new: NODETYPE_MAPSTART  }
+        WS: { new: NODETYPE_NODE  }
       DEFAULT: { new: NODETYPE_NODE }
   ANCHOR:
     match: cb_anchor
     WS:
       TAG:
         match: cb_tag
-        WS: { new: NODETYPE_MAPSTART  }
-      DEFAULT: { new: NODETYPE_MAPSTART }
+        WS: { new: NODETYPE_NODE  }
+      DEFAULT: { new: NODETYPE_NODE }
   DEFAULT: { new: NODETYPE_NODE }
 
 FULLNODE_TAG:
@@ -282,15 +247,15 @@ FULLNODE_TAG:
     WS:
       TAG:
         match: cb_tag
-        WS: { new: NODETYPE_MAPSTART  }
+        WS: { new: NODETYPE_NODE  }
       DEFAULT: { new: NODETYPE_NODE, }
   TAG:
     match: cb_tag
     WS:
       ANCHOR:
         match: cb_anchor
-        WS: { new: NODETYPE_MAPSTART  }
-      DEFAULT: { new: NODETYPE_MAPSTART }
+        WS: { new: NODETYPE_NODE  }
+      DEFAULT: { new: NODETYPE_NODE }
   DEFAULT: { new: NODETYPE_NODE }
 
 FULLNODE_TAG_ANCHOR:
@@ -299,15 +264,15 @@ FULLNODE_TAG_ANCHOR:
     WS:
       TAG:
         match: cb_tag
-        WS: { new: NODETYPE_MAPSTART  }
-      DEFAULT: { new: NODETYPE_MAPSTART }
+        WS: { new: NODETYPE_NODE  }
+      DEFAULT: { new: NODETYPE_NODE }
   TAG:
     match: cb_tag
     WS:
       ANCHOR:
         match: cb_anchor
-        WS: { new: NODETYPE_MAPSTART  }
-      DEFAULT: { new: NODETYPE_MAPSTART }
+        WS: { new: NODETYPE_NODE  }
+      DEFAULT: { new: NODETYPE_NODE }
   DEFAULT: { new: NODETYPE_NODE }
 
 FULLNODE:

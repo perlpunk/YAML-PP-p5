@@ -73,11 +73,11 @@ $GRAMMAR = {
     'ANCHOR' => {
       'WS' => {
         'DEFAULT' => {
-          'new' => 'NODETYPE_MAPSTART'
+          'new' => 'NODETYPE_NODE'
         },
         'TAG' => {
           'WS' => {
-            'new' => 'NODETYPE_MAPSTART'
+            'new' => 'NODETYPE_NODE'
           },
           'match' => 'cb_tag'
         }
@@ -96,7 +96,7 @@ $GRAMMAR = {
       'WS' => {
         'ANCHOR' => {
           'WS' => {
-            'new' => 'NODETYPE_MAPSTART'
+            'new' => 'NODETYPE_NODE'
           },
           'match' => 'cb_anchor'
         },
@@ -120,7 +120,7 @@ $GRAMMAR = {
         },
         'TAG' => {
           'WS' => {
-            'new' => 'NODETYPE_MAPSTART'
+            'new' => 'NODETYPE_NODE'
           },
           'match' => 'cb_tag'
         }
@@ -134,12 +134,12 @@ $GRAMMAR = {
       'WS' => {
         'ANCHOR' => {
           'WS' => {
-            'new' => 'NODETYPE_MAPSTART'
+            'new' => 'NODETYPE_NODE'
           },
           'match' => 'cb_anchor'
         },
         'DEFAULT' => {
-          'new' => 'NODETYPE_MAPSTART'
+          'new' => 'NODETYPE_NODE'
         }
       },
       'match' => 'cb_tag'
@@ -149,11 +149,11 @@ $GRAMMAR = {
     'ANCHOR' => {
       'WS' => {
         'DEFAULT' => {
-          'new' => 'NODETYPE_MAPSTART'
+          'new' => 'NODETYPE_NODE'
         },
         'TAG' => {
           'WS' => {
-            'new' => 'NODETYPE_MAPSTART'
+            'new' => 'NODETYPE_NODE'
           },
           'match' => 'cb_tag'
         }
@@ -167,12 +167,12 @@ $GRAMMAR = {
       'WS' => {
         'ANCHOR' => {
           'WS' => {
-            'new' => 'NODETYPE_MAPSTART'
+            'new' => 'NODETYPE_NODE'
           },
           'match' => 'cb_anchor'
         },
         'DEFAULT' => {
-          'new' => 'NODETYPE_MAPSTART'
+          'new' => 'NODETYPE_NODE'
         }
       },
       'match' => 'cb_tag'
@@ -388,93 +388,6 @@ $GRAMMAR = {
           }
         },
         'match' => 'cb_singlequoted_key'
-      }
-    }
-  },
-  'NODETYPE_MAPSTART' => {
-    'DOUBLEQUOTE' => {
-      'DOUBLEQUOTED' => {
-        'DOUBLEQUOTE' => {
-          'COLON' => {
-            'EOL' => {
-              'new' => 'FULLNODE',
-              'return' => 1
-            },
-            'WS' => {
-              'new' => 'FULLMAPVALUE',
-              'return' => 1
-            }
-          },
-          'WS' => {
-            'COLON' => {
-              'EOL' => {
-                'new' => 'FULLNODE',
-                'return' => 1
-              },
-              'WS' => {
-                'new' => 'FULLMAPVALUE',
-                'return' => 1
-              }
-            }
-          }
-        },
-        'match' => 'cb_doublequotedstart'
-      }
-    },
-    'QUESTION' => {
-      'EOL' => {
-        'new' => 'FULLNODE',
-        'return' => 1
-      },
-      'WS' => {
-        'new' => 'FULLNODE',
-        'return' => 1
-      },
-      'match' => 'cb_questionstart'
-    },
-    'SCALAR' => {
-      'COLON' => {
-        'EOL' => {
-          'new' => 'FULLNODE',
-          'return' => 1
-        },
-        'WS' => {
-          'new' => 'FULLMAPVALUE',
-          'return' => 1
-        }
-      },
-      'WS' => {
-        'COLON' => $GRAMMAR->{'NODETYPE_MAPSTART'}{'SCALAR'}{'COLON'}
-      },
-      'match' => 'cb_mapkeystart'
-    },
-    'SINGLEQUOTE' => {
-      'SINGLEQUOTED' => {
-        'SINGLEQUOTE' => {
-          'COLON' => {
-            'EOL' => {
-              'new' => 'FULLNODE',
-              'return' => 1
-            },
-            'WS' => {
-              'new' => 'FULLMAPVALUE',
-              'return' => 1
-            }
-          },
-          'WS' => {
-            'COLON' => {
-              'EOL' => {
-                'new' => 'FULLNODE',
-                'return' => 1
-              },
-              'WS' => {
-                'new' => 'FULLMAPVALUE',
-                'return' => 1
-              }
-            }
-          }
-        },
-        'match' => 'cb_singleequotedstart'
       }
     }
   },
@@ -964,41 +877,6 @@ This is the Grammar in YAML
         EOL: { new: FULLNODE , return: 1}
         WS: { new: FULLMAPVALUE, return: 1 }
     
-    NODETYPE_MAPSTART:
-      QUESTION:
-        match: cb_questionstart
-        EOL: { new: FULLNODE , return: 1}
-        WS: { new: FULLNODE , return: 1}
-      DOUBLEQUOTE:
-        DOUBLEQUOTED:
-          match: cb_doublequotedstart
-          DOUBLEQUOTE:
-            WS:
-              COLON:
-                EOL: { new: FULLNODE , return: 1}
-                WS: { new: FULLMAPVALUE, return: 1 }
-            COLON:
-              EOL: { new: FULLNODE , return: 1}
-              WS: { new: FULLMAPVALUE, return: 1 }
-      SINGLEQUOTE:
-        SINGLEQUOTED:
-          match: cb_singleequotedstart
-          SINGLEQUOTE:
-            WS:
-              COLON:
-                EOL: { new: FULLNODE , return: 1}
-                WS: { new: FULLMAPVALUE, return: 1 }
-            COLON:
-              EOL: { new: FULLNODE , return: 1}
-              WS: { new: FULLMAPVALUE, return: 1 }
-      SCALAR:
-        match: cb_mapkeystart
-        WS:
-          COLON: &new-mapvalue
-            EOL: { new: FULLNODE , return: 1}
-            WS: { new: FULLMAPVALUE, return: 1 }
-        COLON: *new-mapvalue
-    
     RULE_SEQSTART:
       DASH:
         match: cb_seqstart
@@ -1068,15 +946,15 @@ This is the Grammar in YAML
         WS:
           ANCHOR:
             match: cb_anchor
-            WS: { new: NODETYPE_MAPSTART  }
+            WS: { new: NODETYPE_NODE  }
           DEFAULT: { new: NODETYPE_NODE }
       ANCHOR:
         match: cb_anchor
         WS:
           TAG:
             match: cb_tag
-            WS: { new: NODETYPE_MAPSTART  }
-          DEFAULT: { new: NODETYPE_MAPSTART }
+            WS: { new: NODETYPE_NODE  }
+          DEFAULT: { new: NODETYPE_NODE }
       DEFAULT: { new: NODETYPE_NODE }
     
     FULLNODE_TAG:
@@ -1086,15 +964,15 @@ This is the Grammar in YAML
         WS:
           TAG:
             match: cb_tag
-            WS: { new: NODETYPE_MAPSTART  }
+            WS: { new: NODETYPE_NODE  }
           DEFAULT: { new: NODETYPE_NODE, }
       TAG:
         match: cb_tag
         WS:
           ANCHOR:
             match: cb_anchor
-            WS: { new: NODETYPE_MAPSTART  }
-          DEFAULT: { new: NODETYPE_MAPSTART }
+            WS: { new: NODETYPE_NODE  }
+          DEFAULT: { new: NODETYPE_NODE }
       DEFAULT: { new: NODETYPE_NODE }
     
     FULLNODE_TAG_ANCHOR:
@@ -1103,15 +981,15 @@ This is the Grammar in YAML
         WS:
           TAG:
             match: cb_tag
-            WS: { new: NODETYPE_MAPSTART  }
-          DEFAULT: { new: NODETYPE_MAPSTART }
+            WS: { new: NODETYPE_NODE  }
+          DEFAULT: { new: NODETYPE_NODE }
       TAG:
         match: cb_tag
         WS:
           ANCHOR:
             match: cb_anchor
-            WS: { new: NODETYPE_MAPSTART  }
-          DEFAULT: { new: NODETYPE_MAPSTART }
+            WS: { new: NODETYPE_NODE  }
+          DEFAULT: { new: NODETYPE_NODE }
       DEFAULT: { new: NODETYPE_NODE }
     
     FULLNODE:

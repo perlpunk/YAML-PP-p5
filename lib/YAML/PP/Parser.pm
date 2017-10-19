@@ -957,17 +957,6 @@ sub cb_empty_mapkey {
     }];
 }
 
-sub cb_mapkeystart {
-    my ($self, $res) = @_;
-    push @{ $self->event_stack },
-        [ begin => 'MAP', { }],
-        [ scalar => {
-            style => ':',
-            value => $self->tokens->[-1]->{value},
-        }];
-    $res->{name} = 'NOOP';
-}
-
 sub cb_doublequoted_key {
     my ($self, $res) = @_;
     $res->{name} = 'MAPKEY';
@@ -977,18 +966,6 @@ sub cb_doublequoted_key {
     }];
 }
 
-sub cb_doublequotedstart {
-    my ($self, $res) = @_;
-    my $value = $self->tokens->[-1]->{value};
-    push @{ $self->event_stack },
-        [ begin => 'MAP', { }],
-        [ scalar => {
-            style => '"',
-            value => [ $value ],
-        }];
-    $res->{name} = 'NOOP';
-}
-
 sub cb_singlequoted_key {
     my ($self, $res) = @_;
     $res->{name} = 'MAPKEY';
@@ -996,17 +973,6 @@ sub cb_singlequoted_key {
         style => "'",
         value => [ $self->tokens->[-1]->{value} ],
     }];
-}
-
-sub cb_singleequotedstart {
-    my ($self, $res) = @_;
-    push @{ $self->event_stack },
-        [ begin => 'MAP', { }],
-        [ scalar => {
-            style => "'",
-            value => [ $self->tokens->[-1]->{value} ],
-        }];
-    $res->{name} = 'NOOP';
 }
 
 sub cb_mapkey_alias {
