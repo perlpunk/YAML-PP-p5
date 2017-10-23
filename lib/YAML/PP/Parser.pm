@@ -1106,8 +1106,7 @@ sub cb_add_block_scalar_chomp {
 sub cb_read_block_scalar {
     my ($self, $res) = @_;
     my $event = $self->event_stack->[-1]->[1];
-    my $lines = $self->lexer->parse_block_scalar(
-        $self,
+    my $lines = $self->parse_block_scalar(
         indent => $event->{block_indent},
     );
     my $string = YAML::PP::Render::render_block_scalar(
@@ -1117,6 +1116,84 @@ sub cb_read_block_scalar {
     );
     $event->{value} = $string;
 }
+
+sub parse_block_scalar {
+    TRACE and warn "=== parse_block_scalar()\n";
+    my ($self, %args) = @_;
+    my $lexer = $self->lexer;
+    my $tokens = $self->tokens;
+    my $next_tokens = $lexer->next_tokens;
+    my $indent = $self->offset->[-1] + 1;
+
+    my $exp_indent = $args{indent} || 0;
+
+    my @lines;
+
+    my $got_indent = 0;
+    if ($exp_indent) {
+        $indent = $exp_indent;
+        $got_indent = 1;
+    }
+    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$indent], ['indent']);
+    my @tokens;
+    while (1) {
+        my $next_tokens = $lexer->_fetch_next_tokens_block_scalar($indent)
+            or last;
+        if ($next_tokens->[0]->{name} eq 'EOL') {
+            push @$tokens, shift @$next_tokens;
+            push @lines, '';
+            next;
+        }
+        my $spaces = shift @$next_tokens;
+        if ($next_tokens->[0]->{name} eq 'EOL') {
+            push @$tokens, $spaces;
+            push @$tokens, shift @$next_tokens;
+            push @lines, '';
+            next;
+        }
+        my $more_spaces;
+        if ($next_tokens->[0]->{name} eq 'SPACE') {
+            $more_spaces = shift @$next_tokens;
+        }
+        my ($content, $lb) = @$next_tokens;
+        @$next_tokens = ();
+
+        unless ($got_indent) {
+            if ($more_spaces) {
+                $spaces->{value} .= $more_spaces->{value};
+                $indent += length $more_spaces->{value};
+                undef $more_spaces;
+            }
+            unless (length $content->{value}) {
+                push @$tokens, $spaces;
+                push @$tokens, $lb;
+                push @lines, '';
+                next;
+            }
+
+            # first non-empty line
+            $got_indent = 1;
+
+        }
+        push @$tokens, $spaces;
+
+        my $value = $content->{value};
+        if ($more_spaces) {
+            push @$tokens, $more_spaces;
+            $value = $more_spaces->{value} . $value;
+        }
+        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$content], ['content']);
+
+        push @$tokens, $content;
+        push @$tokens, $lb;
+        push @lines, $value;
+
+    }
+    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@lines], ['lines']);
+
+    return \@lines;
+}
+
 
 sub cb_flow_map {
     $_[0]->exception("Not Implemented: Flow Style");

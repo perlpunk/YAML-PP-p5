@@ -125,51 +125,56 @@ sub render_block_scalar {
     if (not $keep) {
         # remove trailing empty lines
         while (@$lines) {
-            if ($lines->[-1]->[0] ne 'EMPTY') {
-                last;
-            }
+            last if $lines->[-1] ne '';
             pop @$lines;
         }
     }
-    my $prev = 'START';
-    for my $i (0 .. $#$lines) {
-        my $item = $lines->[ $i ];
-        my ($type, $indent, $line) = @$item;
-        TRACE and printf STDERR "=========== %7s '%s' '%s'\n", @$item;
-        if ($folded) {
+    if ($folded) {
 
-            if ($type eq 'EMPTY') {
-                if ($prev eq 'MORE') {
-                    $type = 'PARAGRAPH';
+        my $prev = '';
+        for my $i (0 .. $#$lines) {
+            my $line = $lines->[ $i ];
+
+            my $type = $line eq ''
+                ? 'EMPTY'
+                : $line =~ m/\A[ \t]/
+                ? 'MORE'
+                : 'CONTENT';
+            if ($i > 0) {
+                if ($type eq 'EMPTY' and $prev eq 'MORE') {
+                    $type = 'MORE';
                 }
-                $string .= "\n";
-            }
-            elsif ($type eq 'CONTENT') {
-                if ($prev eq 'CONTENT') {
-                    $string .= ' ';
+
+                if ($type eq 'CONTENT') {
+                    if ($prev eq 'MORE') {
+                        $string .= "\n";
+                    }
+                    elsif ($prev eq 'CONTENT') {
+                        $string .= ' ';
+                    }
                 }
-                $string .= $line;
-                if ($i == $#$lines) {
+                else {
                     $string .= "\n";
                 }
             }
-            elsif ($type eq 'MORE') {
-                if ($prev eq 'EMPTY' or $prev eq 'CONTENT') {
+            else {
+                if ($type eq 'EMPTY') {
                     $string .= "\n";
                 }
-                $string .=  $line . "\n";
             }
+            $string .= $line;
+
             $prev = $type;
-
         }
-        else {
-            $string .= $line . "\n";
+        $string .= "\n" if @$lines and not $trim;
+    }
+    else {
+        for my $i (0 .. $#$lines) {
+            $string .= $lines->[ $i ];
+            $string .= "\n" if ($i != $#$lines or not $trim);
         }
     }
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$string], ['string']);
-    if ($trim) {
-        $string =~ s/\n$//;
-    }
     return $string;
 }
 

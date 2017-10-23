@@ -131,104 +131,34 @@ my %REGEXES = (
     FLOW_SEQ_START => qr{(\[)},
 );
 
-sub parse_block_scalar {
-    TRACE and warn "=== parse_block_scalar()\n";
-    my ($self, $parser, %args) = @_;
-    my $tokens = $parser->tokens;
-    my $indent = $parser->offset->[-1] + 1;
-
-    my $exp_indent = $args{indent} || 0;
-
-    my @lines;
-
-    my $got_indent = 0;
-    if ($exp_indent) {
-        $indent = $exp_indent;
-        $got_indent = 1;
+sub _fetch_next_tokens_block_scalar {
+    my ($self, $indent) = @_;
+    my $next_line = $self->fetch_next_line(1) or return;
+    my ($spaces, $content) = $next_line->[0] =~ m/\A( *)(.*)\z/;
+    if ((length $spaces) == 0) {
+        return if $content =~ $RE_DOC_START;
+        return if $content =~ $RE_DOC_END;
     }
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$indent], ['indent']);
-    my $indent_re = '[ ]' ."{$indent}";
-    TRACE and local $Data::Dumper::Useqq = 1;
-    my $type;
-    my $next_line = $self->fetch_next_line;
-    while (defined $next_line) {
-        my $yaml = \$next_line->[0];
-        my $lb = $next_line->[1];
-        TRACE and warn __PACKAGE__.':'.__LINE__.": RE: $indent_re\n";
-        TRACE and $parser->debug_yaml;
-        my $column = 0;
-        my $pre;
-        my $space;
-        my $length;
-        last if $$yaml =~ $RE_DOC_START;
-        last if $$yaml =~ $RE_DOC_END;
-        if ($$yaml =~ s/\A($indent_re)($RE_WS*)//) {
-            $pre = $1;
-            $space = $2;
-            push @$tokens, $self->new_token( INDENT => $pre, column => $column );
-            $column += length $pre;
-            push @$tokens, $self->new_token( WS => $space, column => $column );
-            $length = length $space;
-            $column += $length;
+    if ((length $spaces) < $indent) {
+        if (length $content) {
+            # non-empty less indented line
+            return;
         }
-        elsif ($$yaml =~ m/\A$RE_WS*#.*\z/) {
-            last;
-        }
-        elsif ($$yaml =~ s/\A($RE_WS*)\z//) {
-            $pre = $1;
-            push @$tokens, $self->new_token( WS => $pre, column => $column );
-            $column += length $pre;
-            push @$tokens, $self->new_token( EOL => $lb, column => $column );
-            $space = '';
-            $type = 'EMPTY';
-            push @lines, [$type => $pre, $space];
-
-            $next_line = $self->fetch_next_line(1) or last;
-            next;
-        }
-        else {
-            last;
-        }
-        if (not length $$yaml) {
-            push @$tokens, $self->new_token( EOL => $lb, column => $column );
-            $type = 'EMPTY';
-            if ($got_indent) {
-                push @lines, [$type => $pre, $space];
-            }
-            else {
-                push @lines, [$type => $pre . $space, ''];
-            }
-
-            $next_line = $self->fetch_next_line(1) or last;
-            next;
-        }
-        if ($length and not $got_indent) {
-            $indent += $length;
-            $indent_re = '[ ]' . "{$indent}";
-            $pre = $space;
-            $space = '';
-            $got_indent = 1;
-        }
-        elsif (not $got_indent) {
-            $got_indent = 1;
-        }
-        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
-
-        if ($$yaml =~ s/\A(.*)\z//) {
-            my $value = $1;
-            push @$tokens, $self->new_token( BLOCK_SCALAR_CONTENT => $value, column => $column );
-            $column += length $value;
-            push @$tokens, $self->new_token( EOL => $lb, column => $column );
-            $type = length $space ? 'MORE' : 'CONTENT';
-            push @lines, [ $type => $pre, $space . $value ];
-
-            $next_line = $self->fetch_next_line(1) or last;
-        }
-
+        return $self->push_tokens( [ EOL => $spaces . $next_line->[1] ] );
     }
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@lines], ['lines']);
-
-    return \@lines;
+    my $more_spaces = '';
+    if ((length $spaces) > $indent) {
+        ($spaces, $more_spaces) = unpack "a${indent}a*", $spaces;
+    }
+    elsif (not length $content) {
+        return $self->push_tokens( [ NDENT => $spaces, EOL => $next_line->[1] ] );
+    }
+    return $self->push_tokens([
+        INDENT => $spaces,
+        $more_spaces ? ( SPACE => $more_spaces ) : (),
+        BLOCK_SCALAR_CONTENT => $content,
+        EOL => $next_line->[1],
+    ]);
 }
 
 sub parse_plain_multi {
@@ -667,6 +597,7 @@ sub push_tokens {
         };
         $column += length $value;
     }
+    return $next;
 }
 
 sub new_token {
