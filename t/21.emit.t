@@ -36,6 +36,7 @@ my @skip = qw/
     6BFJ
     7TMG
     K54U
+    PUW8
 
 /;
 

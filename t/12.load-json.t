@@ -65,6 +65,10 @@ my @skip = qw/
     S3PD
     W42U
 
+    FH7J
+    LE5A
+    S4JQ
+
 /;
 my %skip;
 @skip{ @skip }= ();
