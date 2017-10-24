@@ -46,12 +46,12 @@ RULE_SINGLEQUOTED_KEY_OR_NODE:
             WS: { new: FULLMAPVALUE, return: 1 }
     SINGLEQUOTED_LINE:
       match: cb_take
-      EOL: { new: MULTILINE_SINGLEQUOTED }
+      EOL: { fetch: 1, new: MULTILINE_SINGLEQUOTED }
 
 MULTILINE_SINGLEQUOTED:
   SINGLEQUOTED_LINE:
     match: cb_take
-    EOL: { new: MULTILINE_SINGLEQUOTED }
+    EOL: { fetch: 1, new: MULTILINE_SINGLEQUOTED }
     SINGLEQUOTE:
       EOL: { match: cb_got_scalar, new: END }
 
@@ -75,12 +75,12 @@ RULE_DOUBLEQUOTED_KEY_OR_NODE:
         DEFAULT: { new: ERROR }
     DOUBLEQUOTED_LINE:
       match: cb_take
-      EOL: { new: MULTILINE_DOUBLEQUOTED  }
+      EOL: { fetch: 1, new: MULTILINE_DOUBLEQUOTED  }
 
 MULTILINE_DOUBLEQUOTED:
   DOUBLEQUOTED_LINE:
     match: cb_take
-    EOL: { new: MULTILINE_DOUBLEQUOTED  }
+    EOL: { fetch: 1, new: MULTILINE_DOUBLEQUOTED  }
     DOUBLEQUOTE:
       EOL: { match: cb_got_scalar, new: END }
 

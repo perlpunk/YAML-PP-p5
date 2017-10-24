@@ -256,16 +256,10 @@ sub fetch_next_tokens {
         my $next_line = $self->fetch_next_line
             or return $next;
 
-        while (1) {
-            # Continue reading for multiline quoted
-            my $continue = $self->_fetch_next_tokens($offset, $next_line);
-            my $lb = $next_line->[1];
-            if (@$next) {
-                $next->[-1]->{value} .= $lb;
-            }
-            last unless $continue;
-            $next_line = $self->fetch_next_line(1)
-                or last;
+        $self->_fetch_next_tokens($offset, $next_line);
+        my $lb = $next_line->[1];
+        if (@$next) {
+            $next->[-1]->{value} .= $lb;
         }
         @$next_line = ();
     }

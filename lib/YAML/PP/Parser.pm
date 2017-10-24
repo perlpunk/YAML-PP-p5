@@ -468,6 +468,7 @@ sub parse_tokens {
     RULE: while (1) {
         last unless $next_rule_name;
 
+        DEBUG and $self->info("RULE: $next_rule_name");
         unless (@$next_tokens) {
             $self->exception("No more tokens");
             return;
@@ -497,6 +498,10 @@ sub parse_tokens {
         if (my $sub = $def->{match}) {
             DEBUG and $self->info("CALLBACK $sub");
             $self->$sub($res);
+        }
+        if ($def->{fetch}) {
+            DEBUG and $self->info("fetch_next_tokens");
+            $self->lexer->fetch_next_tokens(0);
         }
         if (my $new = $def->{new}) {
             $next_rule_name = $new;

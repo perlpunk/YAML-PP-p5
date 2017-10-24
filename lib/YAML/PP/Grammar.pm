@@ -220,14 +220,17 @@ $GRAMMAR = {
         }
       },
       'EOL' => {
+        'fetch' => 1,
         'new' => 'MULTILINE_DOUBLEQUOTED'
       },
+      'fetch' => 1,
       'match' => 'cb_take'
     }
   },
   'MULTILINE_SINGLEQUOTED' => {
     'SINGLEQUOTED_LINE' => {
       'EOL' => {
+        'fetch' => 1,
         'new' => 'MULTILINE_SINGLEQUOTED'
       },
       'SINGLEQUOTE' => {
@@ -527,6 +530,7 @@ $GRAMMAR = {
       },
       'DOUBLEQUOTED_LINE' => {
         'EOL' => {
+          'fetch' => 1,
           'new' => 'MULTILINE_DOUBLEQUOTED'
         },
         'match' => 'cb_take'
@@ -649,6 +653,7 @@ $GRAMMAR = {
       },
       'SINGLEQUOTED_LINE' => {
         'EOL' => {
+          'fetch' => 1,
           'new' => 'MULTILINE_SINGLEQUOTED'
         },
         'match' => 'cb_take'
@@ -763,12 +768,12 @@ This is the Grammar in YAML
                 WS: { new: FULLMAPVALUE, return: 1 }
         SINGLEQUOTED_LINE:
           match: cb_take
-          EOL: { new: MULTILINE_SINGLEQUOTED }
+          EOL: { fetch: 1, new: MULTILINE_SINGLEQUOTED }
     
     MULTILINE_SINGLEQUOTED:
       SINGLEQUOTED_LINE:
         match: cb_take
-        EOL: { new: MULTILINE_SINGLEQUOTED }
+        EOL: { fetch: 1, new: MULTILINE_SINGLEQUOTED }
         SINGLEQUOTE:
           EOL: { match: cb_got_scalar, new: END }
     
@@ -792,12 +797,13 @@ This is the Grammar in YAML
             DEFAULT: { new: ERROR }
         DOUBLEQUOTED_LINE:
           match: cb_take
-          EOL: { new: MULTILINE_DOUBLEQUOTED  }
+          EOL: { fetch: 1, new: MULTILINE_DOUBLEQUOTED  }
     
     MULTILINE_DOUBLEQUOTED:
       DOUBLEQUOTED_LINE:
         match: cb_take
-        EOL: { new: MULTILINE_DOUBLEQUOTED  }
+        fetch: 1
+        EOL: { fetch: 1, new: MULTILINE_DOUBLEQUOTED  }
         DOUBLEQUOTE:
           EOL: { match: cb_got_scalar, new: END }
     
