@@ -33,6 +33,8 @@ my @skip = qw/
     SY6V i035
 
     ZL4Z
+    9C9N
+    QB6E
 
 /;
 
