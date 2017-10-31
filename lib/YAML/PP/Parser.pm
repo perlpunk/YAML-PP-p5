@@ -477,7 +477,12 @@ sub parse_tokens {
         my $got = $next_tokens->[0]->{name};
         my $def = $next_rule->{ $got };
         if ($def) {
-            push @$tokens, shift @$next_tokens;
+            if ($got eq 'END') {
+                shift @$next_tokens;
+            }
+            else {
+                push @$tokens, shift @$next_tokens;
+            }
         }
         else {
             $def = $next_rule->{DEFAULT};
@@ -560,6 +565,13 @@ sub scalar_event_render {
     elsif ($style eq "'") {
         $value = YAML::PP::Render::render_quoted(
             double => 0,
+            lines => $value,
+        );
+    }
+    elsif ($style eq '|' or $style eq '>') {
+        $value = YAML::PP::Render::render_block_scalar(
+            block_type => $res->{style},
+            chomp => $res->{block_chomp},
             lines => $value,
         );
     }
@@ -1060,6 +1072,12 @@ sub cb_take {
     push @{ $stack->[-1]->[1]->{value} }, $self->tokens->[-1]->{value};
 }
 
+sub cb_empty_quoted_line {
+    my ($self, $res) = @_;
+    my $stack = $self->event_stack;
+    push @{ $stack->[-1]->[1]->{value} }, '';
+}
+
 sub cb_got_scalar {
     my ($self, $res) = @_;
     $res->{name} = 'NOOP';
@@ -1092,14 +1110,21 @@ sub cb_block_scalar {
     my $type = $self->tokens->[-1]->{value};
     push @{ $self->event_stack }, [ scalar => {
         style => $type,
+        value => [],
+        current_indent => $self->offset->[-1] + 1,
     }];
+    $self->lexer->set_context('block_scalar_start');
     $res->{name} = 'NOOP';
 }
 
 sub cb_add_block_scalar_indent {
     my ($self, $res) = @_;
     my $indent = $self->tokens->[-1]->{value};
-    $self->event_stack->[-1]->[1]->{block_indent} = $indent;
+    my $event = $self->event_stack->[-1]->[1];
+    $event->{block_indent} = $indent;
+    $event->{got_indent} = 1;
+    $event->{current_indent} = $indent;
+    $self->lexer->set_context('block_scalar');
 }
 
 sub cb_add_block_scalar_chomp {
@@ -1108,97 +1133,37 @@ sub cb_add_block_scalar_chomp {
     $self->event_stack->[-1]->[1]->{block_chomp} = $chomp;
 }
 
-sub cb_read_block_scalar {
+sub cb_block_scalar_empty_line {
     my ($self, $res) = @_;
     my $event = $self->event_stack->[-1]->[1];
-    my $lines = $self->parse_block_scalar(
-        indent => $event->{block_indent},
-    );
-    my $string = YAML::PP::Render::render_block_scalar(
-        block_type => $event->{style},
-        chomp => $event->{block_chomp},
-        lines => $lines,
-    );
-    $event->{value} = $string;
+    push @{ $event->{value} }, '';
+    $self->lexer->fetch_next_tokens($event->{current_indent});
 }
 
-sub parse_block_scalar {
-    TRACE and warn "=== parse_block_scalar()\n";
-    my ($self, %args) = @_;
-    my $lexer = $self->lexer;
-    my $tokens = $self->tokens;
-    my $next_tokens = $lexer->next_tokens;
-    my $indent = $self->offset->[-1] + 1;
-
-    my $exp_indent = $args{indent} || 0;
-
-    my @lines;
-
-    my $got_indent = 0;
-    if ($exp_indent) {
-        $indent = $exp_indent;
-        $got_indent = 1;
-    }
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$indent], ['indent']);
-    my @tokens;
-    while (1) {
-        my $next_tokens = $lexer->_fetch_next_tokens_block_scalar($indent)
-            or last;
-        if ($next_tokens->[0]->{name} eq 'EOL') {
-            push @$tokens, shift @$next_tokens;
-            push @lines, '';
-            next;
-        }
-        my $spaces = shift @$next_tokens;
-        if ($next_tokens->[0]->{name} eq 'EOL') {
-            push @$tokens, $spaces;
-            push @$tokens, shift @$next_tokens;
-            push @lines, '';
-            next;
-        }
-        my $more_spaces;
-        if ($next_tokens->[0]->{name} eq 'SPACE') {
-            $more_spaces = shift @$next_tokens;
-        }
-        my ($content, $lb) = @$next_tokens;
-        @$next_tokens = ();
-
-        unless ($got_indent) {
-            if ($more_spaces) {
-                $spaces->{value} .= $more_spaces->{value};
-                $indent += length $more_spaces->{value};
-                undef $more_spaces;
-            }
-            unless (length $content->{value}) {
-                push @$tokens, $spaces;
-                push @$tokens, $lb;
-                push @lines, '';
-                next;
-            }
-
-            # first non-empty line
-            $got_indent = 1;
-
-        }
-        push @$tokens, $spaces;
-
-        my $value = $content->{value};
-        if ($more_spaces) {
-            push @$tokens, $more_spaces;
-            $value = $more_spaces->{value} . $value;
-        }
-        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$content], ['content']);
-
-        push @$tokens, $content;
-        push @$tokens, $lb;
-        push @lines, $value;
-
-    }
-    TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@lines], ['lines']);
-
-    return \@lines;
+sub cb_block_scalar_start_indent {
+    my ($self, $res) = @_;
+    my $event = $self->event_stack->[-1]->[1];
+    $event->{current_indent} = length $self->tokens->[-1]->{value};
 }
 
+sub cb_fetch_tokens_block_scalar {
+    my ($self, $res) = @_;
+    my $event = $self->event_stack->[-1]->[1];
+    $self->lexer->fetch_next_tokens($event->{current_indent})
+}
+
+sub cb_block_scalar_start_content {
+    my ($self, $res) = @_;
+    my $event = $self->event_stack->[-1]->[1];
+    push @{ $event->{value} }, $self->tokens->[-1]->{value};
+    $self->lexer->set_context('block_scalar');
+}
+
+sub cb_block_scalar_content {
+    my ($self, $res) = @_;
+    my $event = $self->event_stack->[-1]->[1];
+    push @{ $event->{value} }, $self->tokens->[-1]->{value};
+}
 
 sub cb_flow_map {
     $_[0]->exception("Not Implemented: Flow Style");

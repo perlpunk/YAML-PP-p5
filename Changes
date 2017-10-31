@@ -4,6 +4,7 @@ NEXT
     - Support legacy interface functions Load, LoadFile, Dump
     - ... and --- are now correctly invalid in quoted scalars
     - Improve block scalar handling, passing two more tests
+    - Improve multiline plain handling, passing another test
 
 0.004 2017-09-15 13:30:50+02:00
     - Improve regex for plain scalars

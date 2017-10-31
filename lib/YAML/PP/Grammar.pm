@@ -223,11 +223,20 @@ $GRAMMAR = {
         'fetch' => 1,
         'new' => 'MULTILINE_DOUBLEQUOTED'
       },
-      'fetch' => 1,
       'match' => 'cb_take'
+    },
+    'EOL' => {
+      'fetch' => 1,
+      'match' => 'cb_empty_quoted_line',
+      'new' => 'MULTILINE_DOUBLEQUOTED'
     }
   },
   'MULTILINE_SINGLEQUOTED' => {
+    'EOL' => {
+      'fetch' => 1,
+      'match' => 'cb_empty_quoted_line',
+      'new' => 'MULTILINE_SINGLEQUOTED'
+    },
     'SINGLEQUOTED_LINE' => {
       'EOL' => {
         'fetch' => 1,
@@ -439,38 +448,85 @@ $GRAMMAR = {
       'new' => 'RULE_BLOCK_SCALAR_HEADER'
     }
   },
+  'RULE_BLOCK_SCALAR_CONTENT' => {
+    'END' => {
+      'new' => 'END',
+      'return' => 1
+    },
+    'EOL' => {
+      'match' => 'cb_block_scalar_empty_line',
+      'new' => 'RULE_BLOCK_SCALAR_CONTENT'
+    },
+    'INDENT' => {
+      'BLOCK_SCALAR_CONTENT' => {
+        'EOL' => {
+          'match' => 'cb_fetch_tokens_block_scalar',
+          'new' => 'RULE_BLOCK_SCALAR_CONTENT'
+        },
+        'match' => 'cb_block_scalar_content'
+      },
+      'EOL' => {
+        'match' => 'cb_block_scalar_empty_line',
+        'new' => 'RULE_BLOCK_SCALAR_CONTENT'
+      }
+    }
+  },
   'RULE_BLOCK_SCALAR_HEADER' => {
     'BLOCK_SCALAR_CHOMP' => {
       'BLOCK_SCALAR_INDENT' => {
         'EOL' => {
-          'match' => 'cb_read_block_scalar',
-          'new' => 'END'
+          'match' => 'cb_fetch_tokens_block_scalar',
+          'new' => 'RULE_BLOCK_SCALAR_START'
         },
         'match' => 'cb_add_block_scalar_indent'
       },
       'EOL' => {
-        'match' => 'cb_read_block_scalar',
-        'new' => 'END'
+        'match' => 'cb_fetch_tokens_block_scalar',
+        'new' => 'RULE_BLOCK_SCALAR_START'
       },
       'match' => 'cb_add_block_scalar_chomp'
     },
     'BLOCK_SCALAR_INDENT' => {
       'BLOCK_SCALAR_CHOMP' => {
         'EOL' => {
-          'match' => 'cb_read_block_scalar',
-          'new' => 'END'
+          'match' => 'cb_fetch_tokens_block_scalar',
+          'new' => 'RULE_BLOCK_SCALAR_START'
         },
         'match' => 'cb_add_block_scalar_chomp'
       },
       'EOL' => {
-        'match' => 'cb_read_block_scalar',
-        'new' => 'END'
+        'match' => 'cb_fetch_tokens_block_scalar',
+        'new' => 'RULE_BLOCK_SCALAR_START'
       },
       'match' => 'cb_add_block_scalar_indent'
     },
     'EOL' => {
-      'match' => 'cb_read_block_scalar',
-      'new' => 'END'
+      'match' => 'cb_fetch_tokens_block_scalar',
+      'new' => 'RULE_BLOCK_SCALAR_START'
+    }
+  },
+  'RULE_BLOCK_SCALAR_START' => {
+    'END' => {
+      'new' => 'END',
+      'return' => 1
+    },
+    'EOL' => {
+      'match' => 'cb_block_scalar_empty_line',
+      'new' => 'RULE_BLOCK_SCALAR_START'
+    },
+    'INDENT' => {
+      'BLOCK_SCALAR_CONTENT' => {
+        'EOL' => {
+          'match' => 'cb_fetch_tokens_block_scalar',
+          'new' => 'RULE_BLOCK_SCALAR_CONTENT'
+        },
+        'match' => 'cb_block_scalar_start_content'
+      },
+      'EOL' => {
+        'match' => 'cb_block_scalar_empty_line',
+        'new' => 'RULE_BLOCK_SCALAR_START'
+      },
+      'match' => 'cb_block_scalar_start_indent'
     }
   },
   'RULE_COMPLEX' => {
@@ -776,6 +832,7 @@ This is the Grammar in YAML
         EOL: { fetch: 1, new: MULTILINE_SINGLEQUOTED }
         SINGLEQUOTE:
           EOL: { match: cb_got_scalar, new: END }
+      EOL: { match: cb_empty_quoted_line, fetch: 1, new: MULTILINE_SINGLEQUOTED }
     
     RULE_DOUBLEQUOTED_KEY_OR_NODE:
       DOUBLEQUOTE:
@@ -802,10 +859,10 @@ This is the Grammar in YAML
     MULTILINE_DOUBLEQUOTED:
       DOUBLEQUOTED_LINE:
         match: cb_take
-        fetch: 1
         EOL: { fetch: 1, new: MULTILINE_DOUBLEQUOTED  }
         DOUBLEQUOTE:
           EOL: { match: cb_got_scalar, new: END }
+      EOL: { match: cb_empty_quoted_line, fetch: 1, new: MULTILINE_DOUBLEQUOTED }
     
     RULE_PLAIN_KEY_OR_NODE:
       SCALAR:
@@ -909,24 +966,43 @@ This is the Grammar in YAML
         BLOCK_SCALAR_CHOMP:
           match: cb_add_block_scalar_chomp
           EOL:
-            match: cb_read_block_scalar
-            new: END
+            match: cb_fetch_tokens_block_scalar
+            new: RULE_BLOCK_SCALAR_START
         EOL:
-          match: cb_read_block_scalar
-          new: END
+          match: cb_fetch_tokens_block_scalar
+          new: RULE_BLOCK_SCALAR_START
       BLOCK_SCALAR_CHOMP:
         match: cb_add_block_scalar_chomp
         BLOCK_SCALAR_INDENT:
           match: cb_add_block_scalar_indent
           EOL:
-            match: cb_read_block_scalar
-            new: END
+            match: cb_fetch_tokens_block_scalar
+            new: RULE_BLOCK_SCALAR_START
         EOL:
-          match: cb_read_block_scalar
-          new: END
+          match: cb_fetch_tokens_block_scalar
+          new: RULE_BLOCK_SCALAR_START
       EOL:
-        match: cb_read_block_scalar
-        new: END
+        match: cb_fetch_tokens_block_scalar
+        new: RULE_BLOCK_SCALAR_START
+    
+    RULE_BLOCK_SCALAR_START:
+      EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_START }
+      INDENT:
+        match: cb_block_scalar_start_indent
+        EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_START }
+        BLOCK_SCALAR_CONTENT:
+          match: cb_block_scalar_start_content
+          EOL: { match: cb_fetch_tokens_block_scalar, new: RULE_BLOCK_SCALAR_CONTENT }
+      END: { new: END, return: 1 }
+    
+    RULE_BLOCK_SCALAR_CONTENT:
+      EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_CONTENT }
+      INDENT:
+        EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_CONTENT }
+        BLOCK_SCALAR_CONTENT:
+          match: cb_block_scalar_content
+          EOL: { match: cb_fetch_tokens_block_scalar, new: RULE_BLOCK_SCALAR_CONTENT }
+      END: { new: END, return: 1 }
     
     FULL_MAPKEY:
       ANCHOR:
