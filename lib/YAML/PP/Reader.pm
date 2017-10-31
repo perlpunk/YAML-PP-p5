@@ -57,7 +57,7 @@ sub read {
 
 sub readline {
     my $fh = $_[0]->{filehandle} ||= $_[0]->open_handle;
-    return $fh->getline;
+    return scalar <$fh>;
 }
 
 1;
