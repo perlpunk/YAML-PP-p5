@@ -251,7 +251,6 @@ sub check_indent {
         return;
     }
 
-    my $new_node = $self->new_node;
     my $exp = $self->events->[-1];
     my $end = 0;
     my $indent = 0;
@@ -266,16 +265,16 @@ sub check_indent {
     elsif ($next_token->{name} eq 'DOC_END') {
         $end = 1;
     }
-    elsif ($self->level < 2 and not $new_node) {
+    elsif ($self->level < 2 and not $self->new_node) {
         $end = 1;
     }
     if ($end) {
         my $level = $self->level;
         my $remove = $level - 1;
-        if ($new_node) {
-            $self->set_new_node(undef);
+        if ($self->new_node) {
             push @{ $self->event_stack }, [ scalar => { style => ':' } ];
-            $self->process_events(result => {});
+            push @{ $self->event_stack }, [ node => undef ];
+            $self->process_events({});
         }
         $exp = $self->remove_nodes($remove);
         return $end;
@@ -293,7 +292,7 @@ sub check_indent {
     TRACE and $self->info("INDENT: space=$space indent=$indent");
 
     if ($space > $indent) {
-        unless ($new_node) {
+        unless ($self->new_node) {
             $self->exception("Bad indendation in $exp");
         }
         return;
@@ -305,15 +304,14 @@ sub check_indent {
 
         my $remove = $self->reset_indent($space);
 
-        if ($new_node) {
+        if ($self->new_node) {
             # unindented sequence starts
-            if ($remove == 0 and $seq_start and $exp eq 'MAP') {
+            if ($remove == 0 and $seq_start and $exp eq 'MAPVALUE') {
             }
             else {
-                undef $new_node;
-                $self->set_new_node(undef);
                 push @{ $self->event_stack }, [ scalar => { style => ':' } ];
-                $self->process_events(result => {});
+                push @{ $self->event_stack }, [ node => undef ];
+                $self->process_events({});
             }
         }
 
@@ -322,7 +320,7 @@ sub check_indent {
         }
 
 
-        unless ($new_node) {
+        unless ($self->new_node) {
             if ($exp eq 'SEQ' and not $seq_start) {
                 my $ui = $self->in_unindented_seq;
                 if ($ui) {
@@ -349,40 +347,25 @@ sub check_indent {
 sub parse_next_line {
     my ($self) = @_;
     DEBUG and $self->info("----------------> parse_next_line()");
-    my $new_node = $self->new_node;
     my $tokens = $self->tokens;
 
+    my $event_types = $self->events;
+    my $stack = $self->event_stack;
     while (1) {
-        unless ($new_node) {
-            my $exp = $self->events->[-1];
-            if ($exp eq 'MAP') {
-                $self->set_rule( 'FULL_MAPKEY' );
+        unless ($self->new_node) {
+            if ($event_types->[-1] eq 'MAPVALUE') {
+                $self->set_rule( "NODETYPE_COMPLEX" );
             }
             else {
-                $self->set_rule( "NODETYPE_$exp" );
+                $self->set_rule( "NODETYPE_" . $event_types->[-1] );
             }
         }
 
         my $res = $self->parse_tokens();
 
-        return unless $res->{name};
-
-        $self->process_events( result => $res );
-
-        if ($res->{new_type} eq 'END') {
-            $self->set_new_node(undef);
-            return;
+        if (@$stack) {
+            $self->process_events( $res );
         }
-
-        if ($res->{name} eq 'MAPKEY' or $res->{name} eq 'COMPLEXCOLON') {
-            $self->events->[-1] = 'MAP';
-        }
-        elsif ($res->{name} eq 'COMPLEX') {
-            $self->events->[-1] = 'COMPLEX';
-        }
-
-        $new_node = $res->{new_type};
-        $self->set_new_node($res->{new_type});
 
         return if $tokens->[-1]->{name} eq 'EOL';
     }
@@ -390,8 +373,16 @@ sub parse_next_line {
     return;
 }
 
+my %next_event = (
+    MAP => 'MAPVALUE',
+    MAPVALUE => 'MAP',
+    SEQ => 'SEQ',
+    DOC => 'DOC',
+    STR => 'STR',
+);
+
 sub process_events {
-    my ($self, %args) = @_;
+    my ($self, $res) = @_;
 
     my $event_stack = $self->event_stack;
     return unless @$event_stack;
@@ -399,8 +390,8 @@ sub process_events {
     if (@$event_stack == 1 and $event_stack->[0]->[0] eq 'properties') {
         return;
     }
-    my $res = $args{result};
 
+    my $event_types = $self->events;
     my $properties;
     for my $event (@$event_stack) {
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$event], ['event']);
@@ -420,6 +411,11 @@ sub process_events {
                 undef $properties;
             }
             $self->scalar_event_render( $info );
+            $event_types->[-1] = $next_event{ $event_types->[-1] };
+        }
+        elsif ($event->[0] eq 'node') {
+            my ($type, $node) = @$event;
+            $self->set_new_node($node);
         }
         elsif ($event->[0] eq 'begin') {
             my $offset = $res->{offset};
@@ -446,6 +442,7 @@ sub process_events {
             $info->{content} = delete $info->{alias};
             DEBUG and $self->debug_event( 'alias_event' => $info );
             $self->callback->($self, 'alias_event', $info);
+            $event_types->[-1] = $next_event{ $event_types->[-1] };
         }
     }
     @$event_stack = ();
@@ -490,7 +487,6 @@ sub parse_tokens {
         }
 
         unless ($def) {
-            DEBUG and $self->not("---not $next_tokens->[0]->{name}");
             my @possible = sort grep { m/^[A-Z_]+$/ } keys %$next_rule;
             $self->expected(
                 expected => \@possible,
@@ -508,33 +504,32 @@ sub parse_tokens {
             DEBUG and $self->info("fetch_next_tokens");
             $self->lexer->fetch_next_tokens(0);
         }
-        if (my $new = $def->{new}) {
+        my $node = $def->{node};
+        my $new = $node || $def->{new};
+        if ($new) {
             $next_rule_name = $new;
             DEBUG and $self->got("NEW: $next_rule_name");
-
-            if ($next_rule_name eq 'ERROR') {
-                $self->exception("Got unexpected $next_tokens->[0]->{name}");
+            if ($node) {
+                push @{ $self->event_stack }, [ node => $new ];
             }
+
             if ($def->{return}) {
                 $self->set_rule($next_rule_name);
-                $res->{new_type}= $next_rule_name;
+#                $res->{new_type}= $next_rule_name;
                 return $res;
             }
 
             if ($next_rule_name eq 'PREVIOUS') {
-                my $node_type = $self->new_node;
-                $next_rule_name = $node_type;
+                $next_rule_name = $self->new_node;
                 $next_rule_name =~ s/^FULL//;
-
                 $next_rule_name = "NODETYPE_$next_rule_name";
             }
-            if (exists $GRAMMAR->{ $next_rule_name }) {
-                $next_rule = $GRAMMAR->{ $next_rule_name };
-                next RULE;
-            }
-
-            $self->set_rule($next_rule_name);
-            $res->{new_type}= $next_rule_name;
+            $next_rule = $GRAMMAR->{ $next_rule_name }
+                or die "Unexpected rule $next_rule_name";
+            next RULE;
+        }
+        elsif ($def->{return}) {
+            push @{ $self->event_stack }, [ node => undef ];
             return $res;
         }
         $next_rule_name .= " - $got"; # for debugging
@@ -583,14 +578,10 @@ sub remove_nodes {
     my ($self, $count) = @_;
     my $exp = $self->events->[-1];
     for (1 .. $count) {
-        if ($exp eq 'COMPLEX') {
+        if ($exp eq 'MAPVALUE') {
             $self->scalar_event({ style => ':' });
-            $self->events->[-1] = 'MAP';
-            $self->end('MAP');
         }
-        elsif ($exp eq 'MAP' or $exp eq 'SEQ' or $exp eq 'END') {
-            $self->end($exp);
-        }
+        $self->end($exp);
         $exp = $self->events->[-1];
         TRACE and $self->debug_events;
     }
@@ -652,7 +643,7 @@ my %event_to_method = (
     STR => 'stream',
     VAL => 'scalar',
     ALI => 'alias',
-    COMPLEX => 'mapping',
+    MAPVALUE => 'mapping',
 );
 
 sub scalar_event {
@@ -686,9 +677,10 @@ sub end {
     my ($self, $event, $info) = @_;
     $info->{type} = $event;
 
+    my $event_types = $self->events;
     pop @{ $self->offset };
 
-    my $last = pop @{ $self->events };
+    my $last = pop @{ $event_types };
     if ($last ne $event) {
         die "end($event): Unexpected event '$last', expected $event";
     }
@@ -702,6 +694,8 @@ sub end {
             '!!' => "tag:yaml.org,2002:",
         });
     }
+    return unless @$event_types;
+    $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
 
 sub event_to_test_suite {
@@ -958,7 +952,6 @@ sub cb_property_eol {
 
 sub cb_mapkey {
     my ($self, $res) = @_;
-    $res->{name} ||= 'NOOP';
     push @{ $self->event_stack }, [ scalar => {
         style => ':',
         value => $self->tokens->[-1]->{value},
@@ -967,7 +960,6 @@ sub cb_mapkey {
 
 sub cb_empty_mapkey {
     my ($self, $res) = @_;
-    $res->{name} = 'MAPKEY';
     push @{ $self->event_stack }, [ scalar => {
         style => ':',
         value => undef,
@@ -976,7 +968,6 @@ sub cb_empty_mapkey {
 
 sub cb_doublequoted_key {
     my ($self, $res) = @_;
-    $res->{name} = 'MAPKEY';
     push @{ $self->event_stack }, [ scalar => {
         style => '"',
         value => [ $self->tokens->[-1]->{value} ],
@@ -985,7 +976,6 @@ sub cb_doublequoted_key {
 
 sub cb_singlequoted_key {
     my ($self, $res) = @_;
-    $res->{name} = 'MAPKEY';
     push @{ $self->event_stack }, [ scalar => {
         style => "'",
         value => [ $self->tokens->[-1]->{value} ],
@@ -996,7 +986,6 @@ sub cb_mapkey_alias {
     my ($self, $res) = @_;
     my $alias = $self->tokens->[-1]->{value};
     $alias = substr($alias, 1);
-    $res->{name} = 'NOOP';
     push @{ $self->event_stack }, [ alias => {
         alias => $alias,
     }];
@@ -1004,36 +993,30 @@ sub cb_mapkey_alias {
 
 sub cb_question {
     my ($self, $res) = @_;
-    $res->{name} = 'COMPLEX';
 }
 
 sub cb_empty_complexvalue {
     my ($self, $res) = @_;
-    $res->{name} = 'MAPKEY';
     push @{ $self->event_stack }, [ scalar => { style => ':' }];
 }
 
 sub cb_questionstart {
     my ($self, $res) = @_;
-    push @{ $self->event_stack }, [ begin => 'COMPLEX', { }];
-    $res->{name} = 'NOOP';
+    push @{ $self->event_stack }, [ begin => 'MAP', { }];
 }
 
 sub cb_complexcolon {
     my ($self, $res) = @_;
-    $res->{name} = 'COMPLEXCOLON';
 }
 
 sub cb_seqstart {
     my ($self, $res) = @_;
     push @{ $self->event_stack }, [ begin => 'SEQ', { }];
-    $res->{name} = 'NOOP';
 }
 
-sub cb_seqitem {
-    my ($self, $res) = @_;
-    $res->{name} = 'NOOP';
-}
+#sub cb_seqitem {
+#    my ($self, $res) = @_;
+#}
 
 sub cb_start_quoted {
     my ($self, $res) = @_;
@@ -1080,7 +1063,6 @@ sub cb_empty_quoted_line {
 
 sub cb_got_scalar {
     my ($self, $res) = @_;
-    $res->{name} = 'NOOP';
 }
 
 sub cb_insert_map {
@@ -1094,7 +1076,6 @@ sub cb_insert_map {
         [ begin => 'MAP' => {} ],
         [ scalar => { style => ':', value => undef } ];
     }
-    $res->{name} = 'NOOP';
 }
 
 sub cb_got_multiscalar {
@@ -1102,7 +1083,6 @@ sub cb_got_multiscalar {
     my $stack = $self->event_stack;
     my $multi = $self->lexer->parse_plain_multi($self);
     push @{ $stack->[-1]->[1]->{value} }, @{ $multi };
-    $res->{name} = 'NOOP';
 }
 
 sub cb_block_scalar {
@@ -1114,7 +1094,6 @@ sub cb_block_scalar {
         current_indent => $self->offset->[-1] + 1,
     }];
     $self->lexer->set_context('block_scalar_start');
-    $res->{name} = 'NOOP';
 }
 
 sub cb_add_block_scalar_indent {
