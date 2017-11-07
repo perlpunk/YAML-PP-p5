@@ -38,7 +38,9 @@ sub render_tag {
 
 my %control = (
     '\\' => '\\', '/' => '/', n => "\n", t => "\t", r => "\r", b => "\b",
-    'x0a' => "\n", 'x0d' => "\r",
+    'a' => "\a", 'b' => "\b", 'e' => "\e", 'f' => "\f", 'v' => "\x0b",
+    'P' => "\x{2029}", L => "\x{2028}", 'N' => "\x85",
+    '0' => "\0", '_' => "\xa0", ' ' => ' ', q/"/ => q/"/,
 );
 
 sub render_quoted {
@@ -49,9 +51,13 @@ sub render_quoted {
     if ($#$lines == 0) {
         my $quoted = $lines->[0];
         if ($double) {
-            $quoted =~ s/\\"/"/g;
-            $quoted =~ s/\\(x0d|x0a|[\\\/ntrb])/$control{ $1 }/g;
-            $quoted =~ s/\\u([A-Fa-f0-9]+)/chr(oct("x$1"))/eg;
+            $quoted =~ s{(?:
+                \\([ \\\/_0abefnrtvLNP"]) | \\x([0-9a-fA-F]{2})
+                | \\u([A-Fa-f0-9]{4}) | \\U([A-Fa-f0-9]{4,8})
+            )}{
+            defined $1 ? $control{ $1 } : defined $2 ? chr hex $2 :
+            defined $3 ? chr hex $3 : chr hex $4
+            }xeg;
         }
         else {
             $quoted =~ s/''/'/g;
@@ -74,32 +80,33 @@ sub render_quoted {
             else {
                 $quoted .= "\n";
             }
+            next;
         }
-        else {
-            $quoted .= ' ' if $addspace;
-            $addspace = 1;
-            if (not $first) {
-                $line =~ s/^$WS+//;
-            }
-            if (not $last) {
-                $line =~ s/$WS+$//;
-            }
-            if ($double) {
-                $line =~ s/\\"/"/g;
-            }
-            else {
-                $line =~ s/''/'/g;
-            }
-            if (not $last and $line =~ s/\\$//) {
+
+        $quoted .= ' ' if $addspace;
+        $addspace = 1;
+        if (not $first) {
+            $line =~ s/^$WS+//;
+        }
+        if (not $last) {
+            $line =~ s/$WS+$//;
+        }
+        if ($double) {
+            $line =~ s{(?:
+                \\([ \\\/_0abefnrtvLNP"]) | \\x([0-9a-fA-F]{2})
+                | \\u([A-Fa-f0-9]{4}) | \\U([A-Fa-f0-9]{4,8})
+            )}{
+            defined $1 ? $control{ $1 } : defined $2 ? chr hex $2 :
+            defined $3 ? chr hex $3 : chr hex $4
+            }xeg;
+            if ($line =~ s/\\$//) {
                 $addspace = 0;
             }
-            $line =~ s/^\\ / /;
-            if ($double) {
-                $line =~ s/\\(x0d|x0a|[\\\/ntrb])/$control{ $1 }/g;
-                $line =~ s/\\u([A-Fa-f0-9]+)/chr(oct("x$1"))/eg;
-            }
-            $quoted .= $line;
         }
+        else {
+            $line =~ s/''/'/g;
+        }
+        $quoted .= $line;
     }
     return $quoted;
 }
