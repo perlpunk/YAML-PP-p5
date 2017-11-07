@@ -30,7 +30,7 @@ my @skip = qw/
     N782
     55WF
 
-    SY6V i035
+    SY6V
 
     ZL4Z
     9C9N
@@ -63,7 +63,6 @@ my %skip_events = (
     '3HFZ' => 1,
     X4QW => 1,
     SU5Z => 1,
-    i031 => 1,
     W9L4 => 1,
     Q5MG => 1,
 );
