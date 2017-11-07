@@ -33,10 +33,6 @@ my @skip = qw/
     Q88A Q9WF QF4Y
     SBG9 UDR7 UT92 WZ62 X38W YD5X ZF4X
 
-    W4TN
-
-    v018
-
     6BFJ
     7TMG
     Q5MG

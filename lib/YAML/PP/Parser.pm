@@ -122,7 +122,9 @@ sub parse_stream {
 
         if ( $self->parse_empty($next_tokens) ) {
         }
-        last unless @$next_tokens;
+        if (not @$next_tokens and not $start) {
+            last;
+        }
 
         $self->begin('DOC', -1, { implicit => $start ? 0 : 1 });
 
