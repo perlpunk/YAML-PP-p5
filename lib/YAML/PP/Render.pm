@@ -37,29 +37,33 @@ sub render_tag {
 }
 
 my %control = (
-    '\\' => '\\', n => "\n", t => "\t", r => "\r", b => "\b",
+    '\\' => '\\', '/' => '/', n => "\n", t => "\t", r => "\r", b => "\b",
     'x0a' => "\n", 'x0d' => "\r",
 );
+
 sub render_quoted {
-    my (%args) = @_;
-    my $double = $args{double};
-    my $lines = $args{lines};
+    my ($self, $info) = @_;
+    my $double = $info->{style} eq '"';
+    my $lines = $info->{value};
+
+    if ($#$lines == 0) {
+        my $quoted = $lines->[0];
+        if ($double) {
+            $quoted =~ s/\\"/"/g;
+            $quoted =~ s/\\(x0d|x0a|[\\\/ntrb])/$control{ $1 }/g;
+            $quoted =~ s/\\u([A-Fa-f0-9]+)/chr(oct("x$1"))/eg;
+        }
+        else {
+            $quoted =~ s/''/'/g;
+        }
+        return $quoted;
+    }
+
     my $quoted = '';
     my $addspace = 0;
+
     for my $i (0 .. $#$lines) {
         my $line = $lines->[ $i ];
-        if ($#$lines == 0) {
-            if ($double) {
-                $line =~ s/\\"/"/g;
-                $line =~ s/\\(x0d|x0a|[\\ntrb])/$control{ $1 }/g;
-                $line =~ s/\\u([A-Fa-f0-9]+)/chr(oct("x$1"))/eg;
-            }
-            else {
-                $line =~ s/''/'/g;
-            }
-            $quoted .= $line;
-            last;
-        }
         my $last = $i == $#$lines;
         my $first = $i == 0;
         if ($line =~ s/^$WS*$/\n/) {
@@ -74,14 +78,10 @@ sub render_quoted {
         else {
             $quoted .= ' ' if $addspace;
             $addspace = 1;
-            if ($first) {
-            }
-            else {
+            if (not $first) {
                 $line =~ s/^$WS+//;
             }
-            if ($last) {
-            }
-            else {
+            if (not $last) {
                 $line =~ s/$WS+$//;
             }
             if ($double) {
@@ -95,7 +95,7 @@ sub render_quoted {
             }
             $line =~ s/^\\ / /;
             if ($double) {
-                $line =~ s/\\(x0d|x0a|[\\ntrb])/$control{ $1 }/g;
+                $line =~ s/\\(x0d|x0a|[\\\/ntrb])/$control{ $1 }/g;
                 $line =~ s/\\u([A-Fa-f0-9]+)/chr(oct("x$1"))/eg;
             }
             $quoted .= $line;
@@ -105,10 +105,10 @@ sub render_quoted {
 }
 
 sub render_block_scalar {
-    my (%args) = @_;
-    my $block_type = $args{block_type};
-    my $chomp = $args{chomp} || '';
-    my $lines = $args{lines};
+    my ($self, $info) = @_;
+    my $block_type = $info->{style};
+    my $chomp = $info->{block_chomp} || '';
+    my $lines = $info->{value};
 
     my ($folded, $keep, $trim);
     if ($block_type eq '>') {
@@ -179,7 +179,9 @@ sub render_block_scalar {
 }
 
 sub render_multi_val {
-    my ($multi) = @_;
+    my ($self, $info) = @_;
+    my $multi = $info->{value};
+    return $multi unless ref $multi;
     # remove empty lines at beginning and end
     while (@$multi and $multi->[0] eq '') {
         shift @$multi;

@@ -383,6 +383,14 @@ my %next_event = (
     STR => 'STR',
 );
 
+my %render_methods = (
+    q/:/ => 'render_multi_val',
+    q/"/ => 'render_quoted',
+    q/'/ => 'render_quoted',
+    q/>/ => 'render_block_scalar',
+    q/|/ => 'render_block_scalar',
+);
+
 sub process_events {
     my ($self, $res) = @_;
 
@@ -412,7 +420,10 @@ sub process_events {
                 }
                 undef $properties;
             }
-            $self->scalar_event_render( $info );
+            my $method = $render_methods{ $info->{style} || ':' };
+            $info->{content} = YAML::PP::Render->$method( $info );
+            delete $info->{value};
+            $self->scalar_event( $info );
             $event_types->[-1] = $next_event{ $event_types->[-1] };
         }
         elsif ($event->[0] eq 'node') {
@@ -541,39 +552,6 @@ sub parse_tokens {
 
     die "Unexpected";
     return;
-}
-
-sub scalar_event_render {
-    my ($self, $res) = @_;
-
-    my $value = delete $res->{value};
-    my $style = $res->{style} // ':';
-    if ($style eq ':') {
-        if (ref $value) {
-            $value = YAML::PP::Render::render_multi_val($value);
-        }
-    }
-    elsif ($style eq '"') {
-        $value = YAML::PP::Render::render_quoted(
-            double => 1,
-            lines => $value,
-        );
-    }
-    elsif ($style eq "'") {
-        $value = YAML::PP::Render::render_quoted(
-            double => 0,
-            lines => $value,
-        );
-    }
-    elsif ($style eq '|' or $style eq '>') {
-        $value = YAML::PP::Render::render_block_scalar(
-            block_type => $res->{style},
-            chomp => $res->{block_chomp},
-            lines => $value,
-        );
-    }
-    $res->{content} = $value;
-    $self->scalar_event( $res );
 }
 
 sub remove_nodes {
