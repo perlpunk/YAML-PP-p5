@@ -70,6 +70,7 @@ my @skip = qw/
     S4JQ
     3UYS
     8XYN
+    Q5MG
 
 /;
 my %skip;
