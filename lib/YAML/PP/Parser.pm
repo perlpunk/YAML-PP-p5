@@ -227,60 +227,35 @@ sub parse_document {
         TRACE and $self->debug_yaml;
         TRACE and $self->debug_events;
 
-
         {
             $self->lexer->fetch_next_tokens(0);
             $self->parse_empty($next_tokens);
             my $end = $self->check_indent();
-            return if $end;
+            if ($end) {
+                $self->end_document;
+                return;
+            }
         }
 
         $self->parse_next_line();
     }
 
-    TRACE and $self->debug_events;
-    return 1;
+    return;
 }
 
 sub check_indent {
-    my ($self, %args) = @_;
+    my ($self) = @_;
 
     my $next_tokens = $self->lexer->next_tokens;
-    #TRACE and $self->info("NEXT TOKENS:");
-    #TRACE and $self->debug_tokens($next_tokens);
+    unless (@$next_tokens) {
+        return 1;
+    }
     my $next_token = $next_tokens->[0];
-    if ($next_token and $next_token->{column} != 0) {
+    if ($next_token->{column} != 0) {
         return;
     }
 
-    my $exp = $self->events->[-1];
-    my $end = 0;
-    my $indent = 0;
     my $tokens = $self->tokens;
-
-    if (not $next_token) {
-        $end = 1;
-    }
-    elsif ($next_token->{name} eq 'DOC_START') {
-        $end = 1;
-    }
-    elsif ($next_token->{name} eq 'DOC_END') {
-        $end = 1;
-    }
-    elsif ($self->level < 2 and not $self->new_node) {
-        $end = 1;
-    }
-    if ($end) {
-        my $level = $self->level;
-        my $remove = $level - 1;
-        if ($self->new_node) {
-            push @{ $self->event_stack }, [ scalar => { style => ':' } ];
-            push @{ $self->event_stack }, [ node => undef ];
-            $self->process_events({});
-        }
-        $exp = $self->remove_nodes($remove);
-        return $end;
-    }
 
     my $space = 0;
     if ($next_token->{name} eq 'INDENT') {
@@ -288,68 +263,86 @@ sub check_indent {
         push @$tokens, shift @$next_tokens;
         $next_token = $next_tokens->[0];
     }
+    elsif ($next_token->{name} eq 'DOC_START') {
+        return 1;
+    }
+    elsif ($next_token->{name} eq 'DOC_END') {
+        return 1;
+    }
+    elsif ($self->level < 2 and not $self->new_node) {
+        return 1;
+    }
 
-    $indent = $self->offset->[ -1 ];
+    my $indent = $self->offset->[ -1 ];
 
     TRACE and $self->info("INDENT: space=$space indent=$indent");
 
     if ($space > $indent) {
         unless ($self->new_node) {
-            $self->exception("Bad indendation in $exp");
+            $self->exception("Bad indendation in " . $self->events->[-1]);
         }
         return;
     }
-    else {
 
-        my $seq_start = $next_token->{name} eq 'DASH';
-        TRACE and $self->info("SEQSTART: $seq_start");
+    my $exp = $self->events->[-1];
+    my $seq_start = $next_token->{name} eq 'DASH';
+    TRACE and $self->info("SEQSTART: $seq_start");
 
-        my $remove = $self->reset_indent($space);
+    my $remove = $self->reset_indent($space);
 
-        if ($self->new_node) {
-            # unindented sequence starts
-            if ($remove == 0 and $seq_start and $exp eq 'MAPVALUE') {
+    if ($self->new_node) {
+        # unindented sequence starts
+        if ($remove == 0 and $seq_start and $exp eq 'MAPVALUE') {
+        }
+        else {
+            push @{ $self->event_stack }, [ scalar => { style => ':' } ];
+            push @{ $self->event_stack }, [ node => undef ];
+            $self->process_events({});
+        }
+    }
+
+    if ($remove) {
+        $exp = $self->remove_nodes($remove);
+    }
+
+    unless ($self->new_node) {
+        if ($exp eq 'SEQ' and not $seq_start) {
+            my $ui = $self->in_unindented_seq;
+            if ($ui) {
+                TRACE and $self->info("In unindented sequence");
+                $self->end('SEQ');
+                TRACE and $self->debug_events;
+                $exp = $self->events->[-1];
             }
             else {
-                push @{ $self->event_stack }, [ scalar => { style => ':' } ];
-                push @{ $self->event_stack }, [ node => undef ];
-                $self->process_events({});
+                $self->exception("Expected sequence item");
             }
         }
 
-        if ($remove) {
-            $exp = $self->remove_nodes($remove);
-        }
-
-
-        unless ($self->new_node) {
-            if ($exp eq 'SEQ' and not $seq_start) {
-                my $ui = $self->in_unindented_seq;
-                if ($ui) {
-                    TRACE and $self->info("In unindented sequence");
-                    $self->end('SEQ');
-                    TRACE and $self->debug_events;
-                    $exp = $self->events->[-1];
-                }
-                else {
-                    $self->exception("Expected sequence item");
-                }
-            }
-
-
-            if ($self->offset->[-1] != $space) {
-                $self->exception("Expected $exp");
-            }
+        if ($self->offset->[-1] != $space) {
+            $self->exception("Expected $exp");
         }
     }
 
     return;
 }
 
+sub end_document {
+    my ($self) = @_;
+    my $level = $self->level;
+    my $remove = $level - 1;
+    if ($self->new_node) {
+        push @{ $self->event_stack }, [ scalar => { style => ':' } ];
+        push @{ $self->event_stack }, [ node => undef ];
+        $self->process_events({});
+    }
+    my $exp = $self->remove_nodes($remove);
+}
+
 sub parse_next_line {
     my ($self) = @_;
     DEBUG and $self->info("----------------> parse_next_line()");
-    my $tokens = $self->tokens;
+    my $next_tokens = $self->lexer->next_tokens;
 
     my $event_types = $self->events;
     my $stack = $self->event_stack;
@@ -369,7 +362,7 @@ sub parse_next_line {
             $self->process_events( $res );
         }
 
-        return if $tokens->[-1]->{name} eq 'EOL';
+        last if (not @$next_tokens or $next_tokens->[0]->{column} == 0);
     }
 
     return;
@@ -802,12 +795,6 @@ sub debug_event {
     my $str = $self->event_to_test_suite([$event, $info]);
     require Term::ANSIColor;
     warn Term::ANSIColor::colored(["magenta"], "============ $str"), "\n";
-}
-
-sub not {
-    my ($self, $msg) = @_;
-    require Term::ANSIColor;
-    warn Term::ANSIColor::colored(["red"], "============ $msg"), "\n";
 }
 
 sub debug_rules {
