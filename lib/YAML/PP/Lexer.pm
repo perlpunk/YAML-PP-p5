@@ -273,6 +273,7 @@ sub fetch_next_tokens {
     unless (@$next) {
         my $next_line = $self->fetch_next_line;
         my $context = $self->context;
+        my $offset = 0;
         unless ($next_line) {
             if ($context eq 'block_scalar_start' or $context eq 'block_scalar') {
                 $self->push_tokens( [ END => '' ] );
@@ -283,12 +284,19 @@ sub fetch_next_tokens {
 
         my ($spaces, $content) = @$next_line;
         my $end;
-        unless ($spaces) {
-            if ($content =~ $RE_DOC_START or $content =~ $RE_DOC_END) {
-                $end = 1;
+        if (not $spaces and $content =~ s/\A(---|\.\.\.)(?=$RE_WS|\z)//) {
+            my $token = $1;
+            if ($context eq 'block_scalar_start' or $context eq 'block_scalar') {
+                $self->push_tokens( [ END => '' ] );
             }
+            $context = 'normal';
+            $self->set_context($context);
+            my $token_name = { '---' => 'DOC_START', '...' => 'DOC_END' }->{ $token };
+            $self->push_tokens( [ $token_name => $token ] );
+            $next_line->[1] = $content;
+            $offset = 3;
         }
-        if ((length $spaces) < $indent) {
+        elsif ((length $spaces) < $indent) {
             if (length $content) {
                 # non-empty less indented line
                 $end = 1;
@@ -307,7 +315,7 @@ sub fetch_next_tokens {
             $self->set_context($context);
         }
         my $method = $fetch_methods{ $self->context };
-        $self->$method(0, $indent, $next_line);
+        $self->$method($offset, $indent, $next_line);
         if (@$next) {
             $next->[-1]->{value} .= $next_line->[2];
         }
@@ -356,51 +364,18 @@ sub _fetch_next_tokens {
     my @tokens;
     if ($offset == 0) {
         if ($spaces and $context eq 'normal') {
-            if ($$yaml =~ s/\A(#.*\z)//) {
-                push @tokens, ( EOL => $spaces . $1 );
-                $self->push_tokens(\@tokens);
-                return;
-            }
-            if (not length $$yaml) {
-                push @tokens, ( EOL => $spaces );
+            if ($first eq '#') {
+                push @tokens, ( EOL => $spaces . $$yaml );
                 $self->push_tokens(\@tokens);
                 return;
             }
             push @tokens, ( INDENT => $spaces );
         }
-        elsif (not $spaces and substr($$yaml, 0, 3) eq '---') {
-            if ($$yaml =~ s/$RE_DOC_START//) {
-                push @tokens, ( DOC_START => $1 );
-                if ($$yaml =~ s/\A($RE_EOL|\z)//) {
-                    push @tokens, ( EOL => $1 );
-                    $self->push_tokens(\@tokens);
-                    return;
-                }
-                if ($$yaml =~ s/\A($RE_WS+)//) {
-                    push @tokens, ( WS => $1 );
-                }
-            }
-        }
-        elsif (not $spaces and substr($$yaml, 0, 3) eq '...') {
-            if ($$yaml =~ s/$RE_DOC_END//) {
-                push @tokens, ( DOC_END => $1 );
-                unless ($$yaml =~ s/\A($RE_EOL|\z)//) {
-                    push @tokens, ( 'Expected EOL' => $$yaml );
-                    $self->push_tokens(\@tokens);
-                    return;
-                }
-                push @tokens, ( EOL => $1 );
-                $self->push_tokens(\@tokens);
-                return;
-            }
-        }
         elsif ($context eq 'normal') {
             if ($first eq "#") {
-                if ($$yaml =~ s/\A(#.*\z)//) {
-                    push @tokens, ( EOL => $1 );
-                    $self->push_tokens(\@tokens);
-                    return;
-                }
+                push @tokens, ( EOL => $$yaml );
+                $self->push_tokens(\@tokens);
+                return;
             }
             elsif ($first eq "%") {
                 if ($$yaml =~ s/\A(\s*%YAML ?1\.2$RE_WS*)//) {
@@ -465,13 +440,13 @@ sub _fetch_next_tokens {
         }
     }
 
-    $first = substr($$yaml, 0, 1);
     while (1) {
         unless (length $$yaml) {
             push @tokens, ( EOL => '' );
             $self->push_tokens(\@tokens);
             return;
         }
+        $first = substr($$yaml, 0, 1);
         my $plain = 0;
 
         if ($QUOTED{ $first }) {
@@ -490,7 +465,7 @@ sub _fetch_next_tokens {
                 push @tokens, ( $token_name2 => $quoted );
                 push @tokens, ( $token_name => $first );
             }
-            elsif ($$yaml eq '') {
+            elsif (not length $$yaml) {
                 push @tokens, ( $token_name . 'D_LINE' => $quoted );
                 push @tokens, ( EOL => '' );
                 $self->push_tokens(\@tokens);
@@ -502,7 +477,6 @@ sub _fetch_next_tokens {
                 $self->push_tokens(\@tokens);
                 return;
             }
-
 
         }
         elsif ($COLON_DASH_QUESTION{ $first }) {
@@ -552,7 +526,7 @@ sub _fetch_next_tokens {
                 return;
             }
         }
-        elsif ($first eq ' ') {
+        elsif ($first eq ' ' or $first eq "\t") {
             if ($$yaml =~ s/\A($RE_WS+)//) {
                 my $ws = $1;
                 if ($$yaml =~ s/\A((?:#.*)?\z)//) {
@@ -594,7 +568,6 @@ sub _fetch_next_tokens {
             }
         }
 
-        $first = substr($$yaml, 0, 1);
     }
 
     return;
