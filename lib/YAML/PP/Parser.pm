@@ -996,6 +996,20 @@ sub cb_start_plain {
     ];
 }
 
+sub cb_empty_plain {
+    my ($self, $res) = @_;
+    my $stack = $self->event_stack;
+    push @{ $stack->[-1]->[1]->{value} }, '';
+    $self->cb_fetch_tokens_plain;
+}
+
+sub cb_fetch_tokens_plain {
+    my ($self) = @_;
+    my $indent = $self->offset->[-1] + 1;
+    $self->lexer->set_context('plain');
+    $self->lexer->fetch_next_tokens($indent);
+}
+
 sub cb_start_alias {
     my ($self, $res) = @_;
     my $alias = $self->tokens->[-1]->{value};
@@ -1034,13 +1048,6 @@ sub cb_insert_map {
         [ begin => 'MAP' => {} ],
         [ scalar => { style => ':', value => undef } ];
     }
-}
-
-sub cb_got_multiscalar {
-    my ($self, $res) = @_;
-    my $stack = $self->event_stack;
-    my $multi = $self->lexer->parse_plain_multi($self);
-    push @{ $stack->[-1]->[1]->{value} }, @{ $multi };
 }
 
 sub cb_block_scalar {

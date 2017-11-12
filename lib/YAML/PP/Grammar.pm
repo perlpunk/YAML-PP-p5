@@ -519,18 +519,7 @@ $GRAMMAR = {
         'match' => 'cb_doublequoted_key'
       }
     },
-    'QUESTION' => {
-      'EOL' => {
-        'node' => 'FULLNODE',
-        'return' => 1
-      },
-      'WS' => {
-        'node' => 'FULLNODE',
-        'return' => 1
-      },
-      'match' => 'cb_question'
-    },
-    'SCALAR' => {
+    'PLAIN' => {
       'COLON' => {
         'EOL' => {
           'node' => 'FULLNODE',
@@ -554,6 +543,17 @@ $GRAMMAR = {
         }
       },
       'match' => 'cb_mapkey'
+    },
+    'QUESTION' => {
+      'EOL' => {
+        'node' => 'FULLNODE',
+        'return' => 1
+      },
+      'WS' => {
+        'node' => 'FULLNODE',
+        'return' => 1
+      },
+      'match' => 'cb_question'
     },
     'SINGLEQUOTE' => {
       'SINGLEQUOTED' => {
@@ -586,16 +586,16 @@ $GRAMMAR = {
     }
   },
   'RULE_PLAIN' => {
-    'SCALAR' => {
+    'PLAIN' => {
       'COMMENT' => {
         'EOL' => {
           'return' => 1
         },
-        'match' => 'cb_got_multiscalar'
+        'match' => 'cb_got_scalar'
       },
       'EOL' => {
-        'match' => 'cb_got_multiscalar',
-        'return' => 1
+        'match' => 'cb_fetch_tokens_plain',
+        'new' => 'RULE_PLAIN_MULTI'
       },
       'match' => 'cb_start_plain'
     }
@@ -612,7 +612,7 @@ $GRAMMAR = {
       },
       'match' => 'cb_insert_map'
     },
-    'SCALAR' => {
+    'PLAIN' => {
       'COLON' => {
         'EOL' => {
           'node' => 'FULLNODE',
@@ -631,8 +631,8 @@ $GRAMMAR = {
         'match' => 'cb_got_scalar'
       },
       'EOL' => {
-        'match' => 'cb_got_multiscalar',
-        'return' => 1
+        'match' => 'cb_fetch_tokens_plain',
+        'new' => 'RULE_PLAIN_MULTI'
       },
       'WS' => {
         'COLON' => {
@@ -648,6 +648,45 @@ $GRAMMAR = {
         }
       },
       'match' => 'cb_start_plain'
+    }
+  },
+  'RULE_PLAIN_MULTI' => {
+    'END' => {
+      'return' => 1
+    },
+    'EOL' => {
+      'match' => 'cb_empty_plain',
+      'new' => 'RULE_PLAIN_MULTI'
+    },
+    'INDENT' => {
+      'WS' => {
+        'PLAIN' => {
+          'COMMENT' => {
+            'EOL' => {
+              'return' => 1
+            }
+          },
+          'EOL' => {
+            'match' => 'cb_fetch_tokens_plain',
+            'new' => 'RULE_PLAIN_MULTI'
+          },
+          'match' => 'cb_take'
+        }
+      }
+    },
+    'WS' => {
+      'PLAIN' => {
+        'COMMENT' => {
+          'EOL' => {
+            'return' => 1
+          }
+        },
+        'EOL' => {
+          'match' => 'cb_fetch_tokens_plain',
+          'new' => 'RULE_PLAIN_MULTI'
+        },
+        'match' => 'cb_take'
+      }
     }
   },
   'RULE_SEQSTART' => {
@@ -855,12 +894,12 @@ This is the Grammar in YAML
       EOL: { match: cb_empty_quoted_line, fetch: 1, new: MULTILINE_DOUBLEQUOTED }
     
     RULE_PLAIN_KEY_OR_NODE:
-      SCALAR:
+      PLAIN:
         match: cb_start_plain
         COMMENT:
           match: cb_got_scalar
           EOL: { return: 1 }
-        EOL: { match: cb_got_multiscalar, return: 1 }
+        EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
         WS:
           COLON:
             match: cb_insert_map
@@ -876,12 +915,30 @@ This is the Grammar in YAML
         WS: { node: FULLMAPVALUE, return: 1 }
     
     RULE_PLAIN:
-      SCALAR:
+      PLAIN:
         match: cb_start_plain
         COMMENT:
-          match: cb_got_multiscalar
+          match: cb_got_scalar
           EOL: { return: 1 }
-        EOL: { match: cb_got_multiscalar, return: 1 }
+        EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+    
+    RULE_PLAIN_MULTI:
+      END: { return: 1 }
+      EOL: { match: cb_empty_plain, new: RULE_PLAIN_MULTI }
+      WS:
+        PLAIN:
+          match: cb_take
+          EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+          COMMENT:
+            EOL: { return: 1 }
+      INDENT:
+        WS:
+          PLAIN:
+            match: cb_take
+            EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+            COMMENT:
+              EOL: { return: 1 }
+    
     
     RULE_MAPKEY:
       QUESTION:
@@ -916,7 +973,7 @@ This is the Grammar in YAML
             COLON:
               EOL: { node: FULLNODE , return: 1}
               WS: { node: FULLMAPVALUE, return: 1 }
-      SCALAR:
+      PLAIN:
         match: cb_mapkey
         WS:
           COLON:

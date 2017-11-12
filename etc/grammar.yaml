@@ -86,12 +86,12 @@ MULTILINE_DOUBLEQUOTED:
   EOL: { match: cb_empty_quoted_line, fetch: 1, new: MULTILINE_DOUBLEQUOTED }
 
 RULE_PLAIN_KEY_OR_NODE:
-  SCALAR:
+  PLAIN:
     match: cb_start_plain
     COMMENT:
       match: cb_got_scalar
       EOL: { return: 1 }
-    EOL: { match: cb_got_multiscalar, return: 1 }
+    EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
     WS:
       COLON:
         match: cb_insert_map
@@ -107,12 +107,30 @@ RULE_PLAIN_KEY_OR_NODE:
     WS: { node: FULLMAPVALUE, return: 1 }
 
 RULE_PLAIN:
-  SCALAR:
+  PLAIN:
     match: cb_start_plain
     COMMENT:
-      match: cb_got_multiscalar
+      match: cb_got_scalar
       EOL: { return: 1 }
-    EOL: { match: cb_got_multiscalar, return: 1 }
+    EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+
+RULE_PLAIN_MULTI:
+  END: { return: 1 }
+  EOL: { match: cb_empty_plain, new: RULE_PLAIN_MULTI }
+  WS:
+    PLAIN:
+      match: cb_take
+      EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+      COMMENT:
+        EOL: { return: 1 }
+  INDENT:
+    WS:
+      PLAIN:
+        match: cb_take
+        EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+        COMMENT:
+          EOL: { return: 1 }
+
 
 RULE_MAPKEY:
   QUESTION:
@@ -147,7 +165,7 @@ RULE_MAPKEY:
         COLON:
           EOL: { node: FULLNODE , return: 1}
           WS: { node: FULLMAPVALUE, return: 1 }
-  SCALAR:
+  PLAIN:
     match: cb_mapkey
     WS:
       COLON:

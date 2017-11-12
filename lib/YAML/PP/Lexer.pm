@@ -162,100 +162,67 @@ sub _fetch_next_tokens_block_scalar {
     ]);
 }
 
-sub parse_plain_multi {
-    TRACE and warn "=== parse_plain_multi()\n";
-    my ($self, $parser) = @_;
-    my @multi;
-    my $indent = $parser->offset->[ -1 ] + 1;
-    my $tokens = $parser->tokens;
+sub _fetch_next_tokens_plain {
+    my ($self, $column, $indent, $next_line) = @_;
+    my ($spaces, $content) = @$next_line;
+    my $ws = '';
+    if ($content =~ s/\A($RE_WS+)//) {
+        $ws = $1;
+    }
+    if ($content =~ s/\A(#.*)\z//) {
+        $self->push_tokens( [ COMMENT => $spaces . $ws . $1 ]);
+        $self->push_tokens( [ EOL => '' ]);
+        $self->set_context('normal');
+        return;
+    }
 
-    while (1) {
-        my $next_line = $self->fetch_next_line(1) or last;
-        my $lb = $next_line->[2];
-        my $column = 0;
-        my ($spaces, $content) = @$next_line;
-        if ((length $spaces) < $indent) {
-            if (length $content) {
-                last;
-            }
-            push @$tokens, $self->new_token( EOL => $spaces . $lb, column => $column );
-            push @multi, '';
-            @$next_line = ();
-            next;
-        }
+    if (not length $content) {
+        $self->push_tokens( [ EOL => $spaces . $ws ] );
+        return;
+    }
+    $self->push_tokens( [ INDENT => $spaces ]);
 
-        if ($indent == 0) {
-            last if $content =~ $RE_DOC_END;
-            last if $content =~ $RE_DOC_START;
-        }
-        push @$tokens, $self->new_token( INDENT => $spaces, column => $column );
-        $column += length $spaces;
-        my $ws = '';
-        if ($content =~ s/\A($RE_WS+)//) {
-            $ws = $1;
-        }
-        if ($content =~ s/\A(#.*)\z//) {
-            push @$tokens, $self->new_token( COMMENT => $ws . $1, column => $column );
-            $column += length ($ws . $1);
-            push @$tokens, $self->new_token( EOL => $lb, column => $column );
-            @$next_line = ();
-            last;
-        }
-
-        if (not length $content) {
-            push @$tokens, $self->new_token( EOL => $ws . $lb, column => $column );
-            push @multi, '';
-            next;
-        }
-        push @$tokens, $self->new_token( WS => $ws, column => $column );
-        $column += length $ws;
+        $self->push_tokens( [ WS => $ws ]);
         if ($content =~ s/\A($RE_PLAIN_WORDS2)//) {
             my $string = $1;
-            push @$tokens, $self->new_token( PLAIN => $string, column => $column );
-            $column += length $string;
+            $self->push_tokens( [ PLAIN => $string ]);
+            my $ws = '';
             if ($content =~ s/\A($RE_WS+)//) {
-                push @$tokens, $self->new_token( WS => $1, column => $column );
-                $column += length $1;
+                $ws = $1;
             }
-            push @multi, $string;
             if ($content =~ s/\A(#.*)\z//) {
-                push @$tokens, $self->new_token( COMMENT => $1, column => $column );
-                $column += length $1;
-                push @$tokens, $self->new_token( EOL => $lb, column => $column );
-                @$next_line = ();
-                last;
+                $self->push_tokens( [ COMMENT => $ws . $1 ]);
+                $self->push_tokens( [ EOL => '' ]);
+                $self->set_context('normal');
+                return;
             }
             if (length $content) {
-                push @$tokens, $self->new_token( ERROR => $content . $lb, column => $column );
-                @$next_line = ();
+                $self->push_tokens( [ WS => $ws ]) if $ws;
+                $self->push_tokens( [ ERROR => $content ]);
                 $self->exception("Unexpected content");
             }
-            push @$tokens, $self->new_token( EOL => $lb, column => $column );
+            $self->push_tokens( [ EOL => $ws ]);
         }
         else {
-            push @$tokens, $self->new_token( ERROR => $content . $lb, column => $column );
-            @$next_line = ();
+            $self->push_tokens( [ ERROR => $content ]);
             $self->exception("Unexpected content");
         }
-    }
-    return \@multi;
 }
 
-
 sub fetch_next_line {
-    my ($self, $force) = @_;
+    my ($self) = @_;
     my $next_line = $self->next_line;
-    if ($force or not defined $next_line->[0] ) {
-        my $line = $self->reader->readline;
-        unless (defined $line) {
-            $self->set_next_line([]);
-            return;
-        }
-        $self->inc_line;
-        $line =~ m/\A( *)([^\r\n]*)([\r\n]|\z)/ or die "Unexpected";
-        @$next_line = ( $1,  $2, $3 );
-        $self->set_next_line($next_line);
+
+    my $line = $self->reader->readline;
+    unless (defined $line) {
+        $self->set_next_line(undef);
+        return;
     }
+    $self->inc_line;
+    $line =~ m/\A( *)([^\r\n]*)([\r\n]|\z)/ or die "Unexpected";
+    $next_line = [ $1,  $2, $3 ];
+    $self->set_next_line($next_line);
+
     return $next_line;
 }
 
@@ -265,6 +232,7 @@ my %fetch_methods = (
     '"' => '_fetch_next_tokens',
     block_scalar_start => '_fetch_next_tokens_block_scalar_start',
     block_scalar => '_fetch_next_tokens_block_scalar',
+    plain => '_fetch_next_tokens_plain',
 );
 
 sub fetch_next_tokens {
@@ -275,7 +243,7 @@ sub fetch_next_tokens {
         my $context = $self->context;
         my $offset = 0;
         unless ($next_line) {
-            if ($context eq 'block_scalar_start' or $context eq 'block_scalar') {
+            if ($context eq 'plain' or $context eq 'block_scalar' or $context eq 'block_scalar_start') {
                 $self->push_tokens( [ END => '' ] );
                 $self->set_context('normal');
             }
@@ -286,7 +254,7 @@ sub fetch_next_tokens {
         my $end;
         if (not $spaces and $content =~ s/\A(---|\.\.\.)(?=$RE_WS|\z)//) {
             my $token = $1;
-            if ($context eq 'block_scalar_start' or $context eq 'block_scalar') {
+            if ($context eq 'plain' or $context eq 'block_scalar' or $context eq 'block_scalar_start') {
                 $self->push_tokens( [ END => '' ] );
             }
             $context = 'normal';
@@ -308,7 +276,7 @@ sub fetch_next_tokens {
             }
         }
         if ($end) {
-            if ($context eq 'block_scalar_start' or $context eq 'block_scalar') {
+            if ($context eq 'plain' or $context eq 'block_scalar' or $context eq 'block_scalar_start') {
                 $self->push_tokens( [ END => '' ] );
             }
             $context = 'normal';
@@ -548,7 +516,7 @@ sub _fetch_next_tokens {
 
         if ($plain) {
             if ($$yaml =~ s/\A($RE_PLAIN_WORDS)//) {
-                push @tokens, ( SCALAR => $1 );
+                push @tokens, ( PLAIN => $1 );
                 if ($$yaml =~ s/\A(?:($RE_WS+#.*)|($RE_WS*))\z//) {
                     if (defined $1) {
                         push @tokens, ( COMMENT => $1 );
