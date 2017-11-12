@@ -216,15 +216,22 @@ sub parse_document_head {
     return ($start, $start_line);
 }
 
+my %nodetypes = (
+    MAPVALUE => 'NODETYPE_COMPLEX',
+    MAP => 'NODETYPE_MAP',
+    SEQ => 'NODETYPE_SEQ',
+);
+
 sub parse_document {
     TRACE and warn "=== parse_document()\n";
     my ($self) = @_;
 
     my $next_tokens = $self->lexer->next_tokens;
+    my $event_types = $self->events;
+    my $stack = $self->event_stack;
     while (1) {
 
         TRACE and $self->info("----------------------- LOOP");
-        TRACE and $self->debug_yaml;
         TRACE and $self->debug_events;
 
         {
@@ -237,7 +244,20 @@ sub parse_document {
             }
         }
 
-        $self->parse_next_line();
+        DEBUG and $self->info("----------------> parse_next_line");
+        while (1) {
+            unless ($self->new_node) {
+                $self->set_rule( $nodetypes{ $event_types->[-1] } );
+            }
+
+            my $res = $self->parse_tokens();
+
+            if (@$stack) {
+                $self->process_events( $res );
+            }
+
+            last if (not @$next_tokens or $next_tokens->[0]->{column} == 0);
+        }
     }
 
     return;
@@ -337,35 +357,6 @@ sub end_document {
         $self->process_events({});
     }
     my $exp = $self->remove_nodes($remove);
-}
-
-sub parse_next_line {
-    my ($self) = @_;
-    DEBUG and $self->info("----------------> parse_next_line()");
-    my $next_tokens = $self->lexer->next_tokens;
-
-    my $event_types = $self->events;
-    my $stack = $self->event_stack;
-    while (1) {
-        unless ($self->new_node) {
-            if ($event_types->[-1] eq 'MAPVALUE') {
-                $self->set_rule( "NODETYPE_COMPLEX" );
-            }
-            else {
-                $self->set_rule( "NODETYPE_" . $event_types->[-1] );
-            }
-        }
-
-        my $res = $self->parse_tokens();
-
-        if (@$stack) {
-            $self->process_events( $res );
-        }
-
-        last if (not @$next_tokens or $next_tokens->[0]->{column} == 0);
-    }
-
-    return;
 }
 
 my %next_event = (
