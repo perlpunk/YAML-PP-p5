@@ -187,26 +187,24 @@ $GRAMMAR = {
         }
       },
       'EOL' => {
-        'fetch' => 1,
+        'match' => 'cb_fetch_tokens_quoted',
         'new' => 'MULTILINE_DOUBLEQUOTED'
       },
       'match' => 'cb_take'
     },
     'EOL' => {
-      'fetch' => 1,
       'match' => 'cb_empty_quoted_line',
       'new' => 'MULTILINE_DOUBLEQUOTED'
     }
   },
   'MULTILINE_SINGLEQUOTED' => {
     'EOL' => {
-      'fetch' => 1,
       'match' => 'cb_empty_quoted_line',
       'new' => 'MULTILINE_SINGLEQUOTED'
     },
     'SINGLEQUOTED_LINE' => {
       'EOL' => {
-        'fetch' => 1,
+        'match' => 'cb_fetch_tokens_quoted',
         'new' => 'MULTILINE_SINGLEQUOTED'
       },
       'SINGLEQUOTE' => {
@@ -455,7 +453,7 @@ $GRAMMAR = {
       },
       'DOUBLEQUOTED_LINE' => {
         'EOL' => {
-          'fetch' => 1,
+          'match' => 'cb_fetch_tokens_quoted',
           'new' => 'MULTILINE_DOUBLEQUOTED'
         },
         'match' => 'cb_take'
@@ -739,7 +737,7 @@ $GRAMMAR = {
       },
       'SINGLEQUOTED_LINE' => {
         'EOL' => {
-          'fetch' => 1,
+          'match' => 'cb_fetch_tokens_quoted',
           'new' => 'MULTILINE_SINGLEQUOTED'
         },
         'match' => 'cb_take'
@@ -854,15 +852,15 @@ This is the Grammar in YAML
                 WS: { node: FULLMAPVALUE, return: 1 }
         SINGLEQUOTED_LINE:
           match: cb_take
-          EOL: { fetch: 1, new: MULTILINE_SINGLEQUOTED }
+          EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
     
     MULTILINE_SINGLEQUOTED:
       SINGLEQUOTED_LINE:
         match: cb_take
-        EOL: { fetch: 1, new: MULTILINE_SINGLEQUOTED }
+        EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
         SINGLEQUOTE:
           EOL: { match: cb_got_scalar, return: 1 }
-      EOL: { match: cb_empty_quoted_line, fetch: 1, new: MULTILINE_SINGLEQUOTED }
+      EOL: { match: cb_empty_quoted_line, new: MULTILINE_SINGLEQUOTED }
     
     RULE_DOUBLEQUOTED_KEY_OR_NODE:
       DOUBLEQUOTE:
@@ -883,15 +881,15 @@ This is the Grammar in YAML
               WS: { node: FULLMAPVALUE, return: 1 }
         DOUBLEQUOTED_LINE:
           match: cb_take
-          EOL: { fetch: 1, new: MULTILINE_DOUBLEQUOTED  }
+          EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
     
     MULTILINE_DOUBLEQUOTED:
       DOUBLEQUOTED_LINE:
         match: cb_take
-        EOL: { fetch: 1, new: MULTILINE_DOUBLEQUOTED  }
+        EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
         DOUBLEQUOTE:
           EOL: { match: cb_got_scalar, return: 1 }
-      EOL: { match: cb_empty_quoted_line, fetch: 1, new: MULTILINE_DOUBLEQUOTED }
+      EOL: { match: cb_empty_quoted_line, new: MULTILINE_DOUBLEQUOTED }
     
     RULE_PLAIN_KEY_OR_NODE:
       PLAIN:

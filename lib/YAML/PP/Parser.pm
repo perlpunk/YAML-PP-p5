@@ -497,10 +497,6 @@ sub parse_tokens {
             DEBUG and $self->info("CALLBACK $sub");
             $self->$sub($res);
         }
-        if ($def->{fetch}) {
-            DEBUG and $self->info("fetch_next_tokens");
-            $self->lexer->fetch_next_tokens(0);
-        }
         my $node = $def->{node};
         my $new = $node || $def->{new};
         if ($new) {
@@ -986,6 +982,12 @@ sub cb_start_quoted {
     ];
 }
 
+sub cb_fetch_tokens_quoted {
+    my ($self) = @_;
+    my $indent = $self->offset->[-1] + 1;
+    $self->lexer->fetch_next_tokens($indent);
+}
+
 sub cb_start_plain {
     my ($self, $res) = @_;
     push @{ $self->event_stack }, [
@@ -1031,6 +1033,7 @@ sub cb_empty_quoted_line {
     my ($self, $res) = @_;
     my $stack = $self->event_stack;
     push @{ $stack->[-1]->[1]->{value} }, '';
+    $self->cb_fetch_tokens_quoted;
 }
 
 sub cb_got_scalar {

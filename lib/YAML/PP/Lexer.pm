@@ -243,7 +243,7 @@ sub fetch_next_tokens {
         my $context = $self->context;
         my $offset = 0;
         unless ($next_line) {
-            if ($context eq 'plain' or $context eq 'block_scalar' or $context eq 'block_scalar_start') {
+            if ($context ne 'normal') {
                 $self->push_tokens( [ END => '' ] );
                 $self->set_context('normal');
             }
@@ -254,7 +254,7 @@ sub fetch_next_tokens {
         my $end;
         if (not $spaces and $content =~ s/\A(---|\.\.\.)(?=$RE_WS|\z)//) {
             my $token = $1;
-            if ($context eq 'plain' or $context eq 'block_scalar' or $context eq 'block_scalar_start') {
+            if ($context ne 'normal') {
                 $self->push_tokens( [ END => '' ] );
             }
             $context = 'normal';
@@ -276,7 +276,7 @@ sub fetch_next_tokens {
             }
         }
         if ($end) {
-            if ($context eq 'plain' or $context eq 'block_scalar' or $context eq 'block_scalar_start') {
+            if ($context ne 'normal') {
                 $self->push_tokens( [ END => '' ] );
             }
             $context = 'normal';
