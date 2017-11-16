@@ -389,11 +389,11 @@ sub process_events {
     my $properties;
     for my $event (@$event_stack) {
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$event], ['event']);
-        if ($event->[0] eq 'properties') {
-            $properties = $event->[1];
+        my ($type, $info) = @$event;
+        if ($type eq 'properties') {
+            $properties = $info;
         }
-        elsif ($event->[0] eq 'scalar') {
-            my ($type, $info) = @$event;
+        elsif ($type eq 'scalar') {
             if ($properties) {
                 for my $p (@{ $properties->{newline} }, @{ $properties->{inline} }) {
                     my $type = $p->{type};
@@ -410,13 +410,12 @@ sub process_events {
             $self->scalar_event( $info );
             $event_types->[-1] = $next_event{ $event_types->[-1] };
         }
-        elsif ($event->[0] eq 'node') {
-            my ($type, $node) = @$event;
-            $self->set_new_node($node);
+        elsif ($type eq 'node') {
+            $self->set_new_node($info);
         }
-        elsif ($event->[0] eq 'begin') {
+        elsif ($type eq 'begin') {
             my $offset = $res->{offset};
-            my ($type, $name, $info) = @$event;
+            my $name = $info->{name};
             if ($properties and $properties->{newline}) {
 
                 for my $p (@{ $properties->{newline} }) {
@@ -431,8 +430,7 @@ sub process_events {
             }
             $self->$type($name, $offset, $info );
         }
-        elsif ($event->[0] eq 'alias') {
-            my ($type, $info) = @$event;
+        elsif ($type eq 'alias') {
             if ($properties) {
                 $self->exception("Parse error: Alias not allowed in this context");
             }
@@ -622,7 +620,6 @@ sub alias_event {
 
 sub begin {
     my ($self, $event, $offset, $info) = @_;
-    $info->{type} = $event;
 
     DEBUG and $self->debug_event( $event_to_method{ $event } . "_start_event" => $info );
     $self->callback->($self,
@@ -635,7 +632,6 @@ sub begin {
 
 sub end {
     my ($self, $event, $info) = @_;
-    $info->{type} = $event;
 
     my $event_types = $self->events;
     pop @{ $self->offset };
@@ -666,7 +662,6 @@ sub event_to_test_suite {
             $ev = $event_to_method{ $ev } . "_event";
         }
         my $string;
-        my $type = $info->{type};
         my $content = $info->{content};
 
         my $properties = '';
@@ -956,7 +951,7 @@ sub cb_empty_complexvalue {
 
 sub cb_questionstart {
     my ($self, $res) = @_;
-    push @{ $self->event_stack }, [ begin => 'MAP', { }];
+    push @{ $self->event_stack }, [ begin => { name => 'MAP' }];
 }
 
 sub cb_complexcolon {
@@ -965,7 +960,7 @@ sub cb_complexcolon {
 
 sub cb_seqstart {
     my ($self, $res) = @_;
-    push @{ $self->event_stack }, [ begin => 'SEQ', { }];
+    push @{ $self->event_stack }, [ begin => { name => 'SEQ' }];
 }
 
 #sub cb_seqitem {
@@ -1044,11 +1039,11 @@ sub cb_insert_map {
     my ($self, $res) = @_;
     my $stack = $self->event_stack;
     if (@$stack and $stack->[-1]->[0] ne 'properties') {
-        splice @$stack, -1, 0, [ begin => 'MAP' => {} ];
+        splice @$stack, -1, 0, [ begin => { name => 'MAP' } ];
     }
     else {
         push @$stack,
-        [ begin => 'MAP' => {} ],
+        [ begin => { name => 'MAP' } ],
         [ scalar => { style => ':', value => undef } ];
     }
 }
