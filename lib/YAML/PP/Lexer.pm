@@ -228,8 +228,8 @@ sub fetch_next_line {
 
 my %fetch_methods = (
     normal => '_fetch_next_tokens',
-    "'" => '_fetch_next_tokens',
-    '"' => '_fetch_next_tokens',
+    "'" => '_fetch_next_tokens_quoted',
+    '"' => '_fetch_next_tokens_quoted',
     block_scalar_start => '_fetch_next_tokens_block_scalar_start',
     block_scalar => '_fetch_next_tokens_block_scalar',
     plain => '_fetch_next_tokens_plain',
@@ -283,6 +283,7 @@ sub fetch_next_tokens {
             $self->set_context($context);
         }
         my $method = $fetch_methods{ $self->context };
+        TRACE and warn __PACKAGE__.':'.__LINE__.": fetch next tokens: $method\n";
         $self->$method($offset, $indent, $next_line);
         if (@$next) {
             $next->[-1]->{value} .= $next_line->[2];
@@ -313,7 +314,6 @@ my %FLOW =                ( '{' => 1, '[' => 1, '}' => 1, ']' => 1 );
 
 sub _fetch_next_tokens {
     my ($self, $offset, $indent, $next_line) = @_;
-    my $context = $self->context;
     my $next = $self->next_tokens;
 
     my $spaces = $next_line->[0];
@@ -331,7 +331,7 @@ sub _fetch_next_tokens {
 
     my @tokens;
     if ($offset == 0) {
-        if ($spaces and $context eq 'normal') {
+        if ($spaces ) {
             if ($first eq '#') {
                 push @tokens, ( EOL => $spaces . $$yaml );
                 $self->push_tokens(\@tokens);
@@ -339,7 +339,7 @@ sub _fetch_next_tokens {
             }
             push @tokens, ( INDENT => $spaces );
         }
-        elsif ($context eq 'normal') {
+        else {
             if ($first eq "#") {
                 push @tokens, ( EOL => $$yaml );
                 $self->push_tokens(\@tokens);
@@ -372,36 +372,6 @@ sub _fetch_next_tokens {
                     $self->push_tokens(\@tokens);
                     return;
                 }
-                $self->push_tokens(\@tokens);
-                return;
-            }
-        }
-        elsif ($QUOTED{ $context }) {
-            my $token_name = $TOKEN_NAMES{ $context };
-            my $token_name2 = $token_name . 'D';
-            my $regex = $REGEXES{ $token_name2 };
-            $token_name2 = $token_name . 'D_LINE';
-
-            my $quoted = $spaces;
-            if ($$yaml =~ s/\A($regex)//) {
-                $quoted .= $1;
-            }
-
-            if ($$yaml =~ s/\A$context//) {
-                push @tokens, ( $token_name2 => $quoted );
-                push @tokens, ( $token_name => $context );
-                $context = 'normal';
-                $self->set_context('normal');
-            }
-            elsif ($$yaml eq '') {
-                $token_name2 = $token_name . 'D_LINE';
-                push @tokens, ( $token_name2 => $quoted );
-                push @tokens, ( EOL => '' );
-                $self->push_tokens(\@tokens);
-                return 1;
-            }
-            else {
-                push @tokens, ( 'Invalid quoted string' => $$yaml );
                 $self->push_tokens(\@tokens);
                 return;
             }
@@ -539,6 +509,54 @@ sub _fetch_next_tokens {
     }
 
     return;
+}
+
+sub _fetch_next_tokens_quoted {
+    my ($self, $offset, $indent, $next_line) = @_;
+    my $context = $self->context;
+
+    my $spaces = $next_line->[0];
+    my $yaml = \$next_line->[1];
+    if (not length $$yaml) {
+        $self->push_token( EOL => $spaces );
+        return;
+    }
+    # $ESCAPE_CHAR from YAML.pm
+    if ($$yaml =~ tr/\x00-\x08\x0b-\x0c\x0e-\x1f//) {
+        $self->exception("Control characters are not allowed");
+    }
+
+    my @tokens;
+
+    my $token_name = $TOKEN_NAMES{ $context };
+    my $token_name2 = $token_name . 'D';
+    my $regex = $REGEXES{ $token_name2 };
+    $token_name2 = $token_name . 'D_LINE';
+
+    my $quoted = $spaces;
+    if ($$yaml =~ s/\A($regex)//) {
+        $quoted .= $1;
+    }
+
+    if ($$yaml =~ s/\A$context//) {
+        push @tokens, ( $token_name2 => $quoted );
+        push @tokens, ( $token_name => $context );
+        $self->push_tokens(\@tokens);
+        $context = 'normal';
+        $self->set_context('normal');
+        $self->_fetch_next_tokens(1, $indent, $next_line);
+    }
+    elsif ($$yaml eq '') {
+        $token_name2 = $token_name . 'D_LINE';
+        push @tokens, ( $token_name2 => $quoted );
+        push @tokens, ( EOL => '' );
+        $self->push_tokens(\@tokens);
+    }
+    else {
+        push @tokens, ( 'Invalid quoted string' => $$yaml );
+        $self->push_tokens(\@tokens);
+    }
+
 }
 
 sub push_token {
