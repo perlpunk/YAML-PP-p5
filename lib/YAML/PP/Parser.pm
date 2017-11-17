@@ -226,22 +226,28 @@ sub parse_document {
     TRACE and warn "=== parse_document()\n";
     my ($self) = @_;
 
-    my $next_tokens = $self->lexer->next_tokens;
+    my $lexer = $self->lexer;
+    my $next_tokens = $lexer->next_tokens;
     my $event_types = $self->events;
     my $stack = $self->event_stack;
-    while (1) {
+    $lexer->fetch_next_tokens(0);
+    LINE: while (1) {
 
         TRACE and $self->info("----------------------- LOOP");
         TRACE and $self->debug_events;
 
-        {
-            $self->lexer->fetch_next_tokens(0);
-            $self->parse_empty($next_tokens);
-            my $end = $self->check_indent();
-            if ($end) {
-                $self->end_document;
-                return;
-            }
+        unless (@$next_tokens) {
+            return $self->end_document;
+        }
+        if ( $next_tokens->[0]->{name} eq 'EOL' ) {
+            push @{ $self->tokens }, shift @$next_tokens;
+            $lexer->fetch_next_tokens(0);
+            next LINE;
+        }
+
+        my $end = $self->check_indent();
+        if ($end) {
+            return $self->end_document;
         }
 
         DEBUG and $self->info("----------------> parse_next_line");
@@ -258,6 +264,9 @@ sub parse_document {
 
             last if (not @$next_tokens or $next_tokens->[0]->{column} == 0);
         }
+        unless (@$next_tokens) {
+            $lexer->fetch_next_tokens(0);
+        }
     }
 
     return;
@@ -267,9 +276,6 @@ sub check_indent {
     my ($self) = @_;
 
     my $next_tokens = $self->lexer->next_tokens;
-    unless (@$next_tokens) {
-        return 1;
-    }
     my $next_token = $next_tokens->[0];
     if ($next_token->{column} != 0) {
         return;

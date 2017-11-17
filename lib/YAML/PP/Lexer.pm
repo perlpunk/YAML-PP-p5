@@ -199,13 +199,11 @@ sub _fetch_next_tokens_plain {
             if (length $content) {
                 $self->push_tokens( [ WS => $ws ]) if $ws;
                 $self->push_tokens( [ ERROR => $content ]);
-                $self->exception("Unexpected content");
             }
             $self->push_tokens( [ EOL => $ws ]);
         }
         else {
             $self->push_tokens( [ ERROR => $content ]);
-            $self->exception("Unexpected content");
         }
 }
 
@@ -240,10 +238,8 @@ sub fetch_next_tokens {
     my $next = $self->next_tokens;
     unless (@$next) {
         my $next_line = $self->fetch_next_line;
-        my $context = $self->context;
-        my $offset = 0;
         unless ($next_line) {
-            if ($context ne 'normal') {
+            if ($self->context ne 'normal') {
                 $self->push_tokens( [ END => '' ] );
                 $self->set_context('normal');
             }
@@ -251,44 +247,42 @@ sub fetch_next_tokens {
         }
 
         my ($spaces, $content) = @$next_line;
-        my $end;
-        if (not $spaces and $content =~ s/\A(---|\.\.\.)(?=$RE_WS|\z)//) {
-            my $token = $1;
-            if ($context ne 'normal') {
-                $self->push_tokens( [ END => '' ] );
-            }
-            $context = 'normal';
-            $self->set_context($context);
-            my $token_name = { '---' => 'DOC_START', '...' => 'DOC_END' }->{ $token };
-            $self->push_tokens( [ $token_name => $token ] );
-            $next_line->[1] = $content;
-            $offset = 3;
-        }
-        elsif ((length $spaces) < $indent) {
-            if (length $content) {
-                # non-empty less indented line
-                $end = 1;
-            }
-            else {
-                $self->push_tokens( [ EOL => $spaces . $next_line->[2] ] );
-                @$next_line = ();
+        if (not $spaces) {
+            if ($content =~ s/\A(---|\.\.\.)(?=$RE_WS|\z)//) {
+                my $token = $1;
+                if ($self->context ne 'normal') {
+                    $self->push_tokens( [ END => '' ] );
+                    $self->set_context('normal');
+                }
+                my $token_name = { '---' => 'DOC_START', '...' => 'DOC_END' }->{ $token };
+                $self->push_tokens( [ $token_name => $token ] );
+                $next_line->[1] = $content;
+                $self->_fetch_next_tokens(3, $indent, $next_line);
+                if (@$next) {
+                    $next->[-1]->{value} .= $next_line->[2];
+                }
                 return $next;
             }
         }
-        if ($end) {
+        my $context = $self->context;
+        if ((length $spaces) < $indent) {
+            unless (length $content) {
+                $self->push_tokens( [ EOL => $spaces . $next_line->[2] ] );
+                return $next;
+            }
+            # non-empty less indented line
             if ($context ne 'normal') {
                 $self->push_tokens( [ END => '' ] );
+                $context = 'normal';
+                $self->set_context($context);
             }
-            $context = 'normal';
-            $self->set_context($context);
         }
-        my $method = $fetch_methods{ $self->context };
+        my $method = $fetch_methods{ $context };
         TRACE and warn __PACKAGE__.':'.__LINE__.": fetch next tokens: $method\n";
-        $self->$method($offset, $indent, $next_line);
+        $self->$method(0, $indent, $next_line);
         if (@$next) {
             $next->[-1]->{value} .= $next_line->[2];
         }
-        @$next_line = ();
     }
     return $next;
 }
@@ -331,50 +325,17 @@ sub _fetch_next_tokens {
 
     my @tokens;
     if ($offset == 0) {
+        if ($first eq '#') {
+            push @tokens, ( EOL => $spaces . $$yaml );
+            $self->push_tokens(\@tokens);
+            return;
+        }
         if ($spaces ) {
-            if ($first eq '#') {
-                push @tokens, ( EOL => $spaces . $$yaml );
-                $self->push_tokens(\@tokens);
-                return;
-            }
             push @tokens, ( INDENT => $spaces );
         }
-        else {
-            if ($first eq "#") {
-                push @tokens, ( EOL => $$yaml );
-                $self->push_tokens(\@tokens);
-                return;
-            }
-            elsif ($first eq "%") {
-                if ($$yaml =~ s/\A(\s*%YAML ?1\.2$RE_WS*)//) {
-                    push @tokens, ( YAML_DIRECTIVE => $1 );
-                }
-                elsif ($$yaml =~ s/\A(\s*%TAG +(!$RE_NS_WORD_CHAR*!|!) +(tag:\S+|!$RE_URI_CHAR+)$RE_WS*)//) {
-                    push @tokens, ( TAG_DIRECTIVE => $1 );
-                    # TODO
-                    my $tag_alias = $2;
-                    my $tag_url = $3;
-                }
-                elsif ($$yaml =~ s/\A(\s*\A%(?:\w+).*)//) {
-                    push @tokens, ( RESERVED_DIRECTIVE => $1 );
-                    warn "Found reserved directive '$1'";
-                }
-                else {
-                    push @tokens, ( 'Invalid directive' => $$yaml );
-                    $self->push_tokens(\@tokens);
-                    return;
-                }
-                if (not length $$yaml) {
-                    push @tokens, ( EOL => '' );
-                }
-                else {
-                    push @tokens, ( 'Invalid directive' => $$yaml );
-                    $self->push_tokens(\@tokens);
-                    return;
-                }
-                $self->push_tokens(\@tokens);
-                return;
-            }
+        elsif ($first eq "%") {
+            $self->_fetch_next_tokens_directive($yaml);
+            return;
         }
     }
 
@@ -544,6 +505,7 @@ sub _fetch_next_tokens_quoted {
         $self->push_tokens(\@tokens);
         $context = 'normal';
         $self->set_context('normal');
+        $next_line->[0] = '';
         $self->_fetch_next_tokens(1, $indent, $next_line);
     }
     elsif ($$yaml eq '') {
@@ -557,6 +519,38 @@ sub _fetch_next_tokens_quoted {
         $self->push_tokens(\@tokens);
     }
 
+}
+
+sub _fetch_next_tokens_directive {
+    my ($self, $yaml) = @_;
+    my @tokens;
+
+    if ($$yaml =~ s/\A(\s*%YAML ?1\.2$RE_WS*)//) {
+        push @tokens, ( YAML_DIRECTIVE => $1 );
+    }
+    elsif ($$yaml =~ s/\A(\s*%TAG +(!$RE_NS_WORD_CHAR*!|!) +(tag:\S+|!$RE_URI_CHAR+)$RE_WS*)//) {
+        push @tokens, ( TAG_DIRECTIVE => $1 );
+        # TODO
+        my $tag_alias = $2;
+        my $tag_url = $3;
+    }
+    elsif ($$yaml =~ s/\A(\s*\A%(?:\w+).*)//) {
+        push @tokens, ( RESERVED_DIRECTIVE => $1 );
+        warn "Found reserved directive '$1'";
+    }
+    else {
+        push @tokens, ( 'Invalid directive' => $$yaml );
+        $self->push_tokens(\@tokens);
+        return;
+    }
+    if (not length $$yaml) {
+        push @tokens, ( EOL => '' );
+    }
+    else {
+        push @tokens, ( 'Invalid directive' => $$yaml );
+    }
+    $self->push_tokens(\@tokens);
+    return;
 }
 
 sub push_token {
