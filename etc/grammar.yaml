@@ -1,5 +1,5 @@
 ---
-RULE_ALIAS_KEY_OR_NODE:
+NODETYPE_NODE:
   ALIAS:
     match: cb_start_alias
     EOL: { match: cb_got_scalar, return: 1 }
@@ -9,26 +9,11 @@ RULE_ALIAS_KEY_OR_NODE:
         EOL: { node: FULLNODE, return: 1 }
         WS: { node: FULLMAPVALUE_INLINE, return: 1 }
 
-RULE_COMPLEX:
   QUESTION:
     match: cb_questionstart
     EOL: { node: FULLNODE, return: 1 }
     WS: { node: FULLNODE, return: 1 }
 
-NODETYPE_COMPLEX:
-  COLON:
-    match: cb_complexcolon
-    EOL: { node: FULLNODE, return: 1 }
-    WS: { node: FULLNODE, return: 1 }
-  DEFAULT:
-    match: cb_empty_complexvalue
-    QUESTION:
-      match: cb_question
-      EOL: { node: FULLNODE, return: 1 }
-      WS: { node: FULLNODE, return: 1 }
-    DEFAULT: { new: NODETYPE_MAP }
-
-RULE_SINGLEQUOTED_KEY_OR_NODE:
   SINGLEQUOTE:
     match: cb_start_quoted
     SINGLEQUOTED:
@@ -48,15 +33,6 @@ RULE_SINGLEQUOTED_KEY_OR_NODE:
       match: cb_take
       EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
 
-MULTILINE_SINGLEQUOTED:
-  SINGLEQUOTED_LINE:
-    match: cb_take
-    EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
-    SINGLEQUOTE:
-      EOL: { match: cb_got_scalar, return: 1 }
-  EOL: { match: cb_empty_quoted_line, new: MULTILINE_SINGLEQUOTED }
-
-RULE_DOUBLEQUOTED_KEY_OR_NODE:
   DOUBLEQUOTE:
     match: cb_start_quoted
     DOUBLEQUOTED:
@@ -77,15 +53,6 @@ RULE_DOUBLEQUOTED_KEY_OR_NODE:
       match: cb_take
       EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
 
-MULTILINE_DOUBLEQUOTED:
-  DOUBLEQUOTED_LINE:
-    match: cb_take
-    EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
-    DOUBLEQUOTE:
-      EOL: { match: cb_got_scalar, return: 1 }
-  EOL: { match: cb_empty_quoted_line, new: MULTILINE_DOUBLEQUOTED }
-
-RULE_PLAIN_KEY_OR_NODE:
   PLAIN:
     match: cb_start_plain
     COMMENT:
@@ -106,13 +73,44 @@ RULE_PLAIN_KEY_OR_NODE:
     EOL: { node: FULLNODE , return: 1}
     WS: { node: FULLMAPVALUE_INLINE, return: 1 }
 
-RULE_PLAIN:
-  PLAIN:
-    match: cb_start_plain
-    COMMENT:
-      match: cb_got_scalar
-      EOL: { return: 1 }
-    EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+  DASH:
+    match: cb_seqstart
+    EOL: { node: FULLNODE , return: 1}
+    WS: { node: FULLNODE , return: 1}
+
+  LITERAL:
+    match: cb_block_scalar
+    new: RULE_BLOCK_SCALAR_HEADER
+  FOLDED:
+    match: cb_block_scalar
+    new: RULE_BLOCK_SCALAR_HEADER
+
+
+
+NODETYPE_COMPLEX:
+  COLON:
+    match: cb_complexcolon
+    EOL: { node: FULLNODE, return: 1 }
+    WS: { node: FULLNODE, return: 1 }
+  DEFAULT:
+    match: cb_empty_complexvalue
+    new: NODETYPE_MAP
+
+MULTILINE_SINGLEQUOTED:
+  SINGLEQUOTED_LINE:
+    match: cb_take
+    EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
+    SINGLEQUOTE:
+      EOL: { match: cb_got_scalar, return: 1 }
+  EOL: { match: cb_empty_quoted_line, new: MULTILINE_SINGLEQUOTED }
+
+MULTILINE_DOUBLEQUOTED:
+  DOUBLEQUOTED_LINE:
+    match: cb_take
+    EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
+    DOUBLEQUOTE:
+      EOL: { match: cb_got_scalar, return: 1 }
+  EOL: { match: cb_empty_quoted_line, new: MULTILINE_DOUBLEQUOTED }
 
 RULE_PLAIN_MULTI:
   END: { return: 1 }
@@ -179,25 +177,11 @@ RULE_MAPKEY:
     EOL: { node: FULLNODE , return: 1}
     WS: { node: FULLMAPVALUE_INLINE, return: 1 }
 
-RULE_SEQSTART:
-  DASH:
-    match: cb_seqstart
-    EOL: { node: FULLNODE , return: 1}
-    WS: { node: FULLNODE , return: 1}
-
 NODETYPE_SEQ:
   DASH:
 #    match: cb_seqitem
     EOL: { node: FULLNODE , return: 1}
     WS: { node: FULLNODE , return: 1}
-
-RULE_BLOCK_SCALAR:
-  LITERAL:
-    match: cb_block_scalar
-    new: RULE_BLOCK_SCALAR_HEADER
-  FOLDED:
-    match: cb_block_scalar
-    new: RULE_BLOCK_SCALAR_HEADER
 
 RULE_BLOCK_SCALAR_HEADER:
   BLOCK_SCALAR_INDENT:
