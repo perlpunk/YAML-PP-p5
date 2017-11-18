@@ -128,7 +128,7 @@ sub parse_stream {
 
         $self->begin('DOC', -1, { implicit => $start ? 0 : 1 });
 
-        my $new_type = $start_line ? 'FULLSTARTNODE' : 'FULLNODE';
+        my $new_type = 'FULLNODE';
         $self->set_rule( $new_type );
         $self->set_new_node($new_type);
 
@@ -516,11 +516,6 @@ sub parse_tokens {
                 return $res;
             }
 
-            if ($next_rule_name eq 'PREVIOUS') {
-                $next_rule_name = $self->new_node;
-                $next_rule_name =~ s/^FULL//;
-                $next_rule_name = "NODETYPE_$next_rule_name";
-            }
             $next_rule = $GRAMMAR->{ $next_rule_name }
                 or die "Unexpected rule $next_rule_name";
             next RULE;

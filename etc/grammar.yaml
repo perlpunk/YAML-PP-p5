@@ -332,7 +332,7 @@ FULLNODE:
         EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR , return: 1}
         WS: { new: NODETYPE_NODE  }
       DEFAULT: { new: NODETYPE_NODE }
-  DEFAULT: { new: PREVIOUS }
+  DEFAULT: { new: NODETYPE_NODE }
 
 FULLMAPVALUE_INLINE:
   ANCHOR:

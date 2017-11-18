@@ -95,7 +95,7 @@ $GRAMMAR = {
       'match' => 'cb_anchor'
     },
     'DEFAULT' => {
-      'new' => 'PREVIOUS'
+      'new' => 'NODETYPE_NODE'
     },
     'TAG' => {
       'EOL' => {
@@ -876,12 +876,6 @@ $GRAMMAR = {
 
 
 my %TYPE2RULE = (
-    NODETYPE_STARTNODE => {
-        %{ $GRAMMAR->{RULE_SINGLEQUOTED_KEY_OR_NODE} },
-        %{ $GRAMMAR->{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
-        %{ $GRAMMAR->{RULE_BLOCK_SCALAR} },
-        %{ $GRAMMAR->{RULE_PLAIN} },
-    },
     NODETYPE_NODE => {
         %{ $GRAMMAR->{RULE_SEQSTART} },
         %{ $GRAMMAR->{RULE_COMPLEX} },
@@ -891,7 +885,6 @@ my %TYPE2RULE = (
         %{ $GRAMMAR->{RULE_ALIAS_KEY_OR_NODE} },
         %{ $GRAMMAR->{RULE_PLAIN_KEY_OR_NODE} },
     },
-    FULLSTARTNODE => $GRAMMAR->{FULLNODE},
 );
 
 %$GRAMMAR = (
@@ -1254,7 +1247,7 @@ This is the Grammar in YAML
             EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR , return: 1}
             WS: { new: NODETYPE_NODE  }
           DEFAULT: { new: NODETYPE_NODE }
-      DEFAULT: { new: PREVIOUS }
+      DEFAULT: { new: NODETYPE_NODE }
     
     FULLMAPVALUE_INLINE:
       ANCHOR:

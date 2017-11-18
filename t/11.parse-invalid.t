@@ -62,6 +62,7 @@ my %skip_events = (
     SU5Z => 1,
     W9L4 => 1,
     ZL4Z => 1,
+    '9KBC' => 1,
 );
 
 unless (@dirs) {
