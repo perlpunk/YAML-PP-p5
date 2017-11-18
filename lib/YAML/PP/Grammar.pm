@@ -16,6 +16,59 @@ our $GRAMMAR = {};
 # This grammar is automatically generated from etc/grammar.yaml
 
 $GRAMMAR = {
+  'FULLMAPVALUE_INLINE' => {
+    'ANCHOR' => {
+      'EOL' => {
+        'match' => 'cb_property_eol',
+        'new' => 'FULLNODE_ANCHOR',
+        'return' => 1
+      },
+      'WS' => {
+        'DEFAULT' => {
+          'new' => 'NODETYPE_MAPVALUE_INLINE'
+        },
+        'TAG' => {
+          'EOL' => {
+            'match' => 'cb_property_eol',
+            'new' => 'FULLNODE_TAG_ANCHOR',
+            'return' => 1
+          },
+          'WS' => {
+            'new' => 'NODETYPE_MAPVALUE_INLINE'
+          },
+          'match' => 'cb_tag'
+        }
+      },
+      'match' => 'cb_anchor'
+    },
+    'DEFAULT' => {
+      'new' => 'NODETYPE_MAPVALUE_INLINE'
+    },
+    'TAG' => {
+      'EOL' => {
+        'match' => 'cb_property_eol',
+        'new' => 'FULLNODE_TAG',
+        'return' => 1
+      },
+      'WS' => {
+        'ANCHOR' => {
+          'EOL' => {
+            'match' => 'cb_property_eol',
+            'new' => 'FULLNODE_TAG_ANCHOR',
+            'return' => 1
+          },
+          'WS' => {
+            'new' => 'NODETYPE_MAPVALUE_INLINE'
+          },
+          'match' => 'cb_anchor'
+        },
+        'DEFAULT' => {
+          'new' => 'NODETYPE_MAPVALUE_INLINE'
+        }
+      },
+      'match' => 'cb_tag'
+    }
+  },
   'FULLNODE' => {
     'ANCHOR' => {
       'EOL' => {
@@ -279,6 +332,77 @@ $GRAMMAR = {
       'match' => 'cb_tag'
     }
   },
+  'NODETYPE_MAPVALUE_INLINE' => {
+    'ALIAS' => {
+      'EOL' => {
+        'match' => 'cb_got_scalar',
+        'return' => 1
+      },
+      'match' => 'cb_start_alias'
+    },
+    'DOUBLEQUOTE' => {
+      'DOUBLEQUOTED' => {
+        'DOUBLEQUOTE' => {
+          'EOL' => {
+            'match' => 'cb_got_scalar',
+            'return' => 1
+          },
+          'WS' => {
+            'match' => 'cb_got_scalar'
+          }
+        },
+        'match' => 'cb_take'
+      },
+      'DOUBLEQUOTED_LINE' => {
+        'EOL' => {
+          'match' => 'cb_fetch_tokens_quoted',
+          'new' => 'MULTILINE_DOUBLEQUOTED'
+        },
+        'match' => 'cb_take'
+      },
+      'match' => 'cb_start_quoted'
+    },
+    'FOLDED' => {
+      'match' => 'cb_block_scalar',
+      'new' => 'RULE_BLOCK_SCALAR_HEADER'
+    },
+    'LITERAL' => {
+      'match' => 'cb_block_scalar',
+      'new' => 'RULE_BLOCK_SCALAR_HEADER'
+    },
+    'PLAIN' => {
+      'COMMENT' => {
+        'EOL' => {
+          'return' => 1
+        },
+        'match' => 'cb_got_scalar'
+      },
+      'EOL' => {
+        'match' => 'cb_fetch_tokens_plain',
+        'new' => 'RULE_PLAIN_MULTI'
+      },
+      'match' => 'cb_start_plain'
+    },
+    'SINGLEQUOTE' => {
+      'SINGLEQUOTED' => {
+        'SINGLEQUOTE' => {
+          'EOL' => {
+            'match' => 'cb_got_scalar',
+            'return' => 1
+          }
+        },
+        'match' => 'cb_take'
+      },
+      'SINGLEQUOTED_LINE' => {
+        'EOL' => {
+          'match' => 'cb_fetch_tokens_quoted',
+          'new' => 'MULTILINE_SINGLEQUOTED'
+        },
+        'match' => 'cb_take'
+      },
+      'match' => 'cb_start_quoted'
+    }
+  },
   'NODETYPE_SEQ' => {
     'DASH' => {
       'EOL' => {
@@ -304,7 +428,7 @@ $GRAMMAR = {
             'return' => 1
           },
           'WS' => {
-            'node' => 'FULLMAPVALUE',
+            'node' => 'FULLMAPVALUE_INLINE',
             'return' => 1
           },
           'match' => 'cb_insert_map'
@@ -425,7 +549,7 @@ $GRAMMAR = {
               'return' => 1
             },
             'WS' => {
-              'node' => 'FULLMAPVALUE',
+              'node' => 'FULLMAPVALUE_INLINE',
               'return' => 1
             },
             'match' => 'cb_insert_map'
@@ -441,7 +565,7 @@ $GRAMMAR = {
                 'return' => 1
               },
               'WS' => {
-                'node' => 'FULLMAPVALUE',
+                'node' => 'FULLMAPVALUE_INLINE',
                 'return' => 1
               },
               'match' => 'cb_insert_map'
@@ -470,7 +594,7 @@ $GRAMMAR = {
             'return' => 1
           },
           'WS' => {
-            'node' => 'FULLMAPVALUE',
+            'node' => 'FULLMAPVALUE_INLINE',
             'return' => 1
           }
         }
@@ -483,7 +607,7 @@ $GRAMMAR = {
         'return' => 1
       },
       'WS' => {
-        'node' => 'FULLMAPVALUE',
+        'node' => 'FULLMAPVALUE_INLINE',
         'return' => 1
       },
       'match' => 'cb_empty_mapkey'
@@ -497,7 +621,7 @@ $GRAMMAR = {
               'return' => 1
             },
             'WS' => {
-              'node' => 'FULLMAPVALUE',
+              'node' => 'FULLMAPVALUE_INLINE',
               'return' => 1
             }
           },
@@ -508,7 +632,7 @@ $GRAMMAR = {
                 'return' => 1
               },
               'WS' => {
-                'node' => 'FULLMAPVALUE',
+                'node' => 'FULLMAPVALUE_INLINE',
                 'return' => 1
               }
             }
@@ -524,7 +648,7 @@ $GRAMMAR = {
           'return' => 1
         },
         'WS' => {
-          'node' => 'FULLMAPVALUE',
+          'node' => 'FULLMAPVALUE_INLINE',
           'return' => 1
         }
       },
@@ -535,7 +659,7 @@ $GRAMMAR = {
             'return' => 1
           },
           'WS' => {
-            'node' => 'FULLMAPVALUE',
+            'node' => 'FULLMAPVALUE_INLINE',
             'return' => 1
           }
         }
@@ -562,7 +686,7 @@ $GRAMMAR = {
               'return' => 1
             },
             'WS' => {
-              'node' => 'FULLMAPVALUE',
+              'node' => 'FULLMAPVALUE_INLINE',
               'return' => 1
             }
           },
@@ -573,7 +697,7 @@ $GRAMMAR = {
                 'return' => 1
               },
               'WS' => {
-                'node' => 'FULLMAPVALUE',
+                'node' => 'FULLMAPVALUE_INLINE',
                 'return' => 1
               }
             }
@@ -605,7 +729,7 @@ $GRAMMAR = {
         'return' => 1
       },
       'WS' => {
-        'node' => 'FULLMAPVALUE',
+        'node' => 'FULLMAPVALUE_INLINE',
         'return' => 1
       },
       'match' => 'cb_insert_map'
@@ -617,7 +741,7 @@ $GRAMMAR = {
           'return' => 1
         },
         'WS' => {
-          'node' => 'FULLMAPVALUE',
+          'node' => 'FULLMAPVALUE_INLINE',
           'return' => 1
         },
         'match' => 'cb_insert_map'
@@ -639,7 +763,7 @@ $GRAMMAR = {
             'return' => 1
           },
           'WS' => {
-            'node' => 'FULLMAPVALUE',
+            'node' => 'FULLMAPVALUE_INLINE',
             'return' => 1
           },
           'match' => 'cb_insert_map'
@@ -710,7 +834,7 @@ $GRAMMAR = {
               'return' => 1
             },
             'WS' => {
-              'node' => 'FULLMAPVALUE',
+              'node' => 'FULLMAPVALUE_INLINE',
               'return' => 1
             },
             'match' => 'cb_insert_map'
@@ -726,7 +850,7 @@ $GRAMMAR = {
                 'return' => 1
               },
               'WS' => {
-                'node' => 'FULLMAPVALUE',
+                'node' => 'FULLMAPVALUE_INLINE',
                 'return' => 1
               },
               'match' => 'cb_insert_map'
@@ -758,13 +882,6 @@ my %TYPE2RULE = (
         %{ $GRAMMAR->{RULE_BLOCK_SCALAR} },
         %{ $GRAMMAR->{RULE_PLAIN} },
     },
-    NODETYPE_MAPVALUE => {
-        %{ $GRAMMAR->{RULE_ALIAS_KEY_OR_NODE} },
-        %{ $GRAMMAR->{RULE_SINGLEQUOTED_KEY_OR_NODE} },
-        %{ $GRAMMAR->{RULE_DOUBLEQUOTED_KEY_OR_NODE} },
-        %{ $GRAMMAR->{RULE_BLOCK_SCALAR} },
-        %{ $GRAMMAR->{RULE_PLAIN} },
-    },
     NODETYPE_NODE => {
         %{ $GRAMMAR->{RULE_SEQSTART} },
         %{ $GRAMMAR->{RULE_COMPLEX} },
@@ -774,7 +891,6 @@ my %TYPE2RULE = (
         %{ $GRAMMAR->{RULE_ALIAS_KEY_OR_NODE} },
         %{ $GRAMMAR->{RULE_PLAIN_KEY_OR_NODE} },
     },
-    FULLMAPVALUE => $GRAMMAR->{FULLNODE},
     FULLSTARTNODE => $GRAMMAR->{FULLNODE},
 );
 
@@ -813,7 +929,7 @@ This is the Grammar in YAML
           COLON:
             match: cb_insert_map
             EOL: { node: FULLNODE, return: 1 }
-            WS: { node: FULLMAPVALUE, return: 1 }
+            WS: { node: FULLMAPVALUE_INLINE, return: 1 }
     
     RULE_COMPLEX:
       QUESTION:
@@ -844,12 +960,12 @@ This is the Grammar in YAML
             COLON:
               match: cb_insert_map
               EOL: { node: FULLNODE, return: 1 }
-              WS: { node: FULLMAPVALUE, return: 1 }
+              WS: { node: FULLMAPVALUE_INLINE, return: 1 }
             WS:
               COLON:
                 match: cb_insert_map
                 EOL: { node: FULLNODE, return: 1 }
-                WS: { node: FULLMAPVALUE, return: 1 }
+                WS: { node: FULLMAPVALUE_INLINE, return: 1 }
         SINGLEQUOTED_LINE:
           match: cb_take
           EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
@@ -874,11 +990,11 @@ This is the Grammar in YAML
               COLON:
                 match: cb_insert_map
                 EOL: { node: FULLNODE , return: 1}
-                WS: { node: FULLMAPVALUE, return: 1 }
+                WS: { node: FULLMAPVALUE_INLINE, return: 1 }
             COLON:
               match: cb_insert_map
               EOL: { node: FULLNODE , return: 1}
-              WS: { node: FULLMAPVALUE, return: 1 }
+              WS: { node: FULLMAPVALUE_INLINE, return: 1 }
         DOUBLEQUOTED_LINE:
           match: cb_take
           EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
@@ -902,15 +1018,15 @@ This is the Grammar in YAML
           COLON:
             match: cb_insert_map
             EOL: { node: FULLNODE , return: 1}
-            WS: { node: FULLMAPVALUE, return: 1 }
+            WS: { node: FULLMAPVALUE_INLINE, return: 1 }
         COLON:
           match: cb_insert_map
           EOL: { node: FULLNODE , return: 1}
-          WS: { node: FULLMAPVALUE, return: 1 }
+          WS: { node: FULLMAPVALUE_INLINE, return: 1 }
       COLON:
         match: cb_insert_map
         EOL: { node: FULLNODE , return: 1}
-        WS: { node: FULLMAPVALUE, return: 1 }
+        WS: { node: FULLMAPVALUE_INLINE, return: 1 }
     
     RULE_PLAIN:
       PLAIN:
@@ -948,7 +1064,7 @@ This is the Grammar in YAML
         WS:
           COLON:
             EOL: { node: FULLNODE , return: 1}
-            WS: { node: FULLMAPVALUE, return: 1 }
+            WS: { node: FULLMAPVALUE_INLINE, return: 1 }
       DOUBLEQUOTE:
         DOUBLEQUOTED:
           match: cb_doublequoted_key
@@ -956,10 +1072,10 @@ This is the Grammar in YAML
             WS:
               COLON:
                 EOL: { node: FULLNODE , return: 1}
-                WS: { node: FULLMAPVALUE, return: 1 }
+                WS: { node: FULLMAPVALUE_INLINE, return: 1 }
             COLON:
               EOL: { node: FULLNODE , return: 1}
-              WS: { node: FULLMAPVALUE, return: 1 }
+              WS: { node: FULLMAPVALUE_INLINE, return: 1 }
       SINGLEQUOTE:
         SINGLEQUOTED:
           match: cb_singlequoted_key
@@ -967,23 +1083,23 @@ This is the Grammar in YAML
             WS:
               COLON:
                 EOL: { node: FULLNODE , return: 1}
-                WS: { node: FULLMAPVALUE, return: 1 }
+                WS: { node: FULLMAPVALUE_INLINE, return: 1 }
             COLON:
               EOL: { node: FULLNODE , return: 1}
-              WS: { node: FULLMAPVALUE, return: 1 }
+              WS: { node: FULLMAPVALUE_INLINE, return: 1 }
       PLAIN:
         match: cb_mapkey
         WS:
           COLON:
             EOL: { node: FULLNODE , return: 1}
-            WS: { node: FULLMAPVALUE, return: 1 }
+            WS: { node: FULLMAPVALUE_INLINE, return: 1 }
         COLON:
           EOL: { node: FULLNODE , return: 1}
-          WS: { node: FULLMAPVALUE, return: 1 }
+          WS: { node: FULLMAPVALUE_INLINE, return: 1 }
       COLON:
         match: cb_empty_mapkey
         EOL: { node: FULLNODE , return: 1}
-        WS: { node: FULLMAPVALUE, return: 1 }
+        WS: { node: FULLMAPVALUE_INLINE, return: 1 }
     
     RULE_SEQSTART:
       DASH:
@@ -1139,6 +1255,69 @@ This is the Grammar in YAML
             WS: { new: NODETYPE_NODE  }
           DEFAULT: { new: NODETYPE_NODE }
       DEFAULT: { new: PREVIOUS }
+    
+    FULLMAPVALUE_INLINE:
+      ANCHOR:
+        match: cb_anchor
+        EOL: { match: cb_property_eol, new: FULLNODE_ANCHOR , return: 1}
+        WS:
+          TAG:
+            match: cb_tag
+            EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR , return: 1}
+            WS: { new: NODETYPE_MAPVALUE_INLINE  }
+          DEFAULT: { new: NODETYPE_MAPVALUE_INLINE }
+      TAG:
+        match: cb_tag
+        EOL: { match: cb_property_eol, new: FULLNODE_TAG , return: 1}
+        WS:
+          ANCHOR:
+            match: cb_anchor
+            EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR , return: 1}
+            WS: { new: NODETYPE_MAPVALUE_INLINE  }
+          DEFAULT: { new: NODETYPE_MAPVALUE_INLINE }
+      DEFAULT: { new: NODETYPE_MAPVALUE_INLINE }
+    
+    
+    NODETYPE_MAPVALUE_INLINE:
+      ALIAS:
+        match: cb_start_alias
+        EOL: { match: cb_got_scalar, return: 1 }
+    
+      SINGLEQUOTE:
+        match: cb_start_quoted
+        SINGLEQUOTED:
+          match: cb_take
+          SINGLEQUOTE:
+            EOL: { match: cb_got_scalar, return: 1 }
+        SINGLEQUOTED_LINE:
+          match: cb_take
+          EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
+    
+      DOUBLEQUOTE:
+        match: cb_start_quoted
+        DOUBLEQUOTED:
+          match: cb_take
+          DOUBLEQUOTE:
+            EOL: { match: cb_got_scalar, return: 1 }
+            WS:
+              match: cb_got_scalar
+        DOUBLEQUOTED_LINE:
+          match: cb_take
+          EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
+    
+      PLAIN:
+        match: cb_start_plain
+        COMMENT:
+          match: cb_got_scalar
+          EOL: { return: 1 }
+        EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+    
+      LITERAL:
+        match: cb_block_scalar
+        new: RULE_BLOCK_SCALAR_HEADER
+      FOLDED:
+        match: cb_block_scalar
+        new: RULE_BLOCK_SCALAR_HEADER
     
 
 

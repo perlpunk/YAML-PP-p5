@@ -31,7 +31,6 @@ my @skip = qw/
 
     SY6V
 
-    ZL4Z
     9C9N
 
 /;
@@ -62,6 +61,7 @@ my %skip_events = (
     X4QW => 1,
     SU5Z => 1,
     W9L4 => 1,
+    ZL4Z => 1,
 );
 
 unless (@dirs) {
