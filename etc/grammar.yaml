@@ -1,5 +1,13 @@
 ---
 NODETYPE_NODE:
+  DASH:
+    match: cb_seqstart
+    EOL: { node: FULLNODE , return: 1}
+    WS: { node: FULLNODE , return: 1}
+
+  DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
+
+NODETYPE_SCALAR_OR_MAP:
   ALIAS:
     match: cb_start_alias
     EOL: { match: cb_got_scalar, return: 1 }
@@ -68,15 +76,11 @@ NODETYPE_NODE:
       match: cb_insert_map
       EOL: { node: FULLNODE , return: 1}
       WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+
   COLON:
     match: cb_insert_map
     EOL: { node: FULLNODE , return: 1}
     WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-
-  DASH:
-    match: cb_seqstart
-    EOL: { node: FULLNODE , return: 1}
-    WS: { node: FULLNODE , return: 1}
 
   LITERAL:
     match: cb_block_scalar
@@ -84,7 +88,6 @@ NODETYPE_NODE:
   FOLDED:
     match: cb_block_scalar
     new: RULE_BLOCK_SCALAR_HEADER
-
 
 
 NODETYPE_COMPLEX:
@@ -251,15 +254,15 @@ FULLNODE_ANCHOR:
     WS:
       ANCHOR:
         match: cb_anchor
-        WS: { new: NODETYPE_NODE  }
-      DEFAULT: { new: NODETYPE_NODE }
+        WS: { new: NODETYPE_SCALAR_OR_MAP  }
+      DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
   ANCHOR:
     match: cb_anchor
     WS:
       TAG:
         match: cb_tag
-        WS: { new: NODETYPE_NODE  }
-      DEFAULT: { new: NODETYPE_NODE }
+        WS: { new: NODETYPE_SCALAR_OR_MAP  }
+      DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
   DEFAULT: { new: NODETYPE_NODE }
 
 FULLNODE_TAG:
@@ -269,15 +272,15 @@ FULLNODE_TAG:
     WS:
       TAG:
         match: cb_tag
-        WS: { new: NODETYPE_NODE  }
-      DEFAULT: { new: NODETYPE_NODE, }
+        WS: { new: NODETYPE_SCALAR_OR_MAP  }
+      DEFAULT: { new: NODETYPE_SCALAR_OR_MAP, }
   TAG:
     match: cb_tag
     WS:
       ANCHOR:
         match: cb_anchor
-        WS: { new: NODETYPE_NODE  }
-      DEFAULT: { new: NODETYPE_NODE }
+        WS: { new: NODETYPE_SCALAR_OR_MAP  }
+      DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
   DEFAULT: { new: NODETYPE_NODE }
 
 FULLNODE_TAG_ANCHOR:
@@ -286,15 +289,15 @@ FULLNODE_TAG_ANCHOR:
     WS:
       TAG:
         match: cb_tag
-        WS: { new: NODETYPE_NODE  }
-      DEFAULT: { new: NODETYPE_NODE }
+        WS: { new: NODETYPE_SCALAR_OR_MAP  }
+      DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
   TAG:
     match: cb_tag
     WS:
       ANCHOR:
         match: cb_anchor
-        WS: { new: NODETYPE_NODE  }
-      DEFAULT: { new: NODETYPE_NODE }
+        WS: { new: NODETYPE_SCALAR_OR_MAP  }
+      DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
   DEFAULT: { new: NODETYPE_NODE }
 
 FULLNODE:
@@ -305,8 +308,8 @@ FULLNODE:
       TAG:
         match: cb_tag
         EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR , return: 1}
-        WS: { new: NODETYPE_NODE  }
-      DEFAULT: { new: NODETYPE_NODE }
+        WS: { new: NODETYPE_SCALAR_OR_MAP  }
+      DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
   TAG:
     match: cb_tag
     EOL: { match: cb_property_eol, new: FULLNODE_TAG , return: 1}
@@ -314,8 +317,8 @@ FULLNODE:
       ANCHOR:
         match: cb_anchor
         EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR , return: 1}
-        WS: { new: NODETYPE_NODE  }
-      DEFAULT: { new: NODETYPE_NODE }
+        WS: { new: NODETYPE_SCALAR_OR_MAP  }
+      DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
   DEFAULT: { new: NODETYPE_NODE }
 
 FULLMAPVALUE_INLINE:

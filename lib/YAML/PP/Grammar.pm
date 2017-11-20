@@ -78,7 +78,7 @@ $GRAMMAR = {
       },
       'WS' => {
         'DEFAULT' => {
-          'new' => 'NODETYPE_NODE'
+          'new' => 'NODETYPE_SCALAR_OR_MAP'
         },
         'TAG' => {
           'EOL' => {
@@ -87,7 +87,7 @@ $GRAMMAR = {
             'return' => 1
           },
           'WS' => {
-            'new' => 'NODETYPE_NODE'
+            'new' => 'NODETYPE_SCALAR_OR_MAP'
           },
           'match' => 'cb_tag'
         }
@@ -111,12 +111,12 @@ $GRAMMAR = {
             'return' => 1
           },
           'WS' => {
-            'new' => 'NODETYPE_NODE'
+            'new' => 'NODETYPE_SCALAR_OR_MAP'
           },
           'match' => 'cb_anchor'
         },
         'DEFAULT' => {
-          'new' => 'NODETYPE_NODE'
+          'new' => 'NODETYPE_SCALAR_OR_MAP'
         }
       },
       'match' => 'cb_tag'
@@ -126,11 +126,11 @@ $GRAMMAR = {
     'ANCHOR' => {
       'WS' => {
         'DEFAULT' => {
-          'new' => 'NODETYPE_NODE'
+          'new' => 'NODETYPE_SCALAR_OR_MAP'
         },
         'TAG' => {
           'WS' => {
-            'new' => 'NODETYPE_NODE'
+            'new' => 'NODETYPE_SCALAR_OR_MAP'
           },
           'match' => 'cb_tag'
         }
@@ -149,12 +149,12 @@ $GRAMMAR = {
       'WS' => {
         'ANCHOR' => {
           'WS' => {
-            'new' => 'NODETYPE_NODE'
+            'new' => 'NODETYPE_SCALAR_OR_MAP'
           },
           'match' => 'cb_anchor'
         },
         'DEFAULT' => {
-          'new' => 'NODETYPE_NODE'
+          'new' => 'NODETYPE_SCALAR_OR_MAP'
         }
       },
       'match' => 'cb_tag'
@@ -169,11 +169,11 @@ $GRAMMAR = {
       },
       'WS' => {
         'DEFAULT' => {
-          'new' => 'NODETYPE_NODE'
+          'new' => 'NODETYPE_SCALAR_OR_MAP'
         },
         'TAG' => {
           'WS' => {
-            'new' => 'NODETYPE_NODE'
+            'new' => 'NODETYPE_SCALAR_OR_MAP'
           },
           'match' => 'cb_tag'
         }
@@ -187,12 +187,12 @@ $GRAMMAR = {
       'WS' => {
         'ANCHOR' => {
           'WS' => {
-            'new' => 'NODETYPE_NODE'
+            'new' => 'NODETYPE_SCALAR_OR_MAP'
           },
           'match' => 'cb_anchor'
         },
         'DEFAULT' => {
-          'new' => 'NODETYPE_NODE'
+          'new' => 'NODETYPE_SCALAR_OR_MAP'
         }
       },
       'match' => 'cb_tag'
@@ -202,11 +202,11 @@ $GRAMMAR = {
     'ANCHOR' => {
       'WS' => {
         'DEFAULT' => {
-          'new' => 'NODETYPE_NODE'
+          'new' => 'NODETYPE_SCALAR_OR_MAP'
         },
         'TAG' => {
           'WS' => {
-            'new' => 'NODETYPE_NODE'
+            'new' => 'NODETYPE_SCALAR_OR_MAP'
           },
           'match' => 'cb_tag'
         }
@@ -220,12 +220,12 @@ $GRAMMAR = {
       'WS' => {
         'ANCHOR' => {
           'WS' => {
-            'new' => 'NODETYPE_NODE'
+            'new' => 'NODETYPE_SCALAR_OR_MAP'
           },
           'match' => 'cb_anchor'
         },
         'DEFAULT' => {
-          'new' => 'NODETYPE_NODE'
+          'new' => 'NODETYPE_SCALAR_OR_MAP'
         }
       },
       'match' => 'cb_tag'
@@ -391,6 +391,22 @@ $GRAMMAR = {
     }
   },
   'NODETYPE_NODE' => {
+    'DASH' => {
+      'EOL' => {
+        'node' => 'FULLNODE',
+        'return' => 1
+      },
+      'WS' => {
+        'node' => 'FULLNODE',
+        'return' => 1
+      },
+      'match' => 'cb_seqstart'
+    },
+    'DEFAULT' => {
+      'new' => 'NODETYPE_SCALAR_OR_MAP'
+    }
+  },
+  'NODETYPE_SCALAR_OR_MAP' => {
     'ALIAS' => {
       'EOL' => {
         'match' => 'cb_got_scalar',
@@ -421,17 +437,6 @@ $GRAMMAR = {
         'return' => 1
       },
       'match' => 'cb_insert_map'
-    },
-    'DASH' => {
-      'EOL' => {
-        'node' => 'FULLNODE',
-        'return' => 1
-      },
-      'WS' => {
-        'node' => 'FULLNODE',
-        'return' => 1
-      },
-      'match' => 'cb_seqstart'
     },
     'DOUBLEQUOTE' => {
       'DOUBLEQUOTED' => {
@@ -857,6 +862,14 @@ This is the Grammar in YAML
 
     ---
     NODETYPE_NODE:
+      DASH:
+        match: cb_seqstart
+        EOL: { node: FULLNODE , return: 1}
+        WS: { node: FULLNODE , return: 1}
+    
+      DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
+    
+    NODETYPE_SCALAR_OR_MAP:
       ALIAS:
         match: cb_start_alias
         EOL: { match: cb_got_scalar, return: 1 }
@@ -925,15 +938,11 @@ This is the Grammar in YAML
           match: cb_insert_map
           EOL: { node: FULLNODE , return: 1}
           WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+    
       COLON:
         match: cb_insert_map
         EOL: { node: FULLNODE , return: 1}
         WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-    
-      DASH:
-        match: cb_seqstart
-        EOL: { node: FULLNODE , return: 1}
-        WS: { node: FULLNODE , return: 1}
     
       LITERAL:
         match: cb_block_scalar
@@ -941,7 +950,6 @@ This is the Grammar in YAML
       FOLDED:
         match: cb_block_scalar
         new: RULE_BLOCK_SCALAR_HEADER
-    
     
     
     NODETYPE_COMPLEX:
@@ -1108,15 +1116,15 @@ This is the Grammar in YAML
         WS:
           ANCHOR:
             match: cb_anchor
-            WS: { new: NODETYPE_NODE  }
-          DEFAULT: { new: NODETYPE_NODE }
+            WS: { new: NODETYPE_SCALAR_OR_MAP  }
+          DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
       ANCHOR:
         match: cb_anchor
         WS:
           TAG:
             match: cb_tag
-            WS: { new: NODETYPE_NODE  }
-          DEFAULT: { new: NODETYPE_NODE }
+            WS: { new: NODETYPE_SCALAR_OR_MAP  }
+          DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
       DEFAULT: { new: NODETYPE_NODE }
     
     FULLNODE_TAG:
@@ -1126,15 +1134,15 @@ This is the Grammar in YAML
         WS:
           TAG:
             match: cb_tag
-            WS: { new: NODETYPE_NODE  }
-          DEFAULT: { new: NODETYPE_NODE, }
+            WS: { new: NODETYPE_SCALAR_OR_MAP  }
+          DEFAULT: { new: NODETYPE_SCALAR_OR_MAP, }
       TAG:
         match: cb_tag
         WS:
           ANCHOR:
             match: cb_anchor
-            WS: { new: NODETYPE_NODE  }
-          DEFAULT: { new: NODETYPE_NODE }
+            WS: { new: NODETYPE_SCALAR_OR_MAP  }
+          DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
       DEFAULT: { new: NODETYPE_NODE }
     
     FULLNODE_TAG_ANCHOR:
@@ -1143,15 +1151,15 @@ This is the Grammar in YAML
         WS:
           TAG:
             match: cb_tag
-            WS: { new: NODETYPE_NODE  }
-          DEFAULT: { new: NODETYPE_NODE }
+            WS: { new: NODETYPE_SCALAR_OR_MAP  }
+          DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
       TAG:
         match: cb_tag
         WS:
           ANCHOR:
             match: cb_anchor
-            WS: { new: NODETYPE_NODE  }
-          DEFAULT: { new: NODETYPE_NODE }
+            WS: { new: NODETYPE_SCALAR_OR_MAP  }
+          DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
       DEFAULT: { new: NODETYPE_NODE }
     
     FULLNODE:
@@ -1162,8 +1170,8 @@ This is the Grammar in YAML
           TAG:
             match: cb_tag
             EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR , return: 1}
-            WS: { new: NODETYPE_NODE  }
-          DEFAULT: { new: NODETYPE_NODE }
+            WS: { new: NODETYPE_SCALAR_OR_MAP  }
+          DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
       TAG:
         match: cb_tag
         EOL: { match: cb_property_eol, new: FULLNODE_TAG , return: 1}
@@ -1171,8 +1179,8 @@ This is the Grammar in YAML
           ANCHOR:
             match: cb_anchor
             EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR , return: 1}
-            WS: { new: NODETYPE_NODE  }
-          DEFAULT: { new: NODETYPE_NODE }
+            WS: { new: NODETYPE_SCALAR_OR_MAP  }
+          DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
       DEFAULT: { new: NODETYPE_NODE }
     
     FULLMAPVALUE_INLINE:
