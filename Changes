@@ -1,4 +1,14 @@
-NEXT
+0.004_002 2017-11-22 23:31:56+01:00
+    - Partial implementation of flow style collections
+    - Allow unicode in alias/anchor names
+    - Document header at the end is now recognized
+    - Support all valid escapes in double quotes
+    - ...and forbid invalid ones
+    - Multiline quoted strings must be indented
+    - Forbid sequence or mapping as a mapping value on the same line
+    - Forbit sequence after an anchor/tag on the same line
+
+0.004_001 2017-11-01 00:15:22+01:00
     - Support reading files
     - Replace load() with load_string(), dump() with dump_string()
     - Support legacy interface functions Load, LoadFile, Dump
