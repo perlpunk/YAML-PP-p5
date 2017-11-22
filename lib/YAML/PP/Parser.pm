@@ -1204,6 +1204,21 @@ sub cb_end_flowmap {
     $self->set_new_node(undef);
 }
 
+sub cb_empty_flowmap_value {
+    my ($self, $token) = @_;
+    my $stack = $self->event_stack;
+    my $info = {
+        style => ':',
+        value => undef,
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    $self->scalar_event($info);
+    $self->set_new_node(undef);
+}
+
 sub cb_take {
     my ($self, $token) = @_;
     my $stack = $self->event_stack;
