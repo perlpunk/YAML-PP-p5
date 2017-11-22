@@ -140,12 +140,16 @@ Still TODO:
 
 =item Flow Style
 
-Flow style is not implemented yet, you will get an appropriate error message.
+Flow style is partially implemented.
+
+Not yet working: Implicit flow collection keys, implicit keys in
+flow sequences, content directly after the colon, empty nodes, explicit
+keys
 
 =item Supported Characters
 
-The regexes are not complete. It will not accept characters that should be
-valid, and it will accept characters that should be invalid.
+If you have valid YAML that's not parsed, or the other way round, please
+create an issue.
 
 =item Line Numbers
 
@@ -155,8 +159,6 @@ in some cases.
 =item Error Messages
 
 The error messages need to be improved. Column information is still missing.
-
-=item Unicode
 
 =item Possibly more
 

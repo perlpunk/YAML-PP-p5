@@ -1333,13 +1333,4 @@ sub cb_block_scalar_content {
     push @{ $event->{value} }, $token->{value};
 }
 
-sub cb_flow_map {
-    $_[0]->exception("Not Implemented: Flow Style");
-}
-
-sub cb_flow_seq {
-    $_[0]->exception("Not Implemented: Flow Style");
-}
-
-
 1;
