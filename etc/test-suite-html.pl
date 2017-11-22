@@ -80,6 +80,11 @@ span.block_scalar_content { color: #aa7700; }
 span.tab { background-color: lightblue; }
 span.error { background-color: #ff8888; }
 span.trailing_space { background-color: magenta; }
+span.flowseq_start { font-weight: bold; color: magenta; }
+span.flowseq_end { font-weight: bold; color: magenta; }
+span.flowmap_start { font-weight: bold; color: magenta; }
+span.flowmap_end { font-weight: bold; color: magenta; }
+span.flow_comma { font-weight: bold; color: magenta; }
 
 pre {
     background-color: white;

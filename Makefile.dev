@@ -6,6 +6,12 @@ cover:
 test-all:
 	TEST_ALL=1 prove -lrv t
 
+test-valid-all:
+	TEST_ALL=1 prove -lrv t/10.parse-valid.t
+
+test-invalid-all:
+	TEST_ALL=1 prove -lrv t/11.parse-invalid.t
+
 test:
 	prove -lr t
 

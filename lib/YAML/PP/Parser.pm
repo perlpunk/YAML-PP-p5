@@ -221,6 +221,9 @@ my %nodetypes = (
     MAP => 'NODETYPE_MAP',
     SEQ => 'NODETYPE_SEQ',
     SEQ0 => 'NODETYPE_SEQ',
+    FLOWMAP => 'NODETYPE_FLOWMAP',
+    FLOWMAPVALUE => 'NODETYPE_FLOWMAPVALUE',
+    FLOWSEQ => 'NODETYPE_FLOWSEQ',
 );
 
 sub parse_document {
@@ -282,9 +285,10 @@ sub check_indent {
         return;
     }
 
+    my $event_types = $self->events;
     my $tokens = $self->tokens;
-
     my $space = 0;
+
     if ($next_token->{name} eq 'INDENT') {
         $space = length $next_token->{value};
         push @$tokens, shift @$next_tokens;
@@ -299,6 +303,9 @@ sub check_indent {
     elsif ($self->level < 2 and not $self->new_node) {
         return 1;
     }
+    if ($event_types->[-1] =~ m/^FLOW/) {
+        return;
+    }
 
     my $indent = $self->offset->[ -1 ];
 
@@ -311,7 +318,7 @@ sub check_indent {
         return;
     }
 
-    my $exp = $self->events->[-1];
+    my $exp = $event_types->[-1];
 
 
     if ($self->new_node) {
@@ -344,6 +351,9 @@ sub check_indent {
 
 sub end_document {
     my ($self) = @_;
+    if ($self->lexer->flowcontext) {
+        die "Unexpected end of flow context";
+    }
     if ($self->new_node) {
         $self->scalar_event({ style => ':', value => undef });
     }
@@ -357,6 +367,9 @@ my %next_event = (
     SEQ0 => 'SEQ0',
     DOC => 'DOC',
     STR => 'STR',
+    FLOWSEQ => 'FLOWSEQ',
+    FLOWMAP => 'FLOWMAPVALUE',
+    FLOWMAPVALUE => 'FLOWMAP',
 );
 
 my %render_methods = (
@@ -369,8 +382,10 @@ my %render_methods = (
 
 my %event_to_method = (
     MAP => 'mapping',
+    FLOWMAP => 'mapping',
     SEQ => 'sequence',
     SEQ0 => 'sequence',
+    FLOWSEQ => 'sequence',
     DOC => 'document',
     STR => 'stream',
     VAL => 'scalar',
@@ -590,6 +605,52 @@ sub start_sequence {
     $self->callback->($self, 'sequence_start_event', $info);
 }
 
+sub start_flow_sequence {
+    my ($self, $offset) = @_;
+    my $offsets = $self->offset;
+    push @{ $self->events }, 'FLOWSEQ';
+    push @{ $offsets }, $offset;
+    my $event_stack = $self->event_stack;
+    my $info = { style => 'flow' };
+    if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($event_stack, $info);
+    }
+    $self->callback->($self, 'sequence_start_event', $info);
+}
+
+sub start_flow_mapping {
+    my ($self, $offset) = @_;
+    my $offsets = $self->offset;
+    push @{ $self->events }, 'FLOWMAP';
+    push @{ $offsets }, $offset;
+    my $event_stack = $self->event_stack;
+    my $info = { style => 'flow' };
+    if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($event_stack, $info);
+    }
+    $self->callback->($self, 'mapping_start_event', $info);
+}
+
+sub end_flow_sequence {
+    my ($self) = @_;
+    my $event_types = $self->events;
+    pop @{ $event_types };
+    pop @{ $self->offset };
+    my $info = { event_name => 'sequence_end_event' };
+    $self->callback->($self, $info->{event_name}, $info);
+    $event_types->[-1] = $next_event{ $event_types->[-1] };
+}
+
+sub end_flow_mapping {
+    my ($self) = @_;
+    my $event_types = $self->events;
+    pop @{ $event_types };
+    pop @{ $self->offset };
+    my $info = { event_name => 'mapping_end_event' };
+    $self->callback->($self, $info->{event_name}, $info);
+    $event_types->[-1] = $next_event{ $event_types->[-1] };
+}
+
 sub start_mapping {
     my ($self, $offset) = @_;
     my $offsets = $self->offset;
@@ -735,10 +796,22 @@ sub event_to_test_suite {
         elsif ($ev eq 'mapping_start_event') {
             $string = "+MAP";
             $string .= $properties;
+            if (0) {
+                # doesn't match yaml-test-suite format
+                if ($info->{style} and $info->{style} eq 'flow') {
+                    $string .= " {}";
+                }
+            }
         }
         elsif ($ev eq 'sequence_start_event') {
             $string = "+SEQ";
             $string .= $properties;
+            if (0) {
+                # doesn't match yaml-test-suite format
+                if ($info->{style} and $info->{style} eq 'flow') {
+                    $string .= " []";
+                }
+            }
         }
         elsif ($ev eq 'mapping_end_event') {
             $string = "-MAP";
@@ -1095,6 +1168,55 @@ sub cb_fetch_tokens_plain {
     my $indent = $self->offset->[-1] + 1;
     $self->lexer->set_context('plain');
     $self->lexer->fetch_next_tokens($indent);
+}
+
+sub cb_start_flowseq {
+    my ($self, $token) = @_;
+    $self->start_flow_sequence($token->{column});
+    $self->set_new_node(1);
+}
+
+sub cb_start_flowmap {
+    my ($self, $token) = @_;
+    $self->start_flow_mapping($token->{column});
+    $self->set_new_node(1);
+}
+
+sub cb_end_flowseq {
+    my ($self, $res) = @_;
+    $self->end_flow_sequence;
+    $self->set_new_node(undef);
+}
+
+sub cb_flow_comma {
+    my ($self) = @_;
+    $self->set_new_node(1);
+}
+
+sub cb_flow_colon {
+    my ($self) = @_;
+    $self->set_new_node(1);
+}
+
+sub cb_end_flowmap {
+    my ($self, $res) = @_;
+    $self->end_flow_mapping;
+    $self->set_new_node(undef);
+}
+
+sub cb_empty_flowmap_value {
+    my ($self, $token) = @_;
+    my $stack = $self->event_stack;
+    my $info = {
+        style => ':',
+        value => undef,
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    $self->scalar_event($info);
+    $self->set_new_node(undef);
 }
 
 sub cb_take {

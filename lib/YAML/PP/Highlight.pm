@@ -32,6 +32,11 @@ my %ansicolors = (
     ERROR => [qw/ bold red /],
     EOL => [qw/ grey12 /],
     TRAILING_SPACE => [qw/ on_grey6 /],
+    FLOWSEQ_START => [qw/ bold magenta /],
+    FLOWSEQ_END => [qw/ bold magenta /],
+    FLOWMAP_START => [qw/ bold magenta /],
+    FLOWMAP_END => [qw/ bold magenta /],
+    FLOW_COMMA => [qw/ bold magenta /],
 );
 
 sub ansicolored {
@@ -86,6 +91,11 @@ my %htmlcolors = (
     ERROR => 'error',
     EOL => 'comment',
     TRAILING_SPACE => 'trailing_space',
+    FLOWSEQ_START => 'flowseq_start',
+    FLOWSEQ_END => 'flowseq_end',
+    FLOWMAP_START => 'flowmap_start',
+    FLOWMAP_END => 'flowmap_end',
+    FLOW_COMMA => 'flow_comma',
 );
 sub htmlcolored {
     require HTML::Entities;

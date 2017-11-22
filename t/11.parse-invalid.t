@@ -24,10 +24,8 @@ my @dirs = YAML::PP::Test->get_tests(
 @dirs = sort @dirs;
 
 my @skip = qw/
-    4H7K 6JTT 9MAG
-    CML9 C2SP CTN5
+    4H7K
     G9HC
-    N782
 
 
     9C9N
@@ -63,6 +61,7 @@ my %skip_events = (
     ZL4Z => 1,
     '9KBC' => 1,
     SY6V => 1,
+    C2SP => 1,
 );
 
 unless (@dirs) {
