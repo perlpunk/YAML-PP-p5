@@ -812,6 +812,10 @@ $GRAMMAR = {
     }
   },
   'RULE_FLOWSCALAR' => {
+    'ALIAS' => {
+      'match' => 'cb_send_alias',
+      'return' => 1
+    },
     'DOUBLEQUOTE' => {
       'DOUBLEQUOTED' => {
         'DOUBLEQUOTE' => {
@@ -1365,6 +1369,11 @@ This is the Grammar in YAML
       FLOWMAP_START:
         match: cb_start_flowmap
         DEFAULT: { new: NEWFLOWMAP }
+    
+      ALIAS:
+        match: cb_send_alias
+        return: 1
+    
       SINGLEQUOTE:
         match: cb_start_quoted
         SINGLEQUOTED:

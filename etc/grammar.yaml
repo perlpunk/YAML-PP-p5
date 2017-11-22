@@ -161,6 +161,11 @@ RULE_FLOWSCALAR:
   FLOWMAP_START:
     match: cb_start_flowmap
     DEFAULT: { new: NEWFLOWMAP }
+
+  ALIAS:
+    match: cb_send_alias
+    return: 1
+
   SINGLEQUOTE:
     match: cb_start_quoted
     SINGLEQUOTED:
