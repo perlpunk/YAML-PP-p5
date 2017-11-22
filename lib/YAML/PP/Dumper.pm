@@ -61,7 +61,7 @@ sub dump_node {
                 $anchor = $num;
             }
             else {
-                $self->emitter->alias_event({ content => $anchor });
+                $self->emitter->alias_event({ value => $anchor });
                 return;
             }
 
@@ -85,7 +85,7 @@ sub dump_node {
     elsif (ref $node) {
         if (ref $node eq 'JSON::PP::Boolean' or ref $node eq 'boolean') {
             $self->emitter->scalar_event({
-                content => $node ? 'true' : 'false',
+                value => $node ? 'true' : 'false',
                 style => ':',
                 anchor => $anchor,
             });
@@ -95,7 +95,7 @@ sub dump_node {
         }
     }
     else {
-        $self->emitter->scalar_event({ content => $node });
+        $self->emitter->scalar_event({ value => $node });
     }
 }
 

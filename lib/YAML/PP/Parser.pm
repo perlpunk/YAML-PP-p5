@@ -110,7 +110,7 @@ sub parse {
 sub parse_stream {
     TRACE and warn "=== parse_stream()\n";
     my ($self) = @_;
-    $self->begin('STR', -1);
+    $self->start_stream;
 
     TRACE and $self->debug_yaml;
 
@@ -126,7 +126,7 @@ sub parse_stream {
             last;
         }
 
-        $self->begin('DOC', -1, { implicit => $start ? 0 : 1 });
+        $self->start_document(not $start);
 
         my $new_type = 'FULLNODE';
         $self->set_rule( $new_type );
@@ -148,11 +148,11 @@ sub parse_stream {
             $implicit = 1;
         }
 
-        $self->end('DOC', { implicit => $implicit });
+        $self->end_doc($implicit);
 
     }
 
-    $self->end('STR');
+    $self->end_stream;
 }
 
 sub parse_document_start {
@@ -220,6 +220,7 @@ my %nodetypes = (
     MAPVALUE => 'NODETYPE_COMPLEX',
     MAP => 'NODETYPE_MAP',
     SEQ => 'NODETYPE_SEQ',
+    SEQ0 => 'NODETYPE_SEQ',
 );
 
 sub parse_document {
@@ -258,9 +259,9 @@ sub parse_document {
 
             my $res = $self->parse_tokens();
 
-            if (@$stack) {
-                $self->process_events( $res );
-            }
+#            if (@$stack) {
+#                $self->process_events( $res );
+#            }
 
             last if (not @$next_tokens or $next_tokens->[0]->{column} == 0);
         }
@@ -311,43 +312,31 @@ sub check_indent {
     }
 
     my $exp = $self->events->[-1];
-    my $seq_start = $next_token->{name} eq 'DASH';
-    TRACE and $self->info("SEQSTART: $seq_start");
 
-    my $remove = $self->reset_indent($space);
 
     if ($self->new_node) {
         # unindented sequence starts
-        if ($remove == 0 and $seq_start and $exp eq 'MAPVALUE') {
+        my $seq_start = $next_token->{name} eq 'DASH';
+        if ($space == $indent and $seq_start and $exp eq 'MAPVALUE') {
+            return;
         }
         else {
-            push @{ $self->event_stack }, [ scalar => { style => ':' } ];
-            push @{ $self->event_stack }, [ node => undef ];
-            $self->process_events({});
+            $self->scalar_event({ style => ':', value => undef });
         }
     }
 
-    if ($remove) {
-        $exp = $self->remove_nodes($remove);
+    if ($space < $indent) {
+        $exp = $self->remove_nodes($space);
     }
 
-    unless ($self->new_node) {
-        if ($exp eq 'SEQ' and not $seq_start) {
-            my $ui = $self->in_unindented_seq;
-            if ($ui) {
-                TRACE and $self->info("In unindented sequence");
-                $self->end('SEQ');
-                TRACE and $self->debug_events;
-                $exp = $self->events->[-1];
-            }
-            else {
-                $self->exception("Expected sequence item");
-            }
-        }
+    if ($exp eq 'SEQ0' and $next_token->{name} ne 'DASH') {
+        TRACE and $self->info("In unindented sequence");
+        $self->end_sequence;
+        $exp = $self->events->[-1];
+    }
 
-        if ($self->offset->[-1] != $space) {
-            $self->exception("Expected $exp");
-        }
+    if ($self->offset->[-1] != $space) {
+        $self->exception("Expected $exp");
     }
 
     return;
@@ -355,20 +344,17 @@ sub check_indent {
 
 sub end_document {
     my ($self) = @_;
-    my $level = $self->level;
-    my $remove = $level - 1;
     if ($self->new_node) {
-        push @{ $self->event_stack }, [ scalar => { style => ':' } ];
-        push @{ $self->event_stack }, [ node => undef ];
-        $self->process_events({});
+        $self->scalar_event({ style => ':', value => undef });
     }
-    my $exp = $self->remove_nodes($remove);
+    $self->remove_nodes(-1);
 }
 
 my %next_event = (
     MAP => 'MAPVALUE',
     MAPVALUE => 'MAP',
     SEQ => 'SEQ',
+    SEQ0 => 'SEQ0',
     DOC => 'DOC',
     STR => 'STR',
 );
@@ -381,73 +367,72 @@ my %render_methods = (
     q/|/ => 'render_block_scalar',
 );
 
-sub process_events {
-    my ($self, $res) = @_;
+my %event_to_method = (
+    MAP => 'mapping',
+    SEQ => 'sequence',
+    SEQ0 => 'sequence',
+    DOC => 'document',
+    STR => 'stream',
+    VAL => 'scalar',
+    ALI => 'alias',
+    MAPVALUE => 'mapping',
+);
 
-    my $event_stack = $self->event_stack;
-    return unless @$event_stack;
-
-    if (@$event_stack == 1 and $event_stack->[0]->[0] eq 'properties') {
-        return;
-    }
-
-    my $event_types = $self->events;
-    my $properties;
-    for my $event (@$event_stack) {
-        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$event], ['event']);
-        my ($type, $info) = @$event;
-        if ($type eq 'properties') {
-            $properties = $info;
-        }
-        elsif ($type eq 'scalar') {
-            if ($properties) {
-                for my $p (@{ $properties->{newline} }, @{ $properties->{inline} }) {
-                    my $type = $p->{type};
-                    if (exists $info->{ $type }) {
-                        $self->exception("A node can only have one $type");
-                    }
-                    $info->{ $type } = $p->{value};
-                }
-                undef $properties;
-            }
-            my $method = $render_methods{ $info->{style} || ':' };
-            $info->{content} = YAML::PP::Render->$method( $info );
-            delete $info->{value};
-            $self->scalar_event( $info );
-            $event_types->[-1] = $next_event{ $event_types->[-1] };
-        }
-        elsif ($type eq 'node') {
-            $self->set_new_node($info);
-        }
-        elsif ($type eq 'begin') {
-            my $offset = $res->{offset};
-            my $name = $info->{name};
-            if ($properties and $properties->{newline}) {
-
-                for my $p (@{ $properties->{newline} }) {
-                    my $type = $p->{type};
-                    if (exists $info->{ $type }) {
-                        $self->exception("A node can only have one $type");
-                    }
-                    $info->{ $type } = $p->{value};
-                }
-                delete $properties->{newline};
-                undef $properties unless keys %$properties;
-            }
-            $self->$type($name, $offset, $info );
-        }
-        elsif ($type eq 'alias') {
-            if ($properties) {
-                $self->exception("Parse error: Alias not allowed in this context");
-            }
-            $info->{content} = delete $info->{alias};
-            DEBUG and $self->debug_event( 'alias_event' => $info );
-            $self->callback->($self, 'alias_event', $info);
-            $event_types->[-1] = $next_event{ $event_types->[-1] };
-        }
-    }
-    @$event_stack = ();
-}
+#sub process_events {
+#    my ($self, $res) = @_;
+#
+#    my $event_stack = $self->event_stack;
+#    return unless @$event_stack;
+#
+#    if (@$event_stack == 1 and $event_stack->[0]->[0] eq 'properties') {
+#        return;
+#    }
+#
+#    my $event_types = $self->events;
+#    my $properties;
+#    my @send_events;
+#    for my $event (@$event_stack) {
+#        TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$event], ['event']);
+#        my ($type, $info) = @$event;
+#        if ($type eq 'properties') {
+#            $properties = $info;
+#        }
+#        elsif ($type eq 'scalar') {
+#            $info->{event_name} = 'scalar_event';
+#            $event_types->[-1] = $next_event{ $event_types->[-1] };
+#            push @send_events, $info;
+#        }
+#        elsif ($type eq 'begin') {
+#            my $name = $info->{name};
+#            $info->{event_name} = $event_to_method{ $name } . '_start_event';
+#            push @{ $event_types }, $name;
+#            push @{ $self->offset }, $info->{offset};
+#            push @send_events, $info;
+#        }
+#        elsif ($type eq 'end') {
+#            my $name = $info->{name};
+#            $info->{event_name} = $event_to_method{ $name } . '_end_event';
+#            $self->$type($name, $info);
+#            push @send_events, $info;
+#            if (@$event_types) {
+#                $event_types->[-1] = $next_event{ $event_types->[-1] };
+#            }
+#        }
+#        elsif ($type eq 'alias') {
+#            if ($properties) {
+#                $self->exception("Parse error: Alias not allowed in this context");
+#            }
+#            $info->{event_name} = 'alias_event';
+#            $event_types->[-1] = $next_event{ $event_types->[-1] };
+#            push @send_events, $info;
+#        }
+#    }
+#    @$event_stack = ();
+#    for my $info (@send_events) {
+#        DEBUG and $self->debug_event( $info->{event_name} => $info );
+#        $self->callback->($self, $info->{event_name}, $info);
+#    }
+#}
 
 sub parse_tokens {
     my ($self) = @_;
@@ -463,13 +448,11 @@ sub parse_tokens {
     my $tokens = $self->tokens;
     my $next_tokens = $self->lexer->next_tokens;
     $res->{offset} = $next_tokens->[0]->{column};
-    RULE: while (1) {
-        last unless $next_rule_name;
-
+    RULE: while ($next_rule_name) {
         DEBUG and $self->info("RULE: $next_rule_name");
+
         unless (@$next_tokens) {
             $self->exception("No more tokens");
-            return;
         }
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens->[0]], ['next_token']);
         my $got = $next_tokens->[0]->{name};
@@ -482,37 +465,32 @@ sub parse_tokens {
                 push @$tokens, shift @$next_tokens;
             }
         }
-        else {
-            $def = $next_rule->{DEFAULT};
+        elsif ($def = $next_rule->{DEFAULT}) {
             $got = 'DEFAULT';
         }
-
-        unless ($def) {
-            my @possible = sort grep { m/^[A-Z_]+$/ } keys %$next_rule;
+        else {
             $self->expected(
-                expected => \@possible,
+                expected => [keys %$next_rule],
                 got => $next_tokens->[0],
             );
-            return;
         }
 
         DEBUG and $self->got("---got $got");
         if (my $sub = $def->{match}) {
             DEBUG and $self->info("CALLBACK $sub");
-            $self->$sub($res);
+            $self->$sub($tokens->[-1]);
         }
         my $node = $def->{node};
         my $new = $node || $def->{new};
         if ($new) {
             $next_rule_name = $new;
             DEBUG and $self->got("NEW: $next_rule_name");
-            if ($node) {
-                push @{ $self->event_stack }, [ node => $new ];
-            }
+#            if ($node) {
+#                $self->set_new_node($node);
+#            }
 
             if ($def->{return}) {
                 $self->set_rule($next_rule_name);
-#                $res->{new_type}= $next_rule_name;
                 return $res;
             }
 
@@ -521,7 +499,7 @@ sub parse_tokens {
             next RULE;
         }
         elsif ($def->{return}) {
-            push @{ $self->event_stack }, [ node => undef ];
+            $self->set_new_node(undef);
             return $res;
         }
         $next_rule_name .= " - $got"; # for debugging
@@ -530,40 +508,41 @@ sub parse_tokens {
     }
 
     die "Unexpected";
-    return;
+}
+
+sub end_sequence {
+    my ($self) = @_;
+    my $event_types = $self->events;
+    pop @{ $event_types };
+    pop @{ $self->offset };
+    my $info = { event_name => 'sequence_end_event' };
+    $self->callback->($self, $info->{event_name} => $info );
+    $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
 
 sub remove_nodes {
-    my ($self, $count) = @_;
-    my $exp = $self->events->[-1];
-    for (1 .. $count) {
-        if ($exp eq 'MAPVALUE') {
-            $self->scalar_event({ style => ':' });
-        }
-        $self->end($exp);
-        $exp = $self->events->[-1];
-        TRACE and $self->debug_events;
-    }
-    TRACE and $self->info("Removed $count nodes");
-    return $exp;
-}
-
-sub reset_indent {
     my ($self, $space) = @_;
-    TRACE and warn "=== reset_indent($space)\n";
-    my $off = $self->offset;
-    my $i = $#$off;
-    while ($i > 1) {
-        my $test_indent = $off->[ $i ];
-        if ($test_indent == $space) {
+    my $offset = $self->offset;
+    my $event_types = $self->events;
+
+    my $exp = $self->events->[-1];
+    while (@$offset) {
+        if ($offset->[ -1 ] <= $space) {
             last;
         }
-        elsif ($test_indent <= $space) {
-            last;
+        if ($exp eq 'MAPVALUE') {
+            $self->scalar_event({ style => ':', value => undef });
+            $exp = 'MAP';
         }
-        $i--;
+        my $info = { name => $exp };
+        $info->{event_name} = $event_to_method{ $exp } . '_end_event';
+        pop @{ $event_types };
+        pop @{ $offset };
+        $self->callback->($self, $info->{event_name} => $info );
+        $event_types->[-1] = $next_event{ $event_types->[-1] };
+        $exp = $event_types->[-1];
     }
-    return $#$off - $i;
+    return $exp;
 }
 
 sub parse_empty {
@@ -578,57 +557,137 @@ sub parse_empty {
     return $empty;
 }
 
-sub in_unindented_seq {
+sub start_stream {
     my ($self) = @_;
-    if ($self->level > 2) {
-        my $seq_indent = $self->offset->[ -1 ];
-        my $prev_indent = $self->offset->[ -2 ];
-        if ($prev_indent == $seq_indent) {
-            return 1;
-        }
+    push @{ $self->events }, 'STR';
+    push @{ $self->offset }, -1;
+    $self->callback->($self, 'stream_start_event', {});
+}
+
+sub start_document {
+    my ($self, $implicit) = @_;
+    push @{ $self->events }, 'DOC';
+    push @{ $self->offset }, -1;
+    $self->callback->($self, 'document_start_event', { implicit => $implicit });
+}
+
+sub start_sequence {
+    my ($self, $offset) = @_;
+    my $offsets = $self->offset;
+    if ($offsets->[-1] == $offset) {
+        push @{ $self->events }, 'SEQ0';
     }
-    return 0;
+    else {
+        push @{ $self->events }, 'SEQ';
+    }
+    push @{ $offsets }, $offset;
+    my $event_stack = $self->event_stack;
+    my $info = {};
+    if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
+        my $properties = pop @$event_stack;
+        $self->node_properties($properties->[1], $info);
+    }
+    $self->callback->($self, 'sequence_start_event', $info);
 }
 
-sub in {
-    my ($self, $event) = @_;
-    return $self->events->[-1] eq $event;
+sub start_mapping {
+    my ($self, $offset) = @_;
+    my $offsets = $self->offset;
+    push @{ $self->events }, 'MAP';
+    push @{ $offsets }, $offset;
+    my $event_stack = $self->event_stack;
+    my $info = {};
+    if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
+        my $properties = pop @$event_stack;
+        $self->node_properties($properties->[1], $info);
+    }
+    $self->callback->($self, 'mapping_start_event', $info);
 }
 
-my %event_to_method = (
-    MAP => 'mapping',
-    SEQ => 'sequence',
-    DOC => 'document',
-    STR => 'stream',
-    VAL => 'scalar',
-    ALI => 'alias',
-    MAPVALUE => 'mapping',
-);
+sub end_doc {
+    my ($self, $implicit) = @_;
+    my $last = pop @{ $self->events };
+    $self->exception("Unexpected event type $last") unless $last eq 'DOC';
+    pop @{ $self->offset };
+    $self->set_tagmap({ '!!' => "tag:yaml.org,2002:" });
+    $self->callback->($self, 'document_end_event', { implicit => $implicit });
+}
+
+sub end_stream {
+    my ($self) = @_;
+    my $last = pop @{ $self->events };
+    $self->exception("Unexpected event type $last") unless $last eq 'STR';
+    pop @{ $self->offset };
+    $self->callback->($self, 'stream_end_event', { });
+}
+
+sub fetch_inline_properties {
+    my ($self, $stack, $info) = @_;
+    my $properties = $stack->[-1];
+
+    $properties = $properties->[1];
+    my $property_offset;
+    if ($properties) {
+        for my $p (@{ $properties->{inline} }) {
+            my $type = $p->{type};
+            if (exists $info->{ $type }) {
+                $self->exception("A node can only have one $type");
+            }
+            $info->{ $type } = $p->{value};
+            unless (defined $property_offset) {
+                $property_offset = $p->{offset};
+                $info->{offset} = $p->{offset};
+            }
+        }
+        delete $properties->{inline};
+        undef $properties unless $properties->{newline};
+    }
+
+    unless ($properties) {
+        pop @$stack;
+    }
+}
+
+sub node_properties {
+    my ($self, $properties, $info) = @_;
+    if ($properties) {
+        for my $p (@{ $properties->{newline} }) {
+            my $type = $p->{type};
+            if (exists $info->{ $type }) {
+                $self->exception("A node can only have one $type");
+            }
+            $info->{ $type } = $p->{value};
+        }
+        undef $properties;
+    }
+}
 
 sub scalar_event {
     my ($self, $info) = @_;
+    my $event_types = $self->events;
+    my $event_stack = $self->event_stack;
+    if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
+        my $properties = pop @$event_stack;
+        $properties = $self->node_properties($properties->[1], $info);
+    }
+    my $method = $render_methods{ $info->{style} };
+    YAML::PP::Render->$method( $info );
 
-    DEBUG and $self->debug_event( $event_to_method{VAL} . "_event" => $info );
-    $self->callback->($self, $event_to_method{VAL} . "_event", $info);
+    $self->callback->($self, 'scalar_event', $info);
+    $self->set_new_node(undef);
+    $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
 
 sub alias_event {
     my ($self, $info) = @_;
-
-    DEBUG and $self->debug_event( $event_to_method{ALI} . "_event" => $info );
-    $self->callback->($self, $event_to_method{ALI} . "_event", $info);
-}
-
-sub begin {
-    my ($self, $event, $offset, $info) = @_;
-
-    DEBUG and $self->debug_event( $event_to_method{ $event } . "_start_event" => $info );
-    $self->callback->($self,
-        $event_to_method{ $event } . "_start_event" => $info
-    );
-    push @{ $self->events }, $event;
-    push @{ $self->offset }, $offset;
-    TRACE and $self->debug_events;
+    my $event_stack = $self->event_stack;
+    if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
+        $self->exception("Parse error: Alias not allowed in this context");
+    }
+    my $event_types = $self->events;
+    $self->callback->($self, 'alias_event', $info);
+    $self->set_new_node(undef);
+    $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
 
 sub end {
@@ -642,17 +701,7 @@ sub end {
         die "end($event): Unexpected event '$last', expected $event";
     }
 
-    DEBUG and $self->debug_event( $event_to_method{ $event } . "_end_event" => $info );
-    $self->callback->($self,
-        $event_to_method{ $event } . "_end_event" => $info
-    );
-    if ($event eq 'DOC') {
-        $self->set_tagmap({
-            '!!' => "tag:yaml.org,2002:",
-        });
-    }
     return unless @$event_types;
-    $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
 
 sub event_to_test_suite {
@@ -663,7 +712,7 @@ sub event_to_test_suite {
             $ev = $event_to_method{ $ev } . "_event";
         }
         my $string;
-        my $content = $info->{content};
+        my $content = $info->{value};
 
         my $properties = '';
         $properties .= " &$info->{anchor}" if defined $info->{anchor};
@@ -853,6 +902,7 @@ sub exception {
 sub expected {
     my ($self, %args) = @_;
     my $expected = $args{expected};
+    @$expected = sort grep { m/^[A-Z_]+$/ } @$expected;
     my $got = $args{got}->{name};
     my @caller = caller(0);
     $self->exception("Expected (@$expected), but got $got",
@@ -861,23 +911,24 @@ sub expected {
 }
 
 sub cb_tag {
-    my ($self, $res) = @_;
+    my ($self, $token) = @_;
     my $stack = $self->event_stack;
     if (! @$stack or $stack->[-1]->[0] ne 'properties') {
         push @$stack, [ properties => {} ];
     }
     my $last = $stack->[-1]->[1];
-    my $tag = YAML::PP::Render::render_tag($self->tokens->[-1]->{value}, $self->tagmap);
+    my $tag = YAML::PP::Render::render_tag($token->{value}, $self->tagmap);
     $last->{inline} ||= [];
     push @{ $last->{inline} }, {
         type => 'tag',
         value => $tag,
+        offset => $token->{column},
     };
 }
 
 sub cb_anchor {
-    my ($self, $res) = @_;
-    my $anchor = $self->tokens->[-1]->{value};
+    my ($self, $token) = @_;
+    my $anchor = $token->{value};
     $anchor = substr($anchor, 1);
     my $stack = $self->event_stack;
     if (! @$stack or $stack->[-1]->[0] ne 'properties') {
@@ -888,6 +939,7 @@ sub cb_anchor {
     push @{ $last->{inline} }, {
         type => 'anchor',
         value => $anchor,
+        offset => $token->{column},
     };
 }
 
@@ -901,81 +953,114 @@ sub cb_property_eol {
 }
 
 sub cb_mapkey {
-    my ($self, $res) = @_;
-    push @{ $self->event_stack }, [ scalar => {
+    my ($self, $token) = @_;
+    my $stack = $self->event_stack;
+    my $info = {
         style => ':',
-        value => $self->tokens->[-1]->{value},
-    }];
+        value => $token->{value},
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    push @{ $stack }, [ scalar => $info ];
+}
+
+sub cb_send_mapkey {
+    my ($self, $res) = @_;
+    my $last = pop @{ $self->event_stack };
+    $self->scalar_event($last->[1]);
+    $self->set_new_node(1);
+}
+
+sub cb_send_scalar {
+    my ($self, $res) = @_;
+    my $last = pop @{ $self->event_stack };
+    $self->scalar_event($last->[1]);
 }
 
 sub cb_empty_mapkey {
-    my ($self, $res) = @_;
-    push @{ $self->event_stack }, [ scalar => {
+    my ($self, $token) = @_;
+    my $stack = $self->event_stack;
+    my $info = {
         style => ':',
         value => undef,
-    }];
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    $self->scalar_event($info);
+    $self->set_new_node(1);
 }
 
-sub cb_doublequoted_key {
-    my ($self, $res) = @_;
-    push @{ $self->event_stack }, [ scalar => {
-        style => '"',
-        value => [ $self->tokens->[-1]->{value} ],
-    }];
+sub cb_send_alias {
+    my ($self, $token) = @_;
+    my $alias = substr($token->{value}, 1);
+    $self->alias_event({ value => $alias });
+    $self->set_new_node(1);
 }
 
-sub cb_singlequoted_key {
-    my ($self, $res) = @_;
-    push @{ $self->event_stack }, [ scalar => {
-        style => "'",
-        value => [ $self->tokens->[-1]->{value} ],
-    }];
+sub cb_send_alias_from_stack {
+    my ($self, $token) = @_;
+    my $last = pop @{ $self->event_stack };
+    $self->alias_event($last->[1]);
+    $self->set_new_node(1);
 }
 
-sub cb_mapkey_alias {
-    my ($self, $res) = @_;
-    my $alias = $self->tokens->[-1]->{value};
-    $alias = substr($alias, 1);
+sub cb_alias {
+    my ($self, $token) = @_;
+    my $alias = substr($token->{value}, 1);
     push @{ $self->event_stack }, [ alias => {
-        alias => $alias,
+        value => $alias,
+        offset => $token->{column},
     }];
 }
 
 sub cb_question {
     my ($self, $res) = @_;
+    $self->set_new_node(1);
 }
 
 sub cb_empty_complexvalue {
     my ($self, $res) = @_;
-    push @{ $self->event_stack }, [ scalar => { style => ':' }];
+    $self->scalar_event({ style => ':', value => undef });
 }
 
 sub cb_questionstart {
-    my ($self, $res) = @_;
-    push @{ $self->event_stack }, [ begin => { name => 'MAP' }];
+    my ($self, $token) = @_;
+    $self->start_mapping($token->{column});
 }
 
 sub cb_complexcolon {
     my ($self, $res) = @_;
+    $self->set_new_node(1);
 }
 
 sub cb_seqstart {
-    my ($self, $res) = @_;
-    push @{ $self->event_stack }, [ begin => { name => 'SEQ' }];
+    my ($self, $token) = @_;
+    my $column = $token->{column};
+    $self->start_sequence($column);
+    $self->set_new_node(1);
 }
 
-#sub cb_seqitem {
-#    my ($self, $res) = @_;
-#}
+sub cb_seqitem {
+    my ($self, $res) = @_;
+    $self->set_new_node(1);
+}
 
 sub cb_start_quoted {
-    my ($self, $res) = @_;
-    push @{ $self->event_stack }, [
-        scalar => {
-            style => $self->tokens->[-1]->{value},
-            value => [],
-        },
-    ];
+    my ($self, $token) = @_;
+    my $stack = $self->event_stack;
+    my $info = {
+        style => $token->{value},
+        value => [],
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    push @{ $stack }, [ scalar => $info ];
 }
 
 sub cb_fetch_tokens_quoted {
@@ -985,13 +1070,17 @@ sub cb_fetch_tokens_quoted {
 }
 
 sub cb_start_plain {
-    my ($self, $res) = @_;
-    push @{ $self->event_stack }, [
-        scalar => {
+    my ($self, $token) = @_;
+    my $stack = $self->event_stack;
+    my $info = {
             style => ':',
-            value => [ $self->tokens->[-1]->{value} ],
-        },
-    ];
+            value => [ $token->{value} ],
+            offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    push @{ $stack }, [ scalar => $info ];
 }
 
 sub cb_empty_plain {
@@ -1008,21 +1097,10 @@ sub cb_fetch_tokens_plain {
     $self->lexer->fetch_next_tokens($indent);
 }
 
-sub cb_start_alias {
-    my ($self, $res) = @_;
-    my $alias = $self->tokens->[-1]->{value};
-    $alias = substr($alias, 1);
-    push @{ $self->event_stack }, [
-        alias => {
-            alias => $alias,
-        },
-    ];
-}
-
 sub cb_take {
-    my ($self, $res) = @_;
+    my ($self, $token) = @_;
     my $stack = $self->event_stack;
-    push @{ $stack->[-1]->[1]->{value} }, $self->tokens->[-1]->{value};
+    push @{ $stack->[-1]->[1]->{value} }, $token->{value};
 }
 
 sub cb_empty_quoted_line {
@@ -1032,37 +1110,62 @@ sub cb_empty_quoted_line {
     $self->cb_fetch_tokens_quoted;
 }
 
-sub cb_got_scalar {
+sub cb_insert_map_alias {
     my ($self, $res) = @_;
+    my $stack = $self->event_stack;
+    my $scalar = pop @$stack;
+    my $info = $scalar->[1];
+    $self->start_mapping($info->{offset});
+    $self->alias_event($info);
+    $self->set_new_node(1);
 }
 
 sub cb_insert_map {
     my ($self, $res) = @_;
     my $stack = $self->event_stack;
-    if (@$stack and $stack->[-1]->[0] ne 'properties') {
-        splice @$stack, -1, 0, [ begin => { name => 'MAP' } ];
+    my $scalar = pop @$stack;
+    my $info = $scalar->[1];
+    $self->start_mapping($info->{offset});
+    $self->scalar_event($info);
+    $self->set_new_node(1);
+}
+
+sub cb_insert_empty_map {
+    my ($self, $token) = @_;
+    my $stack = $self->event_stack;
+    my $info = {
+        style => ':',
+        value => undef,
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
     }
-    else {
-        push @$stack,
-        [ begin => { name => 'MAP' } ],
-        [ scalar => { style => ':', value => undef } ];
-    }
+    $self->start_mapping($info->{offset});
+    $self->scalar_event($info);
+    $self->set_new_node(1);
 }
 
 sub cb_block_scalar {
-    my ($self, $res) = @_;
-    my $type = $self->tokens->[-1]->{value};
-    push @{ $self->event_stack }, [ scalar => {
+    my ($self, $token) = @_;
+    my $type = $token->{value};
+    my $stack = $self->event_stack;
+    my $info = {
         style => $type,
         value => [],
         current_indent => $self->offset->[-1] + 1,
-    }];
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    push @{ $self->event_stack }, [ scalar => $info ];
     $self->lexer->set_context('block_scalar_start');
 }
 
 sub cb_add_block_scalar_indent {
-    my ($self, $res) = @_;
-    my $indent = $self->tokens->[-1]->{value};
+    my ($self, $token) = @_;
+    my $indent = $token->{value};
     my $event = $self->event_stack->[-1]->[1];
     $event->{block_indent} = $indent;
     $event->{got_indent} = 1;
@@ -1071,8 +1174,8 @@ sub cb_add_block_scalar_indent {
 }
 
 sub cb_add_block_scalar_chomp {
-    my ($self, $res) = @_;
-    my $chomp = $self->tokens->[-1]->{value};
+    my ($self, $token) = @_;
+    my $chomp = $token->{value};
     $self->event_stack->[-1]->[1]->{block_chomp} = $chomp;
 }
 
@@ -1084,9 +1187,9 @@ sub cb_block_scalar_empty_line {
 }
 
 sub cb_block_scalar_start_indent {
-    my ($self, $res) = @_;
+    my ($self, $token) = @_;
     my $event = $self->event_stack->[-1]->[1];
-    $event->{current_indent} = length $self->tokens->[-1]->{value};
+    $event->{current_indent} = length $token->{value};
 }
 
 sub cb_fetch_tokens_block_scalar {
@@ -1096,16 +1199,16 @@ sub cb_fetch_tokens_block_scalar {
 }
 
 sub cb_block_scalar_start_content {
-    my ($self, $res) = @_;
+    my ($self, $token) = @_;
     my $event = $self->event_stack->[-1]->[1];
-    push @{ $event->{value} }, $self->tokens->[-1]->{value};
+    push @{ $event->{value} }, $token->{value};
     $self->lexer->set_context('block_scalar');
 }
 
 sub cb_block_scalar_content {
-    my ($self, $res) = @_;
+    my ($self, $token) = @_;
     my $event = $self->event_stack->[-1]->[1];
-    push @{ $event->{value} }, $self->tokens->[-1]->{value};
+    push @{ $event->{value} }, $token->{value};
 }
 
 sub cb_flow_map {

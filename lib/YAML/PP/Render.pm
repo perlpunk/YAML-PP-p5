@@ -62,7 +62,8 @@ sub render_quoted {
         else {
             $quoted =~ s/''/'/g;
         }
-        return $quoted;
+        $info->{value} = $quoted;
+        return;
     }
 
     my $quoted = '';
@@ -108,7 +109,7 @@ sub render_quoted {
         }
         $quoted .= $line;
     }
-    return $quoted;
+    $info->{value} = $quoted;
 }
 
 sub render_block_scalar {
@@ -182,7 +183,7 @@ sub render_block_scalar {
         }
     }
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$string], ['string']);
-    return $string;
+    $info->{value} = $string;
 }
 
 sub render_multi_val {
@@ -214,7 +215,7 @@ sub render_multi_val {
             $start = 0;
         }
     }
-    return $string;
+    $info->{value} = $string;
 }
 
 

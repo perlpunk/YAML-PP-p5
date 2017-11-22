@@ -247,7 +247,7 @@ sub scalar_event {
     my $current_indent = $self->current_indent;
     my $indent = ' ' x $current_indent;
     my $props = '';
-    my $value = $info->{content};
+    my $value = $info->{value};
     my $anchor = $info->{anchor};
     my $tag = $info->{tag};
     if (defined $anchor) {
@@ -434,7 +434,7 @@ sub alias_event {
     my $current_indent = $self->current_indent;
     my $indent = ' ' x $current_indent;
 
-    my $alias = '*' . $info->{content};
+    my $alias = '*' . $info->{value};
 
     if ($stack->[-1] eq 'MAP') {
         $$yaml .= "$indent$alias :";
