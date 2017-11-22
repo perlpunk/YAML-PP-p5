@@ -111,6 +111,7 @@ MULTILINE_SINGLEQUOTED:
     EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
     SINGLEQUOTE:
       EOL: { match: cb_send_scalar, return: 1 }
+      DEFAULT: { match: cb_send_scalar, return: 1 }
   EOL: { match: cb_empty_quoted_line, new: MULTILINE_SINGLEQUOTED }
 
 MULTILINE_DOUBLEQUOTED:
@@ -119,35 +120,64 @@ MULTILINE_DOUBLEQUOTED:
     EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
     DOUBLEQUOTE:
       EOL: { match: cb_send_scalar, return: 1 }
+      DEFAULT: { match: cb_send_scalar, return: 1 }
   EOL: { match: cb_empty_quoted_line, new: MULTILINE_DOUBLEQUOTED }
 
+RULE_FLOWSCALAR:
+  SINGLEQUOTE:
+    match: cb_start_quoted
+    SINGLEQUOTED:
+      match: cb_take
+      SINGLEQUOTE:
+        EOL: { match: cb_send_scalar, return: 1 }
+        WS: { match: cb_send_scalar, return: 1 }
+    SINGLEQUOTED_LINE:
+      match: cb_take
+      EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
+
+  DOUBLEQUOTE:
+    match: cb_start_quoted
+    DOUBLEQUOTED:
+      match: cb_take
+      DOUBLEQUOTE:
+        EOL: { match: cb_send_scalar, return: 1 }
+        WS: { match: cb_send_scalar, return: 1 }
+        DEFAULT: { match: cb_send_scalar, return: 1 }
+    DOUBLEQUOTED_LINE:
+      match: cb_take
+      EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
+
+  PLAIN:
+    match: cb_start_plain
+    EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI_FLOW }
+    COMMENT:
+      match: cb_send_scalar
+      return: 1
+    DEFAULT:
+      match: cb_send_scalar
+      return: 1
 
 
 NODETYPE_NEWFLOWSEQ:
   EOL: { new: NODETYPE_NEWFLOWSEQ, return: 1 }
-  PLAIN:
-    match: cb_start_plain
-    EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
-    DEFAULT:
-      match: cb_send_scalar
-      return: 1
   WS: { new: NODETYPE_NEWFLOWSEQ }
   FLOWSEQ_END:
     match: cb_end_flowseq
     EOL: { return: 1 }
+    DEFAULT: { return: 1 }
   FLOWSEQ_START:
     match: cb_start_flowseq
     DEFAULT: { new: NODETYPE_NEWFLOWSEQ }
   FLOWMAP_START:
     match: cb_start_flowmap
     DEFAULT: { new: NODETYPE_NEWFLOWMAP }
+  DEFAULT: { new: RULE_FLOWSCALAR }
 
 NODETYPE_FLOWSEQ:
   EOL: { new: NODETYPE_FLOWSEQ, return: 1 }
   WS: { new: NODETYPE_FLOWSEQ }
   FLOWSEQ_END:
     match: cb_end_flowseq
-#    return: 1
     EOL: { return: 1 }
     DEFAULT: { return: 1 }
   FLOWSEQ_START:
@@ -158,13 +188,17 @@ NODETYPE_FLOWSEQ:
     match: cb_start_flowmap
     DEFAULT: { new: NODETYPE_NEWFLOWMAP }
 
+NODETYPE_FLOWMAPVALUE:
+  COLON:
+    match: cb_flow_colon
+    new: FLOWMAP_VALUE
 
 
 NODETYPE_NEWFLOWMAP:
   EOL: { new: NODETYPE_NEWFLOWMAP, return: 1 }
   PLAIN:
     match: cb_start_plain
-    EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+    EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI_FLOW }
     DEFAULT:
       match: cb_send_scalar
       WS:
@@ -178,10 +212,11 @@ NODETYPE_NEWFLOWMAP:
     EOL: { return: 1 }
   FLOWSEQ_START:
     match: cb_start_flowseq
-    DEFAULT: { new: NODETYPE_FLOWSEQ }
+    DEFAULT: { new: NODETYPE_NEWFLOWSEQ }
   FLOWMAP_START:
     match: cb_start_flowmap
     DEFAULT: { new: NODETYPE_FLOWMAP }
+  DEFAULT: { new: RULE_FLOWSCALAR }
 
 NODETYPE_FLOWMAP:
   EOL: { new: NODETYPE_FLOWMAP, return: 1 }
@@ -196,6 +231,7 @@ NODETYPE_FLOWMAP:
   FLOWMAP_END:
     match: cb_end_flowmap
     EOL: { return: 1 }
+    DEFAULT: { return: 1 }
   FLOWSEQ_START:
     match: cb_start_flowseq
     DEFAULT: { new: NODETYPE_FLOWSEQ }
@@ -206,15 +242,39 @@ NODETYPE_FLOWMAP:
 
 FLOWMAP_VALUE:
   WS: { new: FLOWMAP_VALUE }
+  SINGLEQUOTE:
+    match: cb_start_quoted
+    SINGLEQUOTED:
+      match: cb_take
+      SINGLEQUOTE:
+        EOL: { match: cb_send_scalar, return: 1 }
+        WS: { match: cb_send_scalar, return: 1 }
+    SINGLEQUOTED_LINE:
+      match: cb_take
+      EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
+
+  DOUBLEQUOTE:
+    match: cb_start_quoted
+    DOUBLEQUOTED:
+      match: cb_take
+      DOUBLEQUOTE:
+        EOL: { match: cb_send_scalar, return: 1 }
+        DEFAULT: { match: cb_send_scalar, return: 1 }
+    DOUBLEQUOTED_LINE:
+      match: cb_take
+      EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
   PLAIN:
     match: cb_start_plain
-    EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+    EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI_FLOW }
     DEFAULT:
       match: cb_send_scalar
       return: 1
   FLOWSEQ_START:
     match: cb_start_flowseq
     DEFAULT: { new: NODETYPE_NEWFLOWSEQ }
+  FLOWMAP_START:
+    match: cb_start_flowmap
+    DEFAULT: { new: NODETYPE_FLOWMAP }
 
 
 RULE_PLAIN_MULTI:
@@ -233,6 +293,26 @@ RULE_PLAIN_MULTI:
         EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
         COMMENT:
           EOL: { match: cb_send_scalar, return: 1 }
+
+RULE_PLAIN_MULTI_FLOW:
+  END: { match: cb_send_scalar, return: 1 }
+  EOL: { match: cb_empty_plain, new: RULE_PLAIN_MULTI }
+  WS:
+    PLAIN:
+      match: cb_take
+      EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+      COMMENT:
+        EOL: { match: cb_send_scalar, return: 1 }
+  INDENT:
+    WS:
+      PLAIN:
+        match: cb_take
+        EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI_FLOW }
+        COMMENT:
+          EOL: { match: cb_send_scalar, return: 1 }
+        DEFAULT: { match: cb_send_scalar, return: 1 }
+      DEFAULT: { match: cb_send_scalar, return: 1 }
+  DEFAULT: { match: cb_send_scalar, return: 1 }
 
 
 RULE_MAPKEY:

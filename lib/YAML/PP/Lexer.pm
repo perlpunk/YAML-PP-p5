@@ -98,6 +98,7 @@ my $RE_PLAIN_WORDS2 = "(?:$RE_PLAIN_WORD(?:$RE_WS+$RE_PLAIN_WORD)*)";
 my $RE_PLAIN_WORD_FLOW = "(?::+$RE_PLAIN_END_FLOW|$RE_PLAIN_START_FLOW)(?::+$RE_PLAIN_END_FLOW|$RE_PLAIN_END_FLOW)*";
 my $RE_PLAIN_FIRST_WORD_FLOW = "(?:[:?-]+$RE_PLAIN_END_FLOW|$RE_PLAIN_FIRST_FLOW)(?::+$RE_PLAIN_END_FLOW|$RE_PLAIN_END_FLOW)*";
 my $RE_PLAIN_WORDS_FLOW = "(?:$RE_PLAIN_FIRST_WORD_FLOW(?:$RE_WS+$RE_PLAIN_WORD_FLOW)*)";
+my $RE_PLAIN_WORDS_FLOW2 = "(?:$RE_PLAIN_WORD_FLOW(?:$RE_WS+$RE_PLAIN_WORD_FLOW)*)";
 
 
 #c-secondary-tag-handle  ::= “!” “!”
@@ -193,8 +194,16 @@ sub _fetch_next_tokens_plain {
     }
     $self->push_tokens( [ INDENT => $spaces ]);
 
+
+
         $self->push_tokens( [ WS => $ws ]);
-        if ($content =~ s/\A($RE_PLAIN_WORDS2)//) {
+
+        my $RE = $RE_PLAIN_WORDS2;
+        if ($self->flowcontext) {
+            $RE = $RE_PLAIN_WORDS_FLOW2;
+        }
+
+        if ($content =~ s/\A($RE)//) {
             my $string = $1;
             $self->push_tokens( [ PLAIN => $string ]);
             my $ws = '';
@@ -209,11 +218,22 @@ sub _fetch_next_tokens_plain {
             }
             if (length $content) {
                 $self->push_tokens( [ WS => $ws ]) if $ws;
-                $self->push_tokens( [ ERROR => $content ]);
+                $self->set_context('normal');
+                $next_line->[0] = '';
+                $next_line->[1] = $content;
+                $self->_fetch_next_tokens(1, $indent, $next_line);
+                return;
             }
             $self->push_tokens( [ EOL => $ws ]);
         }
         else {
+            if ($self->flowcontext) {
+                $self->set_context('normal');
+                $next_line->[0] = '';
+                $next_line->[1] = $content;
+                $self->_fetch_next_tokens(1, $indent, $next_line);
+                return;
+            }
             $self->push_tokens( [ ERROR => $content ]);
         }
 }

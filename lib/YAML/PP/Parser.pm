@@ -222,6 +222,7 @@ my %nodetypes = (
     SEQ => 'NODETYPE_SEQ',
     SEQ0 => 'NODETYPE_SEQ',
     FLOWMAP => 'NODETYPE_FLOWMAP',
+    FLOWMAPVALUE => 'NODETYPE_FLOWMAPVALUE',
     FLOWSEQ => 'NODETYPE_FLOWSEQ',
 );
 
@@ -612,8 +613,7 @@ sub start_flow_sequence {
     my $event_stack = $self->event_stack;
     my $info = { style => 'flow' };
     if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
-        my $properties = pop @$event_stack;
-        $self->fetch_inline_properties($properties->[1], $info);
+        $self->fetch_inline_properties($event_stack, $info);
     }
     $self->callback->($self, 'sequence_start_event', $info);
 }
@@ -626,8 +626,7 @@ sub start_flow_mapping {
     my $event_stack = $self->event_stack;
     my $info = { style => 'flow' };
     if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
-        my $properties = pop @$event_stack;
-        $self->fetch_inline_properties($properties->[1], $info);
+        $self->fetch_inline_properties($event_stack, $info);
     }
     $self->callback->($self, 'mapping_start_event', $info);
 }
@@ -1190,6 +1189,11 @@ sub cb_end_flowseq {
 }
 
 sub cb_flow_comma {
+    my ($self) = @_;
+    $self->set_new_node(1);
+}
+
+sub cb_flow_colon {
     my ($self) = @_;
     $self->set_new_node(1);
 }
