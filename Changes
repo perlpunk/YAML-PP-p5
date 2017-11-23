@@ -1,4 +1,10 @@
-0.004_002 2017-11-22 23:31:56+01:00
+0.005 2017-11-23 17:09:55+01:00
+    - Support reading files
+    - Replace load() with load_string(), dump() with dump_string()
+    - Support legacy interface functions Load, LoadFile, Dump
+    - ... and --- are now correctly invalid in quoted scalars
+    - Improve block scalar handling, passing two more tests
+    - Improve multiline plain handling, passing another test
     - Partial implementation of flow style collections
     - Allow unicode in alias/anchor names
     - Document header at the end is now recognized
@@ -7,14 +13,6 @@
     - Multiline quoted strings must be indented
     - Forbid sequence or mapping as a mapping value on the same line
     - Forbit sequence after an anchor/tag on the same line
-
-0.004_001 2017-11-01 00:15:22+01:00
-    - Support reading files
-    - Replace load() with load_string(), dump() with dump_string()
-    - Support legacy interface functions Load, LoadFile, Dump
-    - ... and --- are now correctly invalid in quoted scalars
-    - Improve block scalar handling, passing two more tests
-    - Improve multiline plain handling, passing another test
 
 0.004 2017-09-15 13:30:50+02:00
     - Improve regex for plain scalars
