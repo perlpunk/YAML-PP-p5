@@ -64,7 +64,7 @@ Here are a few examples of what you can do right now:
     my $yppl = YAML::PP::Loader->new;
     my @documents = $yppl->load_file($filename);
 
-    # The loader offers JSON::PP, boolean.pm or pureperl 1/0 (default)
+    # The loader offers JSON::PP, boolean.pm or pureperl 1/'' (currently default)
     # for booleans
     my $yppl = YAML::PP::Loader->new(boolean => 'JSON::PP');
     my ($data1, $data2) = $yppl->load_string($yaml);
@@ -179,7 +179,7 @@ sequences, but obviously not for scalars.
 
 =item Boolean Handling
 
-You can choose between C<'perl'> (default), C<'JSON::PP'> and C<'boolean'>.pm
+You can choose between C<'perl'> (1/'', currently default), C<'JSON::PP'> and C<'boolean'>.pm
 for handling boolean types.
 That allows you to dump the data structure with one of the JSON modules
 without losing information about booleans.

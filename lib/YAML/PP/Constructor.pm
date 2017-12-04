@@ -244,8 +244,11 @@ sub render_plain_scalar {
         my $oct = 0 . substr($content, 2);
         $value = oct $oct;
     }
-    elsif ($content eq 'true' or $content eq 'false') {
-        $value = $self->truefalse->($content);
+    elsif ($content eq 'true') {
+        $value = $self->truefalse->(1);
+    }
+    elsif ($content eq 'false') {
+        $value = $self->truefalse->(0);
     }
     else {
         $value = $content;
@@ -254,15 +257,15 @@ sub render_plain_scalar {
 }
 
 sub bool_jsonpp {
-    $_[0] eq 'true' ? JSON::PP::true() : JSON::PP::false()
+    $_[0] ? JSON::PP::true() : JSON::PP::false()
 }
 
 sub bool_booleanpm {
-    $_[0] eq 'true' ? boolean::true() : boolean::false()
+    $_[0] ? boolean::true() : boolean::false()
 }
 
 sub bool_perl {
-    $_[0] eq 'true' ? 1 : 0
+    $_[0] ? 1 : !1
 }
 
 
