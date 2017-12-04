@@ -10,9 +10,18 @@ our @EXPORT_OK = qw/ Load LoadFile Dump DumpFile /;
 
 sub new {
     my ($class, %args) = @_;
+
     my $bool = delete $args{boolean} // 'perl';
+    my $schemas = delete $args{schema} || ['Core'];
+
+    my $schema = YAML::PP::Schema->new(
+        boolean => $bool,
+    );
+    $schema->load_subschemas(@$schemas);
+
     my $self = bless {
         boolean => $bool,
+        schema => $schema,
     }, $class;
     return $self;
 }
@@ -37,12 +46,29 @@ sub dumper {
     }
 }
 
+sub schema {
+    if (@_ > 1) { $_[0]->{schema} = $_[1] }
+    else { return $_[0]->{schema} }
+}
+
+sub default_schema {
+    my ($self, %args) = @_;
+    my $schema = YAML::PP::Schema->new(
+        boolean => $args{boolean},
+    );
+    $schema->load_subschemas(qw/ Core /);
+    return $schema;
+}
+
 sub load_string {
     my ($self, $yaml) = @_;
     my $loader = $self->loader;
     unless ($loader) {
         require YAML::PP::Loader;
-        $loader = YAML::PP::Loader->new( boolean => $self->boolean );
+        $loader = YAML::PP::Loader->new(
+            boolean => $self->boolean,
+            schema => $self->schema,
+        );
         $self->loader($loader);
     }
     return $loader->load_string($yaml);
@@ -53,7 +79,10 @@ sub load_file {
     my $loader = $self->loader;
     unless ($loader) {
         require YAML::PP::Loader;
-        $loader = YAML::PP::Loader->new;
+        $loader = YAML::PP::Loader->new(
+            boolean => $self->boolean,
+            schema => $self->schema,
+        );
         $self->loader($loader);
     }
     return $loader->load_file($file);
@@ -100,6 +129,323 @@ sub Dump {
 sub DumpFile {
     my ($file, @data) = @_;
     YAML::PP->new->dump_file($file, @data);
+}
+
+package YAML::PP::Schema;
+
+sub new {
+    my ($class, %args) = @_;
+
+    my $bool = delete $args{boolean} // 'perl';
+    if (keys %args) {
+        die "Unexpected arguments: " . join ', ', sort keys %args;
+    }
+    my $true;
+    my $false;
+    if ($bool eq 'JSON::PP') {
+        require JSON::PP;
+        $true = \&bool_jsonpp_true;
+        $false = \&bool_jsonpp_false;
+    }
+    elsif ($bool eq 'boolean') {
+        require boolean;
+        $true = \&bool_booleanpm_true;
+        $false = \&bool_booleanpm_false;
+    }
+    elsif ($bool eq 'perl') {
+        $true = \&bool_perl_true;
+        $false = \&bool_perl_false;
+    }
+    else {
+        die "Invalid value for 'boolean': '$bool'. Allowed: ('perl', 'boolean', 'JSON::PP')";
+    }
+
+    my $self = bless {
+        resolvers => $args{resolvers} || {},
+        true => $true,
+        false => $false,
+    }, $class;
+    return $self;
+}
+
+sub resolvers { return $_[0]->{resolvers} }
+sub true { return $_[0]->{true} }
+sub false { return $_[0]->{false} }
+
+sub load_subschemas {
+    my ($self, @schemas) = @_;
+    for my $s (@schemas) {
+        my $class = "YAML::PP::Schema::" . $s;
+        my $tags = $class->register(
+            schema => $self,
+        );
+    }
+}
+
+sub add_matcher {
+    my ($self, $type, $match, $value) = @_;
+    my $resolvers = $self->resolvers;
+    my $res = $resolvers->{value} ||= {};
+    if ($type eq 'equals') {
+        unless (exists $res->{equals}->{ $match }) {
+            $res->{equals}->{ $match } = $value;
+        }
+        return;
+    }
+    if ($type eq 'regex') {
+        push @{ $res->{regex} }, [ $match => $value ];
+        return;
+    }
+}
+
+sub add_tag_resolver {
+    my ($self, $tag, $type, $match, $value) = @_;
+    my $resolvers = $self->resolvers;
+    my $res = $resolvers->{tag}->{ $tag } ||= {};
+    if ($type eq 'equals') {
+        unless (exists $res->{equals}->{ $match }) {
+            $res->{equals}->{ $match } = $value;
+        }
+        return;
+    }
+    if ($type eq 'regex') {
+        push @{ $res->{regex} }, [ $match => $value ];
+    }
+}
+
+sub load_scalar_tag {
+    my ($self, $event) = @_;
+    my $tag = $event->{tag};
+    my $value = $event->{value} // '';
+    my $resolvers = $self->resolvers;
+    my $res = $resolvers->{tag}->{ $tag };
+
+    if (my $equals = $res->{equals}) {
+        if (exists $equals->{ $value }) {
+            my $res = $equals->{ $value };
+            if (ref $res eq 'CODE') {
+                return $res->();
+            }
+            return $res;
+        }
+        die "Tag $tag ($value)";
+    }
+    if (my $regex = $res->{regex}) {
+        for my $item (@$regex) {
+            my ($re, $sub) = @$item;
+            my @matches = $value =~ $re;
+            if (@matches) {
+                return $sub->(@matches);
+            }
+        }
+        die "Tag $tag ($value)";
+    }
+#    die "Tag $tag ($value)";
+    return $value;
+}
+
+sub load_scalar {
+    my ($self, $style, $value) = @_;
+    if ($style ne ':') {
+        return $value;
+    }
+    my $resolvers = $self->resolvers;
+    my $res = $resolvers->{value};
+    $value //= '';
+
+    if (my $equals = $res->{equals}) {
+        if (exists $equals->{ $value }) {
+            my $res = $equals->{ $value };
+            if (ref $res eq 'CODE') {
+                return $res->();
+            }
+            return $res;
+        }
+    }
+    if (my $regex = $res->{regex}) {
+        for my $item (@$regex) {
+            my ($re, $sub) = @$item;
+            my @matches = $value =~ $re;
+            if (@matches) {
+                return $sub->(@matches);
+            }
+        }
+    }
+    return $value;
+}
+
+sub bool_jsonpp_true { JSON::PP::true() }
+
+sub bool_booleanpm_true { boolean::true() }
+
+sub bool_perl_true { 1 }
+
+sub bool_jsonpp_false { JSON::PP::false() }
+
+sub bool_booleanpm_false { boolean::false() }
+
+sub bool_perl_false { !1 }
+
+
+package YAML::PP::Schema::Base;
+
+sub register {
+    return {};
+}
+
+package YAML::PP::Schema::Failsafe;
+
+use base 'YAML::PP::Schema';
+
+sub register {
+    my ($self, %args) = @_;
+    my $schema = $args{schema};
+    $schema->add_matcher( equals => '' => '' );
+    return {
+        tags => [
+#            '<tag:yaml.org,2002:str>' => {
+#                default => 1,
+#            },
+        ],
+    };
+}
+
+package YAML::PP::Schema::JSON;
+use base 'YAML::PP::Schema';
+
+my $RE_INT = qr{^(-?(?:0|[1-9][0-9]*))$};
+my $RE_FLOAT = qr{^(-?(?:0|[1-9][0-9]*)(?:\.[0-9]*)?(?:[eE][+-]?[0-9]+)?)$};
+
+sub new {
+    my ($class, %args) = @_;
+    my $self = bless {}, $class;
+    return $self;
+}
+
+sub _to_int { 0 + $_[0] }
+
+# DaTa++ && shmem++
+sub _to_float { unpack F => pack F => $_[0] }
+
+sub register {
+    my ($self, %args) = @_;
+    my $schema = $args{schema};
+    $schema->add_matcher( equals => null => undef );
+    $schema->add_matcher( equals => true => $schema->true );
+    $schema->add_matcher( equals => false => $schema->false );
+    $schema->add_matcher( regex => $RE_INT => \&_to_int );
+    $schema->add_matcher( regex => $RE_FLOAT => \&_to_float );
+
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:null' => equals => '' => undef
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:null' => equals => null => undef
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:bool' => equals => true => $schema->true
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:bool' => equals => false => $schema->false
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:int' => regex => $RE_INT => \&_to_int
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:float' => regex => $RE_FLOAT => \&_to_float
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:str' => regex => qr{^(.*)$} => sub { $_[0] }
+    );
+    return;
+}
+
+package YAML::PP::Schema::Core;
+use base 'YAML::PP::Schema';
+
+my $RE_INT_CORE = qr{^([+-]?(?:0|[1-9][0-9]*))$};
+my $RE_FLOAT_CORE = qr{^([+-]?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?)(?:[eE][+-]?[0-9]+)?)$};
+my $RE_INT_OCTAL = qr{^0o([0-7]+)$};
+my $RE_INT_HEX = qr{^0x([0-9a-fA-F]+)$};
+
+
+sub new {
+    my ($class, %args) = @_;
+    my $self = bless {}, $class;
+    return $self;
+}
+
+sub _from_oct { oct $_[0] }
+sub _from_hex { hex $_[0] }
+
+sub register {
+    my ($self, %args) = @_;
+    my $schema = $args{schema};
+    $schema->add_matcher( equals => '' => undef );
+    $schema->add_matcher( equals => null => undef );
+    $schema->add_matcher( equals => NULL => undef );
+    $schema->add_matcher( equals => Null => undef );
+    $schema->add_matcher( equals => '~' => undef );
+    $schema->add_matcher( equals => true => $schema->true );
+    $schema->add_matcher( equals => TRUE => $schema->true );
+    $schema->add_matcher( equals => True => $schema->true );
+    $schema->add_matcher( equals => false => $schema->false );
+    $schema->add_matcher( equals => FALSE => $schema->false );
+    $schema->add_matcher( equals => False => $schema->false );
+    $schema->add_matcher( regex => $RE_INT_CORE => \&YAML::PP::Schema::JSON::_to_int );
+    $schema->add_matcher( regex => $RE_INT_OCTAL => \&_from_oct );
+    $schema->add_matcher( regex => $RE_INT_HEX => \&_from_hex );
+    $schema->add_matcher( regex => $RE_FLOAT_CORE => \&YAML::PP::Schema::JSON::_to_float );
+
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:null' => equals => '' => undef
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:null' => equals => null => undef
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:null' => equals => '~' => undef
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:null' => equals => Null => undef
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:null' => equals => NULL => undef
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:bool' => equals => true => $schema->true
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:bool' => equals => True => $schema->true
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:bool' => equals => TRUE => $schema->true
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:bool' => equals => false => $schema->false
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:bool' => equals => False => $schema->false
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:bool' => equals => FALSE => $schema->false
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:int' => regex => $RE_INT_CORE => \&YAML::PP::Schema::JSON::_to_int
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:int' => regex => $RE_INT_OCTAL => \&_from_oct
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:int' => regex => $RE_INT_HEX => \&_from_hex
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:float' => regex => $RE_FLOAT_CORE => \&YAML::PP::Schema::JSON::_to_float
+    );
+    $schema->add_tag_resolver(
+        'tag:yaml.org,2002:str' => regex => qr{^(.*)$} => sub { $_[0] }
+    );
+    return;
 }
 
 1;
@@ -237,26 +583,30 @@ The error messages need to be improved.
 
 =head2 YAML::PP::Constructor
 
-The Constructor is very simple so far.
+The Constructor now supports all three YAML 1.2 Schemas, Failsafe, JSON and Core.
+
+You can choose the Schema, however, the API for that is not yet fixed.
+Currently it looks like this:
+
+    my $ypp = YAML::PP->new(schema => ['JSON']); # default is 'Core' for now
+
+The Tags C<!!seq> and C<!!map> are still ignored for now.
 
 It supports:
 
 =over 4
 
-=item Simple handling of Anchors/Aliases
+=item Handling of Anchors/Aliases
 
 Like in modules like L<YAML>, the Constructor will use references for mappings and
 sequences, but obviously not for scalars.
 
 =item Boolean Handling
 
-You can choose between C<'perl'> (1/'', currently default), C<'JSON::PP'> and C<'boolean'>.pm
-for handling boolean types.
-That allows you to dump the data structure with one of the JSON modules
-without losing information about booleans.
-
-I also would like to add the possibility to specify a callback for your
-own boolean handling.
+You can choose between C<'perl'> (1/'', currently default), C<'JSON::PP'> and
+C<'boolean'>.pm for handling boolean types.  That allows you to dump the data
+structure with one of the JSON modules without losing information about
+booleans.
 
 =item Numbers
 
@@ -275,8 +625,8 @@ TODO:
 
 Mapping Keys in YAML can be more than just scalars. Of course, you can't load
 that into a native perl structure. The Constructor will stringify those keys
-with L<Data::Dumper>.
-I would like to add a possibility to specify a method for stringification.
+with L<Data::Dumper> instead of just returning something like
+C<HASH(0x55dc1b5d0178)>.
 
 Example:
 
