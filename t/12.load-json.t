@@ -25,7 +25,6 @@ $|++;
 
 my @skip = qw/
     4ABK
-    54T7
     87E4
     8CWC
     8UDB
@@ -34,25 +33,14 @@ my @skip = qw/
     CT4Q
     DBG4
     DFF7
-    F3CP
     FRK4
     L9U5
     LQZ7
     QF4Y
-    U3C3
-
-    5WE3
-    7W2P
-    8KHE
-    JTV5
-    NHX8
-    S3PD
-    W42U
 
     FH7J
     LE5A
     S4JQ
-    8XYN
     Q5MG
 
 /;
