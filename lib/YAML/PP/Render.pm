@@ -11,9 +11,9 @@ my $WS = '[\t ]';
 sub render_tag {
     my ($tag, $map) = @_;
     if ($tag eq '!') {
-        return "<!>";
+        return "!";
     }
-    elsif ($tag =~ m/^!(<.*)/) {
+    elsif ($tag =~ m/^!<(.*)>/) {
         return $1;
     }
     elsif ($tag =~ m/^(![^!]*!|!)(.+)/) {
@@ -21,13 +21,13 @@ sub render_tag {
         my $name = $2;
         $name =~ s/%([0-9a-fA-F]{2})/chr hex $1/eg;
         if (exists $map->{ $alias }) {
-            $tag = "<" . $map->{ $alias }. $name . ">";
+            $tag = $map->{ $alias }. $name;
         }
         else {
             if ($alias ne '!' and $alias ne '!!') {
                 die "Found undefined tag handle '$alias'";
             }
-            $tag = "<!$name>";
+            $tag = "!$name";
         }
     }
     else {

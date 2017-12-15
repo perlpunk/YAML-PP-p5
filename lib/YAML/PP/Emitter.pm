@@ -483,21 +483,20 @@ sub stream_end_event {
 
 sub emit_tag {
     my ($self, $type, $tag) = @_;
-    if ($type eq 'scalar' and $tag =~ m/^<tag:yaml.org,2002:(int|str|null|bool|binary)>/) {
+    if ($type eq 'scalar' and $tag =~ m/^tag:yaml.org,2002:(int|str|null|bool|binary)/) {
         $tag = "!!$1";
     }
-    elsif ($type eq 'map' and $tag =~ m/^<tag:yaml.org,2002:(map|set)>/) {
+    elsif ($type eq 'map' and $tag =~ m/^tag:yaml.org,2002:(map|set)/) {
         $tag = "!!$1";
     }
-    elsif ($type eq 'seq' and $tag =~ m/^<tag:yaml.org,2002:(omap|seq)>/) {
+    elsif ($type eq 'seq' and $tag =~ m/^tag:yaml.org,2002:(omap|seq)/) {
         $tag = "!!$1";
     }
-    elsif ($tag =~ m/^<(!.*?)>/) {
+    elsif ($tag =~ m/^(!.*)/) {
         $tag = "$1";
     }
     else {
-#        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$tag], ['tag']);
-        $tag = "!$tag";
+        $tag = "!<$tag>";
     }
     return $tag;
 }

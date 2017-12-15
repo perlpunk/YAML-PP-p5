@@ -777,7 +777,7 @@ sub event_to_test_suite {
 
         my $properties = '';
         $properties .= " &$info->{anchor}" if defined $info->{anchor};
-        $properties .= " $info->{tag}" if defined $info->{tag};
+        $properties .= " <$info->{tag}>" if defined $info->{tag};
 
         if ($ev eq 'document_start_event') {
             $string = "+DOC";
