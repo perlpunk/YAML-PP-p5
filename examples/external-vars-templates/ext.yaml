@@ -1,0 +1,5 @@
+---
+filename: !external /argv/0
+env.LANG: !external /env/LANG
+argv: !external /argv
+path: !template "${/config/prefix}/bin/perl"
