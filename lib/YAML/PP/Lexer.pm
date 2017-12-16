@@ -591,7 +591,13 @@ sub _fetch_next_tokens_directive {
     }
     elsif ($$yaml =~ s/\A(\s*\A%(?:\w+).*)//) {
         push @tokens, ( RESERVED_DIRECTIVE => $1 );
-        warn "Found reserved directive '$1'";
+        my $warn = $ENV{YAML_PP_RESERVED_DIRECTIVE} || 'warn';
+        if ($warn eq 'warn') {
+            warn "Found reserved directive '$1'";
+        }
+        elsif ($warn eq 'fatal') {
+            die "Found reserved directive '$1'";
+        }
     }
     else {
         push @tokens, ( 'Invalid directive' => $$yaml );

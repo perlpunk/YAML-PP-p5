@@ -10,6 +10,9 @@ use YAML::PP::Test;
 use YAML::PP::Loader;
 use Encode;
 use File::Basename qw/ dirname basename /;
+
+$ENV{YAML_PP_RESERVED_DIRECTIVE} = 'ignore';
+
 my $json_xs = eval "use JSON::PP; 1";
 
 my $yts = "$Bin/../yaml-test-suite";
