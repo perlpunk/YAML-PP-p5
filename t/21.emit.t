@@ -9,6 +9,7 @@ use YAML::PP::Test;
 use Data::Dumper;
 use YAML::PP::Parser;
 use YAML::PP::Emitter;
+use YAML::PP::Writer;
 use Encode;
 use File::Basename qw/ dirname basename /;
 
@@ -176,7 +177,9 @@ sub test {
     my $ok = 0;
     my $error = 0;
     my @events;
-    my $emitter = YAML::PP::Emitter->new;
+    my $writer = YAML::PP::Writer->new;
+    my $emitter = YAML::PP::Emitter->new();
+    $emitter->set_writer($writer);
     my $parser = YAML::PP::Parser->new(
         receiver => sub {
             my ($self, @args) = @_;
@@ -200,7 +203,7 @@ sub test {
     }
     else {
         my $yaml = emit_events($emitter, \@events);
-        $out_yaml = $$yaml;
+        $out_yaml = $yaml;
         $ok = cmp_ok($out_yaml, 'eq', $exp_yaml, "$name - $title - Emit events");
     }
     if ($ok) {
@@ -232,7 +235,7 @@ sub emit_events {
         my ($type, $info) = @$event;
         $emitter->$type($info);
     }
-    my $yaml = $emitter->yaml;
+    my $yaml = $emitter->writer->output;
     return $yaml;
 }
 

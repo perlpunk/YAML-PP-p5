@@ -25,6 +25,8 @@ sub current_indent { return $_[0]->{current_indent} }
 sub set_current_indent { $_[0]->{current_indent} = $_[1] }
 sub first { return $_[0]->{first} }
 sub set_first { $_[0]->{first} = $_[1] }
+sub writer { $_[0]->{writer} }
+sub set_writer { $_[0]->{writer} = $_[1] }
 
 sub init {
     my ($self) = @_;
@@ -38,7 +40,6 @@ sub init {
 sub mapping_start_event {
     DEBUG and warn __PACKAGE__.':'.__LINE__.": +++ mapping_start_event\n";
     my ($self, $info) = @_;
-    my $yaml = $self->yaml;
     my $stack = $self->event_stack;
     my $current_indent = $self->current_indent;
     my $indent = ' ' x ($current_indent);
@@ -57,27 +58,27 @@ sub mapping_start_event {
     my $new_first = 1;
     if ($stack->[-1] eq 'DOC') {
         if ($first or $props) {
-            $$yaml .= "$props\n";
+            $self->writer->write("$props\n");
         }
         $new_first = 0;
     }
     else {
     if ($stack->[-1] eq 'SEQ') {
         if ($props) {
-            $$yaml .= "$indent-$props";
+            $self->writer->write("$indent-$props");
             $new_first = 0;
         }
         else {
-            $$yaml .= "$indent-";
+            $self->writer->write("$indent-");
         }
         $self->set_current_indent($current_indent + $self->indent);
     }
     elsif ($stack->[-1] eq 'MAP') {
         if ($first) {
-            $$yaml .= " ?$props";
+            $self->writer->write(" ?$props");
         }
         else {
-            $$yaml .= "$indent?$props";
+            $self->writer->write("$indent?$props");
         }
         if ($props) {
             $new_first = 0;
@@ -86,17 +87,17 @@ sub mapping_start_event {
         $stack->[-1] = 'COMPLEX';
     }
     elsif ($stack->[-1] eq 'MAPVALUE') {
-        $$yaml .= "$props";
+        $self->writer->write("$props");
         $self->set_current_indent($current_indent + $self->indent);
         $new_first = 0;
     }
     elsif ($stack->[-1] eq 'COMPLEX') {
         $stack->[-1] = 'COMPLEXVALUE';
         if ($first) {
-            $$yaml .= " :$props";
+            $self->writer->write(" :$props");
         }
         else {
-            $$yaml .= "$indent:$props";
+            $self->writer->write("$indent:$props");
         }
         if ($props) {
             $new_first = 0;
@@ -107,7 +108,7 @@ sub mapping_start_event {
         die 23;
     }
     if ($new_first == 0) {
-        $$yaml .= "\n";
+        $self->writer->write("\n");
     }
     }
     push @{ $stack }, 'MAP';
@@ -118,7 +119,6 @@ sub mapping_start_event {
 sub mapping_end_event {
     DEBUG and warn __PACKAGE__.':'.__LINE__.": +++ mapping_end_event\n";
     my ($self, $info) = @_;
-    my $yaml = $self->yaml;
     my $stack = $self->event_stack;
     my $current_indent = $self->current_indent;
     my $indent = ' ' x $current_indent;
@@ -141,7 +141,6 @@ sub mapping_end_event {
 sub sequence_start_event {
     DEBUG and warn __PACKAGE__.':'.__LINE__.": +++ sequence_start_event\n";
     my ($self, $info) = @_;
-    my $yaml = $self->yaml;
     my $stack = $self->event_stack;
     my $current_indent = $self->current_indent;
     my $indent = ' ' x $current_indent;
@@ -163,42 +162,42 @@ sub sequence_start_event {
     }
     if ($stack->[-1] eq 'SEQ') {
         if (not $first) {
-            $$yaml .= $indent;
+            $self->writer->write($indent);
         }
         if ($props) {
-            $$yaml .= "-$props\n";
+            $self->writer->write("-$props\n");
         }
         else {
-            $$yaml .= "-";
+            $self->writer->write("-");
         }
         $self->set_current_indent($current_indent + $self->indent);
     }
     elsif ($stack->[-1] eq 'MAP') {
         if ($props) {
-            $$yaml .= "?$props\n";
+            $self->writer->write("?$props\n");
         }
         else {
-            $$yaml .= "?";
+            $self->writer->write("?");
         }
         $self->set_current_indent($current_indent + $self->indent);
         $stack->[-1] = 'COMPLEX';
     }
     elsif ($stack->[-1] eq 'MAPVALUE') {
-        $$yaml .= "$props\n";
+        $self->writer->write("$props\n");
         $new_first = 0;
     }
     elsif ($stack->[-1] eq 'COMPLEXVALUE') {
         if ($props) {
-            $$yaml .= ":$props\n";
+            $self->writer->write(":$props\n");
         }
         else {
-            $$yaml .= ":";
+            $self->writer->write(":");
         }
         $self->set_current_indent($current_indent + $self->indent);
     }
     elsif ($stack->[-1] eq 'DOC') {
         if ($first or $props) {
-            $$yaml .= "$props\n";
+            $self->writer->write("$props\n");
         }
         $new_first = 0;
     }
@@ -212,7 +211,6 @@ sub sequence_start_event {
 sub sequence_end_event {
     DEBUG and warn __PACKAGE__.':'.__LINE__.": +++ sequence_end_event\n";
     my ($self, $info) = @_;
-    my $yaml = $self->yaml;
     my $stack = $self->event_stack;
     my $current_indent = $self->current_indent;
     my $indent = ' ' x $current_indent;
@@ -242,7 +240,6 @@ sub sequence_end_event {
 sub scalar_event {
     DEBUG and warn __PACKAGE__.':'.__LINE__.": +++ scalar_event\n";
     my ($self, $info) = @_;
-    my $yaml = $self->yaml;
     my $stack = $self->event_stack;
     my $current_indent = $self->current_indent;
     my $indent = ' ' x $current_indent;
@@ -351,26 +348,26 @@ sub scalar_event {
         my $new_event = 'MAPVALUE';
         if ($style eq '|' or $style eq '>') {
             # oops, a complex key
-            $$yaml .= '?';
+            $self->writer->write("?");
             $first = 1;
             $new_event = 'COMPLEXVALUE';
         }
         if ($first) {
             if ($style eq '|' or $style eq '>') {
-                $$yaml .= " $props$value";
+                $self->writer->write(" $props$value");
             }
             else {
-                $$yaml .= " $props$value:";
+                $self->writer->write(" $props$value:");
             }
         }
         else {
-            $$yaml .= "$indent$props$value:";
+            $self->writer->write("$indent$props$value:");
         }
         $stack->[-1] = $new_event;
     }
     elsif ($stack->[-1] eq 'MAPVALUE') {
         if (not length $value and not $props) {
-            $$yaml .= "\n";
+            $self->writer->write("\n");
         }
         else {
             if ($props) {
@@ -378,9 +375,9 @@ sub scalar_event {
                     $props .= ' ';
                 }
             }
-            $$yaml .= " $props$value";
+            $self->writer->write(" $props$value");
             if ($style ne '|' and $style ne '>') {
-                $$yaml .= "\n";
+                $self->writer->write("\n");
             }
         }
         $stack->[-1] = 'MAP';
@@ -389,22 +386,22 @@ sub scalar_event {
         #warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$first], ['first']);
         #warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$value], ['value']);
         if (not $first) {
-            $$yaml .= $indent;
+            $self->writer->write($indent);
         }
         else {
-            $$yaml .= ' ';
+            $self->writer->write(" ");
         }
         if ($props and length $value) {
             $props .= ' ';
         }
         if ($props or length $value) {
-            $$yaml .= "- $props$value";
+            $self->writer->write("- $props$value");
         }
         else {
-            $$yaml .= "-";
+            $self->writer->write("-");
         }
         if ($style ne '|' and $style ne '>') {
-            $$yaml .= "\n";
+            $self->writer->write("\n");
         }
     }
     elsif ($stack->[-1] eq 'DOC') {
@@ -413,14 +410,14 @@ sub scalar_event {
         }
         if ($first) {
             if ($props or length $value) {
-                $$yaml .= " $props$value";
+                $self->writer->write(" $props$value");
             }
         }
         else {
-            $$yaml .= "$props$value";
+            $self->writer->write("$props$value");
         }
         if ($style ne '|' and $style ne '>') {
-            $$yaml .= "\n";
+            $self->writer->write("\n");
         }
     }
     $self->set_first(0);
@@ -429,7 +426,6 @@ sub scalar_event {
 sub alias_event {
     DEBUG and warn __PACKAGE__.':'.__LINE__.": +++ alias_event\n";
     my ($self, $info) = @_;
-    my $yaml = $self->yaml;
     my $stack = $self->event_stack;
     my $current_indent = $self->current_indent;
     my $indent = ' ' x $current_indent;
@@ -437,18 +433,18 @@ sub alias_event {
     my $alias = '*' . $info->{value};
 
     if ($stack->[-1] eq 'MAP') {
-        $$yaml .= "$indent$alias :";
+        $self->writer->write("$indent$alias :");
         $stack->[-1] = 'MAPVALUE';
     }
     elsif ($stack->[-1] eq 'MAPVALUE') {
-        $$yaml .= " $alias\n";
+        $self->writer->write(" $alias\n");
         $stack->[-1] = 'MAP';
     }
     elsif ($stack->[-1] eq 'SEQ') {
-        $$yaml .= "$indent- $alias\n";
+        $self->writer->write("$indent- $alias\n");
     }
     elsif ($stack->[-1] eq 'DOC') {
-        $$yaml .= "$alias\n";
+        $self->writer->write("$alias\n");
     }
     $self->set_first(0);
 }
@@ -456,12 +452,11 @@ sub alias_event {
 sub document_start_event {
     DEBUG and warn __PACKAGE__.':'.__LINE__.": +++ document_start_event\n";
     my ($self, $info) = @_;
-    my $yaml = $self->yaml;
     if ($info->{implicit}) {
         $self->set_first(0);
     }
     else {
-        $$yaml .= "---";
+        $self->writer->write("---");
         $self->set_first(1);
     }
 }
@@ -469,9 +464,8 @@ sub document_start_event {
 sub document_end_event {
     DEBUG and warn __PACKAGE__.':'.__LINE__.": +++ document_end_event\n";
     my ($self, $info) = @_;
-    my $yaml = $self->yaml;
     unless ($info->{implicit}) {
-        $$yaml .= "...\n";
+        $self->writer->write("...\n");
     }
 }
 

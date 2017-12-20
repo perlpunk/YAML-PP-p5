@@ -39,6 +39,13 @@ sub Dump {
     return $dumper->dump_string(@data);
 }
 
+sub DumpFile {
+    require YAML::PP::Dumper;
+    my ($file, @data) = @_;
+    my $dumper = YAML::PP::Dumper->new;
+    return $dumper->dump_file($file, @data);
+}
+
 1;
 
 __END__
@@ -71,6 +78,7 @@ Here are a few examples of what you can do right now:
 
     my $yppd = YAML::PP::Dumper->new();
     my $yaml = $yppd->dump_string($data1, $data2);
+    $yppd->dump_file($filename, $data1, $data2);
 
 Some utility scripts:
 

@@ -5,6 +5,7 @@ package YAML::PP::Dumper;
 our $VERSION = '0.000'; # VERSION
 
 use YAML::PP::Emitter;
+use YAML::PP::Writer;
 
 sub new {
     my ($class, %args) = @_;
@@ -20,9 +21,25 @@ sub new {
 
 sub emitter { return $_[0]->{emitter} }
 sub set_emitter { $_[0]->{emitter} = $_[1] }
+sub writer { $_[0]->{writer} }
+sub set_writer { $_[0]->{writer} = $_[1] }
 
 sub dump_string {
     my ($self, @docs) = @_;
+    $self->set_writer(YAML::PP::Writer->new);
+    $self->dump(@docs);
+}
+
+sub dump_file {
+    my ($self, $file, @docs) = @_;
+    $self->set_writer(YAML::PP::Writer::File->new(output => $file));
+    $self->emitter->set_writer($self->writer);
+    $self->dump(@docs);
+}
+
+sub dump {
+    my ($self, @docs) = @_;
+    $self->emitter->set_writer($self->writer);
     $self->emitter->init;
     if (@docs) {
         $self->emitter->document_start_event({ implicit => 0 });
@@ -36,8 +53,9 @@ sub dump_string {
         }
         $self->emitter->document_end_event({ implicit => 1 });
     }
-    my $yaml = $self->emitter->yaml;
-    return $$yaml;
+    $self->emitter->document_end_event({ implicit => 1 });
+    my $yaml = $self->writer->output;
+    return $yaml;
 }
 
 sub dump_document {

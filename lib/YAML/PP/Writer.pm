@@ -1,0 +1,42 @@
+# ABSTRACT: Writer class for YAML::PP representing output data
+use strict;
+use warnings;
+package YAML::PP::Writer;
+
+our $VERSION = '0.000'; # VERSION
+
+sub output { return $_[0]->{output} }
+sub set_output { $_[0]->{output} = $_[1] }
+
+sub new {
+    my ($class, %args) = @_;
+    my $output = delete $args{output} // '';
+    return bless {
+        output => $output,
+    }, $class;
+}
+
+sub write {
+    my ($self, $line) = @_;
+    $self->{output} .= $line;
+}
+
+package YAML::PP::Writer::File;
+
+our @ISA = qw/ YAML::PP::Writer /;
+
+sub open_handle {
+    my $fh;
+    unless ($fh) {
+        open $fh, '>:encoding(UTF-8)', $_[0]->{output};
+    }
+    return $fh;
+}
+
+sub write {
+    my ($self, $line) = @_;
+    my $fh = $self->{filehandle} ||= $self->open_handle;
+    print $fh $line;
+}
+
+1;
