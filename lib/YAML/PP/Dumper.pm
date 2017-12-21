@@ -24,16 +24,18 @@ sub set_emitter { $_[0]->{emitter} = $_[1] }
 sub dump_string {
     my ($self, @docs) = @_;
     $self->emitter->init;
-    $self->emitter->document_start_event({ implicit => 1 });
-    for my $i (0 .. $#docs) {
-        my $doc = $docs[ $i ];
-        my $yaml_doc = $self->dump_document($doc);
-        if ($i < $#docs) {
-            $self->emitter->document_end_event({ implicit => 1 });
-            $self->emitter->document_start_event({ implicit => 0 });
+    if (@docs) {
+        $self->emitter->document_start_event({ implicit => 0 });
+        for my $i (0 .. $#docs) {
+            my $doc = $docs[ $i ];
+            my $yaml_doc = $self->dump_document($doc);
+            if ($i < $#docs) {
+                $self->emitter->document_end_event({ implicit => 1 });
+                $self->emitter->document_start_event({ implicit => 0 });
+            }
         }
+        $self->emitter->document_end_event({ implicit => 1 });
     }
-    $self->emitter->document_end_event({ implicit => 1 });
     my $yaml = $self->emitter->yaml;
     return $$yaml;
 }

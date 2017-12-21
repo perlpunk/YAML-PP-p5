@@ -9,6 +9,7 @@ my $boolean = eval "use boolean; 1";
 my $json_pp = eval "use JSON::PP; 1";
 
 my $exp_yaml = <<"EOM";
+---
 FALSE: false
 TRUE: true
 EOM

@@ -16,6 +16,7 @@ my $data1 = {
 };
 
 my $exp_yaml1 = <<"EOM";
+---
 hash: &1
   a: b
 hashcopy: *1
@@ -35,6 +36,7 @@ my $data2 = {
 
 # cyclic
 my $exp_yaml2 = <<"EOM";
+---
 a: &1
   link: &2
     link: *1
