@@ -7,8 +7,7 @@ use lib "$Bin/lib";
 
 use YAML::PP::Test;
 use Data::Dumper;
-use YAML::PP::Loader;
-use YAML::PP::Dumper;
+use YAML::PP;
 use Encode;
 use File::Basename qw/ dirname basename /;
 
@@ -117,14 +116,13 @@ sub test {
     my ($title, $name, $yaml, $exp_out_yaml) = @_;
 #    warn __PACKAGE__.':'.__LINE__.": ================================ $name\n";
     my $ok = 0;
-    my $loader = YAML::PP::Loader->new;
-    my $dumper = YAML::PP::Dumper->new;
-    my @docs = eval { $loader->load_string($yaml) };
+    my $ypp = YAML::PP->new;
+    my @docs = eval { $ypp->load_string($yaml) };
     my $error = $@;
     my $out_yaml;
     unless ($error) {
         eval {
-            $out_yaml = $dumper->dump_string(@docs);
+            $out_yaml = $ypp->dump_string(@docs);
         };
     }
     if ($@) {
@@ -142,7 +140,7 @@ sub test {
         ok(0, "$name - $title ERROR");
     }
     else {
-        @reload = eval { $loader->load_string($out_yaml) };
+        @reload = eval { $ypp->load_string($out_yaml) };
         $reload_error = $@;
         if ($reload_error) {
             diag "RELOAD ERROR: $reload_error";

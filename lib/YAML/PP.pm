@@ -10,40 +10,96 @@ our @EXPORT_OK = qw/ Load LoadFile Dump DumpFile /;
 
 sub new {
     my ($class, %args) = @_;
+    my $bool = delete $args{boolean} // 'perl';
     my $self = bless {
+        boolean => $bool,
     }, $class;
     return $self;
 }
 
-sub loader { return $_[0]->{loader} }
+sub boolean { return $_[0]->{boolean} }
 
-# legagy interface
-sub Load {
-    require YAML::PP::Loader;
-    my ($yaml) = @_;
-    my $loader = YAML::PP::Loader->new;
+sub loader {
+    if (@_ > 1) {
+        $_[0]->{loader} = $_[1]
+    }
+    else {
+        return $_[0]->{loader}
+    }
+}
+
+sub dumper {
+    if (@_ > 1) {
+        $_[0]->{dumper} = $_[1]
+    }
+    else {
+        return $_[0]->{dumper}
+    }
+}
+
+sub load_string {
+    my ($self, $yaml) = @_;
+    my $loader = $self->loader;
+    unless ($loader) {
+        require YAML::PP::Loader;
+        $loader = YAML::PP::Loader->new( boolean => $self->boolean );
+        $self->loader($loader);
+    }
     return $loader->load_string($yaml);
 }
 
-sub LoadFile {
-    require YAML::PP::Loader;
-    my ($file) = @_;
-    my $loader = YAML::PP::Loader->new;
+sub load_file {
+    my ($self, $file) = @_;
+    my $loader = $self->loader;
+    unless ($loader) {
+        require YAML::PP::Loader;
+        $loader = YAML::PP::Loader->new;
+        $self->loader($loader);
+    }
     return $loader->load_file($file);
 }
 
-sub Dump {
-    require YAML::PP::Dumper;
-    my (@data) = @_;
-    my $dumper = YAML::PP::Dumper->new;
+sub dump_string {
+    my ($self, @data) = @_;
+    my $dumper = $self->dumper;
+    unless ($dumper) {
+        require YAML::PP::Dumper;
+        $dumper = YAML::PP::Dumper->new;
+        $self->dumper($dumper);
+    }
     return $dumper->dump_string(@data);
 }
 
-sub DumpFile {
-    require YAML::PP::Dumper;
-    my ($file, @data) = @_;
-    my $dumper = YAML::PP::Dumper->new;
+sub dump_file {
+    my ($self, $file, @data) = @_;
+    my $dumper = $self->dumper;
+    unless ($dumper) {
+        require YAML::PP::Dumper;
+        $dumper = YAML::PP::Dumper->new;
+        $self->dumper($dumper);
+    }
     return $dumper->dump_file($file, @data);
+}
+
+# legagy interface
+sub Load {
+    my ($yaml) = @_;
+    YAML::PP->new->load_string($yaml);
+}
+
+sub LoadFile {
+    my ($file) = @_;
+    YAML::PP->new->load_file($file);
+}
+
+sub Dump {
+    my (@data) = @_;
+    YAML::PP->new->dump_string(@data);
+}
+
+sub DumpFile {
+    my ($file, @data) = @_;
+    YAML::PP->new->dump_file($file, @data);
 }
 
 1;
@@ -56,7 +112,7 @@ __END__
 
 =head1 NAME
 
-YAML::PP - YAML Framework
+YAML::PP - YAML 1.2 processor
 
 =head1 SYNOPSIS
 
@@ -64,28 +120,35 @@ WARNING: This is highly experimental.
 
 Here are a few examples of what you can do right now:
 
-    my $yppl = YAML::PP::Loader->new;
-    my @documents = $yppl->load_string($yaml);
+    use YAML::PP;
+    my $ypp = YAML::PP->new;
 
-    # load file
-    my $yppl = YAML::PP::Loader->new;
-    my @documents = $yppl->load_file($filename);
+    my @documents = $ypp->load_string($yaml);
+    my @documents = $ypp->load_file($filename);
 
-    # The loader offers JSON::PP, boolean.pm or pureperl 1/'' (currently default)
-    # for booleans
-    my $yppl = YAML::PP::Loader->new(boolean => 'JSON::PP');
-    my ($data1, $data2) = $yppl->load_string($yaml);
+    my $yaml = $ypp->dump_string($data1, $data2);
+    $ypp->dump_file($filename, $data1, $data2);
 
-    my $yppd = YAML::PP::Dumper->new();
-    my $yaml = $yppd->dump_string($data1, $data2);
-    $yppd->dump_file($filename, $data1, $data2);
+    # The loader offers JSON::PP::Boolean, boolean.pm or
+    # perl 1/'' (currently default) for booleans
+    my $ypp = YAML::PP->new(boolean => 'JSON::PP');
+    my $ypp = YAML::PP->new(boolean => 'boolean');
+    my $ypp = YAML::PP->new(boolean => 'perl');
+
+    # Legacy interface
+    use YAML::PP qw/ Load Dump LoadFile DumpFile /;
+    my @documents = Load($yaml);
+    my @documents = LoadFile($filename);
+    my $yaml = = Dump(@documents);
+    DumpFile($filename, @documents);
+
 
 Some utility scripts:
 
-    # Load YAML into a very simple data structure
+    # Load YAML into a data structure and dump with Data::Dumper
     yamlpp5-load < file.yaml
 
-    # Load and dump
+    # Load and Dump
     yamlpp5-load-dump < file.yaml
 
     # Print the events from the parser in yaml-test-suite format
@@ -217,9 +280,9 @@ I would like to add a possibility to specify a method for stringification.
 
 Example:
 
-    use YAML::PP::Loader;
+    use YAML::PP;
     use JSON::PP;
-    my $yppl = YAML::PP::Loader->new;
+    my $ypp = YAML::PP->new;
     my $coder = JSON::PP->new->ascii->pretty->allow_nonref->canonical;
     my $yaml = <<'EOM';
     complex:
@@ -290,7 +353,7 @@ Compare the output of the following YAML Loaders and JSON::PP dump:
     use YAML::Syck ();
         $YAML::Syck::ImplicitTyping = 1;
     use YAML::Tiny ();
-    use YAML::PP::Loader;
+    use YAML::PP;
 
     my $yaml = "foo: 23";
 
@@ -298,7 +361,7 @@ Compare the output of the following YAML Loaders and JSON::PP dump:
     my $d2 = YAML::Load($yaml);
     my $d3 = YAML::Syck::Load($yaml);
     my $d4 = YAML::Tiny->read_string($yaml)->[0];
-    my $d5 = YAML::PP::Loader->new->load_string($yaml);
+    my $d5 = YAML::PP->new->load_string($yaml);
 
     Dump $d1->{foo};
     Dump $d2->{foo};

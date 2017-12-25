@@ -3,7 +3,7 @@ use strict;
 use warnings;
 use 5.010;
 
-use YAML::PP::Loader;
+use YAML::PP;
 use YAML::PP::Dumper;
 use Encode;
 
@@ -15,9 +15,9 @@ unless ($file) {
     $yaml = decode_utf8($yaml);
 }
 
-my $yppl = YAML::PP::Loader->new(boolean => 'JSON::PP');
+my $ypp = YAML::PP->new(boolean => 'JSON::PP');
 my $yppd = YAML::PP::Dumper->new;
-my @docs = $file ? $yppl->load_file($file) : $yppl->load_string($yaml);
+my @docs = $file ? $ypp->load_file($file) : $ypp->load_string($yaml);
 my $out_yaml = $yppd->dump_string(@docs);
 
 print encode_utf8 $out_yaml;

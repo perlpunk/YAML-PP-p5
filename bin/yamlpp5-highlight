@@ -4,7 +4,7 @@ use warnings;
 use 5.010;
 
 use Data::Dumper;
-use YAML::PP::Loader;
+use YAML::PP;
 use YAML::PP::Highlight;
 use Encode;
 
@@ -16,16 +16,16 @@ unless ($file) {
     $yaml = decode_utf8($yaml);
 }
 
-my $ypp = YAML::PP::Loader->new;
+my $ypp = YAML::PP->new;
 my @docs = eval {
     $file ? $ypp->load_file($file) : $ypp->load_string($yaml);
 };
 my $error = $@;
-my $tokens = $ypp->parser->tokens;
-my $next = $ypp->parser->lexer->next_tokens;
+my $tokens = $ypp->loader->parser->tokens;
+my $next = $ypp->loader->parser->lexer->next_tokens;
 if ($error) {
     push @$tokens, map { +{ %$_, name => 'ERROR' } } @$next;
-    my $remaining = $ypp->parser->lexer->reader->read // '';
+    my $remaining = $ypp->loader->parser->lexer->reader->read // '';
     push @$tokens, { name => "ERROR", value => $remaining };
 }
 else {

@@ -6,7 +6,7 @@ use Test::More;
 use FindBin '$Bin';
 use Data::Dumper;
 use YAML::PP::Parser;
-use YAML::PP::Loader;
+use YAML::PP;
 
 my @yaml = (
     [ q{\\\\}, q{\\} ],
@@ -35,7 +35,7 @@ for my $test (@yaml) {
     my ($yaml, $output) = @$test;
 
     $yaml = qq{"$yaml"};
-    my $got = eval { YAML::PP::Loader->new->load_string($yaml) };
+    my $got = eval { YAML::PP->new->load_string($yaml) };
     if ($@) {
         diag "YAML:" . Data::Dumper->Dump([\$yaml], ['yaml']);
         diag "YAML: >>$yaml<< ";

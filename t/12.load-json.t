@@ -7,7 +7,7 @@ use lib "$Bin/lib";
 
 use Data::Dumper;
 use YAML::PP::Test;
-use YAML::PP::Loader;
+use YAML::PP;
 use Encode;
 use File::Basename qw/ dirname basename /;
 
@@ -84,7 +84,7 @@ for my $item (@dirs) {
     $exp_json = decode_utf8 $exp_json;
 
 #    diag "------------------------------ $id";
-    my $ypp = YAML::PP::Loader->new(boolean => 'JSON::PP');
+    my $ypp = YAML::PP->new(boolean => 'JSON::PP');
     my $data = eval { $ypp->load_string($yaml) };
 #    warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$data], ['data']);
     if ($@) {

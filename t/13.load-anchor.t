@@ -5,7 +5,7 @@ use 5.010;
 use Test::More;
 use FindBin '$Bin';
 use Data::Dumper;
-use YAML::PP::Loader;
+use YAML::PP;
 
 my $yaml = <<'EOM';
 foo: &sequence
@@ -18,7 +18,7 @@ copies:
 - *alias
 EOM
 
-my $data = YAML::PP::Loader->new->load_string($yaml);
+my $data = YAML::PP->new->load_string($yaml);
 cmp_ok($data->{copies}->[0],'eq', 'A', "Scalar anchor");
 cmp_ok($data->{copies}->[0],'eq', $data->{copies}->[1], "Scalar alias equals anchor");
 
