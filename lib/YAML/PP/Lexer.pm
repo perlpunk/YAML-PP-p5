@@ -410,6 +410,7 @@ sub _fetch_next_tokens {
                 return 1;
             }
             else {
+                push @tokens, ( $token_name2 => $quoted );
                 push @tokens, ( 'Invalid quoted string' => $$yaml );
                 $self->push_tokens(\@tokens);
                 return;
@@ -570,6 +571,7 @@ sub _fetch_next_tokens_quoted {
         $self->push_tokens(\@tokens);
     }
     else {
+        push @tokens, ( $token_name2 => $quoted );
         push @tokens, ( 'Invalid quoted string' => $$yaml );
         $self->push_tokens(\@tokens);
     }
