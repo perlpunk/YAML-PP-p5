@@ -222,14 +222,14 @@ keys
 If you have valid YAML that's not parsed, or the other way round, please
 create an issue.
 
-=item Line Numbers
+=item Line and Column Numbers
 
-You will see line numbers in the error message. They might still be wrong
-in some cases.
+You will see line and column numbers in the error message. The column numbers
+might still be wrong in some cases.
 
 =item Error Messages
 
-The error messages need to be improved. Column information is still missing.
+The error messages need to be improved.
 
 =item Possibly more
 

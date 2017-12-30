@@ -963,6 +963,8 @@ sub exception {
     my $next_line = $self->lexer->next_line;
     my $caller = $args{caller} || [ caller(0) ];
     my $e = YAML::PP::Exception->new(
+        got => $args{got},
+        expected => $args{expected},
         line => $line,
         msg => $msg,
         next => $next,
@@ -980,6 +982,8 @@ sub expected {
     my @caller = caller(0);
     $self->exception("Expected (@$expected), but got $got",
         caller => \@caller,
+        expected => $expected,
+        got => $args{got},
     );
 }
 

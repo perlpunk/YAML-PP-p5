@@ -14,6 +14,8 @@ sub new {
         next => $args{next},
         where => $args{where},
         yaml => $args{yaml},
+        got => $args{got},
+        expected => $args{expected},
     }, $class;
     return $self;
 }
@@ -21,13 +23,19 @@ sub new {
 sub to_string {
     my ($self) = @_;
     my $next = $self->{next};
+    my $line = $self->{line};
+    my $column;
+
     my $yaml = '';
     for my $token (@$next) {
+        last if $token->{name} eq 'EOL';
+        $column = $token->{column} unless defined $column;
         $yaml .= $token->{value};
     }
+    $column //= '???';
+
     my $remaining_yaml = $self->{yaml}->[0] // '';
     $yaml .= $remaining_yaml;
-    $yaml =~ s/[\r\n].*//s;
     {
         local $@; # avoid bug in old Data::Dumper
         require Data::Dumper;
@@ -36,13 +44,34 @@ sub to_string {
         $yaml = Data::Dumper->Dump([$yaml], ['yaml']);
         chomp $yaml;
     }
-    my $fmt = join "\n", ("%-10s: %s") x 4;
-    my $string = sprintf $fmt,
-        "Line", $self->{line},
-        "Message", $self->{msg},
-        "Where", $self->{where},
-        "YAML", $yaml,
-        ;
+
+    my $lines = 5;
+    my @fields;
+
+    if ($self->{got} and $self->{expected}) {
+        $lines = 6;
+        $line = $self->{got}->{line};
+        $column = $self->{got}->{column};
+        @fields = (
+            "Line" => $line,
+            "Column" => $column,
+            "Expected", join(" ", @{ $self->{expected} }),
+            "Got", $self->{got}->{name},
+            "Where", $self->{where},
+            "YAML", $yaml,
+        );
+    }
+    else {
+        @fields = (
+            "Line" => $line,
+            "Column" => $column,
+            "Message", $self->{msg},
+            "Where", $self->{where},
+            "YAML", $yaml,
+        );
+    }
+    my $fmt = join "\n", ("%-10s: %s") x $lines;
+    my $string = sprintf $fmt, @fields;
     return $string;
 }
 
