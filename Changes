@@ -1,3 +1,11 @@
+0.005_001 2017-12-30 21:49:32+01:00
+    - Add first part of Schema implementation (Loader)
+    - Add dump_file, DumpFile
+    - Add YAML::PP::Writer
+    - perl boolean false is now the empty string instead of 0
+    - Add column numbers to error messages
+    - Happy New Year!
+
 0.005 2017-11-23 17:09:55+01:00
     - Support reading files
     - Replace load() with load_string(), dump() with dump_string()
