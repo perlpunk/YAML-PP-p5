@@ -40,9 +40,6 @@ my @skip = qw/
     LQZ7
     QF4Y
 
-    FH7J
-    LE5A
-    S4JQ
     Q5MG
 
 /;

@@ -7,7 +7,7 @@ use lib "$Bin/../lib";
 
 use IO::All;
 use Data::Dumper;
-use YAML::PP::Loader;
+use YAML::PP;
 use YAML::PP::Dumper;
 use File::Basename qw/ basename /;
 use HTML::Entities qw/ encode_entities /;
@@ -104,7 +104,7 @@ Generated with YAML::PP $version<br>
 <a href="#invalid">Invalid (@{[ scalar @invalid ]})</a><br>
 EOM
 
-my $ypp = YAML::PP::Loader->new(
+my $ypp = YAML::PP->new(
     boolean => 'JSON::PP',
 );
 my $table;
@@ -163,15 +163,15 @@ sub highlight_test {
         @docs = $ypp->load_string($yaml);
     };
     my $error = $@ || '';
-    my $tokens = $ypp->parser->tokens;
+    my $tokens = $ypp->loader->parser->tokens;
     my $diff = 0;
     if ($error) {
         $error =~ s{\Q$Bin/../lib/}{};
         $class = "error";
-        my $remaining_tokens = $ypp->parser->lexer->next_tokens;
+        my $remaining_tokens = $ypp->loader->parser->lexer->next_tokens;
         push @$tokens, map {
             { name => 'ERROR', value => $_->{value} } } @$remaining_tokens;
-        my $remaining = $ypp->parser->lexer->reader->read;
+        my $remaining = $ypp->loader->parser->lexer->reader->read;
         push @$tokens, { name => 'ERROR', value => $remaining };
         my $out = join '', map { $_->{value} } @$tokens;
         if ($out ne $yaml) {
@@ -197,7 +197,7 @@ sub highlight_test {
     my $yaml_dump = $yppd->dump_string(@docs);
 
     my @reload_docs = $ypp->load_string($yaml_dump);
-    my $reload_tokens = $ypp->parser->tokens;
+    my $reload_tokens = $ypp->loader->parser->tokens;
 
     my $dd = eval { require Data::Dump; 1 };
     my $data_dump = join "\n", map {

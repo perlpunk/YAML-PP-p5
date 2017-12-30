@@ -10,8 +10,8 @@ my $boolean = eval "use boolean; 1";
 my $json_pp = eval "use JSON::PP; 1";
 
 my $yaml = <<'EOM';
-TRUE: true
-FALSE: false
+"TRUE": true
+"FALSE": false
 EOM
 
 my $ypp = YAML::PP->new(boolean => 'perl');

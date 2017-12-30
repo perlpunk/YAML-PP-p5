@@ -13,9 +13,13 @@ sub new {
     my ($class, %args) = @_;
 
     my $bool = delete $args{boolean} // 'perl';
+    my $schema = delete $args{schema} // YAML::PP->default_schema(
+        boolean => $bool,
+    );
+
     my $parser = delete $args{parser} || YAML::PP::Parser->new;
     my $constructor = delete $args{constructor} || YAML::PP::Constructor->new(
-        boolean => $bool,
+        schema => $schema,
     );
     if (keys %args) {
         die "Unexpected arguments: " . join ', ', sort keys %args;
@@ -23,6 +27,7 @@ sub new {
     my $self = bless {
         parser => $parser,
         constructor => $constructor,
+        schema => $schema,
     }, $class;
     $parser->set_receiver($constructor);
     return $self;
@@ -30,6 +35,7 @@ sub new {
 
 sub parser { return $_[0]->{parser} }
 sub constructor { return $_[0]->{constructor} }
+sub schema { return $_[0]->{schema} }
 
 sub load_string {
     my ($self, $yaml) = @_;
