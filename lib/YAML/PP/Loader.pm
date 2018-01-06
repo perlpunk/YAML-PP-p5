@@ -12,9 +12,8 @@ use YAML::PP::Reader;
 sub new {
     my ($class, %args) = @_;
 
-    my $bool = delete $args{boolean} // 'perl';
     my $schema = delete $args{schema} // YAML::PP->default_schema(
-        boolean => $bool,
+        boolean => 'perl',
     );
 
     my $parser = delete $args{parser} || YAML::PP::Parser->new;

@@ -10,6 +10,7 @@ use YAML::PP::Writer;
 sub new {
     my ($class, %args) = @_;
     my $self = bless {
+        schema => $args{schema},
         refs => {},
         seen => {},
         emitter => YAML::PP::Emitter->new(
@@ -23,6 +24,7 @@ sub emitter { return $_[0]->{emitter} }
 sub set_emitter { $_[0]->{emitter} = $_[1] }
 sub writer { $_[0]->{writer} }
 sub set_writer { $_[0]->{writer} = $_[1] }
+sub schema { return $_[0]->{schema} }
 
 sub dump_string {
     my ($self, @docs) = @_;
@@ -53,7 +55,6 @@ sub dump {
         }
         $self->emitter->document_end_event({ implicit => 1 });
     }
-    $self->emitter->document_end_event({ implicit => 1 });
     my $yaml = $self->writer->output;
     return $yaml;
 }

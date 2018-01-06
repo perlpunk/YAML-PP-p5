@@ -66,7 +66,6 @@ sub load_string {
     unless ($loader) {
         require YAML::PP::Loader;
         $loader = YAML::PP::Loader->new(
-            boolean => $self->boolean,
             schema => $self->schema,
         );
         $self->loader($loader);
@@ -80,7 +79,6 @@ sub load_file {
     unless ($loader) {
         require YAML::PP::Loader;
         $loader = YAML::PP::Loader->new(
-            boolean => $self->boolean,
             schema => $self->schema,
         );
         $self->loader($loader);
@@ -93,7 +91,9 @@ sub dump_string {
     my $dumper = $self->dumper;
     unless ($dumper) {
         require YAML::PP::Dumper;
-        $dumper = YAML::PP::Dumper->new;
+        $dumper = YAML::PP::Dumper->new(
+            schema => $self->schema,
+        );
         $self->dumper($dumper);
     }
     return $dumper->dump_string(@data);
@@ -104,7 +104,9 @@ sub dump_file {
     my $dumper = $self->dumper;
     unless ($dumper) {
         require YAML::PP::Dumper;
-        $dumper = YAML::PP::Dumper->new;
+        $dumper = YAML::PP::Dumper->new(
+            schema => $self->schema,
+        );
         $self->dumper($dumper);
     }
     return $dumper->dump_file($file, @data);
@@ -161,7 +163,7 @@ sub new {
     }
 
     my $self = bless {
-        resolvers => $args{resolvers} || {},
+        resolvers => {},
         true => $true,
         false => $false,
     }, $class;
@@ -182,34 +184,31 @@ sub load_subschemas {
     }
 }
 
-sub add_matcher {
-    my ($self, $type, $match, $value) = @_;
+sub add_resolver {
+    my ($self, %args) = @_;
+    my $tag = $args{tag};
+    my $rule = $args{match};
     my $resolvers = $self->resolvers;
-    my $res = $resolvers->{value} ||= {};
-    if ($type eq 'equals') {
-        unless (exists $res->{equals}->{ $match }) {
-            $res->{equals}->{ $match } = $value;
+    my ($type, $match, $value) = @$rule;
+    my $implicit = $args{implicit} // 1;
+    my @resolvers;
+    if ($tag) {
+        my $res = $resolvers->{tag}->{ $tag } ||= {};
+        push @resolvers, $res;
+    }
+    if ($implicit) {
+        push @resolvers, $resolvers->{value} ||= {};
+    }
+    for my $res (@resolvers) {
+        if ($type eq 'equals') {
+            unless (exists $res->{equals}->{ $match }) {
+                $res->{equals}->{ $match } = $value;
+            }
+            next;
         }
-        return;
-    }
-    if ($type eq 'regex') {
-        push @{ $res->{regex} }, [ $match => $value ];
-        return;
-    }
-}
-
-sub add_tag_resolver {
-    my ($self, $tag, $type, $match, $value) = @_;
-    my $resolvers = $self->resolvers;
-    my $res = $resolvers->{tag}->{ $tag } ||= {};
-    if ($type eq 'equals') {
-        unless (exists $res->{equals}->{ $match }) {
-            $res->{equals}->{ $match } = $value;
+        if ($type eq 'regex') {
+            push @{ $res->{regex} }, [ $match => $value ];
         }
-        return;
-    }
-    if ($type eq 'regex') {
-        push @{ $res->{regex} }, [ $match => $value ];
     }
 }
 
@@ -300,14 +299,11 @@ use base 'YAML::PP::Schema';
 sub register {
     my ($self, %args) = @_;
     my $schema = $args{schema};
-    $schema->add_matcher( equals => '' => '' );
-    return {
-        tags => [
-#            '<tag:yaml.org,2002:str>' => {
-#                default => 1,
-#            },
-        ],
-    };
+
+    $schema->add_resolver(
+        match => [ equals => '' => '' ],
+    );
+    return;
 }
 
 package YAML::PP::Schema::JSON;
@@ -330,32 +326,36 @@ sub _to_float { unpack F => pack F => $_[0] }
 sub register {
     my ($self, %args) = @_;
     my $schema = $args{schema};
-    $schema->add_matcher( equals => null => undef );
-    $schema->add_matcher( equals => true => $schema->true );
-    $schema->add_matcher( equals => false => $schema->false );
-    $schema->add_matcher( regex => $RE_INT => \&_to_int );
-    $schema->add_matcher( regex => $RE_FLOAT => \&_to_float );
 
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:null' => equals => '' => undef
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:null',
+        match => [ equals => null => undef ],
     );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:null' => equals => null => undef
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:null',
+        match => [ equals => '' => undef ],
+        implicit => 0,
     );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:bool' => equals => true => $schema->true
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:bool',
+        match => [ equals => true => $schema->true ],
     );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:bool' => equals => false => $schema->false
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:bool',
+        match => [ equals => false => $schema->false ],
     );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:int' => regex => $RE_INT => \&_to_int
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:int',
+        match => [ regex => $RE_INT => \&_to_int ],
     );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:float' => regex => $RE_FLOAT => \&_to_float
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:float',
+        match => [ regex => $RE_FLOAT => \&_to_float ],
     );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:str' => regex => qr{^(.*)$} => sub { $_[0] }
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:str',
+        match => [ regex => qr{^(.*)$} => sub { $_[0] } ],
+        implicit => 0,
     );
     return;
 }
@@ -381,70 +381,41 @@ sub _from_hex { hex $_[0] }
 sub register {
     my ($self, %args) = @_;
     my $schema = $args{schema};
-    $schema->add_matcher( equals => '' => undef );
-    $schema->add_matcher( equals => null => undef );
-    $schema->add_matcher( equals => NULL => undef );
-    $schema->add_matcher( equals => Null => undef );
-    $schema->add_matcher( equals => '~' => undef );
-    $schema->add_matcher( equals => true => $schema->true );
-    $schema->add_matcher( equals => TRUE => $schema->true );
-    $schema->add_matcher( equals => True => $schema->true );
-    $schema->add_matcher( equals => false => $schema->false );
-    $schema->add_matcher( equals => FALSE => $schema->false );
-    $schema->add_matcher( equals => False => $schema->false );
-    $schema->add_matcher( regex => $RE_INT_CORE => \&YAML::PP::Schema::JSON::_to_int );
-    $schema->add_matcher( regex => $RE_INT_OCTAL => \&_from_oct );
-    $schema->add_matcher( regex => $RE_INT_HEX => \&_from_hex );
-    $schema->add_matcher( regex => $RE_FLOAT_CORE => \&YAML::PP::Schema::JSON::_to_float );
 
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:null' => equals => '' => undef
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:null',
+        match => [ equals => $_ => undef ],
+    ) for (qw/ null NULL Null ~ /, '');
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:bool',
+        match => [ equals => $_ => $schema->true ],
+    ) for (qw/ true TRUE True /);
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:bool',
+        match => [ equals => $_ => $schema->false ],
+    ) for (qw/ false FALSE False /);
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:int',
+        match => [ regex => $RE_INT_CORE => \&YAML::PP::Schema::JSON::_to_int ],
     );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:null' => equals => null => undef
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:int',
+        match => [ regex => $RE_INT_OCTAL => \&_from_oct ],
     );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:null' => equals => '~' => undef
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:int',
+        match => [ regex => $RE_INT_HEX => \&_from_hex ],
     );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:null' => equals => Null => undef
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:float',
+        match => [ regex => $RE_FLOAT_CORE => \&YAML::PP::Schema::JSON::_to_float ],
     );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:null' => equals => NULL => undef
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:str',
+        match => [ regex => qr{^(.*)$} => sub { $_[0] } ],
+        implicit => 0,
     );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:bool' => equals => true => $schema->true
-    );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:bool' => equals => True => $schema->true
-    );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:bool' => equals => TRUE => $schema->true
-    );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:bool' => equals => false => $schema->false
-    );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:bool' => equals => False => $schema->false
-    );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:bool' => equals => FALSE => $schema->false
-    );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:int' => regex => $RE_INT_CORE => \&YAML::PP::Schema::JSON::_to_int
-    );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:int' => regex => $RE_INT_OCTAL => \&_from_oct
-    );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:int' => regex => $RE_INT_HEX => \&_from_hex
-    );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:float' => regex => $RE_FLOAT_CORE => \&YAML::PP::Schema::JSON::_to_float
-    );
-    $schema->add_tag_resolver(
-        'tag:yaml.org,2002:str' => regex => qr{^(.*)$} => sub { $_[0] }
-    );
+
     return;
 }
 
