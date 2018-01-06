@@ -15,17 +15,21 @@ my $external_data = {
 };
 
 my $schema = $ypp->schema;
-$schema->add_tag_resolver(
-    "!external" => regex => qr{^(.*)$} => sub {
+$schema->add_resolver(
+    tag => "!external",
+    match => [ regex => qr{^(.*)$} => sub {
         my ($value) = @_;
         path($external_data, $value)
-    }
+    }],
+    implicit => 0,
 );
-$schema->add_tag_resolver(
-    "!template" => regex => qr{^(.*)$} => sub {
+$schema->add_resolver(
+    tag => "!template",
+    match => [ regex => qr{^(.*)$} => sub {
         my ($value) = @_;
         template($external_data, $value)
-    }
+    }],
+    implicit => 0,
 );
 
 my $data = $ypp->load_file($filename);
