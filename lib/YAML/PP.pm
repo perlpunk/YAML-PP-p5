@@ -541,7 +541,11 @@ The Loader combines the constructor and parser.
 
 =item L<YAML::PP::Dumper>
 
-The Dumper will create Emitter events from the given data structure.
+The Dumper will delegate to the Representer
+
+=item L<YAML::PP::Representer>
+
+The Representer will create Emitter events from the given data structure.
 
 =item L<YAML::PP::Emitter>
 
