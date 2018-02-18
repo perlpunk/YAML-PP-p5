@@ -28,16 +28,13 @@ sub new {
 sub init {
     my ($self) = @_;
     $self->set_docs([]);
-    $self->set_data(undef);
     $self->set_refs([]);
     $self->set_anchors({});
 }
 
-sub data { return $_[0]->{data} }
 sub docs { return $_[0]->{docs} }
 sub refs { return $_[0]->{refs} }
 sub anchors { return $_[0]->{anchors} }
-sub set_data { $_[0]->{data} = $_[1] }
 sub set_docs { $_[0]->{docs} = $_[1] }
 sub set_refs { $_[0]->{refs} = $_[1] }
 sub set_anchors { $_[0]->{anchors} = $_[1] }
@@ -48,92 +45,82 @@ sub begin {
 
     my $refs = $self->refs;
 
-    my $ref = $refs->[-1];
-    if (not defined $$ref) {
-        $$ref = $data;
-    }
-    elsif (ref $$ref eq 'ARRAY') {
-        push @$$ref, $data;
-        push @$refs, \$data;
-    }
-    elsif (ref $$ref eq 'HASH') {
-        # we got a complex key
-        push @$refs, \\undef;
-        push @$refs, \$data;
-    }
-    else {
-        die "Unexpected";
-    }
+    push @$refs, $data;
     if (defined(my $anchor = $event->{anchor})) {
-        $self->anchors->{ $anchor } = \$data;
+        $self->anchors->{ $anchor } = \$data->{data};
     }
 }
 
 sub document_start_event {
     my ($self, $event) = @_;
-    $self->set_refs([ \$self->{data} ]);
+    my $refs = $self->refs;
+    my $ref = [];
+    push @$refs, { type => 'document', ref => $ref, data => $ref };
 }
 
 sub document_end_event {
     my ($self, $event) = @_;
     my $refs = $self->refs;
+    my $last = pop @$refs;
+    my ($type, $ref) = @{ $last }{qw/ type ref /};
+    my $data = $ref->[0];
+    $type eq 'document' or die "Expected mapping, but got $type";
+    if (@$refs) {
+        die "Got unexpected end of document";
+    }
     my $docs = $self->docs;
-    push @$docs, $self->data;
-    pop @$refs if @$refs;
-    $self->set_data(undef);
+    push @$docs, $data;
     $self->set_anchors({});
     $self->set_refs([]);
 }
 
 sub mapping_start_event {
     my ($self, $event) = @_;
-    my $data = {};
-    shift->begin($data, @_);
+    my $data = { type => 'mapping', ref => [], data => {}, event => $event };
+    $self->begin($data, $event);
 }
 
 sub mapping_end_event {
-    shift->end(@_);
+    my ($self, $event) = @_;
+    my $refs = $self->refs;
+
+    my $last = pop @$refs;
+    my ($type, $ref, $hash) = @{ $last }{qw/ type ref data /};
+    $type eq 'mapping' or die "Expected mapping, but got $type";
+
+    for (my $i = 0; $i < @$ref; $i += 2) {
+        my ($key, $value) = @$ref[ $i, $i + 1 ];
+        $key //= '';
+        if (ref $key) {
+            $key = $self->stringify_complex($key);
+        }
+        $hash->{ $key } = $value;
+    }
+    push @{ $refs->[-1]->{ref} }, $hash;
+    return;
 }
 
 sub sequence_start_event {
     my ($self, $event) = @_;
-    my $data = [];
-    shift->begin($data, @_);
+    my $ref = [];
+    my $data = { type => 'sequence', ref => $ref, data => $ref, event => $event };
+    $self->begin($data, $event);
 }
 
 sub sequence_end_event {
-    shift->end(@_);
+    my ($self, $event) = @_;
+    my $refs = $self->refs;
+    my $last = pop @$refs;
+    my ($type, $ref) = @{ $last }{qw/ type ref /};
+    $type eq 'sequence' or die "Expected mapping, but got $type";
+    push @{ $refs->[-1]->{ref} }, $ref;
+    return;
 }
 
 sub stream_start_event {
-    my ($self, $event) = @_;
-    my $refs = $self->refs;
-    pop @$refs if @$refs;
 }
 
 sub stream_end_event {}
-
-sub end {
-    my ($self, $event) = @_;
-    my $refs = $self->refs;
-
-    my $complex = pop @$refs;
-    if (@$refs > 1) {
-        my $ref1 = $refs->[-1];
-        my $ref2 = $refs->[-2];
-        if (ref $$ref1 eq 'SCALAR') {
-            pop @$refs;
-            my $string = $self->stringify_complex($$complex);
-            if (ref $$ref2 eq 'HASH') {
-                $$ref2->{ $string } = undef;
-                push @$refs, \$$ref2->{ $string };
-            }
-            else {
-                die "Unexpected";
-            }
-        }
-    }
-}
 
 
 sub scalar_event {
@@ -165,21 +152,10 @@ sub alias_event {
 sub add_scalar {
     my ($self, $value) = @_;
 
-    my $refs = $self->refs;
+    my $last = $self->refs->[-1];
 
-    my $ref = $refs->[-1];
-    if (not defined $$ref) {
-        $$ref = $value;
-        pop @$refs;
-    }
-    elsif (ref $$ref eq 'HASH') {
-        $value = '' unless defined $value;
-        $$ref->{ $value } = undef;
-        push @$refs, \$$ref->{ $value };
-    }
-    elsif (ref $$ref eq 'ARRAY') {
-        push @{ $$ref }, $value;
-    }
+    my ($type, $ref) = @{ $last }{qw/ type ref /};
+    push @$ref, $value;
 }
 
 sub stringify_complex {
