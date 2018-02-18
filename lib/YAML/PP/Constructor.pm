@@ -10,10 +10,14 @@ use YAML::PP;
 use constant DEBUG => ($ENV{YAML_PP_LOAD_DEBUG} or $ENV{YAML_PP_LOAD_TRACE}) ? 1 : 0;
 use constant TRACE => $ENV{YAML_PP_LOAD_TRACE} ? 1 : 0;
 
+my %cyclic_refs = qw/ allow 1 ignore 1 warn 1 fatal 1 /;
 
 sub new {
     my ($class, %args) = @_;
 
+    my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
+    die "Invalid value for cyclic_refs: $cyclic_refs"
+        unless $cyclic_refs{ $cyclic_refs };
     my $schema = delete $args{schema};
 
     if (keys %args) {
@@ -22,6 +26,7 @@ sub new {
 
     my $self = bless {
         schema => $schema,
+        cyclic_refs => $cyclic_refs,
     }, $class;
 }
 
@@ -39,6 +44,7 @@ sub set_docs { $_[0]->{docs} = $_[1] }
 sub set_refs { $_[0]->{refs} = $_[1] }
 sub set_anchors { $_[0]->{anchors} = $_[1] }
 sub schema { return $_[0]->{schema} }
+sub cyclic_refs { return $_[0]->{cyclic_refs} }
 
 sub begin {
     my ($self, $data, $event) = @_;
@@ -47,7 +53,7 @@ sub begin {
 
     push @$refs, $data;
     if (defined(my $anchor = $event->{anchor})) {
-        $self->anchors->{ $anchor } = \$data->{data};
+        $self->anchors->{ $anchor } = { data => $data->{data} };
     }
 }
 
@@ -55,7 +61,7 @@ sub document_start_event {
     my ($self, $event) = @_;
     my $refs = $self->refs;
     my $ref = [];
-    push @$refs, { type => 'document', ref => $ref, data => $ref };
+    push @$refs, { type => 'document', ref => $ref, data => $ref, event => $event };
 }
 
 sub document_end_event {
@@ -85,7 +91,7 @@ sub mapping_end_event {
     my $refs = $self->refs;
 
     my $last = pop @$refs;
-    my ($type, $ref, $hash) = @{ $last }{qw/ type ref data /};
+    my ($type, $ref, $hash, $start_event) = @{ $last }{qw/ type ref data event /};
     $type eq 'mapping' or die "Expected mapping, but got $type";
 
     for (my $i = 0; $i < @$ref; $i += 2) {
@@ -97,6 +103,10 @@ sub mapping_end_event {
         $hash->{ $key } = $value;
     }
     push @{ $refs->[-1]->{ref} }, $hash;
+    if (defined(my $anchor = $start_event->{anchor})) {
+        my $anchors = $self->anchors;
+        $anchors->{ $anchor }->{finished} = 1;
+    }
     return;
 }
 
@@ -111,9 +121,13 @@ sub sequence_end_event {
     my ($self, $event) = @_;
     my $refs = $self->refs;
     my $last = pop @$refs;
-    my ($type, $ref) = @{ $last }{qw/ type ref /};
+    my ($type, $ref, $start_event) = @{ $last }{qw/ type ref event /};
     $type eq 'sequence' or die "Expected mapping, but got $type";
     push @{ $refs->[-1]->{ref} }, $ref;
+    if (defined(my $anchor = $start_event->{anchor})) {
+        my $anchors = $self->anchors;
+        $anchors->{ $anchor }->{finished} = 1;
+    }
     return;
 }
 
@@ -134,7 +148,7 @@ sub scalar_event {
         $value = $self->schema->load_scalar($event->{style}, $event->{value});
     }
     if (defined (my $name = $event->{anchor})) {
-        $self->anchors->{ $name } = \$value;
+        $self->anchors->{ $name } = { data => $value, finished => 1 };
     }
     $self->add_scalar($value);
 }
@@ -144,7 +158,24 @@ sub alias_event {
     my $value;
     my $name = $event->{value};
     if (my $anchor = $self->anchors->{ $name }) {
-        $value = $$anchor;
+        # We know this is a cyclic ref since the node hasn't
+        # been constructed completely yet
+        unless ($anchor->{finished} ) {
+            my $cyclic_refs = $self->cyclic_refs;
+            if ($cyclic_refs ne 'allow') {
+                if ($cyclic_refs eq 'fatal') {
+                    die "Found cyclic ref";
+                }
+                if ($cyclic_refs eq 'warn') {
+                    $anchor = { data => undef };
+                    warn "Found cyclic ref";
+                }
+                elsif ($cyclic_refs eq 'ignore') {
+                    $anchor = { data => undef };
+                }
+            }
+        }
+        $value = $anchor->{data};
     }
     $self->add_scalar($value);
 }

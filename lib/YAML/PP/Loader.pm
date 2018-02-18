@@ -12,6 +12,7 @@ use YAML::PP::Reader;
 sub new {
     my ($class, %args) = @_;
 
+    my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
     my $schema = delete $args{schema} // YAML::PP->default_schema(
         boolean => 'perl',
     );
@@ -19,6 +20,7 @@ sub new {
     my $parser = delete $args{parser} || YAML::PP::Parser->new;
     my $constructor = delete $args{constructor} || YAML::PP::Constructor->new(
         schema => $schema,
+        cyclic_refs => $cyclic_refs,
     );
     if (keys %args) {
         die "Unexpected arguments: " . join ', ', sort keys %args;

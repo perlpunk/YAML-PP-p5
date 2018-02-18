@@ -13,6 +13,7 @@ sub new {
 
     my $bool = delete $args{boolean} // 'perl';
     my $schemas = delete $args{schema} || ['Core'];
+    my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
 
     my $schema = YAML::PP::Schema->new(
         boolean => $bool,
@@ -22,11 +23,13 @@ sub new {
     my $self = bless {
         boolean => $bool,
         schema => $schema,
+        cyclic_refs => $cyclic_refs,
     }, $class;
     return $self;
 }
 
 sub boolean { return $_[0]->{boolean} }
+sub cyclic_refs { return $_[0]->{cyclic_refs} }
 
 sub loader {
     if (@_ > 1) {
@@ -67,6 +70,7 @@ sub load_string {
         require YAML::PP::Loader;
         $loader = YAML::PP::Loader->new(
             schema => $self->schema,
+            cyclic_refs => $self->cyclic_refs,
         );
         $self->loader($loader);
     }
