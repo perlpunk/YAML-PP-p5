@@ -14,6 +14,15 @@ my $yaml = <<'EOM';
     name: B
     link: *NODEA
 EOM
+my $yaml2 = <<'EOM';
+- &NODEA
+  name: A
+  foo: &NODEA # overwrite anchor
+    bar: boo
+  link: &NODEB
+    name: B
+    link: *NODEA
+EOM
 
 my $fatal     = YAML::PP->new( cyclic_refs => 'fatal' );
 my $warn      = YAML::PP->new( cyclic_refs => 'warn' );
@@ -47,5 +56,8 @@ $data = eval {
 };
 $error = $@;
 cmp_ok($error, '=~', qr{invalid}i, "cyclic_refs=nonsense (invalid parameter)");
+
+$data = $fatal->load_string($yaml2);
+cmp_ok($data->[0]->{link}->{link}->{bar}, 'eq', 'boo', "cyclic_refs=fatal, no cyclic ref found");
 
 done_testing;
