@@ -33,51 +33,50 @@ sub new {
 sub init {
     my ($self) = @_;
     $self->set_docs([]);
-    $self->set_refs([]);
+    $self->set_stack([]);
     $self->set_anchors({});
 }
 
 sub docs { return $_[0]->{docs} }
-sub refs { return $_[0]->{refs} }
+sub stack { return $_[0]->{stack} }
 sub anchors { return $_[0]->{anchors} }
 sub set_docs { $_[0]->{docs} = $_[1] }
-sub set_refs { $_[0]->{refs} = $_[1] }
+sub set_stack { $_[0]->{stack} = $_[1] }
 sub set_anchors { $_[0]->{anchors} = $_[1] }
 sub schema { return $_[0]->{schema} }
 sub cyclic_refs { return $_[0]->{cyclic_refs} }
 
 sub begin {
-    my ($self, $data, $event) = @_;
+    my ($self, $ref, $event) = @_;
 
-    my $refs = $self->refs;
+    my $stack = $self->stack;
 
-    push @$refs, $data;
+    push @$stack, $ref;
     if (defined(my $anchor = $event->{anchor})) {
-        $self->anchors->{ $anchor } = { data => $data->{data} };
+        $self->anchors->{ $anchor } = { data => $ref->{data} };
     }
 }
 
 sub document_start_event {
     my ($self, $event) = @_;
-    my $refs = $self->refs;
+    my $stack = $self->stack;
     my $ref = [];
-    push @$refs, { type => 'document', ref => $ref, data => $ref, event => $event };
+    push @$stack, { type => 'document', ref => $ref, data => $ref, event => $event };
 }
 
 sub document_end_event {
     my ($self, $event) = @_;
-    my $refs = $self->refs;
-    my $last = pop @$refs;
+    my $stack = $self->stack;
+    my $last = pop @$stack;
     my ($type, $ref) = @{ $last }{qw/ type ref /};
-    my $data = $ref->[0];
     $type eq 'document' or die "Expected mapping, but got $type";
-    if (@$refs) {
+    if (@$stack) {
         die "Got unexpected end of document";
     }
     my $docs = $self->docs;
-    push @$docs, $data;
+    push @$docs, $ref->[0];
     $self->set_anchors({});
-    $self->set_refs([]);
+    $self->set_stack([]);
 }
 
 sub mapping_start_event {
@@ -88,9 +87,9 @@ sub mapping_start_event {
 
 sub mapping_end_event {
     my ($self, $event) = @_;
-    my $refs = $self->refs;
+    my $stack = $self->stack;
 
-    my $last = pop @$refs;
+    my $last = pop @$stack;
     my ($type, $ref, $hash, $start_event) = @{ $last }{qw/ type ref data event /};
     $type eq 'mapping' or die "Expected mapping, but got $type";
 
@@ -102,7 +101,7 @@ sub mapping_end_event {
         }
         $hash->{ $key } = $value;
     }
-    push @{ $refs->[-1]->{ref} }, $hash;
+    push @{ $stack->[-1]->{ref} }, $hash;
     if (defined(my $anchor = $start_event->{anchor})) {
         my $anchors = $self->anchors;
         $anchors->{ $anchor }->{finished} = 1;
@@ -119,11 +118,11 @@ sub sequence_start_event {
 
 sub sequence_end_event {
     my ($self, $event) = @_;
-    my $refs = $self->refs;
-    my $last = pop @$refs;
+    my $stack = $self->stack;
+    my $last = pop @$stack;
     my ($type, $ref, $start_event) = @{ $last }{qw/ type ref event /};
     $type eq 'sequence' or die "Expected mapping, but got $type";
-    push @{ $refs->[-1]->{ref} }, $ref;
+    push @{ $stack->[-1]->{ref} }, $ref;
     if (defined(my $anchor = $start_event->{anchor})) {
         my $anchors = $self->anchors;
         $anchors->{ $anchor }->{finished} = 1;
@@ -183,7 +182,7 @@ sub alias_event {
 sub add_scalar {
     my ($self, $value) = @_;
 
-    my $last = $self->refs->[-1];
+    my $last = $self->stack->[-1];
 
     my ($type, $ref) = @{ $last }{qw/ type ref /};
     push @$ref, $value;
