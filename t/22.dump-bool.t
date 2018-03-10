@@ -10,15 +10,15 @@ my $json_pp = eval "use JSON::PP; 1";
 
 my $exp_yaml = <<"EOM";
 ---
-FALSE: false
-TRUE: true
+bool false: false
+bool true: true
 EOM
 
 SKIP: {
     skip "boolean not installed", 1 unless $boolean;
     my $data = {
-        TRUE => JSON::PP::true(),
-        FALSE => JSON::PP::false(),
+        "bool true" => boolean::true(),
+        "bool false" => boolean::false(),
     };
     my $yppd = YAML::PP::Dumper->new(boolean => 'boolean');
     my $yaml = $yppd->dump_string($data);
@@ -28,8 +28,8 @@ SKIP: {
 SKIP: {
     skip "JSON::PP not installed", 1 unless $json_pp;
     my $data = {
-        TRUE => JSON::PP::true(),
-        FALSE => JSON::PP::false(),
+        "bool true" => JSON::PP::true(),
+        "bool false" => JSON::PP::false(),
     };
     my $yppd = YAML::PP::Dumper->new(boolean => 'JSON::PP');
     my $yaml = $yppd->dump_string($data);
