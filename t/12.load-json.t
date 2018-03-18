@@ -43,6 +43,29 @@ my @skip = qw/
     Q5MG
 
 /;
+
+# skip multidoc for now
+push @skip, qw/
+
+    35KP
+    6ZKB
+    7Z25
+    8G76
+    98YD
+    9DXL
+    9KAX
+    AVM7
+    JHB9
+    KSS4
+    M7A3
+    PUW8
+    RZT7
+    U9NS
+    UT92
+    W4TN
+    WZ62
+
+/;
 my %skip;
 @skip{ @skip }= ();
 @dirs = grep { not exists $skip{ basename $_ } } @dirs;
