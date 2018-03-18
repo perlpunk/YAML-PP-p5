@@ -47,6 +47,7 @@ my @skip = qw/
 
 # emitter
 push @skip, qw/
+4MUZ
 /;
 # quoting
 push @skip, qw/
