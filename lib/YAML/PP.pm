@@ -556,6 +556,10 @@ might still be wrong in some cases.
 
 The error messages need to be improved.
 
+=item Unicode Surrogate Pairs
+
+Currently loaded as single characters without validating
+
 =item Possibly more
 
 =back
@@ -668,6 +672,69 @@ The layout is like libyaml output:
     - - b1
       - b2
 
+=head1 METHODS
+
+=over
+
+=item new
+
+    my $ypp = YAML::PP->new;
+    # load booleans via boolean.pm
+    my $ypp = YAML::PP->new( boolean => 'boolean' );
+    # load booleans via JSON::PP::true/false
+    my $ypp = YAML::PP->new( boolean => 'JSON::PP' );
+    
+    # use YAML 1.2 Failsafe Schema
+    my $ypp = YAML::PP->new( schema => ['Failsafe'] );
+    # use YAML 1.2 JSON Schema
+    my $ypp = YAML::PP->new( schema => ['JSON'] );
+    # use YAML 1.2 Core Schema
+    my $ypp = YAML::PP->new( schema => ['Core'] );
+    
+    # Die when detecting cyclic references
+    my $ypp = YAML::PP->new( cyclic_refs => 'fatal' );
+    # Other values:
+    # warn   - Just warn about them and replace with undef
+    # ignore - replace with undef
+    # allow  - Default
+    
+    my $ypp = YAML::PP->new(
+        boolean => 'JSON::PP',
+        schema => ['JSON'],
+        cyclic_refs => 'fatal',
+    );
+
+=item load_string
+
+    my $doc = $ypp->load_string("foo: bar");
+    my @docs = $ypp->load_string("foo: bar\n---\n- a");
+
+Input should be utf-8 decoded.
+
+=item load_file
+
+    my $doc = $ypp->load_file("file.yaml");
+    my @docs = $ypp->load_file("file.yaml");
+
+UTF-8 decoding will be done automatically
+
+=item dump_string
+
+    my $yaml = $ypp->dump_string($doc);
+    my $yaml = $ypp->dump_string($doc1, $doc2);
+    my $yaml = $ypp->dump_string(@docs);
+
+Output will be UTF-8 decoded
+
+=item dump_file
+
+    $ypp->dump_file("file.yaml", $doc);
+    $ypp->dump_file("file.yaml", $doc1, $doc2);
+    $ypp->dump_file("file.yaml", @docs);
+
+File will be written UTF-8 encoded
+
+=back
 
 =head1 NUMBERS
 
