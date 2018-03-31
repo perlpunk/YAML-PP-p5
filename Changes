@@ -1,4 +1,4 @@
-0.005_002
+0.005_002 2018-03-31 21:07:06+02:00
     - Detect cyclic references when loading
     - Fixed various bugs in Emitter
     - Can now emit empty collections like [], {}
