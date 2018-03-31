@@ -1,13 +1,18 @@
 +STR
 +DOC ---
 +MAP
-=VAL :abc
-=VAL :def
+=VAL :mapping
++MAP
+=VAL >key\n
+=VAL :
+=VAL :
+=VAL :value
 +SEQ
 =VAL :a
 =VAL :b
 -SEQ
 =VAL :
+-MAP
 -MAP
 -DOC
 -STR

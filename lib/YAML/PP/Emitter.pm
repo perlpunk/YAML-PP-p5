@@ -436,18 +436,22 @@ sub scalar_event {
         $last->{type} = $new_event;
     }
     elsif ($last->{type} eq 'COMPLEXVALUE') {
-        if (length $pvalue) {
-            if ($append) {
-                $yaml .= " ";
-            }
-            else {
-                $yaml .= $indent;
-            }
-            $yaml .= ": $pvalue";
-            if (not $multiline) {
-                $yaml .= "\n";
-            }
+        if ($append) {
+            $yaml .= " ";
         }
+        else {
+            $yaml .= $indent;
+        }
+        if (length $pvalue) {
+            $yaml .= ": $pvalue";
+        }
+        else {
+            $yaml .= ":";
+        }
+        if (not $multiline) {
+            $yaml .= "\n";
+        }
+        $last->{type} = 'MAP';
     }
     else {
         if ($last->{type} eq 'MAPVALUE') {

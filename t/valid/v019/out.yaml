@@ -1,4 +1,9 @@
 ---
-abc: def
-? - a
-  - b
+mapping:
+  ? >
+    key
+  :
+  : value
+  ? - a
+    - b
+  :
