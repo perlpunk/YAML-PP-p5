@@ -89,7 +89,7 @@ my %htmlcolors = (
     BLOCK_SCALAR_CONTENT => 'block_scalar_content',
     TAB => 'tab',
     ERROR => 'error',
-    EOL => 'comment',
+    EOL => 'eol',
     TRAILING_SPACE => 'trailing_space',
     FLOWSEQ_START => 'flowseq_start',
     FLOWSEQ_END => 'flowseq_end',
@@ -135,7 +135,7 @@ sub transform {
         elsif ($i < $#list) {
             my $next = $list[ $i + 1];
             if ($next->{name} eq 'EOL') {
-                if ($next->{value} =~ m/\A([\r\n]|\z)/ and $name eq 'WS') {
+                if ($str =~ m/ \z/ and $name =~ m/^(BLOCK_SCALAR_CONTENT|WS)$/) {
                     $token->{name} = "TRAILING_SPACE";
                 }
             }

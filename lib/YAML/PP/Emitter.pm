@@ -97,7 +97,8 @@ sub mapping_start_event {
     $self->writer->write($yaml);
     my $new_info = { index => 0, indent => $new_indent, info => $info, append => $new_append };
     if (($info->{style} || '') eq 'flow') {
-        $new_info->{type} = 'FLOWMAP';
+#        $new_info->{type} = 'FLOWMAP';
+        $new_info->{type} = 'MAP';
     }
     else {
         $new_info->{type} = 'MAP';
@@ -476,6 +477,7 @@ sub scalar_event {
             }
         }
         else {
+#            warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$last], ['last']);
             die "Unexpected";
         }
         if (not $multiline) {

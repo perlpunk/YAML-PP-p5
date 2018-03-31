@@ -67,6 +67,7 @@ span.yaml_directive { color: cyan; }
 span.tag_directive { color: cyan; }
 span.tag { color: blue; }
 span.comment { color: grey; }
+span.eol { color: grey; }
 span.alias { color: green; }
 span.singlequote { font-weight: bold; color: green; }
 span.doublequote { font-weight: bold; color: green; }
@@ -76,10 +77,10 @@ span.literal { font-weight: bold; color: magenta; }
 span.folded { font-weight: bold; color: magenta; }
 span.doc_start { font-weight: bold; }
 span.doc_end { font-weight: bold; }
-span.block_scalar_content { color: #aa7700; }
+span.block_scalar_content { color: #aa7700; border-left: 2px solid #999; margin-left: -2px; }
 span.tab { background-color: lightblue; }
 span.error { background-color: #ff8888; }
-span.trailing_space { background-color: magenta; }
+span.trailing_space { border: 1px solid red; margin: -1px; background-color: #eee; }
 span.flowseq_start { font-weight: bold; color: magenta; }
 span.flowseq_end { font-weight: bold; color: magenta; }
 span.flowmap_start { font-weight: bold; color: magenta; }
@@ -121,6 +122,7 @@ $html .= <<"EOM";
 <td>YAML::PP::Loader | Data::Dump</td>
 <td>YAML::PP::Loader | JSON::XS</td>
 <td>YAML::PP::Loader | YAML::PP::Dumper</td>
+<td>YAML::PP::Parser | YAML::PP::Emitter</td>
 </tr>
 $table
 </table>
@@ -140,6 +142,7 @@ $html .= <<"EOM";
 <td>YAML::PP::Loader | Data::Dump</td>
 <td>YAML::PP::Loader | JSON::XS</td>
 <td>YAML::PP::Loader | YAML::PP::Dumper</td>
+<td>YAML::PP::Parser | YAML::PP::Emitter</td>
 </tr>
 $table
 </table>
@@ -211,6 +214,44 @@ sub highlight_test {
         }
     } 0 .. $#docs;
 
+
+    my $emit_yaml = '';
+    {
+        my @events;
+        my $parser = YAML::PP::Parser->new(
+            receiver => sub {
+                my ($self, @args) = @_;
+                push @events, [@args];
+            },
+        );
+        eval {
+            $parser->parse($yaml);
+        };
+        if ($@) {
+#            warn "Error parsing: $@";
+        }
+        else {
+            my $writer = YAML::PP::Writer->new;
+            my $emitter = YAML::PP::Emitter->new();
+            $emitter->set_writer($writer);
+            eval {
+                for my $event (@events) {
+                    my ($type, $info) = @$event;
+                    if ($type eq 'sequence_start_event' or $type eq 'mapping_end_event') {
+                        delete $info->{style};
+                    }
+                    $emitter->$type($info);
+                }
+            };
+            $emit_yaml = $emitter->writer->output;
+        }
+    }
+    my @emit_docs = eval { $ypp->load_string($emit_yaml) };
+    my $emit_tokens = $ypp->loader->parser->tokens;
+
+
+
+
     $title = decode_utf8($title);
     $title = encode_entities($title);
     $error =~ s{\Q$Bin/../lib/}{}g;
@@ -222,7 +263,7 @@ sub highlight_test {
     my $taglist = join ', ', @{ $tags{ $id } || [] };
     $html .= <<"EOM";
 <tr>
-<td colspan="5" valign="top" style="background-color: #dddddd"><b>$id - $title</b></td></tr>
+<td colspan="6" valign="top" style="background-color: #dddddd"><b>$id - $title</b></td></tr>
 <tr>
 <td style="max-width: 15em;" valign="top" >Tags:<br>$taglist<br>
 <a href="https://github.com/yaml/yaml-test-suite/blob/master/test/$id.tml">View source</a><br>
@@ -230,6 +271,7 @@ sub highlight_test {
 EOM
     my $high = YAML::PP::Highlight->htmlcolored($tokens);
     my $reload_high = YAML::PP::Highlight->htmlcolored($reload_tokens);
+    my $emit_high = YAML::PP::Highlight->htmlcolored($emit_tokens);
     my $orig = $diff ? qq{<br><pre>$yaml</pre>} : '';
     $html .= <<"EOM";
 <td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="$class">$high</pre>
@@ -244,6 +286,9 @@ $orig
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
 <pre>$reload_high</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>$emit_high</pre>
 </td>
 </tr>
 EOM
