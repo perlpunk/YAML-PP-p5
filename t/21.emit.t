@@ -31,7 +31,7 @@ my @skip = qw/
     4ABK 87E4 8CWC 8UDB 9MMW
     C2DT CN3R CT4Q DFF7
     FRK4
-    KZN9 L9U5 LP6E LQZ7 LX3P
+    KZN9 L9U5 LQZ7 LX3P
     M7A3
     Q9WF QF4Y
     R4YG SBG9 UT92 WZ62 X38W
@@ -44,7 +44,7 @@ my @skip = qw/
     Q5MG
     7ZZ5
     KK5P
-    3R3P
+    EX5H
 
 /;
 
@@ -237,6 +237,10 @@ sub emit_events {
     $emitter->init;
     for my $event (@$events) {
         my ($type, $info) = @$event;
+#warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$type], ['type']);
+        if ($type eq 'sequence_start_event' or $type eq 'mapping_start_event') {
+            delete $info->{style};
+        }
         $emitter->$type($info);
     }
     my $yaml = $emitter->writer->output;

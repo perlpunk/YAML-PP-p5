@@ -6,6 +6,7 @@ our $VERSION = '0.000'; # VERSION
 
 use YAML::PP::Emitter;
 use YAML::PP::Writer;
+use B;
 
 sub new {
     my ($class, %args) = @_;
@@ -70,6 +71,8 @@ sub dump_document {
 sub dump_node {
     my ($self, $node) = @_;
 
+    my $schema = $self->schema;
+    my $representers = $schema->representers;
     my $seen = $self->{seen};
     my $anchor;
     if (ref $node) {
@@ -89,7 +92,8 @@ sub dump_node {
         }
     }
     if (ref $node eq 'HASH') {
-        $self->emitter->mapping_start_event({ anchor => $anchor });
+        my $style = 'block';
+        $self->emitter->mapping_start_event({ anchor => $anchor, style => $style });
         for my $key (sort keys %$node) {
             $self->dump_node($key);
             $self->dump_node($node->{ $key });
@@ -97,13 +101,15 @@ sub dump_node {
         $self->emitter->mapping_end_event;
     }
     elsif (ref $node eq 'ARRAY') {
-        $self->emitter->sequence_start_event({ anchor => $anchor });
+        my $style = 'block';
+        $self->emitter->sequence_start_event({ anchor => $anchor, style => $style });
         for my $elem (@$node) {
             $self->dump_node($elem);
         }
         $self->emitter->sequence_end_event;
     }
     elsif (ref $node) {
+        # TODO check configuration for boolean type
         if (ref $node eq 'JSON::PP::Boolean' or ref $node eq 'boolean') {
             $self->emitter->scalar_event({
                 value => $node ? 'true' : 'false',
@@ -116,7 +122,61 @@ sub dump_node {
         }
     }
     else {
-        $self->emitter->scalar_event({ value => $node });
+        my $result;
+        if (not defined $node) {
+            if (my $undef = $representers->{undef}) {
+                $result = $undef->($self, $node);
+            }
+            else {
+                $result = { plain => "" };
+            }
+        }
+        if (not $result and my $flag_rep = $representers->{flags}) {
+            for my $rep (@$flag_rep) {
+                my $check_flags = $rep->{flags};
+                my $flags = B::svref_2object(\$node)->FLAGS;
+                if ($flags & $check_flags) {
+                    my $res = $rep->{code}->($self, $node);
+                    if (not $res->{skip}) {
+                        $result = $res;
+                        last;
+                    }
+                }
+
+            }
+        }
+        if (not $result and my $equals = $representers->{equals}) {
+            if (my $rep = $equals->{ $node }) {
+                my $res = $rep->{code}->($self, $node);
+                if (not $res->{skip}) {
+                    $result = $res;
+                }
+            }
+        }
+        if (not $result and my $regex = $representers->{regex}) {
+            for my $rep (@$regex) {
+                if ($node =~ $rep->{regex}) {
+                    my $res = $rep->{code}->($self, $node);
+                    if (not $res->{skip}) {
+                        $result = $res;
+                        last;
+                    }
+                }
+            }
+        }
+        $result ||= { any => $node };
+        if (exists $result->{plain}) {
+            $self->emitter->scalar_event({ value => $result->{plain}, style => ":" });
+        }
+        elsif (exists $result->{quoted}) {
+            $self->emitter->scalar_event({ value => $result->{quoted}, style => "'" });
+        }
+        elsif (exists $result->{any}) {
+            $self->emitter->scalar_event({ value => $result->{any}, style => "" });
+        }
+        else {
+            die "Unexpected";
+        }
     }
 }
 

@@ -11,6 +11,13 @@ use YAML::PP;
 use Encode;
 use File::Basename qw/ dirname basename /;
 
+my $json_pp = eval "use JSON::PP; 1";
+
+unless ($json_pp) {
+    plan skip_all => "Need JSON::PP for testing booleans";
+    exit;
+}
+
 $ENV{YAML_PP_RESERVED_DIRECTIVE} = 'ignore';
 
 $|++;
@@ -26,17 +33,15 @@ my @dirs = YAML::PP::Test->get_tests(
 
 # skip tests that parser can't parse
 my @skip = qw/
-    4ABK 5TRB 87E4 8CWC 8UDB 9MMW
+    4ABK 87E4 8CWC 8UDB 9MMW
     C2DT CN3R CT4Q DFF7
     FRK4
     KZN9 L9U5 LP6E LQZ7 LX3P
-    N782
     Q9WF QF4Y
     UT92 WZ62
 
     6BFJ
     Q5MG
-    7ZZ5
 /;
 
 # dumper
@@ -117,7 +122,7 @@ sub test {
     my ($title, $name, $yaml, $exp_out_yaml) = @_;
 #    warn __PACKAGE__.':'.__LINE__.": ================================ $name\n";
     my $ok = 0;
-    my $ypp = YAML::PP->new;
+    my $ypp = YAML::PP->new( boolean => 'JSON::PP' );
     my @docs = eval { $ypp->load_string($yaml) };
     my $error = $@;
     my $out_yaml;

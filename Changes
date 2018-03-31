@@ -1,7 +1,9 @@
 0.005_002
     - Detect cyclic references when loading
-    - Improve Emitter
+    - Fixed various bugs in Emitter
+    - Can now emit empty collections like [], {}
     - Add YAML::PP::Representer
+    - Add Schema to Dumper/Representer for dumping numbers, undef
 
 0.005_001 2017-12-30 21:49:32+01:00
     - Add first part of Schema implementation (Loader)

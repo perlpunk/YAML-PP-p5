@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 package YAML::PP;
+use B;
 
 our $VERSION = '0.000'; # VERSION
 
@@ -168,6 +169,7 @@ sub new {
 
     my $self = bless {
         resolvers => {},
+        representers => {},
         true => $true,
         false => $false,
     }, $class;
@@ -175,6 +177,7 @@ sub new {
 }
 
 sub resolvers { return $_[0]->{resolvers} }
+sub representers { return $_[0]->{representers} }
 sub true { return $_[0]->{true} }
 sub false { return $_[0]->{false} }
 
@@ -213,6 +216,33 @@ sub add_resolver {
         if ($type eq 'regex') {
             push @{ $res->{regex} }, [ $match => $value ];
         }
+    }
+}
+
+sub add_representer {
+    my ($self, %args) = @_;
+
+    my $representers = $self->representers;
+    if (my $flags = $args{flags}) {
+        my $rep = $representers->{flags} ||= [];
+        push @$rep, \%args;
+        return;
+    }
+    if (my $regex = $args{regex}) {
+        my $rep = $representers->{regex} ||= [];
+        push @$rep, \%args;
+        return;
+    }
+    if (defined(my $equals = $args{equals})) {
+        my $rep = $representers->{equals} ||= {};
+        $rep->{ $equals } = {
+            code => $args{code},
+        };
+        return;
+    }
+    if (my $undef = $args{undefined}) {
+        $representers->{undef} = $undef;
+        return;
     }
 }
 
@@ -307,6 +337,13 @@ sub register {
     $schema->add_resolver(
         match => [ equals => '' => '' ],
     );
+
+    $schema->add_representer(
+        undefined => sub {
+            my ($rep, $value) = @_;
+            return { quoted => "" };
+        },
+    );
     return;
 }
 
@@ -360,6 +397,50 @@ sub register {
         tag => 'tag:yaml.org,2002:str',
         match => [ regex => qr{^(.*)$} => sub { $_[0] } ],
         implicit => 0,
+    );
+
+    $schema->add_representer(
+        undefined => sub {
+            my ($rep, $value) = @_;
+            return { plain => "null" };
+        },
+    );
+    $schema->add_representer(
+        reftype => "*",
+        code => sub {
+            die "Dumping references not supported yet";
+        },
+    );
+
+    my $int_flags = B::SVp_IOK;
+    my $float_flags = B::SVp_NOK;
+    $schema->add_representer(
+        flags => $int_flags,
+        code => sub {
+            my ($rep, $value) = @_;
+            return { plain => "$value" };
+        },
+    );
+    $schema->add_representer(
+        flags => $float_flags,
+        code => sub {
+            my ($rep, $value) = @_;
+            return { plain => "$value" };
+        },
+    );
+    $schema->add_representer(
+        equals => $_,
+        code => sub {
+            my ($rep, $value) = @_;
+            return { quoted => "$value" };
+        },
+    ) for ("", qw/ true false null /);
+    $schema->add_representer(
+        regex => qr{$RE_INT|$RE_FLOAT},
+        code => sub {
+            my ($rep, $value) = @_;
+            return { quoted => "$value" };
+        },
     );
     return;
 }
@@ -418,6 +499,50 @@ sub register {
         tag => 'tag:yaml.org,2002:str',
         match => [ regex => qr{^(.*)$} => sub { $_[0] } ],
         implicit => 0,
+    );
+
+    $schema->add_representer(
+        reftype => "*",
+        code => sub {
+            die "Dumping references not supported yet";
+        },
+    );
+
+    my $int_flags = B::SVp_IOK;
+    my $float_flags = B::SVp_NOK;
+    $schema->add_representer(
+        flags => $int_flags,
+        code => sub {
+            my ($rep, $value) = @_;
+            return { plain => "$value" };
+        },
+    );
+    $schema->add_representer(
+        flags => $float_flags,
+        code => sub {
+            my ($rep, $value) = @_;
+            return { plain => "$value" };
+        },
+    );
+    $schema->add_representer(
+        undefined => sub {
+            my ($rep, $value) = @_;
+            return { plain => "null" };
+        },
+    );
+    $schema->add_representer(
+        equals => $_,
+        code => sub {
+            my ($rep, $value) = @_;
+            return { quoted => "$value" };
+        },
+    ) for ("", qw/ true TRUE True false FALSE False null NULL Null ~ /);
+    $schema->add_representer(
+        regex => qr{$RE_INT_CORE|$RE_FLOAT_CORE|$RE_INT_OCTAL|$RE_INT_HEX},
+        code => sub {
+            my ($rep, $value) = @_;
+            return { quoted => "$value" };
+        },
     );
 
     return;
@@ -650,11 +775,22 @@ wish to be able to keep the comments.
 
 =head2 YAML::PP::Dumper, YAML::PP::Emitter
 
-This is also pretty simple so far. Any string containing something
-other than C<0-9a-zA-Z.-> will be dumped with double quotes.
+The Dumper should be able to dump strings correctly, adding quotes
+whenever a plain scalar would look like a special string, like C<true>,
+or when it contains or starts with characters that are not allowed.
+
+Most strings will be dumped as plain scalars without quotes. If they
+contain special characters or have a special meaning, they will be dumped
+with single quotes. If they contain control characters, including <"\n">,
+they will be dumped with double quotes.
 
 It will recognize JSON::PP::Boolean and boolean.pm objects and dump them
 correctly.
+
+TODO: Correctly recognize numbers which also have a string flag, like:
+
+    my $int = 23;
+    say "int: $int"; # $int will now also have a PV flag
 
 The layout is like libyaml output:
 
