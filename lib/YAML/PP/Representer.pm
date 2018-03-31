@@ -109,6 +109,7 @@ sub dump_node {
         $self->emitter->sequence_end_event;
     }
     elsif (ref $node) {
+        # TODO check configuration for boolean type
         if (ref $node eq 'JSON::PP::Boolean' or ref $node eq 'boolean') {
             $self->emitter->scalar_event({
                 value => $node ? 'true' : 'false',

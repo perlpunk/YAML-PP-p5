@@ -775,11 +775,22 @@ wish to be able to keep the comments.
 
 =head2 YAML::PP::Dumper, YAML::PP::Emitter
 
-This is also pretty simple so far. Any string containing something
-other than C<0-9a-zA-Z.-> will be dumped with double quotes.
+The Dumper should be able to dump strings correctly, adding quotes
+whenever a plain scalar would look like a special string, like C<true>,
+or when it contains or starts with characters that are not allowed.
+
+Most strings will be dumped as plain scalars without quotes. If they
+contain special characters or have a special meaning, they will be dumped
+with single quotes. If they contain control characters, including <"\n">,
+they will be dumped with double quotes.
 
 It will recognize JSON::PP::Boolean and boolean.pm objects and dump them
 correctly.
+
+TODO: Correctly recognize numbers which also have a string flag, like:
+
+    my $int = 23;
+    say "int: $int"; # $int will now also have a PV flag
 
 The layout is like libyaml output:
 
