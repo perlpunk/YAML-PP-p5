@@ -1,17 +1,14 @@
-0.005_002 2018-03-31 21:07:06+02:00
-    - Detect cyclic references when loading
-    - Fixed various bugs in Emitter
-    - Can now emit empty collections like [], {}
-    - Add YAML::PP::Representer
-    - Add Schema to Dumper/Representer for dumping numbers, undef
+0.006 2018-04-01 22:59:31+02:00
 
-0.005_001 2017-12-30 21:49:32+01:00
-    - Add first part of Schema implementation (Loader)
+    - Support YAML Failsafe, JSON and Core Schema
     - Add dump_file, DumpFile
     - Add YAML::PP::Writer
+    - Add YAML::PP::Representer
+    - Detect cyclic references when loading
     - perl boolean false is now the empty string instead of 0
     - Add column numbers to error messages
-    - Happy New Year!
+    - Fixed various bugs in Emitter
+    - Can now emit empty collections like [], {}
 
 0.005 2017-11-23 17:09:55+01:00
     - Support reading files
