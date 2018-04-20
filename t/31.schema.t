@@ -73,7 +73,7 @@ nulls:
 - ~
 - # empty
 ints: [ 0, +0, -0, +1, -1, 42, -42, +42 ]
-floats: [ .0, 0.0, .3e3, .3E-1, 3.3e+3, 0.3e3, -3.14, +3.14 ]
+floats: [ .0, 0.0, .3e3, .3E-1, 3.3e+3, 0.3e3, -3.14, +3.14, .inf, .Inf, .INF, -.inf, -.Inf, -.INF, .nan, .NaN, .NAN ]
 octal: [ 0o0, 0o7, 0o10 ]
 hex: [ 0x0, 0xa, 0x10 ]
 ...
@@ -99,7 +99,7 @@ my $core_expected = [
     {
         boolfalse => [ '', '', '' ],
         booltrue => [ 1, 1, 1 ],
-        floats => [ 0.0, 0.0, 300.0, 0.03, 3300.0, 300.0, -3.14, 3.14 ],
+        floats => [ 0.0, 0.0, 300.0, 0.03, 3300.0, 300.0, -3.14, 3.14, (0+"inf")x 3, (0-"inf")x 3, (0+"nan")x 3 ],
         hex => [ 0, 10, 16 ],
         ints => [ 0, 0, 0, 1, -1, 42, -42, 42 ],
         nulls => [ undef, undef, undef, undef, undef ],

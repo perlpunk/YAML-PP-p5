@@ -77,6 +77,9 @@ my $data_failsafe = [
     "NULL",
     "TRUE",
     "False",
+    0+"inf",
+    0-"inf",
+    0+"nan",
 ];
 my $yaml_failsafe = <<'EOM';
 ---
@@ -95,6 +98,9 @@ my $yaml_failsafe = <<'EOM';
 - NULL
 - TRUE
 - False
+- Inf
+- -Inf
+- NaN
 EOM
 
 my $data_json = $data_failsafe;
@@ -115,6 +121,9 @@ my $yaml_json = <<'EOM';
 - NULL
 - TRUE
 - False
+- Inf
+- -Inf
+- NaN
 EOM
 my $data_core = $data_failsafe;
 my $yaml_core = <<'EOM';
@@ -134,6 +143,9 @@ my $yaml_core = <<'EOM';
 - 'NULL'
 - 'TRUE'
 - 'False'
+- .inf
+- -.inf
+- .nan
 EOM
 
 my $yaml_boolean = <<'EOM';

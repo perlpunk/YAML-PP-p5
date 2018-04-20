@@ -261,7 +261,6 @@ sub load_scalar_tag {
             }
             return $res;
         }
-        die "Tag $tag ($value)";
     }
     if (my $regex = $res->{regex}) {
         for my $item (@$regex) {
@@ -496,6 +495,18 @@ sub register {
         match => [ regex => $RE_FLOAT_CORE => \&YAML::PP::Schema::JSON::_to_float ],
     );
     $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:float',
+        match => [ equals => $_ => 0 + "inf" ],
+    ) for (qw/ .inf .Inf .INF /);
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:float',
+        match => [ equals => $_ => 0 - "inf" ],
+    ) for (qw/ -.inf -.Inf -.INF /);
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:float',
+        match => [ equals => $_ => 0 + "nan" ],
+    ) for (qw/ .nan .NaN .NAN /);
+    $schema->add_resolver(
         tag => 'tag:yaml.org,2002:str',
         match => [ regex => qr{^(.*)$} => sub { $_[0] } ],
         implicit => 0,
@@ -517,10 +528,14 @@ sub register {
             return { plain => "$value" };
         },
     );
+    my %special = ( NaN => '.nan', Inf => '.inf', '-Inf' => '-.inf' );
     $schema->add_representer(
         flags => $float_flags,
         code => sub {
             my ($rep, $value) = @_;
+            if (exists $special{ $value }) {
+                return { plain => $special{ $value } };
+            }
             return { plain => "$value" };
         },
     );
