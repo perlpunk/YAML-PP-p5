@@ -420,10 +420,18 @@ sub register {
             return { plain => "$value" };
         },
     );
+    my %special = ( NaN => '.nan', Inf => '.inf', '-Inf' => '-.inf' );
     $schema->add_representer(
         flags => $float_flags,
         code => sub {
             my ($rep, $value) = @_;
+            # TODO is inf/nan supported in YAML JSON Schema?
+            if (exists $special{ $value }) {
+                return { plain => "$value" };
+            }
+            if (int($value) eq $value and not $value =~ m/\./) {
+                $value .= '.0';
+            }
             return { plain => "$value" };
         },
     );
@@ -535,6 +543,9 @@ sub register {
             my ($rep, $value) = @_;
             if (exists $special{ $value }) {
                 return { plain => $special{ $value } };
+            }
+            if (int($value) eq $value and not $value =~ m/\./) {
+                $value .= '.0';
             }
             return { plain => "$value" };
         },
