@@ -78,9 +78,6 @@ my $data_failsafe = [
     "NULL",
     "TRUE",
     "False",
-    0+"inf",
-    0-"inf",
-    0+"nan",
 ];
 my $yaml_failsafe = <<'EOM';
 ---
@@ -100,9 +97,6 @@ my $yaml_failsafe = <<'EOM';
 - NULL
 - TRUE
 - False
-- Inf
-- -Inf
-- NaN
 EOM
 
 my $data_json = $data_failsafe;
@@ -124,11 +118,13 @@ my $yaml_json = <<'EOM';
 - NULL
 - TRUE
 - False
-- Inf
-- -Inf
-- NaN
 EOM
-my $data_core = $data_failsafe;
+my $data_core = [@$data_json];
+push @$data_core, (
+    0+"inf",
+    0-"inf",
+    0+"nan",
+);
 my $yaml_core = <<'EOM';
 ---
 - 1

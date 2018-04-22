@@ -420,7 +420,7 @@ sub register {
             return { plain => "$value" };
         },
     );
-    my %special = ( NaN => '.nan', Inf => '.inf', '-Inf' => '-.inf' );
+    my %special = ( (0+'nan').'' => '.nan', (0+'inf').'' => '.inf', (0-'inf').'' => '-.inf' );
     $schema->add_representer(
         flags => $float_flags,
         code => sub {
@@ -536,7 +536,7 @@ sub register {
             return { plain => "$value" };
         },
     );
-    my %special = ( NaN => '.nan', Inf => '.inf', '-Inf' => '-.inf' );
+    my %special = ( (0+'nan').'' => '.nan', (0+'inf').'' => '.inf', (0-'inf').'' => '-.inf' );
     $schema->add_representer(
         flags => $float_flags,
         code => sub {
