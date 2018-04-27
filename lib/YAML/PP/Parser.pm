@@ -751,20 +751,6 @@ sub alias_event {
     $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
 
-sub end {
-    my ($self, $event, $info) = @_;
-
-    my $event_types = $self->events;
-    pop @{ $self->offset };
-
-    my $last = pop @{ $event_types };
-    if ($last ne $event) {
-        die "end($event): Unexpected event '$last', expected $event";
-    }
-
-    return unless @$event_types;
-}
-
 sub event_to_test_suite {
     my ($self, $event) = @_;
     if (ref $event) {

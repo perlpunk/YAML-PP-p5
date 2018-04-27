@@ -9,14 +9,11 @@ use constant DEBUG => $ENV{YAML_PP_EMIT_DEBUG};
 sub new {
     my ($class, %args) = @_;
     my $self = bless {
-        yaml => undef,
         indent => $args{indent} // 2,
     }, $class;
     return $self;
 }
 
-sub yaml { return $_[0]->{yaml} }
-sub set_yaml { $_[0]->{yaml} = $_[1] }
 sub event_stack { return $_[0]->{event_stack} }
 sub set_event_stack { $_[0]->{event_stack} = $_[1] }
 sub indent { return $_[0]->{indent} }
@@ -26,8 +23,6 @@ sub set_writer { $_[0]->{writer} = $_[1] }
 
 sub init {
     my ($self) = @_;
-    my $yaml = '';
-    $self->set_yaml(\$yaml);
 }
 
 sub mapping_start_event {

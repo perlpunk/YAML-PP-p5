@@ -668,11 +668,6 @@ sub push_tokens {
     return $next;
 }
 
-sub new_token {
-    my ($self, $type, $value, %args) = @_;
-    return { name => $type, value => $value, line => $self->line, %args };
-}
-
 sub exception {
     my ($self, $msg) = @_;
     my $next = $self->next_tokens;
