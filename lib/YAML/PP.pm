@@ -533,6 +533,9 @@ sub register {
         flags => $int_flags,
         code => sub {
             my ($rep, $value) = @_;
+            if (int($value) ne $value) {
+                return { skip => 1 };
+            }
             return { plain => "$value" };
         },
     );
@@ -543,6 +546,9 @@ sub register {
             my ($rep, $value) = @_;
             if (exists $special{ $value }) {
                 return { plain => $special{ $value } };
+            }
+            if (0.0 + $value ne $value) {
+                return { skip => 1 };
             }
             if (int($value) eq $value and not $value =~ m/\./) {
                 $value .= '.0';

@@ -34,6 +34,7 @@ my $data_common = [
     'x"y',
     'foo\bar',
     "string#",
+    !1,
 ];
 my $yaml_common = <<'EOM';
 ---
@@ -59,6 +60,7 @@ my $yaml_common = <<'EOM';
 - x"y
 - foo\bar
 - string#
+- ''
 EOM
 
 my $data_failsafe = [
