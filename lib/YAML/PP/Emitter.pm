@@ -305,9 +305,13 @@ sub scalar_event {
 
     my $append = $last->{append};
 
-    my $style = $info->{style} || ':';
+    my $style = $info->{style};
     DEBUG and local $Data::Dumper::Useqq = 1;
     $value //= '';
+    if (not $style and $value eq '') {
+        $style = "'";
+    }
+    $style ||= ':';
 
     my $first = substr($value, 0, 1);
     # no control characters anywhere

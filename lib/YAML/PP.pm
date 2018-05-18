@@ -417,6 +417,9 @@ sub register {
         flags => $int_flags,
         code => sub {
             my ($rep, $value) = @_;
+            if (int($value) ne $value) {
+                return { skip => 1 };
+            }
             return { plain => "$value" };
         },
     );
@@ -428,6 +431,9 @@ sub register {
             # TODO is inf/nan supported in YAML JSON Schema?
             if (exists $special{ $value }) {
                 return { plain => "$value" };
+            }
+            if (0.0 + $value ne $value) {
+                return { skip => 1 };
             }
             if (int($value) eq $value and not $value =~ m/\./) {
                 $value .= '.0';
