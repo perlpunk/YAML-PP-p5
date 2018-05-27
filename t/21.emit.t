@@ -34,7 +34,7 @@ my @skip = qw/
     KZN9 L9U5 LQZ7 LX3P
     M7A3
     Q9WF QF4Y
-    R4YG SBG9 UT92 WZ62 X38W
+    R4YG UT92 WZ62 X38W
 
     6BFJ
     K54U
