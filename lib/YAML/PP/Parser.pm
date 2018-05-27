@@ -1183,6 +1183,29 @@ sub cb_flow_comma {
     $self->set_new_node(1);
 }
 
+sub cb_empty_flow_comma {
+    my ($self, $token) = @_;
+    $self->debug_events;
+    $self->cb_empty_flowmap_value;
+    $self->set_new_node(1);
+}
+
+sub cb_empty_flow_colon {
+    my ($self, $token) = @_;
+    $self->debug_events;
+    my $stack = $self->event_stack;
+    my $info = {
+        style => ':',
+        value => undef,
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    $self->scalar_event($info);
+    $self->set_new_node(1);
+}
+
 sub cb_flow_colon {
     my ($self) = @_;
     $self->set_new_node(1);

@@ -843,11 +843,29 @@ $GRAMMAR = {
       },
       'match' => 'cb_start_quoted'
     },
+    'FLOWMAP_END' => {
+      'DEFAULT' => {
+        'return' => 1
+      },
+      'EOL' => {
+        'return' => 1
+      },
+      'match' => 'cb_end_flowmap'
+    },
     'FLOWMAP_START' => {
       'DEFAULT' => {
         'new' => 'NEWFLOWMAP'
       },
       'match' => 'cb_start_flowmap'
+    },
+    'FLOWSEQ_END' => {
+      'DEFAULT' => {
+        'return' => 1
+      },
+      'EOL' => {
+        'return' => 1
+      },
+      'match' => 'cb_end_flowseq'
     },
     'FLOWSEQ_START' => {
       'DEFAULT' => {
@@ -903,9 +921,19 @@ $GRAMMAR = {
         'new' => 'RULE_FULLFLOWSCALAR_ANCHOR',
         'return' => 1
       },
+      'FLOW_COMMA' => {
+        'match' => 'cb_empty_flow_comma',
+        'new' => 'RULE_FULLFLOWSCALAR',
+        'return' => 1
+      },
       'WS' => {
         'DEFAULT' => {
           'new' => 'RULE_FLOWSCALAR'
+        },
+        'FLOW_COMMA' => {
+          'match' => 'cb_empty_flow_comma',
+          'new' => 'RULE_FULLFLOWSCALAR',
+          'return' => 1
         },
         'TAG' => {
           'WS' => {
@@ -919,12 +947,26 @@ $GRAMMAR = {
     'DEFAULT' => {
       'new' => 'RULE_FLOWSCALAR'
     },
+    'EOL' => {
+      'new' => 'RULE_FULLFLOWSCALAR',
+      'return' => 1
+    },
     'TAG' => {
+      'COLON' => {
+        'match' => 'cb_empty_flow_colon',
+        'new' => 'NODETYPE_FLOWMAPVALUE',
+        'return' => 1
+      },
       'DEFAULT' => {
         'new' => 'RULE_FLOWSCALAR'
       },
       'EOL' => {
         'new' => 'RULE_FULLFLOWSCALAR_TAG',
+        'return' => 1
+      },
+      'FLOW_COMMA' => {
+        'match' => 'cb_empty_flow_comma',
+        'new' => 'RULE_FULLFLOWSCALAR',
         'return' => 1
       },
       'WS' => {
@@ -934,11 +976,26 @@ $GRAMMAR = {
           },
           'match' => 'cb_anchor'
         },
+        'COLON' => {
+          'WS' => {
+            'match' => 'cb_empty_flow_colon',
+            'new' => 'RULE_FULLFLOWSCALAR',
+            'return' => 1
+          }
+        },
         'DEFAULT' => {
           'new' => 'RULE_FLOWSCALAR'
+        },
+        'FLOW_COMMA' => {
+          'match' => 'cb_empty_flow_comma',
+          'new' => 'RULE_FULLFLOWSCALAR',
+          'return' => 1
         }
       },
       'match' => 'cb_tag'
+    },
+    'WS' => {
+      'new' => 'RULE_FULLFLOWSCALAR'
     }
   },
   'RULE_FULLFLOWSCALAR_TAG' => {
@@ -1335,13 +1392,17 @@ This is the Grammar in YAML
       EOL: { match: cb_empty_quoted_line, new: MULTILINE_DOUBLEQUOTED }
     
     RULE_FULLFLOWSCALAR:
+      WS: { new: RULE_FULLFLOWSCALAR }
+      EOL: { new: RULE_FULLFLOWSCALAR, return: 1 }
       ANCHOR:
         match: cb_anchor
         WS:
           TAG:
             match: cb_tag
             WS: { new: RULE_FLOWSCALAR }
+          FLOW_COMMA: { match: cb_empty_flow_comma, new: RULE_FULLFLOWSCALAR, return: 1 }
           DEFAULT: { new: RULE_FLOWSCALAR }
+        FLOW_COMMA: { match: cb_empty_flow_comma, new: RULE_FULLFLOWSCALAR, return: 1 }
         EOL: { new: RULE_FULLFLOWSCALAR_ANCHOR, return: 1 }
         DEFAULT: { new: RULE_FLOWSCALAR }
       TAG:
@@ -1351,6 +1412,11 @@ This is the Grammar in YAML
             match: cb_anchor
             WS: { new: RULE_FLOWSCALAR }
           DEFAULT: { new: RULE_FLOWSCALAR }
+          FLOW_COMMA: { match: cb_empty_flow_comma, new: RULE_FULLFLOWSCALAR, return: 1 }
+          COLON:
+            WS: { match: cb_empty_flow_colon, new: RULE_FULLFLOWSCALAR, return: 1 }
+        FLOW_COMMA: { match: cb_empty_flow_comma, new: RULE_FULLFLOWSCALAR, return: 1 }
+        COLON: { match: cb_empty_flow_colon, new: NODETYPE_FLOWMAPVALUE, return: 1 }
         EOL: { new: RULE_FULLFLOWSCALAR_TAG, return: 1 }
         DEFAULT: { new: RULE_FLOWSCALAR }
       DEFAULT: { new: RULE_FLOWSCALAR }
@@ -1406,6 +1472,16 @@ This is the Grammar in YAML
         DEFAULT:
           match: cb_send_scalar
           return: 1
+    
+      FLOWSEQ_END:
+        match: cb_end_flowseq
+        EOL: { return: 1 }
+        DEFAULT: { return: 1 }
+    
+      FLOWMAP_END:
+        match: cb_end_flowmap
+        EOL: { return: 1 }
+        DEFAULT: { return: 1 }
     
     #  DEFAULT: { match: cb_empty_flowmap_value, return: 1 }
     

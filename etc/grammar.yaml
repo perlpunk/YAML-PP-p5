@@ -127,13 +127,17 @@ MULTILINE_DOUBLEQUOTED:
   EOL: { match: cb_empty_quoted_line, new: MULTILINE_DOUBLEQUOTED }
 
 RULE_FULLFLOWSCALAR:
+  WS: { new: RULE_FULLFLOWSCALAR }
+  EOL: { new: RULE_FULLFLOWSCALAR, return: 1 }
   ANCHOR:
     match: cb_anchor
     WS:
       TAG:
         match: cb_tag
         WS: { new: RULE_FLOWSCALAR }
+      FLOW_COMMA: { match: cb_empty_flow_comma, new: RULE_FULLFLOWSCALAR, return: 1 }
       DEFAULT: { new: RULE_FLOWSCALAR }
+    FLOW_COMMA: { match: cb_empty_flow_comma, new: RULE_FULLFLOWSCALAR, return: 1 }
     EOL: { new: RULE_FULLFLOWSCALAR_ANCHOR, return: 1 }
     DEFAULT: { new: RULE_FLOWSCALAR }
   TAG:
@@ -143,6 +147,11 @@ RULE_FULLFLOWSCALAR:
         match: cb_anchor
         WS: { new: RULE_FLOWSCALAR }
       DEFAULT: { new: RULE_FLOWSCALAR }
+      FLOW_COMMA: { match: cb_empty_flow_comma, new: RULE_FULLFLOWSCALAR, return: 1 }
+      COLON:
+        WS: { match: cb_empty_flow_colon, new: RULE_FULLFLOWSCALAR, return: 1 }
+    FLOW_COMMA: { match: cb_empty_flow_comma, new: RULE_FULLFLOWSCALAR, return: 1 }
+    COLON: { match: cb_empty_flow_colon, new: NODETYPE_FLOWMAPVALUE, return: 1 }
     EOL: { new: RULE_FULLFLOWSCALAR_TAG, return: 1 }
     DEFAULT: { new: RULE_FLOWSCALAR }
   DEFAULT: { new: RULE_FLOWSCALAR }
@@ -198,6 +207,16 @@ RULE_FLOWSCALAR:
     DEFAULT:
       match: cb_send_scalar
       return: 1
+
+  FLOWSEQ_END:
+    match: cb_end_flowseq
+    EOL: { return: 1 }
+    DEFAULT: { return: 1 }
+
+  FLOWMAP_END:
+    match: cb_end_flowmap
+    EOL: { return: 1 }
+    DEFAULT: { return: 1 }
 
 #  DEFAULT: { match: cb_empty_flowmap_value, return: 1 }
 
