@@ -1,0 +1,7 @@
+---
+seq1: [&str, !!str, &str , !!str , &str]
+seq2: [&str !!str, !!str &str]
+seq3: [&str !!str]
+---
+map1: {&str : &str, !!str : !!str, &str : &str , !!str : !!str ,}
+map2: {&str !!str : &str !!str, !!str &str : !!str &str,}

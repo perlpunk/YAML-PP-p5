@@ -131,37 +131,56 @@ RULE_FULLFLOWSCALAR:
   EOL: { new: RULE_FULLFLOWSCALAR, return: 1 }
   ANCHOR:
     match: cb_anchor
-    WS:
-      TAG:
-        match: cb_tag
-        WS: { new: RULE_FLOWSCALAR }
-      FLOW_COMMA: { match: cb_empty_flow_comma, new: RULE_FULLFLOWSCALAR, return: 1 }
-      DEFAULT: { new: RULE_FLOWSCALAR }
-    FLOW_COMMA: { match: cb_empty_flow_comma, new: RULE_FULLFLOWSCALAR, return: 1 }
+    WS: { new: RULE_FULLFLOWSCALAR_ANCHOR }
     EOL: { new: RULE_FULLFLOWSCALAR_ANCHOR, return: 1 }
-    DEFAULT: { new: RULE_FLOWSCALAR }
+    DEFAULT: { new: RULE_EMPTYFLOWSCALAR }
   TAG:
     match: cb_tag
-    WS:
-      ANCHOR:
-        match: cb_anchor
-        WS: { new: RULE_FLOWSCALAR }
-      DEFAULT: { new: RULE_FLOWSCALAR }
-      FLOW_COMMA: { match: cb_empty_flow_comma, new: RULE_FULLFLOWSCALAR, return: 1 }
-      COLON:
-        WS: { match: cb_empty_flow_colon, new: RULE_FULLFLOWSCALAR, return: 1 }
-    FLOW_COMMA: { match: cb_empty_flow_comma, new: RULE_FULLFLOWSCALAR, return: 1 }
-    COLON: { match: cb_empty_flow_colon, new: NODETYPE_FLOWMAPVALUE, return: 1 }
+    WS: { new: RULE_FULLFLOWSCALAR_TAG }
     EOL: { new: RULE_FULLFLOWSCALAR_TAG, return: 1 }
-    DEFAULT: { new: RULE_FLOWSCALAR }
+    DEFAULT: { new: RULE_EMPTYFLOWSCALAR }
+  DEFAULT: { new: RULE_FLOWSCALAR }
+
+RULE_FULLFLOWSCALAR_ANCHOR:
+  WS: { new: RULE_FULLFLOWSCALAR_ANCHOR }
+  EOL: { new: RULE_FULLFLOWSCALAR_ANCHOR, return: 1 }
+  TAG:
+    match: cb_tag
+    WS: { new: RULE_FLOWSCALAR }
+    EOL: { new: RULE_FLOWSCALAR, return: 1 }
+    DEFAULT: { new: RULE_EMPTYFLOWSCALAR }
+  FLOW_COMMA: { match: cb_empty_flow_comma, new: RULE_FULLFLOWSCALAR, return: 1 }
+  COLON:
+    WS: { match: cb_empty_flow_colon, new: NODETYPE_FLOWMAPVALUE, return: 1 }
   DEFAULT: { new: RULE_FLOWSCALAR }
 
 RULE_FULLFLOWSCALAR_TAG:
+  WS: { new: RULE_FULLFLOWSCALAR_TAG }
+  EOL: { new: RULE_FULLFLOWSCALAR_TAG, return: 1 }
   ANCHOR:
     match: cb_anchor
     WS: { new: RULE_FLOWSCALAR }
     EOL: { new: RULE_FLOWSCALAR, return: 1 }
+    DEFAULT: { new: RULE_EMPTYFLOWSCALAR }
+  FLOW_COMMA: { match: cb_empty_flow_comma, new: RULE_FULLFLOWSCALAR, return: 1 }
+  COLON:
+    WS: { match: cb_empty_flow_colon, new: NODETYPE_FLOWMAPVALUE, return: 1 }
   DEFAULT: { new: RULE_FLOWSCALAR }
+
+RULE_EMPTYFLOWSCALAR:
+  WS: { new: RULE_EMPTYFLOWSCALAR }
+  EOL: { new: RULE_EMPTYFLOWSCALAR, return: 1 }
+  FLOW_COMMA: { match: cb_empty_flow_comma, new: RULE_FULLFLOWSCALAR, return: 1 }
+  COLON:
+    WS: { match: cb_empty_flow_colon, new: NODETYPE_FLOWMAPVALUE, return: 1 }
+  FLOWSEQ_END:
+    match: cb_end_flowseq
+    EOL: { return: 1 }
+    DEFAULT: { return: 1 }
+  FLOWMAP_END:
+    match: cb_end_flowmap
+    EOL: { return: 1 }
+    DEFAULT: { return: 1 }
 
 RULE_FLOWSCALAR:
   FLOWSEQ_START:
@@ -218,6 +237,8 @@ RULE_FLOWSCALAR:
     EOL: { return: 1 }
     DEFAULT: { return: 1 }
 
+  COLON:
+    WS: { match: cb_empty_flow_colon, new: NODETYPE_FLOWMAPVALUE, return: 1 }
 #  DEFAULT: { match: cb_empty_flowmap_value, return: 1 }
 
 

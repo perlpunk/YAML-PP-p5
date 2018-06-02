@@ -91,6 +91,7 @@ S3PD
 
 K858
 
+v020
 /;
 # unicode
 push @skip, qw/
