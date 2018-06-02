@@ -21,7 +21,7 @@ testv:
 # YAML_PP_TRACE=1 YAML_TEST_DIR=M9B4 prove -lrv t
 
 gh-pages:
-	git clone git@github.com:perlpunk/YAML-PP-p5.git -b gh-pages gh-pages
+	git worktree add gh-pages gh-pages
 
 gh-pages-status: gh-pages
 	cd gh-pages && git status
