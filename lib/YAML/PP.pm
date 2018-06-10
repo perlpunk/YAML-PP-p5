@@ -641,6 +641,9 @@ Some utility scripts:
     # Create ANSI colored YAML
     yamlpp5-highlight < file.yaml
 
+    # Parse and emit events directly without loading
+    yamlpp5-parse-emit < file.yaml
+
 
 =head1 DESCRIPTION
 
