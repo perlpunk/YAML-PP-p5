@@ -583,8 +583,22 @@ sub _fetch_next_tokens_directive {
     my ($self, $yaml) = @_;
     my @tokens;
 
-    if ($$yaml =~ s/\A(\s*%YAML ?1\.2$RE_WS*)//) {
-        push @tokens, ( YAML_DIRECTIVE => $1 );
+    if ($$yaml =~ s/\A(\s*%YAML)//) {
+        my $dir = $1;
+        if ($$yaml =~ s/\A( )//) {
+            $dir .= $1;
+            if ($$yaml =~ s/\A(1\.2$RE_WS*)//) {
+                $dir .= $1;
+                push @tokens, ( YAML_DIRECTIVE => $dir );
+            }
+            else {
+                $$yaml =~ s/\A.*//;
+                warn "Found reserved directive '$dir$$yaml'";
+            }
+        }
+        else {
+            die "Found invalid directive '$dir$$yaml'";
+        }
     }
     elsif ($$yaml =~ s/\A(\s*%TAG +(!$RE_NS_WORD_CHAR*!|!) +(tag:\S+|!$RE_URI_CHAR+)$RE_WS*)//) {
         push @tokens, ( TAG_DIRECTIVE => $1 );
