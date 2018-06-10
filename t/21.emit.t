@@ -34,29 +34,23 @@ my @skip = qw/
     KZN9 L9U5 LQZ7 LX3P
     M7A3
     Q9WF QF4Y
-    R4YG UT92 WZ62 X38W
+    UT92 WZ62
 
     6BFJ
-    K54U
-    PUW8
-    36F6
-    XLQ9
     Q5MG
-    7ZZ5
-    EX5H
 
 /;
 
 # emitter
 push @skip, qw/
-4MUZ
 /;
 # quoting
 push @skip, qw/
+36F6
 82AN
 9YRD
 HS5T
-T4YY
+EX5H
 /;
 # tags
 push @skip, qw/
@@ -70,27 +64,25 @@ push @skip, qw/
 6VJK
 7T8X
 
-P2AD
+R4YG
 /;
 # test
 push @skip, qw/
+XLQ9
+K54U
+PUW8
 3MYT
 565N
-6FWR
 6SLA
 6ZKB
 9DXL
 EXG3
 G4RS
 JDH8
-KSS4
 MJS9
-NHX8
-S3PD
 
 
-K858
-
+X38W
 /;
 # unicode
 push @skip, qw/
@@ -101,6 +93,11 @@ my $skipped = \@skip;
 
 my @todo = ();
 
+my %skip_yaml_equal = (
+    '4MUZ' => 1,
+    '7ZZ5' => 1,
+    'K858' => 1,
+);
 # test all
 if ($ENV{TEST_ALL}) {
     @todo = @$skipped;
@@ -150,7 +147,7 @@ for my $item (@dirs) {
     close $fh;
     $out_yaml = decode_utf8 $out_yaml;
 
-    open $fh, "<", "$dir/$id/test.event" or die $!;
+    open $fh, "<:encoding(UTF-8)", "$dir/$id/test.event" or die $!;
     chomp(my @test_events = <$fh>);
     close $fh;
 
@@ -177,7 +174,8 @@ diag "Skipped $skip_count tests";
 sub test {
     my ($title, $name, $yaml, $exp_yaml, $test_events) = @_;
 #    warn __PACKAGE__.':'.__LINE__.": ================================ $name\n";
-    my $ok = 0;
+    my $same_yaml = 0;
+    my $same_events = 0;
     my $error = 0;
     my @events;
     my $writer = YAML::PP::Writer->new;
@@ -205,28 +203,64 @@ sub test {
         ok(0, "$name - $title Parse ERROR");
     }
     else {
-        my $yaml = emit_events($emitter, \@events);
-        $out_yaml = $yaml;
-        $ok = cmp_ok($out_yaml, 'eq', $exp_yaml, "$name - $title - Emit events");
+        $out_yaml = emit_events($emitter, \@events);
+        my @reparse_events;
+        my @expected_reparse_events;
+        my @ev;
+        my $parser = YAML::PP::Parser->new(
+            receiver => sub {
+                my ($self, @args) = @_;
+                my ($type, $info) = @args;
+                if ($type eq 'sequence_start_event' or $type eq 'mapping_start_event') {
+                    delete $info->{style};
+                }
+                push @ev, YAML::PP::Parser->event_to_test_suite(\@args);
+            },
+        );
+        eval {
+            $parser->parse($out_yaml);
+        };
+        @reparse_events = @ev;
+        @ev = ();
+        eval {
+            $parser->parse($exp_yaml);
+        };
+        @expected_reparse_events = @ev;
+        $same_events = is_deeply(\@reparse_events, \@expected_reparse_events, "$name - $title - Events from re-parsing are the same");
+        unless ($skip_yaml_equal{ $name }) {
+            $same_yaml = cmp_ok($out_yaml, 'eq', $exp_yaml, "$name - $title - Emit events");
+        }
+        if ($same_events) {
+        }
+        else {
+#            diag(Data::Dumper->Dump([\@reparse_events], ['reparse_events']));
+        }
     }
-    if ($ok) {
-        $results{OK}++;
+    if ($same_events) {
+        $results{SAME_EVENTS}++;
     }
     else {
-        push @{ $results{DIFF} }, $name unless $error;
+        push @{ $results{EVENT_DIFF} }, $name unless $error;
+    }
+    if ($same_yaml) {
+        $results{SAME_YAML}++;
+    }
+    else {
+        push @{ $results{YAML_DIFF} }, $name unless $error;
         if ($TODO) {
             $results{TODO}++;
         }
         if (not $TODO or $ENV{YAML_PP_TRACE}) {
-            diag "YAML:\n$yaml" unless $TODO;
+#            diag "YAML:\n$yaml" unless $TODO;
 #            diag "EVENTS:\n" . join '', map { "$_\n" } @$test_events;
 #            diag "GOT EVENTS:\n" . join '', map { "$_\n" } @events;
         }
     }
 }
-my $diff_count = @{ $results{DIFF} };
-diag "OK: $results{OK} DIFF: $diff_count ERROR: $results{ERROR} TODO: $results{TODO}";
-diag "DIFF: (@{ $results{DIFF} })";
+my $diff_count = @{ $results{YAML_DIFF} || [] };
+diag "OK: $results{OK} YAML_DIFF: $diff_count ERROR: $results{ERROR} TODO: $results{TODO}";
+diag "YAML_DIFF: (@{ $results{YAML_DIFF} || [] })";
+diag "EVENT_DIFF: (@{ $results{EVENT_DIFF} || [] })";
 for my $type (sort keys %errors) {
     diag "ERRORS($type): (@{ $errors{ $type } })";
 }

@@ -349,18 +349,28 @@ sub scalar_event {
         $value =~ s/\n/\n\n/g;
     }
     elsif ($style eq "'") {
-        $value =~ s/\n/\n\n/g;
+        my $new_indent = $last->{indent} . (' ' x $self->indent);
+        my @lines = split m/\n/, $value;
+        if (@lines > 1) {
+            for my $line (@lines[1 .. $#lines]) {
+                $line = $new_indent . $line;
+            }
+        }
+        $value = join "\n\n", @lines;
         $value =~ s/'/''/g;
         $value = "'" . $value . "'";
     }
     elsif ($style eq '|') {
         DEBUG and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$value], ['value']);
         my $indicators = '';
+        if ($value =~ m/\A +/) {
+            $indicators .= $self->indent;
+        }
         if ($value !~ m/\n\z/) {
             $indicators .= '-';
             $value .= "\n";
         }
-        elsif ($value =~ m/\n\n\z/) {
+        elsif ($value =~ m/(\n|\A)\n\z/) {
             $indicators .= '+';
         }
         $value =~ s/^(?=.)/$indent  /gm;
@@ -372,6 +382,9 @@ sub scalar_event {
         DEBUG and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@lines], ['lines']);
         my $eol = 0;
         my $indicators = '';
+        if ($value =~ m/\A +/) {
+            $indicators .= $self->indent;
+        }
         if ($lines[-1] eq '') {
             pop @lines;
             $eol = 1;
@@ -517,6 +530,10 @@ sub alias_event {
     }
     elsif ($last->{type} eq 'DOC') {
         $self->writer->write("$alias\n");
+    }
+    else {
+        $self->writer->write("$indent: $alias\n");
+        $last->{type} = 'MAP';
     }
 }
 
