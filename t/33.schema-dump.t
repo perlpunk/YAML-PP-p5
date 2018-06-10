@@ -48,13 +48,17 @@ my $yaml_common = <<'EOM';
 - 'foo: bar'
 - '#no comment'
 - 'also #no comment'
-- "foo\nbar"
+- |-
+  foo
+  bar
 - "x\ty\rz"
 - 'string:'
 - 'string '
 - "string\t"
 - '''string'
-- "x\n\"y\\z"
+- |-
+  x
+  "y\z
 - string
 - ^string
 - x"y

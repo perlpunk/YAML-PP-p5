@@ -282,6 +282,7 @@ my %to_escape = (
     %control,
 );
 my $escape_re = $control_re . '\n\t\r';
+my $escape_re_without_lb = $control_re . '\t\r';
 
 
 sub scalar_event {
@@ -319,8 +320,14 @@ sub scalar_event {
         $style = '"';
     }
     elsif ($style eq ':') {
-        if ($value =~ m/[$escape_re]/) {
+        if ($value =~ m/[$escape_re_without_lb]/) {
             $style = '"';
+        }
+        elsif ($value eq "\n") {
+            $style = '"';
+        }
+        elsif ($value =~ m/\n/) {
+            $style = '|';
         }
         elsif ($forbidden_first{ $first }) {
             $style = "'";
