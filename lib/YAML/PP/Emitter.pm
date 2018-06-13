@@ -319,6 +319,16 @@ sub scalar_event {
     if ($style ne '"' and $value =~ m/[$control_re]/) {
         $style = '"';
     }
+    elsif ($style eq "'") {
+        if ($value =~ m/ \n/ or $value =~ m/\n / or $value =~ m/^\n/ or $value =~ m/\n$/) {
+            $style = '"';
+        }
+        elsif ($value eq "\n") {
+            $style = '"';
+        }
+    }
+    elsif ($style eq '|' or $style eq '>') {
+    }
     elsif ($style eq ':') {
         if ($value =~ m/[$escape_re_without_lb]/) {
             $style = '"';
@@ -357,20 +367,22 @@ sub scalar_event {
     }
     elsif ($style eq "'") {
         my $new_indent = $last->{indent} . (' ' x $self->indent);
-        my @lines = split m/\n/, $value;
+        $value =~ s/(\n+)/"\n" x (1 + (length $1))/eg;
+        my @lines = split m/\n/, $value, -1;
         if (@lines > 1) {
             for my $line (@lines[1 .. $#lines]) {
-                $line = $new_indent . $line;
+                $line = $new_indent . $line
+                    if length $line;
             }
         }
-        $value = join "\n\n", @lines;
+        $value = join "\n", @lines;
         $value =~ s/'/''/g;
         $value = "'" . $value . "'";
     }
     elsif ($style eq '|') {
         DEBUG and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$value], ['value']);
         my $indicators = '';
-        if ($value =~ m/\A +/) {
+        if ($value =~ m/\A\n* +/) {
             $indicators .= $self->indent;
         }
         if ($value !~ m/\n\z/) {
@@ -389,7 +401,7 @@ sub scalar_event {
         DEBUG and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@lines], ['lines']);
         my $eol = 0;
         my $indicators = '';
-        if ($value =~ m/\A +/) {
+        if ($value =~ m/\A\n* +/) {
             $indicators .= $self->indent;
         }
         if ($lines[-1] eq '') {
