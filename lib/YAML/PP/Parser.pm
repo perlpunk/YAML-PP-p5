@@ -324,7 +324,10 @@ sub check_indent {
     if ($self->new_node) {
         # unindented sequence starts
         my $seq_start = $next_token->{name} eq 'DASH';
-        if ($space == $indent and $seq_start and $exp eq 'MAPVALUE') {
+        if (
+            $space == $indent and $seq_start
+            and ($exp eq 'MAPVALUE' or $exp eq 'MAP')
+        ) {
             return;
         }
         else {
