@@ -74,11 +74,14 @@ sub render_quoted {
         my $last = $i == $#$lines;
         my $first = $i == 0;
         if ($line =~ s/^$WS*$/\n/) {
-            $addspace = 0;
-            if ($first or $last) {
-                $quoted .= " ";
+            if ($first) {
+                $addspace = 1;
+            }
+            elsif ($last) {
+                $quoted .= ' ' if $addspace;
             }
             else {
+                $addspace = 0;
                 $quoted .= "\n";
             }
             next;
