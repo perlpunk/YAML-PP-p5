@@ -21,6 +21,11 @@ sub write {
     $self->{output} .= $line;
 }
 
+sub finish {
+    my ($self) = @_;
+    $self->{output} = undef;
+}
+
 package YAML::PP::Writer::File;
 
 our @ISA = qw/ YAML::PP::Writer /;
@@ -40,6 +45,11 @@ sub write {
     my ($self, $line) = @_;
     my $fh = $self->{filehandle} ||= $self->open_handle;
     print $fh $line;
+}
+
+sub finish {
+    my ($self) = @_;
+    close $self->{filehandle};
 }
 
 1;

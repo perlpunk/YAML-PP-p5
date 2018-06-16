@@ -48,7 +48,7 @@ sub dump {
         $self->emitter->document_start_event({ implicit => 0 });
         for my $i (0 .. $#docs) {
             my $doc = $docs[ $i ];
-            my $yaml_doc = $self->dump_document($doc);
+            $self->dump_document($doc);
             if ($i < $#docs) {
                 $self->emitter->document_end_event({ implicit => 1 });
                 $self->emitter->document_start_event({ implicit => 0 });
@@ -57,6 +57,7 @@ sub dump {
         $self->emitter->document_end_event({ implicit => 1 });
     }
     my $yaml = $self->writer->output;
+    $self->emitter->finish;
     return $yaml;
 }
 

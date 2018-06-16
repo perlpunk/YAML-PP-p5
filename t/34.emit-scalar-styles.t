@@ -13,30 +13,40 @@ my @input = (
     "",
     " ",
     "\n",
+    "\na",
     "a",
     "a\n",
     " a",
     "a ",
     " a ",
     "\na\n",
+    "\n a",
     "\n a\n",
     "\na \n",
+    "a \n",
     "\n a \n",
+    "\n\n a \n\n",
+    "\n \n a \n\n",
+    "\n \n a \n \n",
+    " \n a \n ",
+    " \n\n a \n\n ",
 );
 
 my $emitter = YAML::PP::Emitter->new();
+$emitter->set_writer(YAML::PP::Writer->new);
+my $yp = YAML::PP->new( schema => ['Failsafe'] );
+
 #my @styles = qw/ : " ' | > /;
 my @styles = qw/ : " ' | /;
 
-my $yp = YAML::PP->new( schema => ['Failsafe'] );
 for my $style (@styles) {
     subtest "style $style" => sub {
         for my $input (@input) {
-            my $writer = YAML::PP::Writer->new;
+
             $emitter->init;
-            $emitter->set_writer($writer);
             local $Data::Dumper::Useqq = 1;
             my $label = Data::Dumper->Dump([$input], ['input']);
+
             $emitter->stream_start_event;
             $emitter->document_start_event({ implicit => 1 });
             $emitter->sequence_start_event;
@@ -44,8 +54,12 @@ for my $style (@styles) {
             $emitter->sequence_end_event;
             $emitter->document_end_event({ implicit => 1 });
             $emitter->stream_end_event;
+
             my $yaml = $emitter->writer->output;
+            $emitter->finish;
+
             my $data = $yp->load_string($yaml);
+
             cmp_ok($data->[0], 'eq', $input, "style $style - $label") or do {
                 diag ">>$yaml<<\n";
                 diag(Data::Dumper->Dump([$data], ['data']));

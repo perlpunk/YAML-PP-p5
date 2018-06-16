@@ -607,4 +607,9 @@ sub emit_tag {
     return $tag;
 }
 
+sub finish {
+    my ($self) = @_;
+    $self->writer->finish;
+}
+
 1;
