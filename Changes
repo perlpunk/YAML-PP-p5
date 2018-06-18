@@ -1,9 +1,18 @@
+0.006_003 2018-06-18 21:26:03+02:00
+
+    - Improve emitter scalar styles
+    - Allow zero indented sequences for complex mapping keys/values
+    - Fix parsing empty quoted strings
+
 0.006_002 2018-06-10 16:51:11+02:00
 
     - Fix .inf/.nan for older perls
     - YAML directive needs space
     - Improve emitter
     - Output multiline strings as literal block scalars
+    - Fix regex for integers in Core Schema
+    - Fix dumping of dualvars
+    - Fix emitting of empty strings
 
 0.006_001 2018-04-21 20:09:49+02:00
 
