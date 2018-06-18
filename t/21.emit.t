@@ -38,6 +38,7 @@ my @skip = qw/
 
     6BFJ
     Q5MG
+    F6MC
 
 /;
 
@@ -51,6 +52,7 @@ push @skip, qw/
 9YRD
 HS5T
 EX5H
+NAT4
 /;
 # tags
 push @skip, qw/
