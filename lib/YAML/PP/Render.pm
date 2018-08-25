@@ -142,38 +142,40 @@ sub render_block_scalar {
     }
     if ($folded) {
 
-        my $prev = '';
+        my $prev = 'START';
         for my $i (0 .. $#$lines) {
             my $line = $lines->[ $i ];
 
             my $type = $line eq ''
                 ? 'EMPTY'
                 : $line =~ m/\A[ \t]/
-                ? 'MORE'
-                : 'CONTENT';
-            if ($i > 0) {
-                if ($type eq 'EMPTY' and $prev eq 'MORE') {
-                    $type = 'MORE';
-                }
+                    ? 'MORE'
+                    : 'CONTENT';
 
-                if ($type eq 'CONTENT') {
-                    if ($prev eq 'MORE') {
-                        $string .= "\n";
-                    }
-                    elsif ($prev eq 'CONTENT') {
-                        $string .= ' ';
-                    }
-                }
-                else {
+            if ($prev eq 'MORE' and $type eq 'EMPTY') {
+                $type = 'MORE';
+            }
+            elsif ($prev eq 'CONTENT') {
+                if ($type ne 'CONTENT') {
                     $string .= "\n";
                 }
-            }
-            else {
-                if ($type eq 'EMPTY') {
-                    $string .= "\n";
+                elsif ($type eq 'CONTENT') {
+                    $string .= ' ';
                 }
             }
+            elsif ($prev eq 'START' and $type eq 'EMPTY') {
+                $string .= "\n";
+                $type = 'START';
+            }
+            elsif ($prev eq 'EMPTY' and $type ne 'CONTENT') {
+                $string .= "\n";
+            }
+
             $string .= $line;
+
+            if ($type eq 'MORE' and $i < $#$lines) {
+                $string .= "\n";
+            }
 
             $prev = $type;
         }
