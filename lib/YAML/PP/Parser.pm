@@ -126,6 +126,13 @@ sub parse_stream {
             last;
         }
 
+        if (@$next_tokens and $next_tokens->[0]->{name} eq 'DOC_END') {
+            if (not $start) {
+                $implicit = 0;
+                $self->parse_document_end($next_tokens);
+                next;
+            }
+        }
         $self->start_document(not $start);
 
         my $new_type = 'FULLNODE';
@@ -136,13 +143,7 @@ sub parse_stream {
 
         if (@$next_tokens and $next_tokens->[0]->{name} eq 'DOC_END') {
             $implicit = 0;
-            push @{ $self->tokens }, shift @$next_tokens;
-            if (@$next_tokens and $next_tokens->[0]->{name} eq 'EOL') {
-                push @{ $self->tokens }, shift @$next_tokens;
-            }
-            else {
-                $self->exception("Expected EOL");
-            }
+            $self->parse_document_end($next_tokens);
         }
         else {
             $implicit = 1;
@@ -214,6 +215,17 @@ sub parse_document_head {
         $self->exception("Expected ---");
     }
     return ($start, $start_line);
+}
+
+sub parse_document_end {
+    my ($self, $next_tokens) = @_;
+    push @{ $self->tokens }, shift @$next_tokens;
+    if (@$next_tokens and $next_tokens->[0]->{name} eq 'EOL') {
+        push @{ $self->tokens }, shift @$next_tokens;
+    }
+    else {
+        $self->exception("Expected EOL after document end");
+    }
 }
 
 my %nodetypes = (
