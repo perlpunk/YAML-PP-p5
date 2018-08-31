@@ -1,3 +1,9 @@
+0.007_001 2018-08-31 21:28:45+02:00
+
+    - Support perl 5.8
+    - Fix bug in folded block scalar parsing
+    - Support multiple document end markers without content
+
 0.007 2018-06-20 21:36:26+02:00
 
     - Support .inf/.nan
