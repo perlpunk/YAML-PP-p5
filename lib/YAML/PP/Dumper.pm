@@ -10,7 +10,7 @@ use YAML::PP::Representer;
 sub new {
     my ($class, %args) = @_;
 
-    my $schema = delete $args{schema} // YAML::PP->default_schema(
+    my $schema = delete $args{schema} || YAML::PP->default_schema(
         boolean => 'perl',
     );
 

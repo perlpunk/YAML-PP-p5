@@ -5,7 +5,7 @@ package YAML::PP::Render;
 
 our $VERSION = '0.000'; # VERSION
 
-use constant TRACE => $ENV{YAML_PP_TRACE};
+use constant TRACE => $ENV{YAML_PP_TRACE} ? 1 : 0;
 my $WS = '[\t ]';
 
 sub render_tag {

@@ -15,7 +15,7 @@ sub new {
         refs => {},
         seen => {},
         emitter => YAML::PP::Emitter->new(
-            indent => $args{indent} // 2,
+            indent => $args{indent} || 2,
         ),
     }, $class;
     return $self;

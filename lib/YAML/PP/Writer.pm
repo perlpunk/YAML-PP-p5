@@ -10,7 +10,8 @@ sub set_output { $_[0]->{output} = $_[1] }
 
 sub new {
     my ($class, %args) = @_;
-    my $output = delete $args{output} // '';
+    my $output = delete $args{output};
+    $output = '' unless defined $output;
     return bless {
         output => $output,
     }, $class;

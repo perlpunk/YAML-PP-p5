@@ -13,7 +13,7 @@ sub new {
     my ($class, %args) = @_;
 
     my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
-    my $schema = delete $args{schema} // YAML::PP->default_schema(
+    my $schema = delete $args{schema} || YAML::PP->default_schema(
         boolean => 'perl',
     );
 

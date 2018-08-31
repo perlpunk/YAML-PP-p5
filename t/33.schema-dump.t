@@ -1,7 +1,6 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use 5.010;
 use Test::More tests => 6;
 use FindBin '$Bin';
 use Data::Dumper;
@@ -126,11 +125,7 @@ my $yaml_json = <<'EOM';
 - False
 EOM
 my $data_core = [@$data_json];
-push @$data_core, (
-    0+"inf",
-    0-"inf",
-    0+"nan",
-);
+
 my $yaml_core = <<'EOM';
 ---
 - 1
@@ -149,10 +144,19 @@ my $yaml_core = <<'EOM';
 - 'NULL'
 - 'TRUE'
 - 'False'
+EOM
+if ($] >= 5.008009) {
+    push @$data_core, (
+        0+"inf",
+        0-"inf",
+        0+"nan",
+    );
+    $yaml_core .= <<'EOM';
 - .inf
 - -.inf
 - .nan
 EOM
+}
 
 my $yaml_boolean = <<'EOM';
 ---

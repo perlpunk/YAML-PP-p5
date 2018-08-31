@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use 5.010;
 
 use Data::Dumper;
 use YAML::PP;
@@ -25,7 +24,8 @@ my $tokens = $ypp->loader->parser->tokens;
 my $next = $ypp->loader->parser->lexer->next_tokens;
 if ($error) {
     push @$tokens, map { +{ %$_, name => 'ERROR' } } @$next;
-    my $remaining = $ypp->loader->parser->lexer->reader->read // '';
+    my $remaining = $ypp->loader->parser->lexer->reader->read;
+    $remaining = '' unless defined $remaining;
     push @$tokens, { name => "ERROR", value => $remaining };
 }
 else {

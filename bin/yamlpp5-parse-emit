@@ -1,7 +1,6 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
-use 5.010;
 
 use YAML::PP;
 use YAML::PP::Parser;
@@ -38,7 +37,7 @@ eval {
     $parser->parse($yaml);
 };
 if ($@) {
-    say "Error parsing: $@";
+    warn "Error parsing: $@";
     exit 1;
 }
 my $writer = YAML::PP::Writer->new;
@@ -47,7 +46,7 @@ $emitter->set_writer($writer);
 for my $event (@events) {
     my ($type, $info) = @$event;
     my $str = YAML::PP::Parser->event_to_test_suite($event);
-    say $str if $verbose;
+    print "$str\n" if $verbose;
     if ($type eq 'sequence_start_event' or $type eq 'mapping_end_event') {
         delete $info->{style};
     }

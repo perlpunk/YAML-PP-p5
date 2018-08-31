@@ -1,7 +1,6 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use 5.010;
 use Test::More tests => 3;
 use FindBin '$Bin';
 use B ();
@@ -182,8 +181,15 @@ subtest core => sub {
     for my $int (@$ints) {
         test_int($int);
     }
-    for my $float (@$floats) {
-        test_float($float);
+    if ($] < 5.008009) {
+        for my $float (@$floats[0..8]) {
+            test_float($float);
+        }
+    }
+    else {
+        for my $float (@$floats) {
+            test_float($float);
+        }
     }
     for my $null (@$nulls) {
         test_undef($null);

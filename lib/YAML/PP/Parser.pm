@@ -5,8 +5,8 @@ package YAML::PP::Parser;
 
 our $VERSION = '0.000'; # VERSION
 
-use constant TRACE => $ENV{YAML_PP_TRACE};
-use constant DEBUG => $ENV{YAML_PP_DEBUG} || $ENV{YAML_PP_TRACE};
+use constant TRACE => $ENV{YAML_PP_TRACE} ? 1 : 0;
+use constant DEBUG => ($ENV{YAML_PP_DEBUG} || $ENV{YAML_PP_TRACE}) ? 1 : 0;
 
 use YAML::PP::Render;
 use YAML::PP::Lexer;
@@ -833,7 +833,7 @@ sub event_to_test_suite {
             else {
                 $content = '';
             }
-            $string .= ' ' . $info->{style} . ($content // '');
+            $string .= ' ' . $info->{style} . $content;
         }
         elsif ($ev eq 'alias_event') {
             $string = "=ALI *$content";
@@ -871,8 +871,9 @@ sub debug_yaml {
 
 sub debug_next_line {
     my ($self) = @_;
-    my $next_line = $self->lexer->next_line // [];
-    my $line = $next_line->[0] // '';
+    my $next_line = $self->lexer->next_line || [];
+    my $line = $next_line->[0];
+    $line = '' unless defined $line;
     $line =~ s/( +)$/'·' x length $1/e;
     $line =~ s/\t/▸/g;
     $self->note("NEXT LINE: >>$line<<");

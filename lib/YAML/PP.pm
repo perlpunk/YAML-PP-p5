@@ -12,7 +12,8 @@ our @EXPORT_OK = qw/ Load LoadFile Dump DumpFile /;
 sub new {
     my ($class, %args) = @_;
 
-    my $bool = delete $args{boolean} // 'perl';
+    my $bool = delete $args{boolean};
+    $bool = 'perl' unless defined $bool;
     my $schemas = delete $args{schema} || ['Core'];
     my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
 
@@ -143,7 +144,8 @@ package YAML::PP::Schema;
 sub new {
     my ($class, %args) = @_;
 
-    my $bool = delete $args{boolean} // 'perl';
+    my $bool = delete $args{boolean};
+    $bool = 'perl' unless defined $bool;
     if (keys %args) {
         die "Unexpected arguments: " . join ', ', sort keys %args;
     }
@@ -197,7 +199,8 @@ sub add_resolver {
     my $rule = $args{match};
     my $resolvers = $self->resolvers;
     my ($type, $match, $value) = @$rule;
-    my $implicit = $args{implicit} // 1;
+    my $implicit = $args{implicit};
+    $implicit = 1 unless defined $implicit;
     my @resolvers;
     if ($tag) {
         my $res = $resolvers->{tag}->{ $tag } ||= {};
@@ -249,7 +252,8 @@ sub add_representer {
 sub load_scalar_tag {
     my ($self, $event) = @_;
     my $tag = $event->{tag};
-    my $value = $event->{value} // '';
+    my $value = $event->{value};
+    $value = '' unless defined $value;
     my $resolvers = $self->resolvers;
     my $res = $resolvers->{tag}->{ $tag };
 
@@ -283,7 +287,7 @@ sub load_scalar {
     }
     my $resolvers = $self->resolvers;
     my $res = $resolvers->{value};
-    $value //= '';
+    $value = '' unless defined $value;
 
     if (my $equals = $res->{equals}) {
         if (exists $equals->{ $value }) {
