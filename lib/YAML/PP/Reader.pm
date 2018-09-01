@@ -25,9 +25,15 @@ sub readline {
     unless (length $self->{input}) {
         return;
     }
-    $self->{input} =~ s/\A([^\r\n]*(?:[\r\n]|\z))// or die "Unexpected";
-    my $line = $1;
-    return $line;
+    if ( $self->{input} =~ m/\G(.*\n?)/g ) {
+        my $line = $1;
+        unless (length $line) {
+            $self->{input} = '';
+            return;
+        }
+        return $line;
+    }
+    return;
 }
 
 package YAML::PP::Reader::File;
