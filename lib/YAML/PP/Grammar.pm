@@ -446,15 +446,6 @@ $GRAMMAR = {
       'match' => 'cb_send_alias'
     },
     'DOUBLEQUOTE' => {
-      'DOUBLEQUOTED' => {
-        'DOUBLEQUOTE' => {
-          'EOL' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          }
-        },
-        'match' => 'cb_take'
-      },
       'DOUBLEQUOTED_LINE' => {
         'EOL' => {
           'match' => 'cb_fetch_tokens_quoted',
@@ -497,16 +488,14 @@ $GRAMMAR = {
       },
       'match' => 'cb_start_plain'
     },
-    'SINGLEQUOTE' => {
-      'SINGLEQUOTED' => {
-        'SINGLEQUOTE' => {
-          'EOL' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          }
-        },
-        'match' => 'cb_take'
+    'QUOTED' => {
+      'EOL' => {
+        'match' => 'cb_send_scalar',
+        'return' => 1
       },
+      'match' => 'cb_take_quoted'
+    },
+    'SINGLEQUOTE' => {
       'SINGLEQUOTED_LINE' => {
         'EOL' => {
           'match' => 'cb_fetch_tokens_quoted',
@@ -564,39 +553,6 @@ $GRAMMAR = {
       'match' => 'cb_insert_empty_map'
     },
     'DOUBLEQUOTE' => {
-      'DOUBLEQUOTED' => {
-        'DOUBLEQUOTE' => {
-          'COLON' => {
-            'EOL' => {
-              'node' => 'FULLNODE',
-              'return' => 1
-            },
-            'WS' => {
-              'node' => 'FULLMAPVALUE_INLINE',
-              'return' => 1
-            },
-            'match' => 'cb_insert_map'
-          },
-          'EOL' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          },
-          'WS' => {
-            'COLON' => {
-              'EOL' => {
-                'node' => 'FULLNODE',
-                'return' => 1
-              },
-              'WS' => {
-                'node' => 'FULLMAPVALUE_INLINE',
-                'return' => 1
-              },
-              'match' => 'cb_insert_map'
-            }
-          }
-        },
-        'match' => 'cb_take'
-      },
       'DOUBLEQUOTED_LINE' => {
         'EOL' => {
           'match' => 'cb_fetch_tokens_quoted',
@@ -674,40 +630,38 @@ $GRAMMAR = {
       },
       'match' => 'cb_questionstart'
     },
-    'SINGLEQUOTE' => {
-      'SINGLEQUOTED' => {
-        'SINGLEQUOTE' => {
-          'COLON' => {
-            'EOL' => {
-              'node' => 'FULLNODE',
-              'return' => 1
-            },
-            'WS' => {
-              'node' => 'FULLMAPVALUE_INLINE',
-              'return' => 1
-            },
-            'match' => 'cb_insert_map'
-          },
+    'QUOTED' => {
+      'COLON' => {
+        'EOL' => {
+          'node' => 'FULLNODE',
+          'return' => 1
+        },
+        'WS' => {
+          'node' => 'FULLMAPVALUE_INLINE',
+          'return' => 1
+        },
+        'match' => 'cb_insert_map'
+      },
+      'EOL' => {
+        'match' => 'cb_send_scalar',
+        'return' => 1
+      },
+      'WS' => {
+        'COLON' => {
           'EOL' => {
-            'match' => 'cb_send_scalar',
+            'node' => 'FULLNODE',
             'return' => 1
           },
           'WS' => {
-            'COLON' => {
-              'EOL' => {
-                'node' => 'FULLNODE',
-                'return' => 1
-              },
-              'WS' => {
-                'node' => 'FULLMAPVALUE_INLINE',
-                'return' => 1
-              },
-              'match' => 'cb_insert_map'
-            }
-          }
-        },
-        'match' => 'cb_take'
+            'node' => 'FULLMAPVALUE_INLINE',
+            'return' => 1
+          },
+          'match' => 'cb_insert_map'
+        }
       },
+      'match' => 'cb_take_quoted'
+    },
+    'SINGLEQUOTE' => {
       'SINGLEQUOTED_LINE' => {
         'EOL' => {
           'match' => 'cb_fetch_tokens_quoted',
@@ -820,23 +774,6 @@ $GRAMMAR = {
       'return' => 1
     },
     'DOUBLEQUOTE' => {
-      'DOUBLEQUOTED' => {
-        'DOUBLEQUOTE' => {
-          'DEFAULT' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          },
-          'EOL' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          },
-          'WS' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          }
-        },
-        'match' => 'cb_take'
-      },
       'DOUBLEQUOTED_LINE' => {
         'EOL' => {
           'match' => 'cb_fetch_tokens_quoted',
@@ -873,20 +810,22 @@ $GRAMMAR = {
       },
       'match' => 'cb_start_plain'
     },
-    'SINGLEQUOTE' => {
-      'SINGLEQUOTED' => {
-        'SINGLEQUOTE' => {
-          'EOL' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          },
-          'WS' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          }
-        },
-        'match' => 'cb_take'
+    'QUOTED' => {
+      'DEFAULT' => {
+        'match' => 'cb_send_scalar',
+        'return' => 1
       },
+      'EOL' => {
+        'match' => 'cb_send_scalar',
+        'return' => 1
+      },
+      'WS' => {
+        'match' => 'cb_send_scalar',
+        'return' => 1
+      },
+      'match' => 'cb_take_quoted'
+    },
+    'SINGLEQUOTE' => {
       'SINGLEQUOTED_LINE' => {
         'EOL' => {
           'match' => 'cb_fetch_tokens_quoted',
@@ -987,34 +926,6 @@ $GRAMMAR = {
       'match' => 'cb_empty_mapkey'
     },
     'DOUBLEQUOTE' => {
-      'DOUBLEQUOTED' => {
-        'DOUBLEQUOTE' => {
-          'COLON' => {
-            'EOL' => {
-              'node' => 'FULLNODE',
-              'return' => 1
-            },
-            'WS' => {
-              'node' => 'FULLMAPVALUE_INLINE',
-              'return' => 1
-            }
-          },
-          'WS' => {
-            'COLON' => {
-              'EOL' => {
-                'node' => 'FULLNODE',
-                'return' => 1
-              },
-              'WS' => {
-                'node' => 'FULLMAPVALUE_INLINE',
-                'return' => 1
-              }
-            }
-          },
-          'match' => 'cb_send_mapkey'
-        },
-        'match' => 'cb_take'
-      },
       'match' => 'cb_start_quoted'
     },
     'PLAIN' => {
@@ -1055,35 +966,32 @@ $GRAMMAR = {
       },
       'match' => 'cb_question'
     },
-    'SINGLEQUOTE' => {
-      'SINGLEQUOTED' => {
-        'SINGLEQUOTE' => {
-          'COLON' => {
-            'EOL' => {
-              'node' => 'FULLNODE',
-              'return' => 1
-            },
-            'WS' => {
-              'node' => 'FULLMAPVALUE_INLINE',
-              'return' => 1
-            }
+    'QUOTED' => {
+      'COLON' => {
+        'EOL' => {
+          'node' => 'FULLNODE',
+          'return' => 1
+        },
+        'WS' => {
+          'node' => 'FULLMAPVALUE_INLINE',
+          'return' => 1
+        }
+      },
+      'WS' => {
+        'COLON' => {
+          'EOL' => {
+            'node' => 'FULLNODE',
+            'return' => 1
           },
           'WS' => {
-            'COLON' => {
-              'EOL' => {
-                'node' => 'FULLNODE',
-                'return' => 1
-              },
-              'WS' => {
-                'node' => 'FULLMAPVALUE_INLINE',
-                'return' => 1
-              }
-            }
-          },
-          'match' => 'cb_send_mapkey'
-        },
-        'match' => 'cb_take'
+            'node' => 'FULLMAPVALUE_INLINE',
+            'return' => 1
+          }
+        }
       },
+      'match' => 'cb_take_quoted_key'
+    },
+    'SINGLEQUOTE' => {
       'match' => 'cb_start_quoted'
     }
   },
@@ -1245,38 +1153,24 @@ This is the Grammar in YAML
     
       SINGLEQUOTE:
         match: cb_start_quoted
-        SINGLEQUOTED:
-          match: cb_take
-          SINGLEQUOTE:
-            EOL: { match: cb_send_scalar, return: 1 }
-            COLON:
-              match: cb_insert_map
-              EOL: { node: FULLNODE, return: 1 }
-              WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-            WS:
-              COLON:
-                match: cb_insert_map
-                EOL: { node: FULLNODE, return: 1 }
-                WS: { node: FULLMAPVALUE_INLINE, return: 1 }
         SINGLEQUOTED_LINE:
           match: cb_take
           EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
     
+      QUOTED:
+        match: cb_take_quoted
+        EOL: { match: cb_send_scalar, return: 1 }
+        WS:
+          COLON:
+            match: cb_insert_map
+            EOL: { node: FULLNODE , return: 1}
+            WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+        COLON:
+          match: cb_insert_map
+          EOL: { node: FULLNODE , return: 1}
+          WS: { node: FULLMAPVALUE_INLINE, return: 1 }
       DOUBLEQUOTE:
         match: cb_start_quoted
-        DOUBLEQUOTED:
-          match: cb_take
-          DOUBLEQUOTE:
-            EOL: { match: cb_send_scalar, return: 1 }
-            WS:
-              COLON:
-                match: cb_insert_map
-                EOL: { node: FULLNODE , return: 1}
-                WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-            COLON:
-              match: cb_insert_map
-              EOL: { node: FULLNODE , return: 1}
-              WS: { node: FULLMAPVALUE_INLINE, return: 1 }
         DOUBLEQUOTED_LINE:
           match: cb_take
           EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
@@ -1389,23 +1283,17 @@ This is the Grammar in YAML
     
       SINGLEQUOTE:
         match: cb_start_quoted
-        SINGLEQUOTED:
-          match: cb_take
-          SINGLEQUOTE:
-            EOL: { match: cb_send_scalar, return: 1 }
-            WS: { match: cb_send_scalar, return: 1 }
         SINGLEQUOTED_LINE:
           match: cb_take
           EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
     
+      QUOTED:
+        match: cb_take_quoted
+        EOL: { match: cb_send_scalar, return: 1 }
+        WS: { match: cb_send_scalar, return: 1 }
+        DEFAULT: { match: cb_send_scalar, return: 1 }
       DOUBLEQUOTE:
         match: cb_start_quoted
-        DOUBLEQUOTED:
-          match: cb_take
-          DOUBLEQUOTE:
-            EOL: { match: cb_send_scalar, return: 1 }
-            WS: { match: cb_send_scalar, return: 1 }
-            DEFAULT: { match: cb_send_scalar, return: 1 }
         DOUBLEQUOTED_LINE:
           match: cb_take
           EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
@@ -1525,32 +1413,20 @@ This is the Grammar in YAML
           COLON:
             EOL: { node: FULLNODE , return: 1}
             WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+    
+      QUOTED:
+        match: cb_take_quoted_key
+        WS:
+          COLON:
+            EOL: { node: FULLNODE , return: 1}
+            WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+        COLON:
+          EOL: { node: FULLNODE , return: 1}
+          WS: { node: FULLMAPVALUE_INLINE, return: 1 }
       DOUBLEQUOTE:
         match: cb_start_quoted
-        DOUBLEQUOTED:
-          match: cb_take
-          DOUBLEQUOTE:
-            match: cb_send_mapkey
-            WS:
-              COLON:
-                EOL: { node: FULLNODE , return: 1}
-                WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-            COLON:
-              EOL: { node: FULLNODE , return: 1}
-              WS: { node: FULLMAPVALUE_INLINE, return: 1 }
       SINGLEQUOTE:
         match: cb_start_quoted
-        SINGLEQUOTED:
-          match: cb_take
-          SINGLEQUOTE:
-            match: cb_send_mapkey
-            WS:
-              COLON:
-                EOL: { node: FULLNODE , return: 1}
-                WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-            COLON:
-              EOL: { node: FULLNODE , return: 1}
-              WS: { node: FULLMAPVALUE_INLINE, return: 1 }
       PLAIN:
         match: cb_mapkey
         WS:
@@ -1737,20 +1613,15 @@ This is the Grammar in YAML
     
       SINGLEQUOTE:
         match: cb_start_quoted
-        SINGLEQUOTED:
-          match: cb_take
-          SINGLEQUOTE:
-            EOL: { match: cb_send_scalar, return: 1 }
         SINGLEQUOTED_LINE:
           match: cb_take
           EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
     
+      QUOTED:
+        match: cb_take_quoted
+        EOL: { match: cb_send_scalar, return: 1 }
       DOUBLEQUOTE:
         match: cb_start_quoted
-        DOUBLEQUOTED:
-          match: cb_take
-          DOUBLEQUOTE:
-            EOL: { match: cb_send_scalar, return: 1 }
         DOUBLEQUOTED_LINE:
           match: cb_take
           EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }

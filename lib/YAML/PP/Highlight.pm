@@ -132,11 +132,22 @@ sub transform {
     my ($class, $tokens) = @_;
     my @list;
     for my $token (@$tokens) {
-        push @list, map {
-                $_ =~ tr/\t/\t/
-                ? { name => 'TAB', value => $_ }
-                : { name => $token->{name}, value => $_ }
-            } split m/(\t+)/, $token->{value};
+        my @values;
+        my $value = $token->{value};
+        if (ref $value) {
+            # subtokens
+            @values = @$value;
+        }
+        else {
+            @values = $token;
+        }
+        for my $token (@values) {
+            push @list, map {
+                    $_ =~ tr/\t/\t/
+                    ? { name => 'TAB', value => $_ }
+                    : { name => $token->{name}, value => $_ }
+                } split m/(\t+)/, $token->{value};
+        }
     }
     for my $i (0 .. $#list) {
         my $token = $list[ $i ];

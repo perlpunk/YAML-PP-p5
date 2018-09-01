@@ -1186,6 +1186,27 @@ sub cb_start_quoted {
     push @{ $stack }, [ scalar => $info ];
 }
 
+sub cb_take_quoted {
+    my ($self, $token) = @_;
+    my $subtokens = $token->{value};
+    my $stack = $self->event_stack;
+    my $info = {
+        style => $subtokens->[0]->{value},
+        value => [$subtokens->[1]->{value}],
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    push @{ $stack }, [ scalar => $info ];
+}
+
+sub cb_take_quoted_key {
+    my ($self, $token) = @_;
+    $self->cb_take_quoted($token);
+    $self->cb_send_mapkey;
+}
+
 sub cb_fetch_tokens_quoted {
     my ($self) = @_;
     my $indent = $self->offset->[-1] + 1;

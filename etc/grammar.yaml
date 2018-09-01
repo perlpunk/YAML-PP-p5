@@ -28,38 +28,24 @@ NODETYPE_SCALAR_OR_MAP:
 
   SINGLEQUOTE:
     match: cb_start_quoted
-    SINGLEQUOTED:
-      match: cb_take
-      SINGLEQUOTE:
-        EOL: { match: cb_send_scalar, return: 1 }
-        COLON:
-          match: cb_insert_map
-          EOL: { node: FULLNODE, return: 1 }
-          WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-        WS:
-          COLON:
-            match: cb_insert_map
-            EOL: { node: FULLNODE, return: 1 }
-            WS: { node: FULLMAPVALUE_INLINE, return: 1 }
     SINGLEQUOTED_LINE:
       match: cb_take
       EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
 
+  QUOTED:
+    match: cb_take_quoted
+    EOL: { match: cb_send_scalar, return: 1 }
+    WS:
+      COLON:
+        match: cb_insert_map
+        EOL: { node: FULLNODE , return: 1}
+        WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+    COLON:
+      match: cb_insert_map
+      EOL: { node: FULLNODE , return: 1}
+      WS: { node: FULLMAPVALUE_INLINE, return: 1 }
   DOUBLEQUOTE:
     match: cb_start_quoted
-    DOUBLEQUOTED:
-      match: cb_take
-      DOUBLEQUOTE:
-        EOL: { match: cb_send_scalar, return: 1 }
-        WS:
-          COLON:
-            match: cb_insert_map
-            EOL: { node: FULLNODE , return: 1}
-            WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-        COLON:
-          match: cb_insert_map
-          EOL: { node: FULLNODE , return: 1}
-          WS: { node: FULLMAPVALUE_INLINE, return: 1 }
     DOUBLEQUOTED_LINE:
       match: cb_take
       EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
@@ -172,23 +158,17 @@ RULE_FLOWSCALAR:
 
   SINGLEQUOTE:
     match: cb_start_quoted
-    SINGLEQUOTED:
-      match: cb_take
-      SINGLEQUOTE:
-        EOL: { match: cb_send_scalar, return: 1 }
-        WS: { match: cb_send_scalar, return: 1 }
     SINGLEQUOTED_LINE:
       match: cb_take
       EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
 
+  QUOTED:
+    match: cb_take_quoted
+    EOL: { match: cb_send_scalar, return: 1 }
+    WS: { match: cb_send_scalar, return: 1 }
+    DEFAULT: { match: cb_send_scalar, return: 1 }
   DOUBLEQUOTE:
     match: cb_start_quoted
-    DOUBLEQUOTED:
-      match: cb_take
-      DOUBLEQUOTE:
-        EOL: { match: cb_send_scalar, return: 1 }
-        WS: { match: cb_send_scalar, return: 1 }
-        DEFAULT: { match: cb_send_scalar, return: 1 }
     DOUBLEQUOTED_LINE:
       match: cb_take
       EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
@@ -308,32 +288,20 @@ RULE_MAPKEY:
       COLON:
         EOL: { node: FULLNODE , return: 1}
         WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+
+  QUOTED:
+    match: cb_take_quoted_key
+    WS:
+      COLON:
+        EOL: { node: FULLNODE , return: 1}
+        WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+    COLON:
+      EOL: { node: FULLNODE , return: 1}
+      WS: { node: FULLMAPVALUE_INLINE, return: 1 }
   DOUBLEQUOTE:
     match: cb_start_quoted
-    DOUBLEQUOTED:
-      match: cb_take
-      DOUBLEQUOTE:
-        match: cb_send_mapkey
-        WS:
-          COLON:
-            EOL: { node: FULLNODE , return: 1}
-            WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-        COLON:
-          EOL: { node: FULLNODE , return: 1}
-          WS: { node: FULLMAPVALUE_INLINE, return: 1 }
   SINGLEQUOTE:
     match: cb_start_quoted
-    SINGLEQUOTED:
-      match: cb_take
-      SINGLEQUOTE:
-        match: cb_send_mapkey
-        WS:
-          COLON:
-            EOL: { node: FULLNODE , return: 1}
-            WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-        COLON:
-          EOL: { node: FULLNODE , return: 1}
-          WS: { node: FULLMAPVALUE_INLINE, return: 1 }
   PLAIN:
     match: cb_mapkey
     WS:
@@ -520,20 +488,15 @@ NODETYPE_MAPVALUE_INLINE:
 
   SINGLEQUOTE:
     match: cb_start_quoted
-    SINGLEQUOTED:
-      match: cb_take
-      SINGLEQUOTE:
-        EOL: { match: cb_send_scalar, return: 1 }
     SINGLEQUOTED_LINE:
       match: cb_take
       EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
 
+  QUOTED:
+    match: cb_take_quoted
+    EOL: { match: cb_send_scalar, return: 1 }
   DOUBLEQUOTE:
     match: cb_start_quoted
-    DOUBLEQUOTED:
-      match: cb_take
-      DOUBLEQUOTE:
-        EOL: { match: cb_send_scalar, return: 1 }
     DOUBLEQUOTED_LINE:
       match: cb_take
       EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }

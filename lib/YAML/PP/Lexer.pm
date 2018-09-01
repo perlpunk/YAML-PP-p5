@@ -399,7 +399,7 @@ sub _fetch_next_tokens {
             my $token_name = $TOKEN_NAMES{ $first };
             my $token_name2 = $token_name . 'D';
             $$yaml =~ s/\A$first//;
-            push @tokens, ( $token_name => $first );
+            my @subtokens;
             my $regex = $REGEXES{ $token_name2 };
 
             my $quoted = '';
@@ -408,10 +408,13 @@ sub _fetch_next_tokens {
             }
 
             if ($$yaml =~ s/\A$first//) {
-                push @tokens, ( $token_name2 => $quoted );
-                push @tokens, ( $token_name => $first );
+                push @subtokens, ( $token_name => $first );
+                push @subtokens, ( $token_name2 => $quoted );
+                push @subtokens, ( $token_name => $first );
+                push @tokens, ( QUOTED => \@subtokens );
             }
             elsif (not length $$yaml) {
+                push @tokens, ( $token_name => $first );
                 push @tokens, ( $token_name . 'D_LINE' => $quoted );
                 push @tokens, ( EOL => '' );
                 $self->push_tokens(\@tokens);
@@ -419,11 +422,13 @@ sub _fetch_next_tokens {
                 return 1;
             }
             else {
+                push @tokens, ( $token_name => $first );
                 push @tokens, ( $token_name2 => $quoted );
                 push @tokens, ( 'Invalid quoted string' => $$yaml );
                 $self->push_tokens(\@tokens);
                 return;
             }
+            next;
 
         }
         elsif ($COLON_DASH_QUESTION{ $first }) {
@@ -691,13 +696,30 @@ sub push_tokens {
     for (my $i = 0; $i < @$new_tokens; $i += 2) {
         my $name = $new_tokens->[ $i ];
         my $value = $new_tokens->[ $i + 1 ];
-        push @$next, {
+        my $push = {
             name => $name,
-            value => $value,
             line => $line,
             column => $column,
         };
-        $column += length $value;
+        if (ref $value) {
+            my @subtokens = @$value;
+            for (my $i = 0; $i < @subtokens; $i += 2) {
+                my $name = $subtokens[ $i ];
+                my $value = $subtokens[ $i + 1 ];
+                $column += length $value;
+                push @{ $push->{value} }, {
+                    name => $name,
+                    line => $line,
+                    column => $column,
+                    value => $value,
+                };
+            }
+        }
+        else {
+            $push->{value} = $value;
+            $column += length $value;
+        }
+        push @$next, $push;
     }
     return $next;
 }
