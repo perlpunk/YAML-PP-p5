@@ -283,6 +283,10 @@ sub fetch_next_tokens {
             if ($content =~ s/\A(---|\.\.\.)(?=$RE_WS|\z)//) {
                 my $token = $1;
                 if ($self->context ne 'normal') {
+                    if ($self->context eq '"' or $self->context eq "'") {
+                        $self->push_tokens( [ ERROR => join '', @$next_line ] );
+                        $self->exception("Expected indent of $indent space(s)");
+                    }
                     $self->push_tokens( [ END => '' ] );
                     $self->set_context('normal');
                 }
@@ -304,6 +308,10 @@ sub fetch_next_tokens {
             }
             # non-empty less indented line
             if ($context ne 'normal') {
+                if ($self->context eq '"' or $self->context eq "'") {
+                    $self->push_tokens( [ ERROR => join '', @$next_line ] );
+                    $self->exception("Expected indent of $indent space(s)");
+                }
                 $self->push_tokens( [ END => '' ] );
                 $context = 'normal';
                 $self->set_context($context);
