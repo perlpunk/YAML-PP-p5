@@ -17,7 +17,11 @@ sub new {
 }
 
 sub read {
-    return $_[0]->{input};
+    my ($self) = @_;
+    my $pos = pos $self->{input};
+    my $yaml = substr($self->{input}, $pos);
+    $self->{input} = '';
+    return $yaml;
 }
 
 sub readline {
