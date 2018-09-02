@@ -716,6 +716,9 @@ $GRAMMAR = {
         'match' => 'cb_take'
       },
       'match' => 'cb_start_quoted'
+    },
+    'WS' => {
+      'new' => 'FULLMAPVALUE_INLINE'
     }
   },
   'NODETYPE_SEQ' => {
@@ -1216,6 +1219,10 @@ This is the Grammar in YAML
       DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
     
     NODETYPE_SCALAR_OR_MAP:
+    
+      # Flow nodes can follow tabs
+      WS: { new: FULLMAPVALUE_INLINE }
+    
       ALIAS:
         match: cb_alias
         EOL: { match: cb_send_alias_from_stack, return: 1 }

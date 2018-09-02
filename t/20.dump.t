@@ -41,7 +41,6 @@ my @skip = qw/
     UT92 WZ62
 
     6BFJ
-    Q5MG
 /;
 
 # dumper
