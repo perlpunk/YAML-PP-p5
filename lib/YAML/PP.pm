@@ -917,6 +917,40 @@ File will be written UTF-8 encoded
 
 =back
 
+=head1 FUNCTIONS
+
+The functions C<Load>, C<LoadFile>, C<Dump> and C<DumpFile> are provided
+as a drop-in replacement for other existing YAML processors.
+No function is exported by default.
+
+=over
+
+=item Load
+
+    use YAML::PP qw/ Load /;
+    my $doc = Load($yaml);
+    my @docs = Load($yaml);
+
+=item LoadFile
+
+    use YAML::PP qw/ LoadFile /;
+    my $doc = LoadFile($file);
+    my @docs = LoadFile($file);
+
+=item Dump
+
+    use YAML::PP qw/ Dump /;
+    my $yaml = Dump($doc);
+    my $yaml = Dump(@docs);
+
+=item DumpFile
+
+    use YAML::PP qw/ DumpFile /;
+    DumpFile($file, $doc);
+    DumpFile($file, @docs);
+
+=back
+
 =head1 NUMBERS
 
 Compare the output of the following YAML Loaders and JSON::PP dump:
@@ -1078,10 +1112,30 @@ You can find the latest build at L<http://matrix.yaml.io>
 As of this writing, the test matrix only contains valid test cases.
 Invalid ones will be added.
 
+=head1 CONTRIBUTORS
+
+=over
+
+=item Ingy döt Net
+
+Ingy is one of the creators of YAML. In 2016 he started the YAML Test Suite
+and the YAML Editor. He also made useful suggestions on the class
+hierarchy of YAML::PP.
+
+=item Felix "flyx" Krause
+
+Felix answered countless questions about the YAML Specification.
+
+=back
+
+=head1 SPONSORS
+
+The Perl Foundation L<https://www.perlfoundation.org/> sponsored this project
+(and the YAML Test Suite) with a grant of 2500 USD in 2017-2018.
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2017 by Tina Müller
+Copyright 2018 by Tina Müller
 
 This library is free software and may be distributed under the same terms
 as perl itself.
