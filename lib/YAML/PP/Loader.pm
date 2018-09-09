@@ -40,23 +40,23 @@ sub schema { return $_[0]->{schema} }
 
 sub load_string {
     my ($self, $yaml) = @_;
-    $self->parser->set_reader(YAML::PP::Reader->new);
-    $self->load($yaml);
+    $self->parser->set_reader(YAML::PP::Reader->new( input => $yaml ));
+    $self->load();
 }
 
 sub load_file {
     my ($self, $file) = @_;
-    $self->parser->set_reader(YAML::PP::Reader::File->new);
-    $self->load($file);
+    $self->parser->set_reader(YAML::PP::Reader::File->new( input => $file ));
+    $self->load();
 }
 
 sub load {
-    my ($self, $yaml) = @_;
+    my ($self) = @_;
     my $parser = $self->parser;
     my $constructor = $self->constructor;
 
     $constructor->init;
-    $parser->parse($yaml);
+    $parser->parse();
 
     my $docs = $constructor->docs;
     return wantarray ? @$docs : $docs->[0];

@@ -49,7 +49,7 @@ for my $char (sort keys %chars) {
     chomp $display;
     my $title = "Invalid literal control char: >>$display<<";
     eval {
-        $ypp->parse($yaml);
+        $ypp->parse_string($yaml);
     };
     if ($@) {
         #diag "Error: $@";

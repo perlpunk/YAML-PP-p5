@@ -90,12 +90,20 @@ sub init {
     $self->lexer->init;
 }
 
-sub parse {
+sub parse_string {
     my ($self, $yaml) = @_;
-    my $reader = $self->lexer->reader;
-    if (defined $yaml) {
-        $reader->set_input($yaml);
-    }
+    $self->lexer->reader->set_input( $yaml );
+    $self->parse();
+}
+
+sub parse_file {
+    my ($self, $file) = @_;
+    $self->lexer->reader->set_input( $file );
+    $self->parse();
+}
+
+sub parse {
+    my ($self) = @_;
     $self->init;
     $self->lexer->init;
     eval {

@@ -117,7 +117,7 @@ sub test {
     my $ok = 0;
     my $error = 0;
     eval {
-        $parser->parse($yaml);
+        $parser->parse_string($yaml);
     };
     if ($@) {
         diag "ERROR: $@";

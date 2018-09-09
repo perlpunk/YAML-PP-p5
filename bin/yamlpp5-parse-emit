@@ -34,7 +34,7 @@ my $parser = YAML::PP::Parser->new(
     },
 );
 eval {
-    $parser->parse($yaml);
+    $parser->parse_string($yaml);
 };
 if ($@) {
     warn "Error parsing: $@";

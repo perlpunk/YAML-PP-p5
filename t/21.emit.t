@@ -190,7 +190,7 @@ sub test {
         },
     );
     eval {
-        $parser->parse($yaml);
+        $parser->parse_string($yaml);
     };
     if ($@) {
         diag "ERROR: $@";

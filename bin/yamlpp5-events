@@ -15,12 +15,12 @@ my $parser = YAML::PP::Parser->new(
     $file ? (reader => YAML::PP::Reader::File->new) : (),
 );
 if ($file) {
-    $parser->parse($file);
+    $parser->parse_file($file);
 }
 else {
     my $yaml;
     $yaml = do { local $/; <STDIN> };
     $yaml = decode_utf8($yaml);
-    $parser->parse($yaml);
+    $parser->parse_string($yaml);
 }
 
