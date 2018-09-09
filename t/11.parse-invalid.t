@@ -28,6 +28,7 @@ my @skip = qw/
 
 
     9C9N
+    CXX2
 
 /;
 
@@ -62,6 +63,7 @@ my %skip_events = (
     SY6V => 1,
     C2SP => 1,
     'NTY5' => 1,
+    '4EJS' => 1,
 );
 
 unless (@dirs) {
