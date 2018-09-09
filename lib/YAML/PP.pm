@@ -37,23 +37,19 @@ sub loader {
     if (@_ > 1) {
         $_[0]->{loader} = $_[1]
     }
-    else {
-        return $_[0]->{loader}
-    }
+    return $_[0]->{loader};
 }
 
 sub dumper {
     if (@_ > 1) {
         $_[0]->{dumper} = $_[1]
     }
-    else {
-        return $_[0]->{dumper}
-    }
+    return $_[0]->{dumper};
 }
 
 sub schema {
     if (@_ > 1) { $_[0]->{schema} = $_[1] }
-    else { return $_[0]->{schema} }
+    return $_[0]->{schema};
 }
 
 sub default_schema {
