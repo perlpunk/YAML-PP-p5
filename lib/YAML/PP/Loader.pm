@@ -40,13 +40,13 @@ sub schema { return $_[0]->{schema} }
 
 sub load_string {
     my ($self, $yaml) = @_;
-    $self->parser->lexer->set_reader(YAML::PP::Reader->new);
+    $self->parser->set_reader(YAML::PP::Reader->new);
     $self->load($yaml);
 }
 
 sub load_file {
     my ($self, $file) = @_;
-    $self->parser->lexer->set_reader(YAML::PP::Reader::File->new);
+    $self->parser->set_reader(YAML::PP::Reader::File->new);
     $self->load($file);
 }
 
