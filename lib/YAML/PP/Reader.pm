@@ -18,7 +18,7 @@ sub new {
 
 sub read {
     my ($self) = @_;
-    my $pos = pos $self->{input};
+    my $pos = pos $self->{input} || 0;
     my $yaml = substr($self->{input}, $pos);
     $self->{input} = '';
     return $yaml;
