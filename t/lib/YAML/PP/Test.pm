@@ -132,12 +132,25 @@ sub read_tests {
             $in_yaml = decode_utf8($yaml);
         }
 
+        my $in_json;
+        if ($self->{in_json}) {
+            unless (-f "$dir/in.json") {
+                # ignore all tests whichhave no in.json
+                next;
+            }
+            open my $fh, "<", "$dir/in.json" or die $!;
+            $in_json = do { local $/; <$fh> };
+            close $fh;
+            $in_json = decode_utf8($in_json);
+        }
+
         my $test = {
             id => $id,
             dir => dirname($dir),
             title => $title,
             test_events => \@test_events,
             in_yaml => $in_yaml,
+            in_json => $in_json,
         };
         push @testcases, $test;
     }
@@ -156,7 +169,7 @@ sub run_testcases {
     my $code = $args{code};
     my $skip_count = keys %$skipped;
     my $results = $self->{stats};
-    @$results{qw/ DIFFS DIFF OK ERROR TODO SKIP /} = ([], (0) x 5);
+    @$results{qw/ DIFFS OKS DIFF OK ERROR TODO SKIP /} = ([], [], (0) x 5);
 
     for my $testcase (@$testcases) {
         my $id = $testcase->{id};
@@ -293,6 +306,62 @@ sub compare_invalid_parse_events {
             diag "YAML:\n$yaml" unless $TODO;
             diag "EVENTS:\n" . join '', map { "$_\n" } @$test_events;
             diag "GOT EVENTS:\n" . join '', map { "$_\n" } @{ $result->{events} };
+        }
+    }
+}
+
+sub load_json {
+    my ($self, $testcase) = @_;
+
+    my $ypp = YAML::PP->new(boolean => 'JSON::PP');
+    my $data = eval { $ypp->load_string($testcase->{in_yaml}) };
+
+    my $err = $@;
+    return {
+        data => $data,
+        err => $err,
+    };
+}
+
+sub compare_load_json {
+    my ($self, $testcase, $result) = @_;
+    my $results = $self->{stats};
+    my $id = $testcase->{id};
+    my $title = $testcase->{title};
+    my $err = $result->{err};
+    my $yaml = $testcase->{in_yaml};
+    my $exp_json = $testcase->{in_json};
+    my $data = $result->{data};
+
+    my $coder = JSON::PP->new->ascii->pretty->allow_nonref->canonical;
+    my $exp_data = $coder->decode($exp_json);
+    $exp_json = $coder->encode($exp_data);
+
+    my $json = $coder->encode($data);
+
+    my $ok = 0;
+    if ($err) {
+        $results->{ERROR}++;
+        push @{ $results->{ERRORS} }, $id;
+        ok(0, "$id - $title - ERROR");
+    }
+    else {
+        $results->{OK}++;
+        $ok = cmp_ok($json, 'eq', $exp_json, "$id - load -> JSON equals expected JSON");
+        unless ($ok) {
+            $results->{DIFF}++;
+            push @{ $results->{DIFFS} }, $id;
+        }
+    }
+
+    unless ($ok) {
+        if ($testcase->{todo}) {
+            $results->{TODO}++;
+        }
+        if (not $testcase->{todo} or $ENV{YAML_PP_TRACE}) {
+            diag "YAML:\n$yaml" unless $TODO;
+            diag "JSON:\n" . $exp_json;
+            diag "GOT JSON:\n" . $json;
         }
     }
 }
