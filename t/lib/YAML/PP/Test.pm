@@ -314,11 +314,11 @@ sub load_json {
     my ($self, $testcase) = @_;
 
     my $ypp = YAML::PP->new(boolean => 'JSON::PP');
-    my $data = eval { $ypp->load_string($testcase->{in_yaml}) };
+    my @docs = eval { $ypp->load_string($testcase->{in_yaml}) };
 
     my $err = $@;
     return {
-        data => $data,
+        data => \@docs,
         err => $err,
     };
 }
@@ -331,13 +331,23 @@ sub compare_load_json {
     my $err = $result->{err};
     my $yaml = $testcase->{in_yaml};
     my $exp_json = $testcase->{in_json};
-    my $data = $result->{data};
+    my $docs = $result->{data};
 
+    # input can contain multiple JSON
+    my @exp_json = split m/^(?=true|false|null|[0-9"\{\[])/m, $exp_json;
+    $exp_json = '';
     my $coder = JSON::PP->new->ascii->pretty->allow_nonref->canonical;
-    my $exp_data = $coder->decode($exp_json);
-    $exp_json = $coder->encode($exp_data);
+    for my $exp (@exp_json) {
+        my $data = $coder->decode($exp);
+        $exp = $coder->encode($data);
+        $exp_json .= $exp;
+    }
 
-    my $json = $coder->encode($data);
+    my $json = '';
+    for my $doc (@$docs) {
+        my $j = $coder->encode($doc);
+        $json .= $j;
+    }
 
     my $ok = 0;
     if ($err) {
