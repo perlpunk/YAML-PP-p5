@@ -8,19 +8,10 @@ use lib "$Bin/lib";
 use YAML::PP::Test;
 use Data::Dumper;
 use YAML::PP::Parser;
-use Encode;
-use File::Basename qw/ dirname basename /;
 
 $|++;
 
 my $yts = "$Bin/../yaml-test-suite";
-my @dirs = YAML::PP::Test->get_tests(
-    valid => 0,
-    test_suite_dir => "$yts",
-    dir => "$Bin/invalid",
-);
-
-@dirs = sort @dirs;
 
 my @skip = qw/
     4H7K
@@ -31,24 +22,6 @@ my @skip = qw/
     CXX2
 
 /;
-
-my @todo = ();
-
-# test all
-if ($ENV{TEST_ALL}) {
-    @todo = @skip;
-    @skip = ();
-}
-
-if (my $dir = $ENV{YAML_TEST_DIR}) {
-    @dirs = ($dir);
-    @todo = ();
-    @skip = ();
-}
-my %skip;
-@skip{ @skip } = ();
-my %todo;
-@todo{ @todo } = ();
 
 # in case of error events might not be exactly matching
 my %skip_events = (
@@ -66,72 +39,42 @@ my %skip_events = (
     '4EJS' => 1,
 );
 
-unless (@dirs) {
-    ok(1);
-    done_testing;
-    exit;
-}
-#plan tests => scalar @dirs;
 
-my %results;
+my $testsuite = YAML::PP::Test->new(
+    test_suite_dir => "$yts",
+    dir => "$Bin/invalid",
+    valid => 0,
+    events => 1,
+    in_yaml => 1,
+);
+my ($testcases) = $testsuite->read_tests(
+    skip => \@skip,
+);
 my %errors;
-@results{qw/ OK DIFF ERROR TODO /} = (0) x 4;
-for my $item (@dirs) {
-    my $dir = dirname $item;
-    my $id = basename $item;
-    my $skip = exists $skip{ $id };
-    my $todo = exists $todo{ $id };
-    next if $skip;
-
-    open my $fh, "<", "$dir/$id/in.yaml" or die $!;
-    my $yaml = do { local $/; <$fh> };
-    close $fh;
-    open $fh, "<", "$dir/$id/===" or die $!;
-    chomp(my $title = <$fh>);
-    close $fh;
-
-    open $fh, "<", "$dir/$id/test.event" or die $!;
-    chomp(my @test_events = <$fh>);
-    close $fh;
-
-    if ($skip) {
-        SKIP: {
-            skip "SKIP $id", 1 if $skip;
-            test($title, $id, $yaml, \@test_events);
-        }
-    }
-    elsif ($todo) {
-        TODO: {
-            local $TODO = $todo;
-            test($title, $id, $yaml, \@test_events);
-        }
-    }
-    else {
-        test($title, $id, $yaml, \@test_events);
-    }
-
+$testsuite->run_testcases(
+    code => \&test,
+);
+my $results = $testsuite->{stats};
+diag sprintf "OK: %d DIFF: %d ERROR: %d TODO: %d SKIP: %d",
+    $results->{OK}, $results->{DIFF}, $results->{ERROR},
+    $results->{TODO}, $results->{SKIP};
+diag "OK: (@{ $results->{OKS} })" if $results->{OK};
+for my $type (sort keys %errors) {
+    diag "ERRORS($type): (@{ $errors{ $type } })";
 }
-my $skip_count = @skip;
-diag "Skipped $skip_count tests";
+
+done_testing;
+exit;
+
 
 sub test {
-    my ($title, $name, $yaml, $test_events) = @_;
-    $yaml = decode_utf8($yaml);
-    my @events;
-    my $parser = YAML::PP::Parser->new(
-        receiver => sub {
-            my ($self, @args) = @_;
-            push @events, YAML::PP::Parser->event_to_test_suite(\@args);
-        },
-    );
-    my $ok = 0;
-    my $error = 0;
-    eval {
-        $parser->parse_string($yaml);
-    };
-    if ($@) {
-        diag "ERROR: $@" if $ENV{YAML_PP_TRACE};
-        $results{ERROR}++;
+    my ($testsuite, $testcase) = @_;
+    my $id = $testcase->{id};
+
+    my $result = $testsuite->parse_events($testcase);
+    my $err = $result->{err};
+    if ($err) {
+        diag "ERROR: $err" if $ENV{YAML_PP_TRACE};
         my $error_type = 'unknown';
         if ($@ =~ m/( Expected .*?)/) {
             $error_type = "$1";
@@ -139,40 +82,12 @@ sub test {
         elsif ($@ =~ m/( Not Implemented: .*?)/) {
             $error_type = "$1";
         }
-        push @{ $errors{ $error_type } }, $name;
-        $error = 1;
+        push @{ $errors{ $error_type } }, $id;
     }
-
-    $_ = encode_utf8 $_ for @events;
-    if (not $error) {
-        $results{OK}++;
-        ok(0, "$name - $title - should be invalid");
+    if ($skip_events{ $id }) {
+        delete $result->{events};
     }
-    else {
-        if ($skip_events{ $name }) {
-            $ok = ok(1, "$name - $title");
-        }
-        else {
-            $ok = is_deeply(\@events, $test_events, "$name - $title");
-        }
-    }
-    if ($ok) {
-    }
-    else {
-        $results{DIFF}++ if $error;
-        if ($TODO) {
-            $results{TODO}++;
-        }
-        if (not $TODO or $ENV{YAML_PP_TRACE}) {
-            diag "YAML:\n$yaml" unless $TODO;
-            diag "EVENTS:\n" . join '', map { "$_\n" } @$test_events;
-            diag "GOT EVENTS:\n" . join '', map { "$_\n" } @events;
-        }
-    }
-}
-diag "OK: $results{OK} DIFF: $results{DIFF} ERROR: $results{ERROR} TODO: $results{TODO}";
-for my $type (sort keys %errors) {
-    diag "ERRORS($type): (@{ $errors{ $type } })";
+    $testsuite->compare_invalid_parse_events($testcase, $result);
+    return $result;
 }
 
-done_testing;

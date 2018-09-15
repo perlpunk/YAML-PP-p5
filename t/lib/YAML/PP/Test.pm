@@ -257,5 +257,44 @@ sub compare_parse_events {
     }
 }
 
+sub compare_invalid_parse_events {
+    my ($self, $testcase, $result) = @_;
+    my $results = $self->{stats};
+    my $id = $testcase->{id};
+    my $title = $testcase->{title};
+    my $err = $result->{err};
+    my $yaml = $testcase->{in_yaml};
+    my $test_events = $testcase->{test_events};
+
+    my $ok = 0;
+    if (not $err) {
+        $results->{OK}++;
+        push @{ $results->{OKS} }, $id;
+        ok(0, "$id - $title - should be invalid");
+    }
+    else {
+        $results->{ERROR}++;
+        if (not $result->{events}) {
+            $ok = ok(1, "$id - $title");
+        }
+        else {
+            $ok = is_deeply($result->{events}, $test_events, "$id - $title");
+        }
+    }
+
+    if ($ok) {
+    }
+    else {
+        $results->{DIFF}++;
+        if ($TODO) {
+            $results->{TODO}++;
+        }
+        if (not $testcase->{todo} or $ENV{YAML_PP_TRACE}) {
+            diag "YAML:\n$yaml" unless $TODO;
+            diag "EVENTS:\n" . join '', map { "$_\n" } @$test_events;
+            diag "GOT EVENTS:\n" . join '', map { "$_\n" } @{ $result->{events} };
+        }
+    }
+}
 
 1;
