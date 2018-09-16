@@ -4,6 +4,9 @@ cover:
 	cover
 
 test-all:
+	TEST_ALL=1 prove -lr t
+
+test-all-verbose:
 	TEST_ALL=1 prove -lrv t
 
 test-valid-all:

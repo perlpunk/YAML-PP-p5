@@ -104,6 +104,11 @@ $testsuite->run_testcases(
     code => \&test,
 );
 
+$testsuite->print_stats(
+    count => [qw/ SAME_EVENTS SAME_YAML DIFF_EVENTS DIFF_YAML ERROR TODO SKIP /],
+    ids => [qw/ DIFF_YAML DIFF_EVENTS /],
+);
+
 sub test {
     my ($testsuite, $testcase) = @_;
     my $id = $testcase->{id};
@@ -114,11 +119,7 @@ sub test {
     }
     $testsuite->compare_emit_yaml($testcase, $result);
 }
-my $results = $testsuite->{stats};
-my $diff_count = $results->{DIFF_YAML} || 0;
-diag "SAME_EVENTS: $results->{SAME_EVENTS} SAME_YAML: $results->{SAME_YAML} DIFF_YAML: $diff_count ERROR: $results->{ERROR} TODO: $results->{TODO}";
-#diag "DIFF_YAML: (@{ $results->{DIFF_YAML} || [] })";
-#diag "DIFF_EVENTS: (@{ $results->{DIFF_EVENTS} || [] })";
+
 
 done_testing;
 exit;

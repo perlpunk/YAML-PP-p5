@@ -55,11 +55,12 @@ $testsuite->run_testcases(
     code => \&test,
 );
 
-my $results = $testsuite->{stats};
-diag sprintf "OK: %d DIFF: %d ERROR: %d TODO: %d SKIP: %d",
-    $results->{OK}, $results->{DIFF}, $results->{ERROR},
-    $results->{TODO}, $results->{SKIP};
-diag "DIFF: (@{ $results->{DIFFS} })" if $results->{DIFF};
+$testsuite->print_stats(
+    count => [qw/ OK DIFF ERROR TODO SKIP /],
+    ids => [qw/ ERROR DIFF /],
+);
+
+my $stats = $testsuite->{stats};
 
 done_testing;
 exit;

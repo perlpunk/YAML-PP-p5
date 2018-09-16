@@ -34,6 +34,7 @@ my $testsuite = YAML::PP::Test->new(
     valid => 1,
     events => 1,
     in_yaml => 1,
+    linecount => 1,
 );
 my ($testcases) = $testsuite->read_tests(
     skip => \@skip,
@@ -43,11 +44,12 @@ my %errors;
 $testsuite->run_testcases(
     code => \&test,
 );
-my $results = $testsuite->{stats};
-diag sprintf "OK: %d DIFF: %d ERROR: %d TODO: %d SKIP: %d",
-    $results->{OK}, scalar $results->{DIFF}, $results->{ERROR},
-    $results->{TODO}, $results->{SKIP};
-diag "DIFF: (@{ $results->{DIFFS} })" if $results->{DIFF};
+
+$testsuite->print_stats(
+    count => [qw/ OK DIFF ERROR TODO SKIP /],
+    ids => [qw/ DIFF ERROR /],
+);
+
 for my $type (sort keys %errors) {
     diag "ERRORS($type): (@{ $errors{ $type } })";
 }

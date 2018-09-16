@@ -54,13 +54,14 @@ my %errors;
 $testsuite->run_testcases(
     code => \&test,
 );
-my $results = $testsuite->{stats};
-diag sprintf "OK: %d DIFF: %d ERROR: %d TODO: %d SKIP: %d",
-    $results->{OK}, $results->{DIFF}, $results->{ERROR},
-    $results->{TODO}, $results->{SKIP};
-diag "OK: (@{ $results->{OKS} })" if $results->{OK};
+
+$testsuite->print_stats(
+    count => [qw/ OK DIFF ERROR TODO SKIP /],
+    ids => [qw/ OK DIFF /],
+);
+
 for my $type (sort keys %errors) {
-    diag "ERRORS($type): (@{ $errors{ $type } })";
+    diag "ERRORS($type): (@{ $errors{ $type } })" if $ENV{TEST_VERBOSE};
 }
 
 done_testing;

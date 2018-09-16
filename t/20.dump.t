@@ -61,9 +61,8 @@ sub test {
 
 done_testing;
 
-my $results = $testsuite->{stats};
-
-my $diff_count = $results->{DIFF};
-diag "OK: $results->{OK} DIFF: $diff_count ERROR: $results->{ERROR} TODO: $results->{TODO}";
-diag "DIFF: (@{ $results->{DIFFS} })";
+$testsuite->print_stats(
+    count => [qw/ OK DIFF ERROR TODO SKIP /],
+    ids => [qw/ ERROR DIFF /],
+);
 

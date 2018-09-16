@@ -34,11 +34,11 @@ sub get_tags {
 }
 
 sub get_tests {
-    my ($class, %args) = @_;
-    my $test_suite_dir = $args{test_suite_dir};
-    my $dir = $args{dir};
-    my $valid = $args{valid};
-    my $json = $args{json};
+    my ($self) = @_;
+    my $test_suite_dir = $self->{test_suite_dir};
+    my $dir = $self->{dir};
+    my $valid = $self->{valid};
+    my $json = $self->{in_json};
 
     my @dirs;
     if (-d $test_suite_dir) {
@@ -80,17 +80,10 @@ sub read_tests {
     my ($self, %args) = @_;
     my $test_suite_dir = $self->{test_suite_dir};
     my $dir = $self->{dir};
-    my $valid = $self->{valid};
     my $skip = $args{skip};
 
-    my @dirs = $self->get_tests(
-        test_suite_dir => $test_suite_dir,
-        dir => $dir,
-        valid => $valid,
-        %args,
-    );
-
-    my @todo = ();
+    my @dirs;
+    my @todo;
 
     if ($ENV{TEST_ALL}) {
         @todo = @$skip;
@@ -101,6 +94,9 @@ sub read_tests {
         @dirs = ($dir);
         @todo = ();
         @$skip = ();
+    }
+    else {
+        @dirs = $self->get_tests();
     }
 
     my $skipped;
@@ -126,18 +122,21 @@ sub read_tests {
 
         my $in_yaml;
         if ($self->{in_yaml}) {
-            open my $fh, "<", "$dir/in.yaml" or die $!;
-            my $yaml = do { local $/; <$fh> };
+            open my $fh, "<:encoding(UTF-8)", "$dir/in.yaml" or die $!;
+            $in_yaml = do { local $/; <$fh> };
             close $fh;
-            $in_yaml = decode_utf8($yaml);
+        }
+
+        my $linecount;
+        if ($self->{linecount}) {
+            $linecount = () = $in_yaml =~ m/\n/g;
         }
 
         my $out_yaml;
         if ($self->{out_yaml} and -f "$dir/out.yaml") {
-            open my $fh, "<", "$dir/out.yaml" or die $!;
-            my $yaml = do { local $/; <$fh> };
+            open my $fh, "<:encoding(UTF-8)", "$dir/out.yaml" or die $!;
+            $out_yaml = do { local $/; <$fh> };
             close $fh;
-            $out_yaml = decode_utf8($yaml);
         }
 
         my $emit_yaml;
@@ -149,24 +148,20 @@ sub read_tests {
             unless (-f $file) {
                 $file = "$dir/in.yaml";
             }
-            open my $fh, "<", $file or die $!;
-            my $yaml = do { local $/; <$fh> };
+            open my $fh, "<:encoding(UTF-8)", $file or die $!;
+            $emit_yaml = do { local $/; <$fh> };
             close $fh;
-            $emit_yaml = decode_utf8($yaml);
         }
 
         my $in_json;
         if ($self->{in_json}) {
-            unless (-f "$dir/in.json") {
-                # ignore all tests whichhave no in.json
-                next;
-            }
-            open my $fh, "<", "$dir/in.json" or die $!;
+            open my $fh, "<:encoding(UTF-8)", "$dir/in.json" or die $!;
             $in_json = do { local $/; <$fh> };
             close $fh;
-            $in_json = decode_utf8($in_json);
         }
 
+        my $todo = exists $todo{ $id };
+        my $skip = delete $skipped->{ $id };
         my $test = {
             id => $id,
             dir => dirname($dir),
@@ -176,40 +171,43 @@ sub read_tests {
             out_yaml => $out_yaml,
             emit_yaml => $emit_yaml,
             in_json => $in_json,
+            linecount => $linecount,
+            todo => $todo,
+            skip => $skip,
         };
         push @testcases, $test;
     }
 
-    $self->{skipped} = $skipped;
-    $self->{todo} = \%todo;
+    if (keys %$skipped) {
+        # are there any leftover skips?
+        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$skipped], ['skipped']);
+    }
     $self->{testcases} = \@testcases;
     return (\@testcases);
 }
 
 sub run_testcases {
     my ($self, %args) = @_;
-    my $skipped = $self->{skipped};
     my $testcases = $self->{testcases};
-    my $todos = $self->{todo};
     my $code = $args{code};
-    my $skip_count = keys %$skipped;
-    my $results = $self->{stats};
-    @$results{qw/ DIFFS OKS DIFF OK ERROR TODO SKIP /} = ([], [], (0) x 5);
+    my $stats = $self->{stats};
+
+    unless (@$testcases) {
+        ok(1);
+        return;
+    }
 
     for my $testcase (@$testcases) {
         my $id = $testcase->{id};
-        my $skip = delete $skipped->{ $id };
-#        next if $skip;
-        my $todo = exists $todos->{ $id };
-        $testcase->{todo} = $todo;
+        my $todo = $testcase->{todo};
 
     #    diag "------------------------------ $id";
 
         my $result;
-        if ($skip) {
+        if ($testcase->{skip}) {
             SKIP: {
-                $results->{SKIP}++;
-                skip "SKIP $id", 1 if $skip;
+                push @{ $stats->{SKIP} }, $id;
+                skip "SKIP $id", 1;
                 $result = $code->($self, $testcase);
             }
         }
@@ -224,12 +222,27 @@ sub run_testcases {
         }
 
     }
-    if (keys %$skipped) {
-        # are there any leftover skips?
-        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$skipped], ['skipped']);
-    }
-#    diag "Skipped $skip_count tests";
 
+}
+
+sub print_stats {
+    my ($self, %args) = @_;
+    my $count_fields = $args{count};
+    my $list_fields = $args{ids};
+    my $stats = $self->{stats};
+
+    my $counts = '';
+    for my $field (@$count_fields) {
+        my $count = scalar @{ $stats->{ $field } || [] };
+        $counts .= "$field: $count ";
+    }
+    $counts .= "\n";
+    diag $counts;
+
+    for my $field (@$list_fields) {
+        my $ids = $stats->{ $field } || [];
+        diag "$field: (@$ids)" if @$ids;
+    }
 }
 
 sub parse_events {
@@ -257,35 +270,36 @@ sub parse_events {
 
 sub compare_parse_events {
     my ($self, $testcase, $result) = @_;
-    my $results = $self->{stats};
+    my $stats = $self->{stats};
     my $id = $testcase->{id};
     my $title = $testcase->{title};
     my $err = $result->{err};
     my $yaml = $testcase->{in_yaml};
     my $test_events = $testcase->{test_events};
-    my $exp_lines = () = $yaml =~ m/[\r\n]/g;
+    my $exp_lines = $testcase->{linecount};
 
     my @events = @{ $result->{events} };
     $_ = encode_utf8 $_ for @events;
 
     my $ok = 0;
     if ($err) {
-        $results->{ERROR}++;
+        push @{ $stats->{ERROR} }, $id;
         ok(0, "$id - $title (ERROR)");
     }
     else {
         $ok = is_deeply(\@events, $test_events, "$id - $title");
     }
     if ($ok) {
-        $results->{OK}++;
-        my $lines = $result->{line};
-        cmp_ok($lines, '==', $exp_lines, "$id - Line count $lines == $exp_lines");
+        push @{ $stats->{OK} }, $id;
+        if (defined $exp_lines) {
+            my $lines = $result->{line};
+            cmp_ok($lines, '==', $exp_lines, "$id - Line count $lines == $exp_lines");
+        }
     }
     else {
-        push @{ $results->{DIFFS} }, $id unless $err;
-        $results->{DIFF}++;
+        push @{ $stats->{DIFF} }, $id unless $err;
         if ($testcase->{todo}) {
-            $results->{TODO}++;
+            push @{ $stats->{TODO} }, $id;
         }
         if (not $testcase->{todo} or $ENV{YAML_PP_TRACE}) {
             diag "YAML:\n$yaml" unless $testcase->{todo};
@@ -297,7 +311,7 @@ sub compare_parse_events {
 
 sub compare_invalid_parse_events {
     my ($self, $testcase, $result) = @_;
-    my $results = $self->{stats};
+    my $stats = $self->{stats};
     my $id = $testcase->{id};
     my $title = $testcase->{title};
     my $err = $result->{err};
@@ -306,12 +320,11 @@ sub compare_invalid_parse_events {
 
     my $ok = 0;
     if (not $err) {
-        $results->{OK}++;
-        push @{ $results->{OKS} }, $id;
+        push @{ $stats->{OK} }, $id;
         ok(0, "$id - $title - should be invalid");
     }
     else {
-        $results->{ERROR}++;
+        push @{ $stats->{ERROR} }, $id;
         if (not $result->{events}) {
             $ok = ok(1, "$id - $title");
         }
@@ -323,12 +336,12 @@ sub compare_invalid_parse_events {
     if ($ok) {
     }
     else {
-        $results->{DIFF}++;
-        if ($TODO) {
-            $results->{TODO}++;
+        push @{ $stats->{DIFF} }, $id;
+        if ($testcase->{todo}) {
+            push @{ $stats->{TODO} }, $id;
         }
         if (not $testcase->{todo} or $ENV{YAML_PP_TRACE}) {
-            diag "YAML:\n$yaml" unless $TODO;
+            diag "YAML:\n$yaml" unless $testcase->{todo};
             diag "EVENTS:\n" . join '', map { "$_\n" } @$test_events;
             diag "GOT EVENTS:\n" . join '', map { "$_\n" } @{ $result->{events} };
         }
@@ -350,7 +363,7 @@ sub load_json {
 
 sub compare_load_json {
     my ($self, $testcase, $result) = @_;
-    my $results = $self->{stats};
+    my $stats = $self->{stats};
     my $id = $testcase->{id};
     my $title = $testcase->{title};
     my $err = $result->{err};
@@ -376,25 +389,25 @@ sub compare_load_json {
 
     my $ok = 0;
     if ($err) {
-        $results->{ERROR}++;
-        push @{ $results->{ERRORS} }, $id;
+        push @{ $stats->{ERROR} }, $id;
         ok(0, "$id - $title - ERROR");
     }
     else {
-        $results->{OK}++;
         $ok = cmp_ok($json, 'eq', $exp_json, "$id - load -> JSON equals expected JSON");
-        unless ($ok) {
-            $results->{DIFF}++;
-            push @{ $results->{DIFFS} }, $id;
+        if ($ok) {
+            push @{ $stats->{OK} }, $id;
+        }
+        else {
+            push @{ $stats->{DIFF} }, $id;
         }
     }
 
     unless ($ok) {
         if ($testcase->{todo}) {
-            $results->{TODO}++;
+            push @{ $stats->{TODO} }, $id;
         }
         if (not $testcase->{todo} or $ENV{YAML_PP_TRACE}) {
-            diag "YAML:\n$yaml" unless $TODO;
+            diag "YAML:\n$yaml" unless $testcase->{todo};
             diag "JSON:\n" . $exp_json;
             diag "GOT JSON:\n" . $json;
         }
@@ -442,7 +455,7 @@ sub dump_yaml {
 
 sub compare_dump_yaml {
     my ($self, $testcase, $result) = @_;
-    my $results = $self->{stats};
+    my $stats = $self->{stats};
     my $id = $testcase->{id};
     my $title = $testcase->{title};
     my $err = $result->{err};
@@ -454,21 +467,20 @@ sub compare_dump_yaml {
 
     my $ok = 0;
     if ($err) {
-        $results->{ERROR}++;
-        push @{ $results->{ERRORS} }, $id;
+        push @{ $stats->{ERROR} }, $id;
         ok(0, "$id - $title - ERROR");
     }
     else {
         $ok = is_deeply($reload_docs, $docs, "$id - $title - Reload data equals original");
-        push @{ $results->{DIFFS} }, $id unless $ok;
+        push @{ $stats->{DIFF} }, $id unless $ok;
     }
 
     if ($ok) {
-        $results->{OK}++;
+        push @{ $stats->{OK} }, $id;
     }
     else {
         if ($testcase->{todo}) {
-            $results->{TODO}++;
+            push @{ $stats->{TODO} }, $id;
         }
         warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$docs], ['docs']);
         if (not $testcase->{todo} or $ENV{YAML_PP_TRACE}) {
@@ -556,7 +568,7 @@ sub _emit_events {
 
 sub compare_emit_yaml {
     my ($self, $testcase, $result) = @_;
-    my $results = $self->{stats};
+    my $stats = $self->{stats};
     my $id = $testcase->{id};
     my $title = $testcase->{title};
     my $err = $result->{err};
@@ -567,31 +579,27 @@ sub compare_emit_yaml {
     my $reparse_events = $result->{reparse_events};
 
     if ($err) {
-        $results->{ERROR}++;
-        push @{ $results->{ERRORS} }, $id;
+        push @{ $stats->{ERROR} }, $id;
         ok(0, "$id - $title - ERROR");
         return;
     }
     $_ = encode_utf8 $_ for (@$reparse_events, @$exp_events);
     my $same_events = is_deeply($reparse_events, $exp_events, "$id - $title - Events from re-parsing are the same");
     if ($same_events) {
-        $results->{SAME_EVENTS}++;
+        push @{ $stats->{SAME_EVENTS} }, $id;
         if (defined $emit_yaml) {
             $_ = encode_utf8 $_ for ($emit_yaml, $exp_emit_yaml);
             my $same_yaml = cmp_ok($emit_yaml, 'eq', $exp_emit_yaml, "$id - $title - Emit events");
             if ($same_yaml) {
-                $results->{SAME_YAML}++;
+                push @{ $stats->{SAME_YAML} }, $id;
             }
             else {
-                $results->{DIFF_YAML}++;
+                push @{ $stats->{DIFF_YAML} }, $id;
             }
         }
     }
     else {
-        $results->{DIFF_EVENTS}++;
-    }
-    if ($testcase->{todo}) {
-        $results->{TODO}++;
+        push @{ $stats->{DIFF_EVENTS} }, $id;
     }
 }
 
