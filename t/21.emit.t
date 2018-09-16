@@ -24,12 +24,10 @@ my @skip = qw/
     C2DT CN3R CT4Q DFF7
     FRK4
     KZN9 L9U5 LQZ7 LX3P
-    M7A3
     Q9WF QF4Y
     UT92 WZ62
 
     6BFJ
-    Q5MG
     F6MC
 
 /;
@@ -48,8 +46,6 @@ NAT4
 /;
 # tags
 push @skip, qw/
-5TYM
-6CK3
 v014
 /;
 # block scalar
@@ -66,17 +62,11 @@ XLQ9
 K54U
 PUW8
 3MYT
-565N
-6SLA
-6ZKB
-9DXL
 EXG3
-G4RS
 JDH8
 MJS9
 
 
-X38W
 /;
 # unicode
 push @skip, qw/
@@ -95,6 +85,15 @@ my %skip_yaml_equal = (
     '4MUZ' => 1,
     '7ZZ5' => 1,
     'K858' => 1,
+    'X38W' => 1,
+    'Q5MG' => 1,
+    'G4RS' => 1,
+    '9DXL' => 1,
+    '6ZKB' => 1,
+    '6SLA' => 1,
+    '6CK3' => 1,
+    '5TYM' => 1,
+    '565N' => 1,
 );
 
 my ($testcases) = $testsuite->read_tests(
