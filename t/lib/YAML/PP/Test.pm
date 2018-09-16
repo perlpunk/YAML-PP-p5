@@ -140,6 +140,21 @@ sub read_tests {
             $out_yaml = decode_utf8($yaml);
         }
 
+        my $emit_yaml;
+        if ($self->{emit_yaml}) {
+            my $file = "$dir/emit.yaml";
+            unless (-f $file) {
+                $file = "$dir/out.yaml";
+            }
+            unless (-f $file) {
+                $file = "$dir/in.yaml";
+            }
+            open my $fh, "<", $file or die $!;
+            my $yaml = do { local $/; <$fh> };
+            close $fh;
+            $emit_yaml = decode_utf8($yaml);
+        }
+
         my $in_json;
         if ($self->{in_json}) {
             unless (-f "$dir/in.json") {
@@ -159,6 +174,7 @@ sub read_tests {
             test_events => \@test_events,
             in_yaml => $in_yaml,
             out_yaml => $out_yaml,
+            emit_yaml => $emit_yaml,
             in_json => $in_json,
         };
         push @testcases, $test;
@@ -463,6 +479,120 @@ sub compare_dump_yaml {
         }
     }
 
+}
+
+sub emit_yaml {
+    my ($self, $testcase) = @_;
+    my $id = $testcase->{id};
+    my $exp_yaml = $testcase->{emit_yaml};
+
+    my @events;
+    my $parser = YAML::PP::Parser->new(
+        receiver => sub {
+            my ($self, @args) = @_;
+            push @events, [@args];
+        },
+    );
+    eval {
+        $parser->parse_string($testcase->{in_yaml});
+    };
+
+    my $result = {};
+    my $err = $@;
+    if ($err) {
+        diag "ERROR parsing $id";
+        $result->{err} = $err;
+        return $result;
+    }
+
+    my $emit_yaml = $self->_emit_events(\@events);
+
+    my @reparse_events;
+    my @expected_reparse_events;
+    my @ev;
+    $parser = YAML::PP::Parser->new(
+        receiver => sub {
+            my ($self, @args) = @_;
+            my ($type, $info) = @args;
+            if ($type eq 'sequence_start_event' or $type eq 'mapping_start_event') {
+                delete $info->{style};
+            }
+            push @ev, YAML::PP::Parser->event_to_test_suite(\@args);
+        },
+    );
+    eval {
+        $parser->parse_string($emit_yaml);
+    };
+    @reparse_events = @ev;
+    @ev = ();
+    eval {
+        $parser->parse_string($exp_yaml);
+    };
+    @expected_reparse_events = @ev;
+    $result = {
+        expected_events => \@expected_reparse_events,
+        reparse_events => \@reparse_events,
+        emit_yaml => $emit_yaml,
+    };
+    return $result;
+}
+
+sub _emit_events {
+    my ($testsuite, $events) = @_;
+    my $writer = YAML::PP::Writer->new;
+    my $emitter = YAML::PP::Emitter->new();
+    $emitter->set_writer($writer);
+    $emitter->init;
+    for my $event (@$events) {
+        my ($type, $info) = @$event;
+        if ($type eq 'sequence_start_event' or $type eq 'mapping_start_event') {
+            delete $info->{style};
+        }
+        $emitter->$type($info);
+    }
+    my $yaml = $emitter->writer->output;
+    return $yaml;
+}
+
+sub compare_emit_yaml {
+    my ($self, $testcase, $result) = @_;
+    my $results = $self->{stats};
+    my $id = $testcase->{id};
+    my $title = $testcase->{title};
+    my $err = $result->{err};
+    my $yaml = $testcase->{in_yaml};
+    my $exp_emit_yaml = $testcase->{emit_yaml};
+    my $emit_yaml = $result->{emit_yaml};
+    my $exp_events = $result->{expected_events};
+    my $reparse_events = $result->{reparse_events};
+
+    if ($err) {
+        $results->{ERROR}++;
+        push @{ $results->{ERRORS} }, $id;
+        ok(0, "$id - $title - ERROR");
+        return;
+    }
+    $_ = encode_utf8 $_ for (@$reparse_events, @$exp_events);
+    my $same_events = is_deeply($reparse_events, $exp_events, "$id - $title - Events from re-parsing are the same");
+    if ($same_events) {
+        $results->{SAME_EVENTS}++;
+        if (defined $emit_yaml) {
+            $_ = encode_utf8 $_ for ($emit_yaml, $exp_emit_yaml);
+            my $same_yaml = cmp_ok($emit_yaml, 'eq', $exp_emit_yaml, "$id - $title - Emit events");
+            if ($same_yaml) {
+                $results->{SAME_YAML}++;
+            }
+            else {
+                $results->{DIFF_YAML}++;
+            }
+        }
+    }
+    else {
+        $results->{DIFF_EVENTS}++;
+    }
+    if ($testcase->{todo}) {
+        $results->{TODO}++;
+    }
 }
 
 1;
