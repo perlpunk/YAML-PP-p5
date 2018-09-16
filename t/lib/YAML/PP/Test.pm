@@ -132,6 +132,14 @@ sub read_tests {
             $in_yaml = decode_utf8($yaml);
         }
 
+        my $out_yaml;
+        if ($self->{out_yaml} and -f "$dir/out.yaml") {
+            open my $fh, "<", "$dir/out.yaml" or die $!;
+            my $yaml = do { local $/; <$fh> };
+            close $fh;
+            $out_yaml = decode_utf8($yaml);
+        }
+
         my $in_json;
         if ($self->{in_json}) {
             unless (-f "$dir/in.json") {
@@ -150,6 +158,7 @@ sub read_tests {
             title => $title,
             test_events => \@test_events,
             in_yaml => $in_yaml,
+            out_yaml => $out_yaml,
             in_json => $in_json,
         };
         push @testcases, $test;
@@ -374,6 +383,86 @@ sub compare_load_json {
             diag "GOT JSON:\n" . $json;
         }
     }
+}
+
+sub dump_yaml {
+    my ($self, $testcase) = @_;
+    my $id = $testcase->{id};
+
+    my $ypp = YAML::PP->new( boolean => 'JSON::PP' );
+    my @docs = eval { $ypp->load_string($testcase->{in_yaml}) };
+    my $err = $@;
+    my $result = {};
+    if ($err) {
+        diag "ERROR loading $id";
+        $result->{err} = $err;
+        return $result;
+    }
+
+    my $out_yaml;
+    eval {
+        $out_yaml = $ypp->dump_string(@docs);
+    };
+    $err = $@;
+    if ($err) {
+        diag "ERROR dumping $id";
+        $result->{err} = $err;
+        return $result;
+    }
+    $result->{dump_yaml} = $out_yaml;
+
+    my @reload = eval { $ypp->load_string($out_yaml) };
+    $err = $@;
+    if ($err) {
+        diag "ERROR reloading $id";
+        $result->{err} = $err;
+        return $result;
+    }
+    $result->{data} = \@docs;
+    $result->{data_reload} = \@reload;
+
+    return $result;
+}
+
+sub compare_dump_yaml {
+    my ($self, $testcase, $result) = @_;
+    my $results = $self->{stats};
+    my $id = $testcase->{id};
+    my $title = $testcase->{title};
+    my $err = $result->{err};
+    my $yaml = $testcase->{in_yaml};
+    my $out_yaml = $testcase->{out_yaml};
+    my $docs = $result->{data};
+    my $reload_docs = $result->{data_reload};
+    my $dump_yaml = $result->{dump_yaml};
+
+    my $ok = 0;
+    if ($err) {
+        $results->{ERROR}++;
+        push @{ $results->{ERRORS} }, $id;
+        ok(0, "$id - $title - ERROR");
+    }
+    else {
+        $ok = is_deeply($reload_docs, $docs, "$id - $title - Reload data equals original");
+        push @{ $results->{DIFFS} }, $id unless $ok;
+    }
+
+    if ($ok) {
+        $results->{OK}++;
+    }
+    else {
+        if ($testcase->{todo}) {
+            $results->{TODO}++;
+        }
+        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$docs], ['docs']);
+        if (not $testcase->{todo} or $ENV{YAML_PP_TRACE}) {
+            diag "YAML:\n$out_yaml" unless $testcase->{todo};
+            diag "OUT YAML:\n$out_yaml" unless $testcase->{todo};
+            my $reload_dump = Data::Dumper->Dump([$reload_docs], ['reload_docs']);
+            diag "RELOAD DATA:\n$reload_dump" unless $testcase->{todo};
+        }
+    }
+
 }
 
 1;
