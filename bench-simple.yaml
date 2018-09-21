@@ -1,0 +1,65 @@
+# This file is kept simple so perl YAML.pm and YAML::Tiny are able to parse it
+- 123456789
+- 234567891
+- 345678912
+- 456789123
+- 567891234
+- 678912345
+- 789123456
+- 891234567
+- 912345678
+- abcd efgh ijkl mnop qrst uvwx yz
+- "efgh ijkl mnop qrst uvwx yz abcd"
+- "ijkl mnop qrst uvwx yz abcd efgh"
+- 'mnop qrst uvwx yz abcd efgh ijkl'
+- qrst uvwx yz abcd efgh ijkl mnop
+- uvwx yz abcd efgh ijkl mnop qrst
+- yz abcd efgh ijkl mnop qrst uvwx
+-
+  "abc": "123"
+  "bcd": "234"
+  "cde": "345"
+  'def': '456'
+  'efg': '567'
+  'fgh': '678'
+  ghi: 789
+  ihj: 890
+  hjk: 901
+  jkl:  12
+  klm: 123
+  lmn: 234
+  mno: 345
+  opq: 567
+  pqr: 678
+  literal: |
+    This is a literal block scalar
+    This is a literal block scalar
+  folded: >
+    This is a folded block scalar
+    This is a folded block scalar
+- a
+-
+  -
+    -
+      -
+        -
+          - b
+  - c
+-
+    a: 1
+    b:
+        -
+            c: 2
+            d: 3
+- "abcd efgh ijkl mnop qrst uvwx yz"
+- 1a:
+    2a:
+      3a:
+        4a:
+          5a:
+            6a: end
+          5b: end
+        4b: end
+      3b: end
+    2b: end
+  1b: end
