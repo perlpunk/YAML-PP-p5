@@ -23,13 +23,6 @@ $ENV{YAML_PP_RESERVED_DIRECTIVE} = 'ignore';
 $|++;
 
 my $yts = "$Bin/../yaml-test-suite";
-my @dirs = YAML::PP::Test->get_tests(
-    valid => 1,
-    test_suite_dir => "$yts",
-    dir => "$Bin/valid",
-);
-
-@dirs = sort @dirs;
 
 # skip tests that parser can't parse
 my @skip = qw/
@@ -43,141 +36,33 @@ my @skip = qw/
     6BFJ
 /;
 
-# dumper
-# alias
-#push @skip, qw/ v015 /;
+my $testsuite = YAML::PP::Test->new(
+    test_suite_dir => "$yts",
+    dir => "$Bin/valid",
+    valid => 1,
+    in_yaml => 1,
+    out_yaml => 1,
+);
 
-push @skip, qw/
-/;
+my ($testcases) = $testsuite->read_tests(
+    skip => \@skip,
+);
 
-my $skipped = \@skip;
-
-my @todo = ();
-
-# test all
-if ($ENV{TEST_ALL}) {
-    @todo = @$skipped;
-    @$skipped = ();
-}
-
-if (my $dir = $ENV{YAML_TEST_DIR}) {
-    @dirs = ($dir);
-    @todo = ();
-    @$skipped = ();
-}
-my %skip;
-@skip{ @$skipped } = ();
-my %todo;
-@todo{ @todo } = ();
-
-#plan tests => scalar @dirs;
-
-my %results;
-my %errors;
-@results{qw/ DIFF OK ERROR TODO /} = ([], (0) x 3);
-for my $item (@dirs) {
-    my $dir = dirname $item;
-    my $id = basename $item;
-    my $skip = exists $skip{ $id };
-    my $todo = exists $todo{ $id };
-    next if $skip;
-
-    open my $fh, "<", "$dir/$id/in.yaml" or die $!;
-    my $yaml = do { local $/; <$fh> };
-    close $fh;
-    $yaml = decode_utf8 $yaml;
-    open $fh, "<", "$dir/$id/===" or die $!;
-    chomp(my $title = <$fh>);
-    close $fh;
-
-    my $out_yaml_file = "$dir/$id/out.yaml";
-    $out_yaml_file = "$dir/$id/in.yaml" unless -f $out_yaml_file;
-    open $fh, "<", $out_yaml_file or die $!;
-    local $/;
-    my $out_yaml = <$fh>;
-    close $fh;
-
-    if ($skip) {
-        SKIP: {
-            skip "SKIP $id", 1 if $skip;
-            test($title, $id, $yaml, $out_yaml);
-        }
-    }
-    elsif ($todo) {
-        TODO: {
-            local $TODO = $todo;
-            test($title, $id, $yaml, $out_yaml);
-        }
-    }
-    else {
-        test($title, $id, $yaml, $out_yaml);
-    }
-
-}
-my $skip_count = @$skipped;
-diag "Skipped $skip_count tests";
+$testsuite->run_testcases(
+    code => \&test,
+);
 
 sub test {
-    my ($title, $name, $yaml, $exp_out_yaml) = @_;
-#    warn __PACKAGE__.':'.__LINE__.": ================================ $name\n";
-    my $ok = 0;
-    my $ypp = YAML::PP->new( boolean => 'JSON::PP' );
-    my @docs = eval { $ypp->load_string($yaml) };
-    my $error = $@;
-    my $out_yaml;
-    unless ($error) {
-        eval {
-            $out_yaml = $ypp->dump_string(@docs);
-        };
-    }
-    if ($@) {
-        # should not happen though because we skip tests that cannot be parsed
-        diag "ERROR: $@";
-        $results{ERROR}++;
-        my $error_type = 'unknown';
-        push @{ $errors{ $error_type } }, $name;
-        $error = 1;
-    }
+    my ($testsuite, $testcase) = @_;
 
-    my $reload_error;
-    my @reload;
-    if ($error) {
-        ok(0, "$name - $title ERROR");
-    }
-    else {
-        @reload = eval { $ypp->load_string($out_yaml) };
-        $reload_error = $@;
-        if ($reload_error) {
-            diag "RELOAD ERROR: $reload_error";
-            $ok = 0;
-            ok(0, "Reload $name - $title");
-        }
-        else {
-            $ok = is_deeply(\@reload, \@docs, "Reload - $name - $title");
-        }
-    }
-    if ($ok) {
-        $results{OK}++;
-    }
-    else {
-        push @{ $results{DIFF} }, $name unless $error;
-        if ($TODO) {
-            $results{TODO}++;
-        }
-        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@docs], ['docs']);
-        if (not $TODO or $ENV{YAML_PP_TRACE}) {
-            diag "YAML:\n$exp_out_yaml" unless $TODO;
-            diag "OUT YAML:\n$out_yaml" unless $TODO;
-            my $reload_dump = Data::Dumper->Dump([\@reload], ['reload']);
-            diag "RELOAD DATA:\n$reload_dump" unless $TODO;
-        }
-    }
-}
-my $diff_count = @{ $results{DIFF} };
-diag "OK: $results{OK} DIFF: $diff_count ERROR: $results{ERROR} TODO: $results{TODO}";
-diag "DIFF: (@{ $results{DIFF} })";
-for my $type (sort keys %errors) {
-    diag "ERRORS($type): (@{ $errors{ $type } })";
+    my $result = $testsuite->dump_yaml($testcase);
+    $testsuite->compare_dump_yaml($testcase, $result);
 }
 
 done_testing;
+
+$testsuite->print_stats(
+    count => [qw/ OK DIFF ERROR TODO SKIP /],
+    ids => [qw/ ERROR DIFF /],
+);
+

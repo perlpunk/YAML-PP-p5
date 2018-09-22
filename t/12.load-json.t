@@ -9,118 +9,66 @@ use Data::Dumper;
 use YAML::PP::Test;
 use YAML::PP;
 use Encode;
-use File::Basename qw/ dirname basename /;
 
 $ENV{YAML_PP_RESERVED_DIRECTIVE} = 'ignore';
 
-my $json_xs = eval "use JSON::PP; 1";
+my $json_pp = eval "use JSON::PP; 1";
+unless ($json_pp) {
+    plan skip_all => "JSON::PP not installed";
+    exit;
+}
 
 my $yts = "$Bin/../yaml-test-suite";
-my @dirs = YAML::PP::Test->get_tests(
-    valid => 1,
-    test_suite_dir => "$yts",
-    dir => "$Bin/valid",
-    json => 1,
-);
 
 
 $|++;
 
 my @skip = qw/
-    4ABK
     87E4
     8CWC
     8UDB
     C2DT
     CN3R
     CT4Q
-    DFF7
-    FRK4
     L9U5
     LQZ7
     QF4Y
 
-    Q5MG
-
-/;
-
-# skip multidoc for now
-push @skip, qw/
-
-    35KP
-    6ZKB
-    7Z25
-    8G76
-    98YD
-    9DXL
-    9KAX
-    AVM7
-    JHB9
-    KSS4
-    M7A3
-    PUW8
-    RZT7
-    U9NS
     UT92
-    W4TN
     WZ62
 
 /;
-my %skip;
-@skip{ @skip }= ();
-@dirs = grep { not exists $skip{ basename $_ } } @dirs;
 
-unless (@dirs) {
-    ok(1);
-    done_testing;
-    exit;
-}
+my $testsuite = YAML::PP::Test->new(
+    test_suite_dir => "$yts",
+    dir => "$Bin/valid",
+    valid => 1,
+    in_json => 1,
+    in_yaml => 1,
+);
 
-@dirs = sort @dirs;
+my ($testcases) = $testsuite->read_tests(
+    skip => \@skip,
+);
 
-if (my $dir = $ENV{YAML_TEST_DIR}) {
-    @dirs = ($dir);
-}
+$testsuite->run_testcases(
+    code => \&test,
+);
 
-SKIP: {
-    skip "JSON::PP not installed", scalar(@dirs) unless $json_xs;
-    my $coder = JSON::PP->new->ascii->pretty->allow_nonref->canonical;
+$testsuite->print_stats(
+    count => [qw/ OK DIFF ERROR TODO SKIP /],
+    ids => [qw/ ERROR DIFF /],
+);
 
-for my $item (@dirs) {
-    my $dir = dirname $item;
-    my $id = basename $item;
-
-    open my $fh, "<", "$dir/$id/in.yaml" or die $!;
-    my $yaml = do { local $/; <$fh> };
-    close $fh;
-    $yaml = decode_utf8 $yaml;
-    open $fh, "<", "$dir/$id/===" or die $!;
-    chomp(my $title = <$fh>);
-    close $fh;
-
-    open $fh, "<", "$dir/$id/in.json" or die $!;
-    my $exp_json = do { local $/; <$fh> };
-    close $fh;
-    $exp_json = decode_utf8 $exp_json;
-
-#    diag "------------------------------ $id";
-    my $ypp = YAML::PP->new(boolean => 'JSON::PP');
-    my $data = eval { $ypp->load_string($yaml) };
-#    warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$data], ['data']);
-    if ($@) {
-        warn __PACKAGE__.':'.__LINE__.": ERROR: $@\n";
-        ok(0, "$id");
-        next;
-    }
-    my $exp_data = $coder->decode($exp_json);
-#    warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$data], ['data']);
-#    warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$exp_data], ['exp_data']);
-    $exp_json = $coder->encode($exp_data);
-
-    my $json = $coder->encode($data);
-
-    cmp_ok($json, 'eq', $exp_json, "$id");
-}
-}
+my $stats = $testsuite->{stats};
 
 done_testing;
+exit;
+
+sub test {
+    my ($testsuite, $testcase) = @_;
+
+    my $result = $testsuite->load_json($testcase);
+    $testsuite->compare_load_json($testcase, $result);
+}
+

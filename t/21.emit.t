@@ -11,20 +11,12 @@ use YAML::PP::Parser;
 use YAML::PP::Emitter;
 use YAML::PP::Writer;
 use Encode;
-use File::Basename qw/ dirname basename /;
 
 $ENV{YAML_PP_RESERVED_DIRECTIVE} = 'ignore';
 
 $|++;
 
 my $yts = "$Bin/../yaml-test-suite";
-my @dirs = YAML::PP::Test->get_tests(
-    valid => 1,
-    test_suite_dir => "$yts",
-    dir => "$Bin/valid",
-);
-
-@dirs = sort @dirs;
 
 # skip tests that parser can't parse
 my @skip = qw/
@@ -32,12 +24,10 @@ my @skip = qw/
     C2DT CN3R CT4Q DFF7
     FRK4
     KZN9 L9U5 LQZ7 LX3P
-    M7A3
     Q9WF QF4Y
     UT92 WZ62
 
     6BFJ
-    Q5MG
     F6MC
 
 /;
@@ -56,8 +46,6 @@ NAT4
 /;
 # tags
 push @skip, qw/
-5TYM
-6CK3
 v014
 /;
 # block scalar
@@ -74,212 +62,65 @@ XLQ9
 K54U
 PUW8
 3MYT
-565N
-6SLA
-6ZKB
-9DXL
 EXG3
-G4RS
 JDH8
 MJS9
 
 
-X38W
 /;
 # unicode
 push @skip, qw/
 H3Z8
 /;
 
-my $skipped = \@skip;
-
-my @todo = ();
+my $testsuite = YAML::PP::Test->new(
+    test_suite_dir => "$yts",
+    dir => "$Bin/valid",
+    valid => 1,
+    in_yaml => 1,
+    emit_yaml => 1,
+);
 
 my %skip_yaml_equal = (
     '4MUZ' => 1,
     '7ZZ5' => 1,
     'K858' => 1,
+    'X38W' => 1,
+    'Q5MG' => 1,
+    'G4RS' => 1,
+    '9DXL' => 1,
+    '6ZKB' => 1,
+    '6SLA' => 1,
+    '6CK3' => 1,
+    '5TYM' => 1,
+    '565N' => 1,
 );
-# test all
-if ($ENV{TEST_ALL}) {
-    @todo = @$skipped;
-    @$skipped = ();
-}
 
-if (my $dir = $ENV{YAML_TEST_DIR}) {
-    @dirs = ($dir);
-    @todo = ();
-    @$skipped = ();
-}
-my %skip;
-@skip{ @$skipped } = ();
-my %todo;
-@todo{ @todo } = ();
+my ($testcases) = $testsuite->read_tests(
+    skip => \@skip,
+);
 
-#plan tests => scalar @dirs;
+$testsuite->run_testcases(
+    code => \&test,
+);
 
-my %results;
-my %errors;
-@results{qw/ DIFF OK ERROR TODO /} = ([], (0) x 3);
-for my $item (@dirs) {
-    my $dir = dirname $item;
-    my $id = basename $item;
-    my $skip = exists $skip{ $id };
-    my $todo = exists $todo{ $id };
-    next if $skip;
-
-    open my $fh, "<", "$dir/$id/in.yaml" or die $!;
-    my $yaml = do { local $/; <$fh> };
-    close $fh;
-    $yaml = decode_utf8 $yaml;
-    open $fh, "<", "$dir/$id/===" or die $!;
-    chomp(my $title = <$fh>);
-    close $fh;
-    #diag "------------------------------ $id";
-
-    my $out_yaml_file = "$dir/$id/emit.yaml";
-    unless (-f $out_yaml_file) {
-        $out_yaml_file = "$dir/$id/out.yaml";
-    }
-    unless (-f $out_yaml_file) {
-        $out_yaml_file = "$dir/$id/in.yaml";
-    }
-    open $fh, "<", $out_yaml_file or die $!;
-    my $out_yaml = do { local $/; <$fh> };
-    close $fh;
-    $out_yaml = decode_utf8 $out_yaml;
-
-    open $fh, "<:encoding(UTF-8)", "$dir/$id/test.event" or die $!;
-    chomp(my @test_events = <$fh>);
-    close $fh;
-
-    if ($skip) {
-        SKIP: {
-            skip "SKIP $id", 1 if $skip;
-            test($title, $id, $yaml, $out_yaml);
-        }
-    }
-    elsif ($todo) {
-        TODO: {
-            local $TODO = $todo;
-            test($title, $id, $yaml, $out_yaml);
-        }
-    }
-    else {
-        test($title, $id, $yaml, $out_yaml, \@test_events);
-    }
-
-}
-my $skip_count = @$skipped;
-diag "Skipped $skip_count tests";
+$testsuite->print_stats(
+    count => [qw/ SAME_EVENTS SAME_YAML DIFF_EVENTS DIFF_YAML ERROR TODO SKIP /],
+    ids => [qw/ DIFF_YAML DIFF_EVENTS /],
+);
 
 sub test {
-    my ($title, $name, $yaml, $exp_yaml, $test_events) = @_;
-#    warn __PACKAGE__.':'.__LINE__.": ================================ $name\n";
-    my $same_yaml = 0;
-    my $same_events = 0;
-    my $error = 0;
-    my @events;
-    my $writer = YAML::PP::Writer->new;
-    my $emitter = YAML::PP::Emitter->new();
-    $emitter->set_writer($writer);
-    my $parser = YAML::PP::Parser->new(
-        receiver => sub {
-            my ($self, @args) = @_;
-            push @events, [@args];
-        },
-    );
-    eval {
-        $parser->parse_string($yaml);
-    };
-    if ($@) {
-        diag "ERROR: $@";
-        $results{ERROR}++;
-        my $error_type = 'unknown';
-        push @{ $errors{ $error_type } }, $name;
-        $error = 1;
-    }
+    my ($testsuite, $testcase) = @_;
+    my $id = $testcase->{id};
 
-    my $out_yaml;
-    if ($error) {
-        ok(0, "$name - $title Parse ERROR");
+    my $result = $testsuite->emit_yaml($testcase);
+    if ($skip_yaml_equal{ $id }) {
+        delete $result->{emit_yaml};
     }
-    else {
-        $out_yaml = emit_events($emitter, \@events);
-        my @reparse_events;
-        my @expected_reparse_events;
-        my @ev;
-        my $parser = YAML::PP::Parser->new(
-            receiver => sub {
-                my ($self, @args) = @_;
-                my ($type, $info) = @args;
-                if ($type eq 'sequence_start_event' or $type eq 'mapping_start_event') {
-                    delete $info->{style};
-                }
-                push @ev, YAML::PP::Parser->event_to_test_suite(\@args);
-            },
-        );
-        eval {
-            $parser->parse($out_yaml);
-        };
-        @reparse_events = @ev;
-        @ev = ();
-        eval {
-            $parser->parse($exp_yaml);
-        };
-        @expected_reparse_events = @ev;
-        $same_events = is_deeply(\@reparse_events, \@expected_reparse_events, "$name - $title - Events from re-parsing are the same");
-        unless ($skip_yaml_equal{ $name }) {
-            $same_yaml = cmp_ok($out_yaml, 'eq', $exp_yaml, "$name - $title - Emit events");
-        }
-        if ($same_events) {
-        }
-        else {
-#            diag(Data::Dumper->Dump([\@reparse_events], ['reparse_events']));
-        }
-    }
-    if ($same_events) {
-        $results{SAME_EVENTS}++;
-    }
-    else {
-        push @{ $results{EVENT_DIFF} }, $name unless $error;
-    }
-    if ($same_yaml) {
-        $results{SAME_YAML}++;
-    }
-    else {
-        push @{ $results{YAML_DIFF} }, $name unless $error;
-        if ($TODO) {
-            $results{TODO}++;
-        }
-        if (not $TODO or $ENV{YAML_PP_TRACE}) {
-#            diag "YAML:\n$yaml" unless $TODO;
-#            diag "EVENTS:\n" . join '', map { "$_\n" } @$test_events;
-#            diag "GOT EVENTS:\n" . join '', map { "$_\n" } @events;
-        }
-    }
-}
-my $diff_count = @{ $results{YAML_DIFF} || [] };
-diag "OK: $results{OK} YAML_DIFF: $diff_count ERROR: $results{ERROR} TODO: $results{TODO}";
-diag "YAML_DIFF: (@{ $results{YAML_DIFF} || [] })";
-diag "EVENT_DIFF: (@{ $results{EVENT_DIFF} || [] })";
-for my $type (sort keys %errors) {
-    diag "ERRORS($type): (@{ $errors{ $type } })";
+    $testsuite->compare_emit_yaml($testcase, $result);
 }
 
-sub emit_events {
-    my ($emitter, $events) = @_;
-    $emitter->init;
-    for my $event (@$events) {
-        my ($type, $info) = @$event;
-#warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$type], ['type']);
-        if ($type eq 'sequence_start_event' or $type eq 'mapping_start_event') {
-            delete $info->{style};
-        }
-        $emitter->$type($info);
-    }
-    my $yaml = $emitter->writer->output;
-    return $yaml;
-}
 
 done_testing;
+exit;
+
