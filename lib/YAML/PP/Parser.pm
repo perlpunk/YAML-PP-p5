@@ -71,6 +71,7 @@ sub set_event_stack { $_[0]->{event_stack} = $_[1] }
 sub rule { return $_[0]->{rule} }
 sub set_rule {
     my ($self, $name) = @_;
+    no warnings 'uninitialized';
     DEBUG and $self->info("set_rule($name)");
     $self->{rule} = $name;
 }
@@ -893,20 +894,23 @@ sub debug_next_line {
 
 sub note {
     my ($self, $msg) = @_;
-    require Term::ANSIColor;
-    warn Term::ANSIColor::colored(["yellow"], "============ $msg"), "\n";
+    $self->_colorize_warn(["yellow"], "============ $msg");
 }
 
 sub info {
     my ($self, $msg) = @_;
-    require Term::ANSIColor;
-    warn Term::ANSIColor::colored(["cyan"], "============ $msg"), "\n";
+    $self->_colorize_warn(["cyan"], "============ $msg");
 }
 
 sub got {
     my ($self, $msg) = @_;
+    $self->_colorize_warn(["green"], "============ $msg");
+}
+
+sub _colorize_warn {
+    my ($self, $colors, $text) = @_;
     require Term::ANSIColor;
-    warn Term::ANSIColor::colored(["green"], "============ $msg"), "\n";
+    warn Term::ANSIColor::colored($colors, $text), "\n";
 }
 
 sub debug_event {
