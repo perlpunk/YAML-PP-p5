@@ -46,10 +46,9 @@ sub set_receiver {
     $self->{callback} = $callback;
     $self->{receiver} = $receiver;
 }
-sub reader { return $_[0]->{reader} }
+sub reader { return $_[0]->lexer->{reader} }
 sub set_reader {
     my ($self, $reader) = @_;
-    $self->{reader} = $reader;
     $self->lexer->set_reader($reader);
 }
 sub lexer { return $_[0]->{lexer} }

@@ -4,7 +4,41 @@ package YAML::PP::Highlight;
 
 our $VERSION = '0.000'; # VERSION
 
+use YAML::PP;
+use YAML::PP::Parser;
 use Encode;
+
+sub Dump {
+    my (@docs) = @_;
+    my $yp = YAML::PP->new;
+    my $yaml = $yp->dump_string(@docs);
+
+    my ($error, $tokens) = YAML::PP::Highlight->parse_tokens(string => $yaml);
+    my $highlighted = YAML::PP::Highlight->ansicolored($tokens);
+    encode_utf8 $highlighted;
+}
+
+sub parse_tokens {
+    my ($class, $type, $input) = @_;
+    my $yp = YAML::PP::Parser->new( receiver => sub {} );
+    my @docs = eval {
+        $type eq 'string' ? $yp->parse_string($input) : $yp->parse_file($input);
+    };
+    my $error = $@;
+
+    my $tokens = $yp->tokens;
+    my $next = $yp->lexer->next_tokens;
+    if ($error) {
+        push @$tokens, map { +{ %$_, name => 'ERROR' } } @$next;
+        my $remaining = $yp->reader->read;
+        $remaining = '' unless defined $remaining;
+        push @$tokens, { name => "ERROR", value => $remaining };
+    }
+    else {
+        push @$tokens, @$next;
+    }
+    return $error, $tokens;
+}
 
 my %ansicolors = (
     ANCHOR => [qw/ green /],
@@ -143,4 +177,59 @@ sub transform {
     }
     return @list;
 }
+
 1;
+
+__END__
+
+=pod
+
+=encoding utf-8
+
+=head1 NAME
+
+YAML::PP::Highlight - Syntax highlighting utilities
+
+=head1 SYNOPSIS
+
+
+    use YAML::PP::Highlight qw/ Dump /;
+
+    my $highlighted = Dump $data;
+
+    my ($error, $tokens) = YAML::PP::Highlight->parse_tokens(string => $yaml);
+    my ($error, $tokens) = YAML::PP::Highlight->parse_tokens(file => $file);
+
+=head1 METHODS
+
+=over
+
+=item parse_tokens
+
+    my ($error, $tokens) = YAML::PP::Highlight->parse_tokens(string => $yaml);
+
+It will return the error, if the YAML was invalid. The second return value
+is the list of tokens.
+
+Note that the tokens are very likely to be changed in the future, so don't rely
+on them.
+
+=back
+
+=head1 FUNCTIONS
+
+=over
+
+=item Dump
+
+=back
+
+    use YAML::PP::Highlight qw/ Dump /;
+
+    my $highlighted = Dump $data;
+    my $highlighted = Dump @docs;
+
+It will dump the given data, and then parse it again to create tokens, which
+are then highlighted with ansi colors.
+
+The return value is ansi colored YAML.

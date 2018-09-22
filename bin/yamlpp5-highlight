@@ -2,8 +2,6 @@
 use strict;
 use warnings;
 
-use Data::Dumper;
-use YAML::PP;
 use YAML::PP::Highlight;
 use Encode;
 
@@ -15,21 +13,13 @@ unless ($file) {
     $yaml = decode_utf8($yaml);
 }
 
-my $ypp = YAML::PP->new;
-my @docs = eval {
-    $file ? $ypp->load_file($file) : $ypp->load_string($yaml);
-};
-my $error = $@;
-my $tokens = $ypp->loader->parser->tokens;
-my $next = $ypp->loader->parser->lexer->next_tokens;
-if ($error) {
-    push @$tokens, map { +{ %$_, name => 'ERROR' } } @$next;
-    my $remaining = $ypp->loader->parser->lexer->reader->read;
-    $remaining = '' unless defined $remaining;
-    push @$tokens, { name => "ERROR", value => $remaining };
+my $error;
+my $tokens;
+if (defined $file) {
+    ($error, $tokens) = YAML::PP::Highlight->parse_tokens( file => $file );
 }
 else {
-    push @$tokens, @$next;
+    ($error, $tokens) = YAML::PP::Highlight->parse_tokens( string => $yaml );
 }
 my $highlighted = YAML::PP::Highlight->ansicolored($tokens);
 print encode_utf8 $highlighted;
