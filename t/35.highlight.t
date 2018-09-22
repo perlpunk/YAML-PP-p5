@@ -37,6 +37,14 @@ cmp_ok($error, '=~', qr{Invalid}, "parse_tokens returned an error");
 );
 is_deeply(\@tokens, \@expected_tokens, "parse_tokens returned correct error tokens");
 
+$yaml = <<'EOM';
+foo: |
+  bar  
+EOM
+($error, $tokens) = YAML::PP::Highlight->parse_tokens(string => $yaml);
+my @transformed = YAML::PP::Highlight->transform($tokens);
+cmp_ok($transformed[-2]->{name}, 'eq', 'TRAILING_SPACE', "trailing spaces detected");
+
 my $color = eval "use Term::ANSIColor 4.02; 1";
 # older versions of Term::ANSIColor didn't have grey12
 if ($color) {
