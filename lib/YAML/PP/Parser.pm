@@ -779,6 +779,28 @@ sub alias_event {
     $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
 
+sub yaml_to_tokens {
+    my ($class, $type, $input) = @_;
+    my $yp = YAML::PP::Parser->new( receiver => sub {} );
+    my @docs = eval {
+        $type eq 'string' ? $yp->parse_string($input) : $yp->parse_file($input);
+    };
+    my $error = $@;
+
+    my $tokens = $yp->tokens;
+    my $next = $yp->lexer->next_tokens;
+    if ($error) {
+        push @$tokens, map { +{ %$_, name => 'ERROR' } } @$next;
+        my $remaining = $yp->reader->read;
+        $remaining = '' unless defined $remaining;
+        push @$tokens, { name => "ERROR", value => $remaining };
+    }
+    else {
+        push @$tokens, @$next;
+    }
+    return $error, $tokens;
+}
+
 sub event_to_test_suite {
     my ($self, $event) = @_;
     if (ref $event) {

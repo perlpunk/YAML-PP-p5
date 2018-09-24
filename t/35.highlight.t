@@ -5,7 +5,7 @@ use Test::More;
 use YAML::PP::Highlight;
 
 my $yaml = "foo: bar\n";
-my ($error, $tokens) = YAML::PP::Highlight->parse_tokens(string => $yaml);
+my ($error, $tokens) = YAML::PP::Parser->yaml_to_tokens(string => $yaml);
 
 my @tokens = map { +{ value => $_->{value}, name => $_->{name} } } @$tokens;
 
@@ -17,14 +17,14 @@ my @expected_tokens = (
     { name => "EOL", value => "\n" },
 );
 
-is($error, '', "parse_tokens suceeded");
-is_deeply(\@tokens, \@expected_tokens, "parse_tokens returned correct tokens");
+is($error, '', "yaml_to_tokens suceeded");
+is_deeply(\@tokens, \@expected_tokens, "yaml_to_tokens returned correct tokens");
 
 
 $yaml = "foo: \@bar\n";
-($error, $tokens) = YAML::PP::Highlight->parse_tokens(string => $yaml);
+($error, $tokens) = YAML::PP::Parser->yaml_to_tokens(string => $yaml);
 
-cmp_ok($error, '=~', qr{Invalid}, "parse_tokens returned an error");
+cmp_ok($error, '=~', qr{Invalid}, "yaml_to_tokens returned an error");
 
 @tokens = map { +{ value => $_->{value}, name => $_->{name} } } @$tokens;
 
@@ -35,13 +35,13 @@ cmp_ok($error, '=~', qr{Invalid}, "parse_tokens returned an error");
     { name => "ERROR", value => "\@bar\n" },
     { name => "ERROR", value => "" },
 );
-is_deeply(\@tokens, \@expected_tokens, "parse_tokens returned correct error tokens");
+is_deeply(\@tokens, \@expected_tokens, "yaml_to_tokens returned correct error tokens");
 
 $yaml = <<'EOM';
 foo: |
   bar  
 EOM
-($error, $tokens) = YAML::PP::Highlight->parse_tokens(string => $yaml);
+($error, $tokens) = YAML::PP::Parser->yaml_to_tokens(string => $yaml);
 my @transformed = YAML::PP::Highlight->transform($tokens);
 cmp_ok($transformed[-2]->{name}, 'eq', 'TRAILING_SPACE', "trailing spaces detected");
 
