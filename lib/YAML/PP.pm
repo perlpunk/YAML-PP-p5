@@ -86,6 +86,7 @@ sub load_file {
         require YAML::PP::Loader;
         $loader = YAML::PP::Loader->new(
             schema => $self->schema,
+            parser => $self->parser,
         );
         $self->loader($loader);
     }
