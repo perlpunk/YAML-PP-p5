@@ -42,16 +42,18 @@ sub readline {
 
 package YAML::PP::Reader::File;
 
+use Scalar::Util qw/ openhandle /;
+
 our @ISA = qw/ YAML::PP::Reader /;
 
 use Carp qw/ croak /;
 
 sub open_handle {
-    my $fh;
-    unless ($fh) {
-        open $fh, '<:encoding(UTF-8)', $_[0]->{input}
-            or croak "Could not open '$_[0]->{input}' for reading: $!";
+    if (openhandle( $_[0]->{input} )) {
+        return $_[0]->{input};
     }
+    open my $fh, '<:encoding(UTF-8)', $_[0]->{input}
+        or croak "Could not open '$_[0]->{input}' for reading: $!";
     return $fh;
 }
 

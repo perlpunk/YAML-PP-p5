@@ -14,8 +14,13 @@ my $data = { a => 1 };
 
 my $data_from_string = YAML::PP->new->load_string($yaml);
 my $data_from_file = YAML::PP->new->load_file($file);
+open my $fh, '<', $file or die $!;
+my $data_from_filehandle = YAML::PP->new->load_file($fh);
+close $fh;
+
 is_deeply($data_from_string, $data, "load_string data ok");
 is_deeply($data_from_file, $data, "load_file data ok");
+is_deeply($data_from_filehandle, $data, "load_file(filehandle) data ok");
 $data_from_file = YAML::PP::LoadFile($file);
 is_deeply($data_from_file, $data, "LoadFile data ok");
 
