@@ -29,6 +29,7 @@ my %WriteMakefileArgs = (
     "Data::Dumper" => 0,
     "Encode" => 0,
     "Exporter" => 0,
+    "Scalar::Util" => "1.07",
     "base" => 0,
     "constant" => 0,
     "overload" => 0,
@@ -46,7 +47,7 @@ my %WriteMakefileArgs = (
     "blib" => "1.01",
     "lib" => 0
   },
-  "VERSION" => "0.008",
+  "VERSION" => "0.008_001",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -64,6 +65,7 @@ my %FallbackPrereqs = (
   "FindBin" => 0,
   "IO::Handle" => 0,
   "IPC::Open3" => 0,
+  "Scalar::Util" => "1.07",
   "Test::More" => "0.98",
   "Test::Warn" => 0,
   "base" => 0,
