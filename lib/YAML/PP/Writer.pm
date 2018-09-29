@@ -29,16 +29,18 @@ sub finish {
 
 package YAML::PP::Writer::File;
 
+use Scalar::Util qw/ openhandle /;
+
 our @ISA = qw/ YAML::PP::Writer /;
 
 use Carp qw/ croak /;
 
 sub open_handle {
-    my $fh;
-    unless ($fh) {
-        open $fh, '>:encoding(UTF-8)', $_[0]->{output}
-            or croak "Could not open '$_[0]->{output}' for writing: $!";
+    if (openhandle($_[0]->{output})) {
+        return $_[0]->{output};
     }
+    open my $fh, '>:encoding(UTF-8)', $_[0]->{output}
+        or croak "Could not open '$_[0]->{output}' for writing: $!";
     return $fh;
 }
 

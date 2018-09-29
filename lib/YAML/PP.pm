@@ -631,6 +631,7 @@ Here are a few examples of what you can do right now:
     my @documents = LoadFile($filehandle);
     my $yaml = = Dump(@documents);
     DumpFile($filename, @documents);
+    DumpFile($filenhandle @documents);
 
 
 Some utility scripts:
@@ -951,6 +952,7 @@ No function is exported by default.
     use YAML::PP qw/ DumpFile /;
     DumpFile($file, $doc);
     DumpFile($file, @docs);
+    DumpFile($filehandle, @docs);
 
 =back
 

@@ -32,6 +32,12 @@ YAML::PP::DumpFile($file_out, $data);
 $yaml2 = do { open my $fh, '<', $file_out or die $!; local $/; <$fh> };
 cmp_ok($yaml2, 'eq', $yaml, "DumpFile data correct");
 
+open my $fh_out, '>', $file_out or die $!;
+YAML::PP::DumpFile($fh_out, $data);
+close $fh_out;
+$yaml2 = do { open my $fh, '<', $file_out or die $!; local $/; <$fh> };
+cmp_ok($yaml2, 'eq', $yaml, "DumpFile(filehandle) data correct");
+
 done_testing;
 
 END {
