@@ -14,9 +14,11 @@ sub new {
         boolean => 'perl',
     );
 
+    my $emitter = delete $args{emitter} || YAML::PP::Emitter->new;
     my $self = bless {
         representer => YAML::PP::Representer->new(
             schema => $schema,
+            emitter => $emitter,
         ),
     }, $class;
     return $self;

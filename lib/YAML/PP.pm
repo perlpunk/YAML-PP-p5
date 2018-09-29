@@ -17,6 +17,7 @@ sub new {
     my $schemas = delete $args{schema} || ['Core'];
     my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
     my $parser = delete $args{parser};
+    my $emitter = delete $args{emitter};
 
     my $schema = YAML::PP::Schema->new(
         boolean => $bool,
@@ -28,6 +29,7 @@ sub new {
         schema => $schema,
         cyclic_refs => $cyclic_refs,
         parser => $parser,
+        emitter => $emitter,
     }, $class;
     return $self;
 }
@@ -35,6 +37,7 @@ sub new {
 sub boolean { return $_[0]->{boolean} }
 sub cyclic_refs { return $_[0]->{cyclic_refs} }
 sub parser { return $_[0]->{parser} }
+sub emitter { return $_[0]->{emitter} }
 
 sub loader {
     if (@_ > 1) {
@@ -86,6 +89,7 @@ sub load_file {
         require YAML::PP::Loader;
         $loader = YAML::PP::Loader->new(
             schema => $self->schema,
+            cyclic_refs => $self->cyclic_refs,
             parser => $self->parser,
         );
         $self->loader($loader);
@@ -98,8 +102,10 @@ sub dump_string {
     my $dumper = $self->dumper;
     unless ($dumper) {
         require YAML::PP::Dumper;
+
         $dumper = YAML::PP::Dumper->new(
             schema => $self->schema,
+            emitter => $self->emitter,
         );
         $self->dumper($dumper);
     }
@@ -113,6 +119,7 @@ sub dump_file {
         require YAML::PP::Dumper;
         $dumper = YAML::PP::Dumper->new(
             schema => $self->schema,
+            emitter => $self->emitter,
         );
         $self->dumper($dumper);
     }

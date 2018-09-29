@@ -10,13 +10,12 @@ use B;
 
 sub new {
     my ($class, %args) = @_;
+    my $emitter = delete $args{emitter} || YAML::PP::Emitter->new;
     my $self = bless {
         schema => $args{schema},
         refs => {},
         seen => {},
-        emitter => YAML::PP::Emitter->new(
-            indent => $args{indent} || 2,
-        ),
+        emitter => $emitter,
     }, $class;
     return $self;
 }
@@ -44,6 +43,7 @@ sub dump {
     my ($self, @docs) = @_;
     $self->emitter->set_writer($self->writer);
     $self->emitter->init;
+    $self->emitter->stream_start_event({});
     if (@docs) {
         $self->emitter->document_start_event({ implicit => 0 });
         for my $i (0 .. $#docs) {
@@ -56,6 +56,7 @@ sub dump {
         }
         $self->emitter->document_end_event({ implicit => 1 });
     }
+    $self->emitter->stream_end_event({});
     my $yaml = $self->writer->output;
     $self->emitter->finish;
     return $yaml;
