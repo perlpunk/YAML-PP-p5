@@ -22,6 +22,10 @@ sub write {
     $self->{output} .= $line;
 }
 
+sub init {
+    $_[0]->{output} = '';
+}
+
 sub finish {
     my ($self) = @_;
     $self->{output} = undef;
@@ -48,6 +52,11 @@ sub write {
     my ($self, $line) = @_;
     my $fh = $self->{filehandle} ||= $self->open_handle;
     print $fh $line;
+}
+
+sub init {
+    my ($self) = @_;
+    my $fh = $self->{filehandle} ||= $self->open_handle;
 }
 
 sub finish {
