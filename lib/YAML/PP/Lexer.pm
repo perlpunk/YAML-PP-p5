@@ -35,6 +35,8 @@ sub set_reader { $_[0]->{reader} = $_[1] }
 sub next_tokens { return $_[0]->{next_tokens} }
 sub line { return $_[0]->{line} }
 sub set_line { $_[0]->{line} = $_[1] }
+sub offset { return $_[0]->{offset} }
+sub set_offset { $_[0]->{offset} = $_[1] }
 sub inc_line { return $_[0]->{line}++ }
 sub context { return $_[0]->{context} }
 sub set_context { $_[0]->{context} = $_[1] }
@@ -144,7 +146,7 @@ my %REGEXES = (
 );
 
 sub _fetch_next_tokens_block_scalar_start {
-    my ($self, $column, $indent, $next_line) = @_;
+    my ($self, $indent, $next_line) = @_;
     my ($spaces, $content) = @$next_line;
     if (not length $content) {
         return $self->push_tokens( [ INDENT => $spaces, EOL => '' ] );
@@ -157,7 +159,7 @@ sub _fetch_next_tokens_block_scalar_start {
 }
 
 sub _fetch_next_tokens_block_scalar {
-    my ($self, $column, $indent, $next_line) = @_;
+    my ($self, $indent, $next_line) = @_;
     my ($spaces, $content) = @$next_line;
     if ((length $spaces) > $indent) {
         ($spaces, my $more_spaces) = unpack "a${indent}a*", $spaces;
@@ -175,7 +177,7 @@ sub _fetch_next_tokens_block_scalar {
 }
 
 sub _fetch_next_tokens_plain {
-    my ($self, $column, $indent, $next_line) = @_;
+    my ($self, $indent, $next_line) = @_;
     my ($spaces, $content) = @$next_line;
     my $ws = '';
     if ($content =~ s/\A($RE_WS+)//) {
@@ -220,7 +222,7 @@ sub _fetch_next_tokens_plain {
             $next_line->[0] = '';
             $next_line->[1] = $content;
             $self->push_tokens( \@tokens );
-            $self->_fetch_next_tokens(1, $indent, $next_line);
+            $self->_fetch_next_tokens($indent, $next_line);
             return;
         }
         push @tokens, EOL => $ws;
@@ -231,7 +233,7 @@ sub _fetch_next_tokens_plain {
             $next_line->[0] = '';
             $next_line->[1] = $content;
             $self->push_tokens( \@tokens );
-            $self->_fetch_next_tokens(1, $indent, $next_line);
+            $self->_fetch_next_tokens($indent, $next_line);
             return;
         }
         push @tokens, ERROR => $content;
@@ -271,7 +273,6 @@ sub fetch_next_tokens {
     return $next if @$next;
 
     my $next_line = $self->fetch_next_line;
-    my $offset = 0;
     my $status = '';
     my @tokens;
     if (not $next_line) {
@@ -285,7 +286,6 @@ sub fetch_next_tokens {
             @tokens = [ $token_name => $t ];
             $status = 'END';
             $next_line->[1] = $content;
-            $offset = 3;
         }
         elsif ((length $spaces) < $indent) {
             if (not length $content) {
@@ -320,7 +320,7 @@ sub fetch_next_tokens {
     $self->push_tokens( @tokens ) if @tokens;
     my $method = $fetch_methods{ $self->context };
     TRACE and warn __PACKAGE__.':'.__LINE__.": fetch next tokens: $method\n";
-    $self->$method($offset, $indent, $next_line);
+    $self->$method($indent, $next_line);
 
     if (@$next) {
         $next->[-1]->{value} .= $next_line->[2];
@@ -353,7 +353,8 @@ my %QUOTED =              ( '"' => 1, "'" => 1 );
 my %FLOW =                ( '{' => 1, '[' => 1, '}' => 1, ']' => 1 );
 
 sub _fetch_next_tokens {
-    my ($self, $offset, $indent, $next_line) = @_;
+    my ($self, $indent, $next_line) = @_;
+    my $offset = $self->offset || 0;
     my $flowcontext = $self->flowcontext;
     my $next = $self->next_tokens;
     #warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_line], ['next_line']);
@@ -544,7 +545,7 @@ sub _fetch_next_tokens {
 }
 
 sub _fetch_next_tokens_quoted {
-    my ($self, $offset, $indent, $next_line) = @_;
+    my ($self, $indent, $next_line) = @_;
     my $context = $self->context;
 
     my $spaces = $next_line->[0];
@@ -577,7 +578,7 @@ sub _fetch_next_tokens_quoted {
         $context = 'normal';
         $self->set_context('normal');
         $next_line->[0] = '';
-        $self->_fetch_next_tokens(1, $indent, $next_line);
+        $self->_fetch_next_tokens($indent, $next_line);
     }
     elsif ($$yaml eq '') {
         $token_name2 = $token_name . 'D_LINE';
@@ -662,16 +663,7 @@ sub push_tokens {
     my $next = $self->next_tokens;
     my $line = $self->line;
 
-    my $column = 0;
-
-    if (@$next) {
-        my $previous = $next->[-1];
-        if ($previous->{name} ne 'EOL') {
-            my $C = $previous->{column} + length( $previous->{value} );
-            # TODO
-#            $column = $C;
-        }
-    }
+    my $column = $self->offset || 0;
 
     for (my $i = 0; $i < @$new_tokens; $i += 2) {
         my $value = $new_tokens->[ $i + 1 ];
@@ -699,6 +691,10 @@ sub push_tokens {
         }
         push @$next, $push;
     }
+    if ($next->[-1]->{name} eq 'EOL') {
+        $column = 0;
+    }
+    $self->set_offset($column);
     return $next;
 }
 
