@@ -268,61 +268,62 @@ my %fetch_methods = (
 sub fetch_next_tokens {
     my ($self, $indent) = @_;
     my $next = $self->next_tokens;
-    unless (@$next) {
-        my $next_line = $self->fetch_next_line;
-        unless ($next_line) {
-            if ($self->context ne 'normal') {
-                $self->push_tokens( [ END => '' ] );
-                $self->set_context('normal');
-            }
-            return $next;
-        }
+    return $next if @$next;
 
+    my $next_line = $self->fetch_next_line;
+    my $offset = 0;
+    my $status = '';
+    my @tokens;
+    if (not $next_line) {
+        $status = 'END_STREAM';
+    }
+    else {
         my ($spaces, $content) = @$next_line;
-        if (not $spaces) {
-            if ($content =~ s/\A(---|\.\.\.)(?=$RE_WS|\z)//) {
-                my $token = $1;
-                if ($self->context ne 'normal') {
-                    if ($self->context eq '"' or $self->context eq "'") {
-                        $self->push_tokens( [ ERROR => join '', @$next_line ] );
-                        $self->exception("Expected indent of $indent space(s)");
-                    }
-                    $self->push_tokens( [ END => '' ] );
-                    $self->set_context('normal');
-                }
-                my $token_name = { '---' => 'DOC_START', '...' => 'DOC_END' }->{ $token };
-                $self->push_tokens( [ $token_name => $token ] );
-                $next_line->[1] = $content;
-                $self->_fetch_next_tokens(3, $indent, $next_line);
-                if (@$next) {
-                    $next->[-1]->{value} .= $next_line->[2];
-                }
-                return $next;
-            }
+        if (not $spaces and $content =~ s/\A(---|\.\.\.)(?=$RE_WS|\z)//) {
+            my $t = $1;
+            my $token_name = { '---' => 'DOC_START', '...' => 'DOC_END' }->{ $t };
+            @tokens = [ $token_name => $t ];
+            $status = 'END';
+            $next_line->[1] = $content;
+            $offset = 3;
         }
-        my $context = $self->context;
-        if ((length $spaces) < $indent) {
-            unless (length $content) {
+        elsif ((length $spaces) < $indent) {
+            if (not length $content) {
+                $status = 'EOL';
                 $self->push_tokens( [ EOL => $spaces . $next_line->[2] ] );
                 return $next;
             }
-            # non-empty less indented line
-            if ($context ne 'normal') {
-                if ($self->context eq '"' or $self->context eq "'") {
-                    $self->push_tokens( [ ERROR => join '', @$next_line ] );
-                    $self->exception("Expected indent of $indent space(s)");
-                }
-                $self->push_tokens( [ END => '' ] );
-                $context = 'normal';
-                $self->set_context($context);
+            else {
+                $status = 'LESS';
             }
         }
-        my $method = $fetch_methods{ $context };
-        TRACE and warn __PACKAGE__.':'.__LINE__.": fetch next tokens: $method\n";
-        $self->$method(0, $indent, $next_line);
-        if (@$next) {
-            $next->[-1]->{value} .= $next_line->[2];
+    }
+    if ($self->context eq 'normal') {
+        return [] if $status eq 'END_STREAM';
+    }
+    else {
+        if ($status) {
+            if ($self->context eq '"' or $self->context eq "'") {
+                map { $_->[0] = 'ERROR' } @tokens;
+                push @tokens, [ ERROR => join '', @$next_line ] if $next_line;
+                $self->push_tokens( @tokens ) if @tokens;
+                $self->exception("Expected indent of $indent space(s)");
+            }
+
+            $self->push_tokens( [ END => '' ] );
+            $self->set_context('normal');
+            if ($status eq 'END_STREAM') {
+                return [];
+            }
         }
+    }
+    $self->push_tokens( @tokens ) if @tokens;
+    my $method = $fetch_methods{ $self->context };
+    TRACE and warn __PACKAGE__.':'.__LINE__.": fetch next tokens: $method\n";
+    $self->$method($offset, $indent, $next_line);
+
+    if (@$next) {
+        $next->[-1]->{value} .= $next_line->[2];
     }
     return $next;
 }
@@ -360,7 +361,7 @@ sub _fetch_next_tokens {
     my $spaces = $next_line->[0];
     my $yaml = \$next_line->[1];
     if (not length $$yaml) {
-        $self->push_token( EOL => $spaces );
+        $self->push_tokens( [ EOL => $spaces ] );
         return;
     }
     # $ESCAPE_CHAR from YAML.pm
@@ -549,7 +550,7 @@ sub _fetch_next_tokens_quoted {
     my $spaces = $next_line->[0];
     my $yaml = \$next_line->[1];
     if (not length $$yaml) {
-        $self->push_token( EOL => $spaces );
+        $self->push_tokens( [ EOL => $spaces ] );
         return;
     }
     # $ESCAPE_CHAR from YAML.pm
@@ -656,27 +657,6 @@ sub _fetch_next_tokens_directive {
     return;
 }
 
-sub push_token {
-    my ($self, $type, $value) = @_;
-    my $next = $self->next_tokens;
-    my $column = 0;
-    if (@$next) {
-        my $previous = $next->[-1];
-        if ($previous->{name} eq 'EOL') {
-            $column = 0;
-        }
-        else {
-            $column = $previous->{column} + length( $previous->{value} );
-        }
-    }
-    push @$next, {
-        name => $type,
-        value => $value,
-        line => $self->line,
-        column => $column,
-    };
-}
-
 sub push_tokens {
     my ($self, $new_tokens) = @_;
     my $next = $self->next_tokens;
@@ -694,21 +674,19 @@ sub push_tokens {
     }
 
     for (my $i = 0; $i < @$new_tokens; $i += 2) {
-        my $name = $new_tokens->[ $i ];
         my $value = $new_tokens->[ $i + 1 ];
         my $push = {
-            name => $name,
+            name => $new_tokens->[ $i ],
             line => $line,
             column => $column,
         };
         if (ref $value) {
             my @subtokens = @$value;
             for (my $i = 0; $i < @subtokens; $i += 2) {
-                my $name = $subtokens[ $i ];
                 my $value = $subtokens[ $i + 1 ];
                 $column += length $value;
                 push @{ $push->{value} }, {
-                    name => $name,
+                    name => $subtokens[ $i ],
                     line => $line,
                     column => $column,
                     value => $value,
