@@ -92,13 +92,13 @@ sub init {
 
 sub parse_string {
     my ($self, $yaml) = @_;
-    $self->lexer->reader->set_input( $yaml );
+    $self->reader->set_input( $yaml );
     $self->parse();
 }
 
 sub parse_file {
     my ($self, $file) = @_;
-    $self->lexer->reader->set_input( $file );
+    $self->reader->set_input( $file );
     $self->parse();
 }
 
