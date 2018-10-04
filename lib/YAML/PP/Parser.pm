@@ -477,6 +477,11 @@ my %event_to_method = (
 #    }
 #}
 
+my %fetch_method = (
+    '"' => 'fetch_quoted',
+    "'" => 'fetch_quoted',
+);
+
 sub parse_tokens {
     my ($self) = @_;
     my $res = {};
@@ -499,6 +504,13 @@ sub parse_tokens {
         }
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens->[0]], ['next_token']);
         my $got = $next_tokens->[0]->{name};
+        if ($got eq 'CONTEXT') {
+            my $context = shift @$next_tokens;
+            my $indent = $self->offset->[-1] + 1;
+            my $method = $fetch_method{ $context->{value} };
+            $self->lexer->$method($indent, $context->{value});
+            next RULE;
+        }
         my $def = $next_rule->{ $got };
         if ($def) {
             if ($got eq 'END') {
@@ -1207,12 +1219,6 @@ sub cb_take_quoted_key {
     $self->cb_send_mapkey;
 }
 
-sub cb_fetch_tokens_quoted {
-    my ($self) = @_;
-    my $indent = $self->offset->[-1] + 1;
-    $self->lexer->fetch_next_tokens($indent);
-}
-
 sub cb_start_plain {
     my ($self, $token) = @_;
     my $stack = $self->event_stack;
@@ -1301,7 +1307,6 @@ sub cb_empty_quoted_line {
     my ($self, $res) = @_;
     my $stack = $self->event_stack;
     push @{ $stack->[-1]->[1]->{value} }, '';
-    $self->cb_fetch_tokens_quoted;
 }
 
 sub cb_insert_map_alias {

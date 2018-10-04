@@ -30,7 +30,11 @@ NODETYPE_SCALAR_OR_MAP:
     match: cb_start_quoted
     SINGLEQUOTED_LINE:
       match: cb_take
-      EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
+      EOL: { new: MULTILINE_SINGLEQUOTED }
+    WS:
+      SINGLEQUOTED_LINE:
+        match: cb_take
+        EOL: { new: MULTILINE_SINGLEQUOTED }
 
   QUOTED:
     match: cb_take_quoted
@@ -48,7 +52,11 @@ NODETYPE_SCALAR_OR_MAP:
     match: cb_start_quoted
     DOUBLEQUOTED_LINE:
       match: cb_take
-      EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
+      EOL: { new: MULTILINE_DOUBLEQUOTED  }
+    WS:
+      DOUBLEQUOTED_LINE:
+        match: cb_take
+        EOL: { new: MULTILINE_DOUBLEQUOTED  }
 
   PLAIN:
     match: cb_start_plain
@@ -101,19 +109,21 @@ NODETYPE_COMPLEX:
 MULTILINE_SINGLEQUOTED:
   SINGLEQUOTED_LINE:
     match: cb_take
-    EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
+    EOL: { new: MULTILINE_SINGLEQUOTED }
     SINGLEQUOTE:
       EOL: { match: cb_send_scalar, return: 1 }
       DEFAULT: { match: cb_send_scalar, return: 1 }
+  WS: { new: MULTILINE_SINGLEQUOTED }
   EOL: { match: cb_empty_quoted_line, new: MULTILINE_SINGLEQUOTED }
 
 MULTILINE_DOUBLEQUOTED:
   DOUBLEQUOTED_LINE:
     match: cb_take
-    EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
+    EOL: { new: MULTILINE_DOUBLEQUOTED  }
     DOUBLEQUOTE:
       EOL: { match: cb_send_scalar, return: 1 }
       DEFAULT: { match: cb_send_scalar, return: 1 }
+  WS: { new: MULTILINE_DOUBLEQUOTED }
   EOL: { match: cb_empty_quoted_line, new: MULTILINE_DOUBLEQUOTED }
 
 RULE_FULLFLOWSCALAR:
@@ -160,7 +170,11 @@ RULE_FLOWSCALAR:
     match: cb_start_quoted
     SINGLEQUOTED_LINE:
       match: cb_take
-      EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
+      EOL: { new: MULTILINE_SINGLEQUOTED }
+    WS:
+      SINGLEQUOTED_LINE:
+        match: cb_take
+        EOL: { new: MULTILINE_SINGLEQUOTED }
 
   QUOTED:
     match: cb_take_quoted
@@ -171,7 +185,11 @@ RULE_FLOWSCALAR:
     match: cb_start_quoted
     DOUBLEQUOTED_LINE:
       match: cb_take
-      EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
+      EOL: { new: MULTILINE_DOUBLEQUOTED  }
+    WS:
+      DOUBLEQUOTED_LINE:
+        match: cb_take
+        EOL: { new: MULTILINE_DOUBLEQUOTED  }
 
   PLAIN:
     match: cb_start_plain
@@ -298,10 +316,6 @@ RULE_MAPKEY:
     COLON:
       EOL: { node: FULLNODE , return: 1}
       WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-  DOUBLEQUOTE:
-    match: cb_start_quoted
-  SINGLEQUOTE:
-    match: cb_start_quoted
   PLAIN:
     match: cb_mapkey
     WS:
@@ -490,7 +504,7 @@ NODETYPE_MAPVALUE_INLINE:
     match: cb_start_quoted
     SINGLEQUOTED_LINE:
       match: cb_take
-      EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
+      EOL: { new: MULTILINE_SINGLEQUOTED }
 
   QUOTED:
     match: cb_take_quoted
@@ -499,7 +513,11 @@ NODETYPE_MAPVALUE_INLINE:
     match: cb_start_quoted
     DOUBLEQUOTED_LINE:
       match: cb_take
-      EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
+      EOL: { new: MULTILINE_DOUBLEQUOTED  }
+    WS:
+      DOUBLEQUOTED_LINE:
+        match: cb_take
+        EOL: { new: MULTILINE_DOUBLEQUOTED  }
 
   PLAIN:
     match: cb_start_plain

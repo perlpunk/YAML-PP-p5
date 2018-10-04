@@ -151,11 +151,12 @@ sub _fetch_next_tokens_block_scalar_start {
     if (not length $content) {
         return $self->push_tokens( [ INDENT => $spaces, EOL => '' ] );
     }
-    return $self->push_tokens([
+    $self->push_tokens([
         INDENT => $spaces,
         BLOCK_SCALAR_CONTENT => $content,
         EOL => '',
     ]);
+    return;
 }
 
 sub _fetch_next_tokens_block_scalar {
@@ -167,13 +168,15 @@ sub _fetch_next_tokens_block_scalar {
         $more_spaces = '';
     }
     elsif (not length $content) {
-        return $self->push_tokens( [ INDENT => $spaces, EOL => '' ] );
+        $self->push_tokens( [ INDENT => $spaces, EOL => '' ] );
+        return;
     }
-    return $self->push_tokens([
+    $self->push_tokens([
         INDENT => $spaces,
         BLOCK_SCALAR_CONTENT => $content,
         EOL => '',
     ]);
+    return;
 }
 
 sub _fetch_next_tokens_plain {
@@ -222,8 +225,8 @@ sub _fetch_next_tokens_plain {
             $next_line->[0] = '';
             $next_line->[1] = $content;
             $self->push_tokens( \@tokens );
-            $self->_fetch_next_tokens($indent, $next_line);
-            return;
+            my $ret = $self->_fetch_next_tokens($indent, $next_line);
+            return $ret;
         }
         push @tokens, EOL => $ws;
     }
@@ -233,12 +236,13 @@ sub _fetch_next_tokens_plain {
             $next_line->[0] = '';
             $next_line->[1] = $content;
             $self->push_tokens( \@tokens );
-            $self->_fetch_next_tokens($indent, $next_line);
-            return;
+            my $ret = $self->_fetch_next_tokens($indent, $next_line);
+            return $ret;
         }
         push @tokens, ERROR => $content;
     }
     $self->push_tokens( \@tokens );
+    return;
 }
 
 sub fetch_next_line {
@@ -260,8 +264,6 @@ sub fetch_next_line {
 
 my %fetch_methods = (
     normal => '_fetch_next_tokens',
-    "'" => '_fetch_next_tokens_quoted',
-    '"' => '_fetch_next_tokens_quoted',
     block_scalar_start => '_fetch_next_tokens_block_scalar_start',
     block_scalar => '_fetch_next_tokens_block_scalar',
     plain => '_fetch_next_tokens_plain',
@@ -303,13 +305,6 @@ sub fetch_next_tokens {
     }
     else {
         if ($status) {
-            if ($self->context eq '"' or $self->context eq "'") {
-                map { $_->[0] = 'ERROR' } @tokens;
-                push @tokens, [ ERROR => join '', @$next_line ] if $next_line;
-                $self->push_tokens( @tokens ) if @tokens;
-                $self->exception("Expected indent of $indent space(s)");
-            }
-
             $self->push_tokens( [ END => '' ] );
             $self->set_context('normal');
             if ($status eq 'END_STREAM') {
@@ -320,9 +315,9 @@ sub fetch_next_tokens {
     $self->push_tokens( @tokens ) if @tokens;
     my $method = $fetch_methods{ $self->context };
     TRACE and warn __PACKAGE__.':'.__LINE__.": fetch next tokens: $method\n";
-    $self->$method($indent, $next_line);
+    my $partial = $self->$method($indent, $next_line);
 
-    if (@$next) {
+    if (not $partial and @$next) {
         $next->[-1]->{value} .= $next_line->[2];
     }
     return $next;
@@ -351,6 +346,17 @@ my %BLOCK_SCALAR =        ( '|' => 1, '>' => 1 );
 my %COLON_DASH_QUESTION = ( ':' => 1, '-' => 1, '?' => 1 );
 my %QUOTED =              ( '"' => 1, "'" => 1 );
 my %FLOW =                ( '{' => 1, '[' => 1, '}' => 1, ']' => 1 );
+
+my $RE_ESCAPES = qr{(?:
+    \\([ \\\/_0abefnrtvLNP"]) | \\x([0-9a-fA-F]{2})
+    | \\u([A-Fa-f0-9]{4}) | \\U([A-Fa-f0-9]{4,8})
+)}x;
+my %CONTROL = (
+    '\\' => '\\', '/' => '/', n => "\n", t => "\t", r => "\r", b => "\b",
+    'a' => "\a", 'b' => "\b", 'e' => "\e", 'f' => "\f", 'v' => "\x0b",
+    'P' => "\x{2029}", L => "\x{2028}", 'N' => "\x85",
+    '0' => "\0", '_' => "\xa0", ' ' => ' ', q/"/ => q/"/,
+);
 
 sub _fetch_next_tokens {
     my ($self, $indent, $next_line) = @_;
@@ -398,40 +404,9 @@ sub _fetch_next_tokens {
         my $plain = 0;
 
         if ($QUOTED{ $first }) {
-            my $token_name = $TOKEN_NAMES{ $first };
-            my $token_name2 = $token_name . 'D';
-            $$yaml =~ s/\A$first//;
-            my @subtokens;
-            my $regex = $REGEXES{ $token_name2 };
-
-            my $quoted = '';
-            if ($$yaml =~ s/\A($regex)//) {
-                $quoted .= $1;
-            }
-
-            if ($$yaml =~ s/\A$first//) {
-                push @subtokens, ( $token_name => $first );
-                push @subtokens, ( $token_name2 => $quoted );
-                push @subtokens, ( $token_name => $first );
-                push @tokens, ( QUOTED => \@subtokens );
-            }
-            elsif (not length $$yaml) {
-                push @tokens, ( $token_name => $first );
-                push @tokens, ( $token_name . 'D_LINE' => $quoted );
-                push @tokens, ( EOL => '' );
-                $self->push_tokens(\@tokens);
-                $self->set_context($first);
-                return 1;
-            }
-            else {
-                push @tokens, ( $token_name => $first );
-                push @tokens, ( $token_name2 => $quoted );
-                push @tokens, ( 'Invalid quoted string' => $$yaml );
-                $self->push_tokens(\@tokens);
-                return;
-            }
-            next;
-
+            push @tokens, ( CONTEXT => $first );
+            $self->push_tokens(\@tokens);
+            return 1;
         }
         elsif ($COLON_DASH_QUESTION{ $first }) {
             if ($$yaml =~ s/\A\Q$first\E(?:($RE_WS+)|\z)//) {
@@ -544,54 +519,153 @@ sub _fetch_next_tokens {
     return;
 }
 
-sub _fetch_next_tokens_quoted {
-    my ($self, $indent, $next_line) = @_;
-    my $context = $self->context;
-
-    my $spaces = $next_line->[0];
+sub fetch_quoted {
+    my ($self, $indent, $context) = @_;
+    my $next_line = $self->next_line;
     my $yaml = \$next_line->[1];
-    if (not length $$yaml) {
-        $self->push_tokens( [ EOL => $spaces ] );
-        return;
-    }
-    # $ESCAPE_CHAR from YAML.pm
-    if ($$yaml =~ tr/\x00-\x08\x0b-\x0c\x0e-\x1f//) {
-        $self->exception("Control characters are not allowed");
-    }
-
+    $$yaml =~ s/\A$context//;
     my @tokens;
 
-    my $token_name = $TOKEN_NAMES{ $context };
-    my $token_name2 = $token_name . 'D';
-    my $regex = $REGEXES{ $token_name2 };
-    $token_name2 = $token_name . 'D_LINE';
-
-    my $quoted = $spaces;
-    if ($$yaml =~ s/\A($regex)//) {
-        $quoted .= $1;
-    }
-
-    if ($$yaml =~ s/\A$context//) {
-        push @tokens, ( $token_name2 => $quoted );
-        push @tokens, ( $token_name => $context );
-        $self->push_tokens(\@tokens);
-        $context = 'normal';
-        $self->set_context('normal');
-        $next_line->[0] = '';
-        $self->_fetch_next_tokens($indent, $next_line);
-    }
-    elsif ($$yaml eq '') {
-        $token_name2 = $token_name . 'D_LINE';
-        push @tokens, ( $token_name2 => $quoted );
-        push @tokens, ( EOL => '' );
-        $self->push_tokens(\@tokens);
+    my ($return, @quoted_tokens) = $self->_read_quoted_tokens(1, $context, $yaml);
+    push @tokens, @quoted_tokens;
+    $self->push_tokens(\@tokens);
+    if ($return) {
+        if ($return == 2) {
+            return;
+        }
     }
     else {
-        push @tokens, ( $token_name2 => $quoted );
+        $self->_fetch_next_tokens($indent, $next_line);
+        return;
+    }
+    while (1) {
+
+        my $next_line = $self->fetch_next_line;
+        my @tokens;
+        if (not $next_line) {
+            last;
+        }
+
+        my $spaces = $next_line->[0];
+        my $yaml = \$next_line->[1];
+        if (not $spaces and $$yaml =~ m/\A(---|\.\.\.)(?=$RE_WS|\z)/) {
+            push @tokens, ( 'Invalid quoted string' => $$yaml );
+            $self->push_tokens(\@tokens);
+            last;
+        }
+        elsif (not length $$yaml) {
+            $self->push_tokens( [ EOL => $spaces . $next_line->[2] ] );
+        }
+        elsif ((length $spaces) < $indent) {
+            push @tokens, ( 'Invalid quoted string' => $$yaml );
+            $self->push_tokens(\@tokens);
+            last;
+        }
+        else {
+            if ($$yaml =~ s/\A($RE_WS+)//) {
+                $spaces .= $1;
+            }
+
+            push @tokens, ( WS => $spaces );
+            my ($return, @quoted_tokens) = $self->_read_quoted_tokens(0, $context, $yaml);
+            push @tokens, @quoted_tokens;
+            $self->push_tokens(\@tokens);
+            if ($return) {
+                if ($return == 2) {
+                    last;
+                }
+            }
+            else {
+                $self->_fetch_next_tokens($indent, $next_line);
+                last;
+            }
+        }
+    }
+}
+
+sub _read_quoted_tokens {
+    my ($self, $start, $first, $yaml) = @_;
+    my $quoted = '';
+    my $decoded = '';
+    if ($first eq "'") {
+        my $regex = $REGEXES{SINGLEQUOTED};
+        if ($$yaml =~ s/\A($regex)//) {
+            $quoted .= $1;
+            $decoded .= $1;
+            $decoded =~ s/''/'/g;
+        }
+    }
+    else {
+        ($quoted, $decoded) = $self->_read_doublequoted($yaml);
+    }
+    my $token_name = $TOKEN_NAMES{ $first };
+    my $token_name2 = $token_name . 'D';
+    my @tokens;
+    my $return = 0;
+
+    if ($$yaml =~ s/\A$first//) {
+        if ($start) {
+            my @subtokens;
+            push @subtokens, ( $token_name => $first );
+            push @subtokens, ( $token_name2 => { value => $decoded, orig => $quoted } );
+            push @subtokens, ( $token_name => $first );
+            push @tokens, ( QUOTED => \@subtokens );
+        }
+        else {
+            $token_name2 = $token_name . 'D_LINE';
+            push @tokens, ( $token_name2 => { value => $decoded, orig => $quoted } );
+            push @tokens, ( $token_name => $first );
+        }
+    }
+    elsif (not length $$yaml) {
+        my $eol = '';
+        if ($quoted =~ s/($RE_WS+)\z//) {
+            $eol = $1;
+            $decoded =~ s/($eol)\z//;
+        }
+        push @tokens, ( $token_name => $first ) if $start;
+        push @tokens, ( $token_name . 'D_LINE' => { value => $decoded, orig => $quoted } );
+        push @tokens, ( EOL => $eol );
+        $return = 1;
+    }
+    else {
+        push @tokens, ( $token_name => $first ) if $start;
+        push @tokens, ( $token_name2 => { value => $decoded, orig => $quoted } );
         push @tokens, ( 'Invalid quoted string' => $$yaml );
-        $self->push_tokens(\@tokens);
+        $return = 2;
     }
 
+    return ($return, @tokens);
+}
+
+sub _read_doublequoted {
+    my ($self, $yaml) = @_;
+    my $quoted = '';
+    my $decoded = '';
+    while (1) {
+        my $last = 1;
+        if ($$yaml =~ s/\A([^"\\]+)//) {
+            $quoted .= $1;
+            $decoded .= $1;
+            $last = 0;
+        }
+        if ($$yaml =~ s/\A($RE_ESCAPES)//) {
+            $quoted .= $1;
+            my $dec = defined $2 ? $CONTROL{ $2 }
+                        : defined $3 ? chr hex $3
+                        : defined $4 ? chr hex $4
+                        : chr hex $5;
+            $decoded .= $dec;
+            $last = 0;
+        }
+        if ($$yaml =~ s/\A(\\)\z//) {
+            $quoted .= $1;
+            $decoded .= $1;
+            last;
+        }
+        last if $last;
+    }
+    return ($quoted, $decoded);
 }
 
 sub _fetch_next_tokens_directive {
@@ -667,27 +741,43 @@ sub push_tokens {
 
     for (my $i = 0; $i < @$new_tokens; $i += 2) {
         my $value = $new_tokens->[ $i + 1 ];
+        my $name = $new_tokens->[ $i ];
         my $push = {
             name => $new_tokens->[ $i ],
             line => $line,
             column => $column,
         };
-        if (ref $value) {
+        if (ref $value eq 'ARRAY') {
             my @subtokens = @$value;
             for (my $i = 0; $i < @subtokens; $i += 2) {
                 my $value = $subtokens[ $i + 1 ];
-                $column += length $value;
-                push @{ $push->{value} }, {
+                my $name = $subtokens[ $i ];
+
+                my %sub = (
                     name => $subtokens[ $i ],
                     line => $line,
                     column => $column,
                     value => $value,
+                );
+                if (ref $value eq 'HASH') {
+                    %sub = ( %sub, %$value );
+                    $column += length $value->{orig};
+                }
+                else {
+                    $column += length $value unless $name eq 'CONTEXT';
+                }
+                push @{ $push->{value} }, {
+                    %sub
                 };
             }
         }
+        elsif (ref $value eq 'HASH') {
+            %$push = ( %$push, %$value );
+            $column += length $value->{orig} unless $name eq 'CONTEXT';
+        }
         else {
             $push->{value} = $value;
-            $column += length $value;
+            $column += length $value unless $name eq 'CONTEXT';
         }
         push @$next, $push;
     }

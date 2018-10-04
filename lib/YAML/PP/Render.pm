@@ -6,7 +6,6 @@ package YAML::PP::Render;
 our $VERSION = '0.000'; # VERSION
 
 use constant TRACE => $ENV{YAML_PP_TRACE} ? 1 : 0;
-my $WS = '[\t ]';
 
 sub render_tag {
     my ($tag, $map) = @_;
@@ -36,33 +35,12 @@ sub render_tag {
     return $tag;
 }
 
-my %control = (
-    '\\' => '\\', '/' => '/', n => "\n", t => "\t", r => "\r", b => "\b",
-    'a' => "\a", 'b' => "\b", 'e' => "\e", 'f' => "\f", 'v' => "\x0b",
-    'P' => "\x{2029}", L => "\x{2028}", 'N' => "\x85",
-    '0' => "\0", '_' => "\xa0", ' ' => ' ', q/"/ => q/"/,
-);
-
 sub render_quoted {
     my ($self, $info) = @_;
-    my $double = $info->{style} eq '"';
     my $lines = $info->{value};
 
     if ($#$lines == 0) {
-        my $quoted = $lines->[0];
-        if ($double) {
-            $quoted =~ s{(?:
-                \\([ \\\/_0abefnrtvLNP"]) | \\x([0-9a-fA-F]{2})
-                | \\u([A-Fa-f0-9]{4}) | \\U([A-Fa-f0-9]{4,8})
-            )}{
-            defined $1 ? $control{ $1 } : defined $2 ? chr hex $2 :
-            defined $3 ? chr hex $3 : chr hex $4
-            }xeg;
-        }
-        else {
-            $quoted =~ s/''/'/g;
-        }
-        $info->{value} = $quoted;
+        $info->{value} = $lines->[0];
         return;
     }
 
@@ -73,7 +51,7 @@ sub render_quoted {
         my $line = $lines->[ $i ];
         my $last = $i == $#$lines;
         my $first = $i == 0;
-        if ($line =~ s/^$WS*$/\n/) {
+        if ($line eq '') {
             if ($first) {
                 $addspace = 1;
             }
@@ -89,26 +67,10 @@ sub render_quoted {
 
         $quoted .= ' ' if $addspace;
         $addspace = 1;
-        if (not $first) {
-            $line =~ s/^$WS+//;
-        }
-        if (not $last) {
-            $line =~ s/$WS+$//;
-        }
-        if ($double) {
-            $line =~ s{(?:
-                \\([ \\\/_0abefnrtvLNP"]) | \\x([0-9a-fA-F]{2})
-                | \\u([A-Fa-f0-9]{4}) | \\U([A-Fa-f0-9]{4,8})
-            )}{
-            defined $1 ? $control{ $1 } : defined $2 ? chr hex $2 :
-            defined $3 ? chr hex $3 : chr hex $4
-            }xeg;
+        if ($info->{style} eq '"') {
             if ($line =~ s/\\$//) {
                 $addspace = 0;
             }
-        }
-        else {
-            $line =~ s/''/'/g;
         }
         $quoted .= $line;
     }

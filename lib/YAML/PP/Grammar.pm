@@ -244,13 +244,15 @@ $GRAMMAR = {
         }
       },
       'EOL' => {
-        'match' => 'cb_fetch_tokens_quoted',
         'new' => 'MULTILINE_DOUBLEQUOTED'
       },
       'match' => 'cb_take'
     },
     'EOL' => {
       'match' => 'cb_empty_quoted_line',
+      'new' => 'MULTILINE_DOUBLEQUOTED'
+    },
+    'WS' => {
       'new' => 'MULTILINE_DOUBLEQUOTED'
     }
   },
@@ -261,7 +263,6 @@ $GRAMMAR = {
     },
     'SINGLEQUOTED_LINE' => {
       'EOL' => {
-        'match' => 'cb_fetch_tokens_quoted',
         'new' => 'MULTILINE_SINGLEQUOTED'
       },
       'SINGLEQUOTE' => {
@@ -275,6 +276,9 @@ $GRAMMAR = {
         }
       },
       'match' => 'cb_take'
+    },
+    'WS' => {
+      'new' => 'MULTILINE_SINGLEQUOTED'
     }
   },
   'NEWFLOWMAP' => {
@@ -448,10 +452,17 @@ $GRAMMAR = {
     'DOUBLEQUOTE' => {
       'DOUBLEQUOTED_LINE' => {
         'EOL' => {
-          'match' => 'cb_fetch_tokens_quoted',
           'new' => 'MULTILINE_DOUBLEQUOTED'
         },
         'match' => 'cb_take'
+      },
+      'WS' => {
+        'DOUBLEQUOTED_LINE' => {
+          'EOL' => {
+            'new' => 'MULTILINE_DOUBLEQUOTED'
+          },
+          'match' => 'cb_take'
+        }
       },
       'match' => 'cb_start_quoted'
     },
@@ -498,7 +509,6 @@ $GRAMMAR = {
     'SINGLEQUOTE' => {
       'SINGLEQUOTED_LINE' => {
         'EOL' => {
-          'match' => 'cb_fetch_tokens_quoted',
           'new' => 'MULTILINE_SINGLEQUOTED'
         },
         'match' => 'cb_take'
@@ -555,10 +565,17 @@ $GRAMMAR = {
     'DOUBLEQUOTE' => {
       'DOUBLEQUOTED_LINE' => {
         'EOL' => {
-          'match' => 'cb_fetch_tokens_quoted',
           'new' => 'MULTILINE_DOUBLEQUOTED'
         },
         'match' => 'cb_take'
+      },
+      'WS' => {
+        'DOUBLEQUOTED_LINE' => {
+          'EOL' => {
+            'new' => 'MULTILINE_DOUBLEQUOTED'
+          },
+          'match' => 'cb_take'
+        }
       },
       'match' => 'cb_start_quoted'
     },
@@ -664,10 +681,17 @@ $GRAMMAR = {
     'SINGLEQUOTE' => {
       'SINGLEQUOTED_LINE' => {
         'EOL' => {
-          'match' => 'cb_fetch_tokens_quoted',
           'new' => 'MULTILINE_SINGLEQUOTED'
         },
         'match' => 'cb_take'
+      },
+      'WS' => {
+        'SINGLEQUOTED_LINE' => {
+          'EOL' => {
+            'new' => 'MULTILINE_SINGLEQUOTED'
+          },
+          'match' => 'cb_take'
+        }
       },
       'match' => 'cb_start_quoted'
     },
@@ -776,10 +800,17 @@ $GRAMMAR = {
     'DOUBLEQUOTE' => {
       'DOUBLEQUOTED_LINE' => {
         'EOL' => {
-          'match' => 'cb_fetch_tokens_quoted',
           'new' => 'MULTILINE_DOUBLEQUOTED'
         },
         'match' => 'cb_take'
+      },
+      'WS' => {
+        'DOUBLEQUOTED_LINE' => {
+          'EOL' => {
+            'new' => 'MULTILINE_DOUBLEQUOTED'
+          },
+          'match' => 'cb_take'
+        }
       },
       'match' => 'cb_start_quoted'
     },
@@ -828,10 +859,17 @@ $GRAMMAR = {
     'SINGLEQUOTE' => {
       'SINGLEQUOTED_LINE' => {
         'EOL' => {
-          'match' => 'cb_fetch_tokens_quoted',
           'new' => 'MULTILINE_SINGLEQUOTED'
         },
         'match' => 'cb_take'
+      },
+      'WS' => {
+        'SINGLEQUOTED_LINE' => {
+          'EOL' => {
+            'new' => 'MULTILINE_SINGLEQUOTED'
+          },
+          'match' => 'cb_take'
+        }
       },
       'match' => 'cb_start_quoted'
     }
@@ -925,9 +963,6 @@ $GRAMMAR = {
       },
       'match' => 'cb_empty_mapkey'
     },
-    'DOUBLEQUOTE' => {
-      'match' => 'cb_start_quoted'
-    },
     'PLAIN' => {
       'COLON' => {
         'EOL' => {
@@ -990,9 +1025,6 @@ $GRAMMAR = {
         }
       },
       'match' => 'cb_take_quoted_key'
-    },
-    'SINGLEQUOTE' => {
-      'match' => 'cb_start_quoted'
     }
   },
   'RULE_PLAIN_MULTI' => {
@@ -1155,7 +1187,11 @@ This is the Grammar in YAML
         match: cb_start_quoted
         SINGLEQUOTED_LINE:
           match: cb_take
-          EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
+          EOL: { new: MULTILINE_SINGLEQUOTED }
+        WS:
+          SINGLEQUOTED_LINE:
+            match: cb_take
+            EOL: { new: MULTILINE_SINGLEQUOTED }
     
       QUOTED:
         match: cb_take_quoted
@@ -1173,7 +1209,11 @@ This is the Grammar in YAML
         match: cb_start_quoted
         DOUBLEQUOTED_LINE:
           match: cb_take
-          EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
+          EOL: { new: MULTILINE_DOUBLEQUOTED  }
+        WS:
+          DOUBLEQUOTED_LINE:
+            match: cb_take
+            EOL: { new: MULTILINE_DOUBLEQUOTED  }
     
       PLAIN:
         match: cb_start_plain
@@ -1226,19 +1266,21 @@ This is the Grammar in YAML
     MULTILINE_SINGLEQUOTED:
       SINGLEQUOTED_LINE:
         match: cb_take
-        EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
+        EOL: { new: MULTILINE_SINGLEQUOTED }
         SINGLEQUOTE:
           EOL: { match: cb_send_scalar, return: 1 }
           DEFAULT: { match: cb_send_scalar, return: 1 }
+      WS: { new: MULTILINE_SINGLEQUOTED }
       EOL: { match: cb_empty_quoted_line, new: MULTILINE_SINGLEQUOTED }
     
     MULTILINE_DOUBLEQUOTED:
       DOUBLEQUOTED_LINE:
         match: cb_take
-        EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
+        EOL: { new: MULTILINE_DOUBLEQUOTED  }
         DOUBLEQUOTE:
           EOL: { match: cb_send_scalar, return: 1 }
           DEFAULT: { match: cb_send_scalar, return: 1 }
+      WS: { new: MULTILINE_DOUBLEQUOTED }
       EOL: { match: cb_empty_quoted_line, new: MULTILINE_DOUBLEQUOTED }
     
     RULE_FULLFLOWSCALAR:
@@ -1285,7 +1327,11 @@ This is the Grammar in YAML
         match: cb_start_quoted
         SINGLEQUOTED_LINE:
           match: cb_take
-          EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
+          EOL: { new: MULTILINE_SINGLEQUOTED }
+        WS:
+          SINGLEQUOTED_LINE:
+            match: cb_take
+            EOL: { new: MULTILINE_SINGLEQUOTED }
     
       QUOTED:
         match: cb_take_quoted
@@ -1296,7 +1342,11 @@ This is the Grammar in YAML
         match: cb_start_quoted
         DOUBLEQUOTED_LINE:
           match: cb_take
-          EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
+          EOL: { new: MULTILINE_DOUBLEQUOTED  }
+        WS:
+          DOUBLEQUOTED_LINE:
+            match: cb_take
+            EOL: { new: MULTILINE_DOUBLEQUOTED  }
     
       PLAIN:
         match: cb_start_plain
@@ -1423,10 +1473,6 @@ This is the Grammar in YAML
         COLON:
           EOL: { node: FULLNODE , return: 1}
           WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-      DOUBLEQUOTE:
-        match: cb_start_quoted
-      SINGLEQUOTE:
-        match: cb_start_quoted
       PLAIN:
         match: cb_mapkey
         WS:
@@ -1615,7 +1661,7 @@ This is the Grammar in YAML
         match: cb_start_quoted
         SINGLEQUOTED_LINE:
           match: cb_take
-          EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
+          EOL: { new: MULTILINE_SINGLEQUOTED }
     
       QUOTED:
         match: cb_take_quoted
@@ -1624,7 +1670,11 @@ This is the Grammar in YAML
         match: cb_start_quoted
         DOUBLEQUOTED_LINE:
           match: cb_take
-          EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
+          EOL: { new: MULTILINE_DOUBLEQUOTED  }
+        WS:
+          DOUBLEQUOTED_LINE:
+            match: cb_take
+            EOL: { new: MULTILINE_DOUBLEQUOTED  }
     
       PLAIN:
         match: cb_start_plain
