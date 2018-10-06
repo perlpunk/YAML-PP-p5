@@ -372,7 +372,7 @@ sub _fetch_next_tokens {
         if ($spaces ) {
             push @tokens, ( INDENT => $spaces );
         }
-        elsif ($first eq "%") {
+        elsif ($first eq "%" and not $self->flowcontext) {
             $self->_fetch_next_tokens_directive($yaml);
             return;
         }

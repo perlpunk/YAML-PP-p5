@@ -637,7 +637,10 @@ sub start_flow_sequence {
     my ($self, $offset) = @_;
     my $offsets = $self->offset;
     push @{ $self->events }, 'FLOWSEQ';
-    push @{ $offsets }, $offset;
+    my $new_offset = $offsets->[-1];
+    $new_offset = 0 if $new_offset < 0;
+    push @{ $offsets }, $new_offset;
+
     my $event_stack = $self->event_stack;
     my $info = { style => 'flow' };
     if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
@@ -650,7 +653,10 @@ sub start_flow_mapping {
     my ($self, $offset) = @_;
     my $offsets = $self->offset;
     push @{ $self->events }, 'FLOWMAP';
-    push @{ $offsets }, $offset;
+    my $new_offset = $offsets->[-1];
+    $new_offset = 0 if $new_offset < 0;
+    push @{ $offsets }, $new_offset;
+
     my $event_stack = $self->event_stack;
     my $info = { style => 'flow' };
     if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
@@ -1209,7 +1215,8 @@ sub cb_empty_plain {
 
 sub cb_fetch_tokens_plain {
     my ($self) = @_;
-    my $indent = $self->offset->[-1] + 1;
+    my $indent = $self->offset->[-1];
+    $indent++ unless $self->lexer->flowcontext;
     $self->lexer->set_context('plain');
     $self->lexer->fetch_next_tokens($indent);
 }

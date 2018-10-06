@@ -34,7 +34,6 @@ my @skip = qw/
     LQZ7
     QF4Y
 
-    UT92
     WZ62
 
 /;

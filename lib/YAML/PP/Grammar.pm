@@ -1130,6 +1130,12 @@ $GRAMMAR = {
     }
   },
   'RULE_PLAIN_MULTI_FLOW' => {
+    'COMMENT' => {
+      'EOL' => {
+        'match' => 'cb_send_scalar',
+        'return' => 1
+      }
+    },
     'DEFAULT' => {
       'match' => 'cb_send_scalar',
       'return' => 1
@@ -1503,6 +1509,8 @@ This is the Grammar in YAML
               EOL: { match: cb_send_scalar, return: 1 }
             DEFAULT: { match: cb_send_scalar, return: 1 }
           DEFAULT: { match: cb_send_scalar, return: 1 }
+      COMMENT:
+        EOL: { match: cb_send_scalar, return: 1 }
       DEFAULT: { match: cb_send_scalar, return: 1 }
     
     
