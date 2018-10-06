@@ -480,6 +480,8 @@ my %event_to_method = (
 my %fetch_method = (
     '"' => 'fetch_quoted',
     "'" => 'fetch_quoted',
+    '|' => 'fetch_block',
+    '>' => 'fetch_block',
 );
 
 sub parse_tokens {
@@ -508,7 +510,10 @@ sub parse_tokens {
             my $context = shift @$next_tokens;
             my $indent = $self->offset->[-1] + 1;
             my $method = $fetch_method{ $context->{value} };
-            $self->lexer->$method($indent, $context->{value});
+            my $partial = $self->lexer->$method($indent, $context->{value});
+            unless ($partial) {
+                $self->lexer->set_next_line(undef);
+            }
             next RULE;
         }
         my $def = $next_rule->{ $got };
@@ -1352,24 +1357,12 @@ sub cb_block_scalar {
     my $info = {
         style => $type,
         value => [],
-        current_indent => $self->offset->[-1] + 1,
         offset => $token->{column},
     };
     if (@$stack and $stack->[-1]->[0] eq 'properties') {
         $self->fetch_inline_properties($stack, $info);
     }
     push @{ $self->event_stack }, [ scalar => $info ];
-    $self->lexer->set_context('block_scalar_start');
-}
-
-sub cb_add_block_scalar_indent {
-    my ($self, $token) = @_;
-    my $indent = $token->{value};
-    my $event = $self->event_stack->[-1]->[1];
-    $event->{block_indent} = $indent;
-    $event->{got_indent} = 1;
-    $event->{current_indent} = $indent;
-    $self->lexer->set_context('block_scalar');
 }
 
 sub cb_add_block_scalar_chomp {
@@ -1382,26 +1375,12 @@ sub cb_block_scalar_empty_line {
     my ($self, $res) = @_;
     my $event = $self->event_stack->[-1]->[1];
     push @{ $event->{value} }, '';
-    $self->lexer->fetch_next_tokens($event->{current_indent});
-}
-
-sub cb_block_scalar_start_indent {
-    my ($self, $token) = @_;
-    my $event = $self->event_stack->[-1]->[1];
-    $event->{current_indent} = length $token->{value};
-}
-
-sub cb_fetch_tokens_block_scalar {
-    my ($self, $res) = @_;
-    my $event = $self->event_stack->[-1]->[1];
-    $self->lexer->fetch_next_tokens($event->{current_indent})
 }
 
 sub cb_block_scalar_start_content {
     my ($self, $token) = @_;
     my $event = $self->event_stack->[-1]->[1];
     push @{ $event->{value} }, $token->{value};
-    $self->lexer->set_context('block_scalar');
 }
 
 sub cb_block_scalar_content {
