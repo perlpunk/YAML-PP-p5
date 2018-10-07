@@ -225,7 +225,7 @@ sub highlight_test {
             },
         );
         eval {
-            $parser->parse($yaml);
+            $parser->parse_string($yaml);
         };
         if ($@) {
 #            warn "Error parsing: $@";
@@ -243,6 +243,9 @@ sub highlight_test {
                     $emitter->$type($info);
                 }
             };
+            if ($@) {
+                warn __PACKAGE__.':'.__LINE__.": Error emitting $id: $@\n";
+            }
             $emit_yaml = $emitter->writer->output;
         }
     }
