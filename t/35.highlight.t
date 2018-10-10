@@ -40,10 +40,11 @@ is_deeply(\@tokens, \@expected_tokens, "yaml_to_tokens returned correct error to
 $yaml = <<'EOM';
 foo: |
   bar  
+quoted: "x"
 EOM
 ($error, $tokens) = YAML::PP::Parser->yaml_to_tokens(string => $yaml);
 my @transformed = YAML::PP::Highlight->transform($tokens);
-cmp_ok($transformed[-2]->{name}, 'eq', 'TRAILING_SPACE', "trailing spaces detected");
+cmp_ok($transformed[6]->{name}, 'eq', 'TRAILING_SPACE', "trailing spaces detected");
 
 my $color = eval "use Term::ANSIColor 4.02; 1";
 # older versions of Term::ANSIColor didn't have grey12

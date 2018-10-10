@@ -24,6 +24,7 @@ sub init {
     $self->{next_tokens} = [];
     $self->{next_line} = undef;
     $self->{line} = 0;
+    $self->{offset} = 0;
     $self->{context} = 'normal';
     $self->{flowcontext} = 0;
 }
@@ -125,24 +126,8 @@ my $RE_ALIAS = "\\*$RE_ANCHOR_CAR+";
 my %REGEXES = (
     ANCHOR => qr{($RE_ANCHOR)},
     TAG => qr{($RE_TAG)},
-    EOL => qr{($RE_EOL)},
-#    EMPTY => qr{($RE_COMMENT_EOL)},
-    LB => qr{($RE_LB)},
-    WS => qr{($RE_WS*)},
-    'WS' => qr{($RE_WS+)},
-    SCALAR => qr{($RE_PLAIN_WORDS)},
     ALIAS => qr{($RE_ALIAS)},
-    QUESTION => qr{$RE_COMPLEX},
-    COLON => qr{(?m:(:)(?=$RE_WS|$))},
-    DASH => qr{(?m:(-)(?=$RE_WS|$))},
-    DOUBLEQUOTE => qr{(")},
-    DOUBLEQUOTED => qr{(?:\\(?:[ \\\/_0abefnrtvLNP"]|x[0-9a-fA-F]{2}|[uU][0-9a-fA-F]+|$)|[^"\r\n\\]+)*}m,
-    SINGLEQUOTE => qr{(')},
     SINGLEQUOTED => qr{(?:''|[^'\r\n]+)*},
-    LITERAL => qr{(\|)},
-    FOLDED => qr{(>)},
-    FLOW_MAP_START => qr{(\{)},
-    FLOW_SEQ_START => qr{(\[)},
 );
 
 sub _fetch_next_tokens_plain {
@@ -252,6 +237,12 @@ sub fetch_next_tokens {
     }
     else {
         my ($spaces, $content) = @$next_line;
+        if (not length $content) {
+            $status = 'EOL';
+            $self->push_tokens( [ EOL => $spaces . $next_line->[2] ] );
+            $self->set_next_line(undef);
+            return $next;
+        }
         if (not $spaces and $content =~ s/\A(---|\.\.\.)(?=$RE_WS|\z)//) {
             my $t = $1;
             my $token_name = { '---' => 'DOC_START', '...' => 'DOC_END' }->{ $t };
@@ -260,15 +251,7 @@ sub fetch_next_tokens {
             $next_line->[1] = $content;
         }
         elsif ((length $spaces) < $indent) {
-            if (not length $content) {
-                $status = 'EOL';
-                $self->push_tokens( [ EOL => $spaces . $next_line->[2] ] );
-                $self->set_next_line(undef);
-                return $next;
-            }
-            else {
-                $status = 'LESS';
-            }
+            $status = 'LESS';
         }
     }
     if ($self->context eq 'normal') {
@@ -321,6 +304,7 @@ my %BLOCK_SCALAR =        ( '|' => 1, '>' => 1 );
 my %COLON_DASH_QUESTION = ( ':' => 1, '-' => 1, '?' => 1 );
 my %QUOTED =              ( '"' => 1, "'" => 1 );
 my %FLOW =                ( '{' => 1, '[' => 1, '}' => 1, ']' => 1 );
+my %CONTEXT =             ( '"' => 1, "'" => 1, '>' => 1, '|' => 1 );
 
 my $RE_ESCAPES = qr{(?:
     \\([ \\\/_0abefnrtvLNP"]) | \\x([0-9a-fA-F]{2})
@@ -379,7 +363,7 @@ sub _fetch_next_tokens {
         $first = substr($$yaml, 0, 1);
         my $plain = 0;
 
-        if ($QUOTED{ $first }) {
+        if ($CONTEXT{ $first }) {
             push @tokens, ( CONTEXT => $first );
             $self->push_tokens(\@tokens);
             return 1;
@@ -403,12 +387,6 @@ sub _fetch_next_tokens {
                 next;
             }
             $plain = 1;
-        }
-        elsif ($BLOCK_SCALAR{ $first }) {
-            push @tokens, ( CONTEXT => $first );
-            $self->push_tokens(\@tokens);
-            return 1;
-
         }
         elsif ($ANCHOR_ALIAS_TAG{ $first }) {
             my $token_name = $TOKEN_NAMES{ $first };
@@ -575,73 +553,73 @@ sub fetch_quoted {
     my ($self, $indent, $context) = @_;
     my $next_line = $self->next_line;
     my $yaml = \$next_line->[1];
-    $$yaml =~ s/\A$context//;
-    my @tokens;
+    my $spaces = $next_line->[0];
 
-    my ($return, @quoted_tokens) = $self->_read_quoted_tokens(1, $context, $yaml);
-    push @tokens, @quoted_tokens;
-    $self->push_tokens(\@tokens);
-    if ($return) {
-        if ($return == 2) {
-            return;
-        }
-    }
-    else {
-        return $self->_fetch_next_tokens($indent, $next_line);
-    }
-    $self->set_next_line(undef);
+    my $token_name = $TOKEN_NAMES{ $context };
+    $$yaml =~ s/\A\Q$context// or die "Unexpected";;
+    my @tokens = ( $token_name => $context );
+
+    my $start = 1;
+    my @values;
     while (1) {
 
-        my $next_line = $self->fetch_next_line;
-        if (not $next_line) {
-            last;
-        }
-        my @tokens;
+        unless ($start) {
+            $next_line = $self->fetch_next_line or do {
+                    $self->push_tokens(\@tokens);
+                    $self->exception("Missing closing quote <$context> at EOF");
+                };
+            $start = 0;
+            $spaces = $next_line->[0];
+            $yaml = \$next_line->[1];
 
-        my $spaces = $next_line->[0];
-        my $yaml = \$next_line->[1];
-        if (not $spaces and $$yaml =~ m/\A(---|\.\.\.)(?=$RE_WS|\z)/) {
-            push @tokens, ( 'Invalid quoted string' => $$yaml );
-            $self->push_tokens(\@tokens);
-            $self->set_next_line(undef);
-            last;
-        }
-        elsif (not length $$yaml) {
-            $self->push_tokens( [ EOL => $spaces . $next_line->[2] ] );
-            $self->set_next_line(undef);
-        }
-        elsif ((length $spaces) < $indent) {
-            push @tokens, ( 'Invalid quoted string' => $$yaml );
-            $self->push_tokens(\@tokens);
-            $self->set_next_line(undef);
-            last;
-        }
-        else {
+            if (not length $$yaml) {
+                push @tokens, ( EOL => $spaces . $next_line->[2] );
+                $self->set_next_line(undef);
+                push @values, { value => '', orig => '' };
+                next;
+            }
+            elsif (not $spaces and $$yaml =~ m/\A(---|\.\.\.)(?=$RE_WS|\z)/) {
+                $self->push_tokens(\@tokens);
+                $self->exception("Missing closing quote <$context> or invalid document marker");
+            }
+            elsif ((length $spaces) < $indent) {
+                $self->push_tokens(\@tokens);
+                $self->exception("Wrong indendation or missing closing quote <$context>");
+            }
+
             if ($$yaml =~ s/\A($RE_WS+)//) {
                 $spaces .= $1;
             }
-
             push @tokens, ( WS => $spaces );
-            my ($return, @quoted_tokens) = $self->_read_quoted_tokens(0, $context, $yaml);
-            push @tokens, @quoted_tokens;
-            $self->push_tokens(\@tokens);
-            if ($return) {
-                if ($return == 2) {
-                    last;
-                }
+        }
+
+        my $v = $self->_read_quoted_tokens($start, $context, $yaml, \@tokens);
+        push @values, $v;
+        if ($tokens[-2] eq $token_name) {
+            if ($start) {
+                $self->push_subtokens(
+                    { name => 'QUOTED', value => $v->{value} }, \@tokens
+                );
             }
             else {
-                return $self->_fetch_next_tokens($indent, $next_line);
+                my $value = YAML::PP::Render->render_quoted($context, \@values);
+                $self->push_subtokens(
+                    { name => 'QUOTED_MULTILINE', value => $value }, \@tokens
+                );
             }
-            $self->set_next_line(undef);
+            return $self->_fetch_next_tokens($indent, $next_line);
         }
+        $tokens[-1] .= $next_line->[2];
+        $self->set_next_line(undef);
+        $start = 0;
     }
 }
 
 sub _read_quoted_tokens {
-    my ($self, $start, $first, $yaml) = @_;
+    my ($self, $start, $first, $yaml, $tokens) = @_;
     my $quoted = '';
     my $decoded = '';
+    my $token_name = $TOKEN_NAMES{ $first };
     if ($first eq "'") {
         my $regex = $REGEXES{SINGLEQUOTED};
         if ($$yaml =~ s/\A($regex)//) {
@@ -653,44 +631,35 @@ sub _read_quoted_tokens {
     else {
         ($quoted, $decoded) = $self->_read_doublequoted($yaml);
     }
-    my $token_name = $TOKEN_NAMES{ $first };
-    my $token_name2 = $token_name . 'D';
-    my @tokens;
-    my $return = 0;
-
-    if ($$yaml =~ s/\A$first//) {
-        if ($start) {
-            my @subtokens;
-            push @subtokens, ( $token_name => $first );
-            push @subtokens, ( $token_name2 => { value => $decoded, orig => $quoted } );
-            push @subtokens, ( $token_name => $first );
-            push @tokens, ( QUOTED => \@subtokens );
-        }
-        else {
-            $token_name2 = $token_name . 'D_LINE';
-            push @tokens, ( $token_name2 => { value => $decoded, orig => $quoted } );
-            push @tokens, ( $token_name => $first );
-        }
-    }
-    elsif (not length $$yaml) {
-        my $eol = '';
+    my $eol = '';
+    unless (length $$yaml) {
         if ($quoted =~ s/($RE_WS+)\z//) {
             $eol = $1;
             $decoded =~ s/($eol)\z//;
         }
-        push @tokens, ( $token_name => $first ) if $start;
-        push @tokens, ( $token_name . 'D_LINE' => { value => $decoded, orig => $quoted } );
-        push @tokens, ( EOL => $eol );
-        $return = 1;
     }
-    else {
-        push @tokens, ( $token_name => $first ) if $start;
-        push @tokens, ( $token_name2 => { value => $decoded, orig => $quoted } );
-        push @tokens, ( 'Invalid quoted string' => $$yaml );
-        $return = 2;
+    my $value = { value => $decoded, orig => $quoted };
+
+    if ($$yaml =~ s/\A$first//) {
+        if ($start) {
+            push @$tokens, ( $token_name . 'D' => $value );
+        }
+        else {
+            push @$tokens, ( $token_name . 'D_LINE' => $value );
+        }
+        push @$tokens, ( $token_name => $first );
+        return $value;
+    }
+    if (length $$yaml) {
+        push @$tokens, ( $token_name . 'D' => $value );
+        $self->push_tokens($tokens);
+        $self->exception("Invalid quoted <$first> string");
     }
 
-    return ($return, @tokens);
+    push @$tokens, ( $token_name . 'D_LINE' => $value );
+    push @$tokens, ( EOL => $eol );
+
+    return $value;
 }
 
 sub _read_doublequoted {
@@ -791,8 +760,7 @@ sub push_tokens {
     my ($self, $new_tokens) = @_;
     my $next = $self->next_tokens;
     my $line = $self->line;
-
-    my $column = $self->offset || 0;
+    my $column = $self->offset;
 
     for (my $i = 0; $i < @$new_tokens; $i += 2) {
         my $value = $new_tokens->[ $i + 1 ];
@@ -802,31 +770,7 @@ sub push_tokens {
             line => $line,
             column => $column,
         };
-        if (ref $value eq 'ARRAY') {
-            my @subtokens = @$value;
-            for (my $i = 0; $i < @subtokens; $i += 2) {
-                my $value = $subtokens[ $i + 1 ];
-                my $name = $subtokens[ $i ];
-
-                my %sub = (
-                    name => $subtokens[ $i ],
-                    line => $line,
-                    column => $column,
-                    value => $value,
-                );
-                if (ref $value eq 'HASH') {
-                    %sub = ( %sub, %$value );
-                    $column += length $value->{orig};
-                }
-                else {
-                    $column += length $value unless $name eq 'CONTEXT';
-                }
-                push @{ $push->{value} }, {
-                    %sub
-                };
-            }
-        }
-        elsif (ref $value eq 'HASH') {
+        if (ref $value eq 'HASH') {
             %$push = ( %$push, %$value );
             $column += length $value->{orig} unless $name eq 'CONTEXT';
         }
@@ -846,17 +790,56 @@ sub push_tokens {
     return $next;
 }
 
+sub push_subtokens {
+    my ($self, $token, $subtokens) = @_;
+    my $next = $self->next_tokens;
+    my $line = $self->line;
+    my $column = $self->offset;
+    $token->{line} = $line;
+    $token->{column} = $column;
+    $token->{subtokens} = \my @sub;
+
+    for (my $i = 0; $i < @$subtokens; $i+=2) {
+        my $name = $subtokens->[ $i ];
+        my $value = $subtokens->[ $i + 1 ];
+        my $push = {
+            name => $subtokens->[ $i ],
+            line => $line,
+            column => $column,
+        };
+        if (ref $value eq 'HASH') {
+            %$push = ( %$push, %$value );
+            $column += length $value->{orig} unless $name eq 'CONTEXT';
+        }
+        else {
+            $push->{value} = $value;
+            $column += length $value unless $name eq 'CONTEXT';
+        }
+        push @sub, $push;
+    }
+    push @$next, $token;
+    $self->set_offset($column);
+    return $next;
+}
+
 sub exception {
     my ($self, $msg) = @_;
     my $next = $self->next_tokens;
+    $next = [];
     my $line = @$next ? $next->[0]->{line} : $self->line;
     my @caller = caller(0);
+    my $yaml = '';
+    if (my $nl = $self->next_line) {
+        $yaml = join '', @$nl;
+        $yaml = $nl->[1];
+    }
     my $e = YAML::PP::Exception->new(
         line => $line,
+        column => $self->offset + 1,
         msg => $msg,
         next => $next,
         where => $caller[1] . ' line ' . $caller[2],
-        yaml => [''],
+        yaml => [$yaml],
     );
     croak $e;
 }

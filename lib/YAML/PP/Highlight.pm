@@ -134,9 +134,9 @@ sub transform {
     for my $token (@$tokens) {
         my @values;
         my $value = $token->{value};
-        if (ref $value) {
-            # subtokens
-            @values = @$value;
+        my $subtokens = $token->{subtokens};
+        if ($subtokens) {
+            @values = @$subtokens;
         }
         else {
             @values = $token;

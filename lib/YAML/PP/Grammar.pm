@@ -231,56 +231,6 @@ $GRAMMAR = {
       'match' => 'cb_tag'
     }
   },
-  'MULTILINE_DOUBLEQUOTED' => {
-    'DOUBLEQUOTED_LINE' => {
-      'DOUBLEQUOTE' => {
-        'DEFAULT' => {
-          'match' => 'cb_send_scalar',
-          'return' => 1
-        },
-        'EOL' => {
-          'match' => 'cb_send_scalar',
-          'return' => 1
-        }
-      },
-      'EOL' => {
-        'new' => 'MULTILINE_DOUBLEQUOTED'
-      },
-      'match' => 'cb_take'
-    },
-    'EOL' => {
-      'match' => 'cb_empty_quoted_line',
-      'new' => 'MULTILINE_DOUBLEQUOTED'
-    },
-    'WS' => {
-      'new' => 'MULTILINE_DOUBLEQUOTED'
-    }
-  },
-  'MULTILINE_SINGLEQUOTED' => {
-    'EOL' => {
-      'match' => 'cb_empty_quoted_line',
-      'new' => 'MULTILINE_SINGLEQUOTED'
-    },
-    'SINGLEQUOTED_LINE' => {
-      'EOL' => {
-        'new' => 'MULTILINE_SINGLEQUOTED'
-      },
-      'SINGLEQUOTE' => {
-        'DEFAULT' => {
-          'match' => 'cb_send_scalar',
-          'return' => 1
-        },
-        'EOL' => {
-          'match' => 'cb_send_scalar',
-          'return' => 1
-        }
-      },
-      'match' => 'cb_take'
-    },
-    'WS' => {
-      'new' => 'MULTILINE_SINGLEQUOTED'
-    }
-  },
   'NEWFLOWMAP' => {
     'DEFAULT' => {
       'new' => 'RULE_FULLFLOWSCALAR'
@@ -449,23 +399,6 @@ $GRAMMAR = {
       },
       'match' => 'cb_send_alias'
     },
-    'DOUBLEQUOTE' => {
-      'DOUBLEQUOTED_LINE' => {
-        'EOL' => {
-          'new' => 'MULTILINE_DOUBLEQUOTED'
-        },
-        'match' => 'cb_take'
-      },
-      'WS' => {
-        'DOUBLEQUOTED_LINE' => {
-          'EOL' => {
-            'new' => 'MULTILINE_DOUBLEQUOTED'
-          },
-          'match' => 'cb_take'
-        }
-      },
-      'match' => 'cb_start_quoted'
-    },
     'FLOWMAP_START' => {
       'DEFAULT' => {
         'new' => 'NEWFLOWMAP'
@@ -506,14 +439,11 @@ $GRAMMAR = {
       },
       'match' => 'cb_take_quoted'
     },
-    'SINGLEQUOTE' => {
-      'SINGLEQUOTED_LINE' => {
-        'EOL' => {
-          'new' => 'MULTILINE_SINGLEQUOTED'
-        },
-        'match' => 'cb_take'
+    'QUOTED_MULTILINE' => {
+      'EOL' => {
+        'return' => 1
       },
-      'match' => 'cb_start_quoted'
+      'match' => 'cb_quoted_multiline'
     }
   },
   'NODETYPE_NODE' => {
@@ -561,23 +491,6 @@ $GRAMMAR = {
         'return' => 1
       },
       'match' => 'cb_insert_empty_map'
-    },
-    'DOUBLEQUOTE' => {
-      'DOUBLEQUOTED_LINE' => {
-        'EOL' => {
-          'new' => 'MULTILINE_DOUBLEQUOTED'
-        },
-        'match' => 'cb_take'
-      },
-      'WS' => {
-        'DOUBLEQUOTED_LINE' => {
-          'EOL' => {
-            'new' => 'MULTILINE_DOUBLEQUOTED'
-          },
-          'match' => 'cb_take'
-        }
-      },
-      'match' => 'cb_start_quoted'
     },
     'FLOWMAP_START' => {
       'DEFAULT' => {
@@ -678,22 +591,11 @@ $GRAMMAR = {
       },
       'match' => 'cb_take_quoted'
     },
-    'SINGLEQUOTE' => {
-      'SINGLEQUOTED_LINE' => {
-        'EOL' => {
-          'new' => 'MULTILINE_SINGLEQUOTED'
-        },
-        'match' => 'cb_take'
+    'QUOTED_MULTILINE' => {
+      'EOL' => {
+        'return' => 1
       },
-      'WS' => {
-        'SINGLEQUOTED_LINE' => {
-          'EOL' => {
-            'new' => 'MULTILINE_SINGLEQUOTED'
-          },
-          'match' => 'cb_take'
-        }
-      },
-      'match' => 'cb_start_quoted'
+      'match' => 'cb_quoted_multiline'
     },
     'WS' => {
       'new' => 'FULLMAPVALUE_INLINE'
@@ -787,23 +689,6 @@ $GRAMMAR = {
       'match' => 'cb_send_alias',
       'return' => 1
     },
-    'DOUBLEQUOTE' => {
-      'DOUBLEQUOTED_LINE' => {
-        'EOL' => {
-          'new' => 'MULTILINE_DOUBLEQUOTED'
-        },
-        'match' => 'cb_take'
-      },
-      'WS' => {
-        'DOUBLEQUOTED_LINE' => {
-          'EOL' => {
-            'new' => 'MULTILINE_DOUBLEQUOTED'
-          },
-          'match' => 'cb_take'
-        }
-      },
-      'match' => 'cb_start_quoted'
-    },
     'FLOWMAP_START' => {
       'DEFAULT' => {
         'new' => 'NEWFLOWMAP'
@@ -846,22 +731,11 @@ $GRAMMAR = {
       },
       'match' => 'cb_take_quoted'
     },
-    'SINGLEQUOTE' => {
-      'SINGLEQUOTED_LINE' => {
-        'EOL' => {
-          'new' => 'MULTILINE_SINGLEQUOTED'
-        },
-        'match' => 'cb_take'
+    'QUOTED_MULTILINE' => {
+      'EOL' => {
+        'return' => 1
       },
-      'WS' => {
-        'SINGLEQUOTED_LINE' => {
-          'EOL' => {
-            'new' => 'MULTILINE_SINGLEQUOTED'
-          },
-          'match' => 'cb_take'
-        }
-      },
-      'match' => 'cb_start_quoted'
+      'match' => 'cb_quoted_multiline'
     }
   },
   'RULE_FULLFLOWSCALAR' => {
@@ -1173,16 +1047,6 @@ This is the Grammar in YAML
         EOL: { node: FULLNODE, return: 1 }
         WS: { node: FULLNODE, return: 1 }
     
-      SINGLEQUOTE:
-        match: cb_start_quoted
-        SINGLEQUOTED_LINE:
-          match: cb_take
-          EOL: { new: MULTILINE_SINGLEQUOTED }
-        WS:
-          SINGLEQUOTED_LINE:
-            match: cb_take
-            EOL: { new: MULTILINE_SINGLEQUOTED }
-    
       QUOTED:
         match: cb_take_quoted
         EOL: { match: cb_send_scalar, return: 1 }
@@ -1195,15 +1059,11 @@ This is the Grammar in YAML
           match: cb_insert_map
           EOL: { node: FULLNODE , return: 1}
           WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-      DOUBLEQUOTE:
-        match: cb_start_quoted
-        DOUBLEQUOTED_LINE:
-          match: cb_take
-          EOL: { new: MULTILINE_DOUBLEQUOTED  }
-        WS:
-          DOUBLEQUOTED_LINE:
-            match: cb_take
-            EOL: { new: MULTILINE_DOUBLEQUOTED  }
+    
+      QUOTED_MULTILINE:
+        match: cb_quoted_multiline
+        EOL: { return: 1 }
+    
     
       PLAIN:
         match: cb_start_plain
@@ -1253,26 +1113,6 @@ This is the Grammar in YAML
         match: cb_empty_complexvalue
         new: NODETYPE_MAP
     
-    MULTILINE_SINGLEQUOTED:
-      SINGLEQUOTED_LINE:
-        match: cb_take
-        EOL: { new: MULTILINE_SINGLEQUOTED }
-        SINGLEQUOTE:
-          EOL: { match: cb_send_scalar, return: 1 }
-          DEFAULT: { match: cb_send_scalar, return: 1 }
-      WS: { new: MULTILINE_SINGLEQUOTED }
-      EOL: { match: cb_empty_quoted_line, new: MULTILINE_SINGLEQUOTED }
-    
-    MULTILINE_DOUBLEQUOTED:
-      DOUBLEQUOTED_LINE:
-        match: cb_take
-        EOL: { new: MULTILINE_DOUBLEQUOTED  }
-        DOUBLEQUOTE:
-          EOL: { match: cb_send_scalar, return: 1 }
-          DEFAULT: { match: cb_send_scalar, return: 1 }
-      WS: { new: MULTILINE_DOUBLEQUOTED }
-      EOL: { match: cb_empty_quoted_line, new: MULTILINE_DOUBLEQUOTED }
-    
     RULE_FULLFLOWSCALAR:
       ANCHOR:
         match: cb_anchor
@@ -1313,30 +1153,15 @@ This is the Grammar in YAML
         match: cb_send_alias
         return: 1
     
-      SINGLEQUOTE:
-        match: cb_start_quoted
-        SINGLEQUOTED_LINE:
-          match: cb_take
-          EOL: { new: MULTILINE_SINGLEQUOTED }
-        WS:
-          SINGLEQUOTED_LINE:
-            match: cb_take
-            EOL: { new: MULTILINE_SINGLEQUOTED }
-    
       QUOTED:
         match: cb_take_quoted
         EOL: { match: cb_send_scalar, return: 1 }
         WS: { match: cb_send_scalar, return: 1 }
         DEFAULT: { match: cb_send_scalar, return: 1 }
-      DOUBLEQUOTE:
-        match: cb_start_quoted
-        DOUBLEQUOTED_LINE:
-          match: cb_take
-          EOL: { new: MULTILINE_DOUBLEQUOTED  }
-        WS:
-          DOUBLEQUOTED_LINE:
-            match: cb_take
-            EOL: { new: MULTILINE_DOUBLEQUOTED  }
+    
+      QUOTED_MULTILINE:
+        match: cb_quoted_multiline
+        EOL: { return: 1 }
     
       PLAIN:
         match: cb_start_plain
@@ -1639,24 +1464,13 @@ This is the Grammar in YAML
         match: cb_send_alias
         EOL: { return: 1 }
     
-      SINGLEQUOTE:
-        match: cb_start_quoted
-        SINGLEQUOTED_LINE:
-          match: cb_take
-          EOL: { new: MULTILINE_SINGLEQUOTED }
-    
       QUOTED:
         match: cb_take_quoted
         EOL: { match: cb_send_scalar, return: 1 }
-      DOUBLEQUOTE:
-        match: cb_start_quoted
-        DOUBLEQUOTED_LINE:
-          match: cb_take
-          EOL: { new: MULTILINE_DOUBLEQUOTED  }
-        WS:
-          DOUBLEQUOTED_LINE:
-            match: cb_take
-            EOL: { new: MULTILINE_DOUBLEQUOTED  }
+    
+      QUOTED_MULTILINE:
+        match: cb_quoted_multiline
+        EOL: { return: 1 }
     
       PLAIN:
         match: cb_start_plain

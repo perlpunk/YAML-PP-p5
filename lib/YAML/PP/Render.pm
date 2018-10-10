@@ -36,22 +36,17 @@ sub render_tag {
 }
 
 sub render_quoted {
-    my ($self, $info) = @_;
-    my $lines = $info->{value};
-
-    if ($#$lines == 0) {
-        $info->{value} = $lines->[0];
-        return;
-    }
+    my ($self, $style, $lines) = @_;
 
     my $quoted = '';
     my $addspace = 0;
 
     for my $i (0 .. $#$lines) {
         my $line = $lines->[ $i ];
+        my $value = $line->{value};
         my $last = $i == $#$lines;
         my $first = $i == 0;
-        if ($line eq '') {
+        if ($value eq '') {
             if ($first) {
                 $addspace = 1;
             }
@@ -67,14 +62,16 @@ sub render_quoted {
 
         $quoted .= ' ' if $addspace;
         $addspace = 1;
-        if ($info->{style} eq '"') {
-            if ($line =~ s/\\$//) {
+        if ($style eq '"') {
+            if ($line->{orig} =~ m/\\$/) {
+                $line->{value} =~ s/\\$//;
+                $value =~ s/\\$//;
                 $addspace = 0;
             }
         }
-        $quoted .= $line;
+        $quoted .= $value;
     }
-    $info->{value} = $quoted;
+    return $quoted;
 }
 
 sub render_block_scalar {
@@ -156,18 +153,14 @@ sub render_block_scalar {
 sub render_multi_val {
     my ($self, $info) = @_;
     my $multi = $info->{value};
-    return $multi unless ref $multi;
-    # remove empty lines at beginning and end
-    while (@$multi and $multi->[0] eq '') {
-        shift @$multi;
-    }
+    return unless ref $multi;
+    # remove empty lines at the end
     while (@$multi and $multi->[-1] eq '') {
         pop @$multi;
     }
     my $string = '';
     my $start = 1;
     for my $line (@$multi) {
-        #$line =~ s/\\/\\\\/g;
         if (not $start) {
             if ($line eq '') {
                 $string .= "\n";

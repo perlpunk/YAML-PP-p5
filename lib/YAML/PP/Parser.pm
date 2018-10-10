@@ -782,8 +782,10 @@ sub scalar_event {
         my $properties = pop @$event_stack;
         $properties = $self->node_properties($properties->[1], $info);
     }
-    my $method = $render_methods{ $info->{style} };
-    YAML::PP::Render->$method( $info );
+    if (ref $info->{value}) {
+        my $method = $render_methods{ $info->{style} };
+        YAML::PP::Render->$method( $info );
+    }
 
     $self->callback->($self, 'scalar_event', $info);
     $self->set_new_node(undef);
@@ -814,7 +816,9 @@ sub yaml_to_tokens {
     my $next = $yp->lexer->next_tokens;
     if ($error) {
         push @$tokens, map { +{ %$_, name => 'ERROR' } } @$next;
-        my $remaining = $yp->reader->read;
+        my $next_line = $yp->lexer->next_line;
+        my $remaining = $next_line ? join '', @$next_line : '';
+        $remaining .= $yp->reader->read;
         $remaining = '' unless defined $remaining;
         push @$tokens, { name => "ERROR", value => $remaining };
     }
@@ -1189,12 +1193,13 @@ sub cb_seqitem {
     $self->set_new_node(1);
 }
 
-sub cb_start_quoted {
+sub cb_take_quoted {
     my ($self, $token) = @_;
+    my $subtokens = $token->{subtokens};
     my $stack = $self->event_stack;
     my $info = {
-        style => $token->{value},
-        value => [],
+        style => $subtokens->[0]->{value},
+        value => $token->{value},
         offset => $token->{column},
     };
     if (@$stack and $stack->[-1]->[0] eq 'properties') {
@@ -1203,19 +1208,20 @@ sub cb_start_quoted {
     push @{ $stack }, [ scalar => $info ];
 }
 
-sub cb_take_quoted {
+sub cb_quoted_multiline {
     my ($self, $token) = @_;
-    my $subtokens = $token->{value};
+    my $subtokens = $token->{subtokens};
     my $stack = $self->event_stack;
     my $info = {
         style => $subtokens->[0]->{value},
-        value => [$subtokens->[1]->{value}],
+        value => $token->{value},
         offset => $token->{column},
     };
     if (@$stack and $stack->[-1]->[0] eq 'properties') {
         $self->fetch_inline_properties($stack, $info);
     }
     push @{ $stack }, [ scalar => $info ];
+    $self->cb_send_scalar;
 }
 
 sub cb_take_quoted_key {
