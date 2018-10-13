@@ -399,6 +399,10 @@ $GRAMMAR = {
       },
       'match' => 'cb_send_alias'
     },
+    'BLOCK_SCALAR' => {
+      'match' => 'cb_send_block_scalar',
+      'return' => 1
+    },
     'FLOWMAP_START' => {
       'DEFAULT' => {
         'new' => 'NEWFLOWMAP'
@@ -410,14 +414,6 @@ $GRAMMAR = {
         'new' => 'NEWFLOWSEQ'
       },
       'match' => 'cb_start_flowseq'
-    },
-    'FOLDED' => {
-      'match' => 'cb_block_scalar',
-      'new' => 'RULE_BLOCK_SCALAR_HEADER'
-    },
-    'LITERAL' => {
-      'match' => 'cb_block_scalar',
-      'new' => 'RULE_BLOCK_SCALAR_HEADER'
     },
     'PLAIN' => {
       'COMMENT' => {
@@ -481,6 +477,10 @@ $GRAMMAR = {
       },
       'match' => 'cb_alias'
     },
+    'BLOCK_SCALAR' => {
+      'match' => 'cb_send_block_scalar',
+      'return' => 1
+    },
     'COLON' => {
       'EOL' => {
         'node' => 'FULLNODE',
@@ -503,14 +503,6 @@ $GRAMMAR = {
         'new' => 'NEWFLOWSEQ'
       },
       'match' => 'cb_start_flowseq'
-    },
-    'FOLDED' => {
-      'match' => 'cb_block_scalar',
-      'new' => 'RULE_BLOCK_SCALAR_HEADER'
-    },
-    'LITERAL' => {
-      'match' => 'cb_block_scalar',
-      'new' => 'RULE_BLOCK_SCALAR_HEADER'
     },
     'PLAIN' => {
       'COLON' => {
@@ -611,77 +603,6 @@ $GRAMMAR = {
         'node' => 'FULLNODE'
       },
       'match' => 'cb_seqitem'
-    }
-  },
-  'RULE_BLOCK_SCALAR_CONTENT' => {
-    'END' => {
-      'match' => 'cb_send_scalar',
-      'return' => 1
-    },
-    'EOL' => {
-      'match' => 'cb_block_scalar_empty_line',
-      'new' => 'RULE_BLOCK_SCALAR_CONTENT'
-    },
-    'INDENT' => {
-      'BLOCK_SCALAR_CONTENT' => {
-        'EOL' => {
-          'new' => 'RULE_BLOCK_SCALAR_CONTENT'
-        },
-        'match' => 'cb_block_scalar_content'
-      },
-      'EOL' => {
-        'match' => 'cb_block_scalar_empty_line',
-        'new' => 'RULE_BLOCK_SCALAR_CONTENT'
-      }
-    }
-  },
-  'RULE_BLOCK_SCALAR_HEADER' => {
-    'BLOCK_SCALAR_CHOMP' => {
-      'BLOCK_SCALAR_INDENT' => {
-        'EOL' => {
-          'new' => 'RULE_BLOCK_SCALAR_START'
-        }
-      },
-      'EOL' => {
-        'new' => 'RULE_BLOCK_SCALAR_START'
-      },
-      'match' => 'cb_add_block_scalar_chomp'
-    },
-    'BLOCK_SCALAR_INDENT' => {
-      'BLOCK_SCALAR_CHOMP' => {
-        'EOL' => {
-          'new' => 'RULE_BLOCK_SCALAR_START'
-        },
-        'match' => 'cb_add_block_scalar_chomp'
-      },
-      'EOL' => {
-        'new' => 'RULE_BLOCK_SCALAR_START'
-      }
-    },
-    'EOL' => {
-      'new' => 'RULE_BLOCK_SCALAR_START'
-    }
-  },
-  'RULE_BLOCK_SCALAR_START' => {
-    'END' => {
-      'match' => 'cb_send_scalar',
-      'return' => 1
-    },
-    'EOL' => {
-      'match' => 'cb_block_scalar_empty_line',
-      'new' => 'RULE_BLOCK_SCALAR_START'
-    },
-    'INDENT' => {
-      'BLOCK_SCALAR_CONTENT' => {
-        'EOL' => {
-          'new' => 'RULE_BLOCK_SCALAR_CONTENT'
-        },
-        'match' => 'cb_block_scalar_start_content'
-      },
-      'EOL' => {
-        'match' => 'cb_block_scalar_empty_line',
-        'new' => 'RULE_BLOCK_SCALAR_START'
-      }
     }
   },
   'RULE_FLOWSCALAR' => {
@@ -950,7 +871,7 @@ $GRAMMAR = {
     },
     'EOL' => {
       'match' => 'cb_empty_plain',
-      'new' => 'RULE_PLAIN_MULTI'
+      'new' => 'RULE_PLAIN_MULTI_FLOW'
     },
     'INDENT' => {
       'WS' => {
@@ -987,7 +908,7 @@ $GRAMMAR = {
         },
         'EOL' => {
           'match' => 'cb_fetch_tokens_plain',
-          'new' => 'RULE_PLAIN_MULTI'
+          'new' => 'RULE_PLAIN_MULTI_FLOW'
         },
         'match' => 'cb_take'
       }
@@ -1086,12 +1007,9 @@ This is the Grammar in YAML
         EOL: { node: FULLNODE , return: 1}
         WS: { node: FULLMAPVALUE_INLINE, return: 1 }
     
-      LITERAL:
-        match: cb_block_scalar
-        new: RULE_BLOCK_SCALAR_HEADER
-      FOLDED:
-        match: cb_block_scalar
-        new: RULE_BLOCK_SCALAR_HEADER
+      BLOCK_SCALAR:
+        match: cb_send_block_scalar
+        return: 1
     
       FLOWSEQ_START:
         match: cb_start_flowseq
@@ -1246,11 +1164,11 @@ This is the Grammar in YAML
     
     RULE_PLAIN_MULTI_FLOW:
       END: { match: cb_send_scalar, return: 1 }
-      EOL: { match: cb_empty_plain, new: RULE_PLAIN_MULTI }
+      EOL: { match: cb_empty_plain, new: RULE_PLAIN_MULTI_FLOW }
       WS:
         PLAIN:
           match: cb_take
-          EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+          EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI_FLOW }
           COMMENT:
             EOL: { match: cb_send_scalar, return: 1 }
       INDENT:
@@ -1309,42 +1227,6 @@ This is the Grammar in YAML
         match: cb_seqitem
         EOL: { node: FULLNODE , return: 1}
         WS: { node: FULLNODE }
-    
-    RULE_BLOCK_SCALAR_HEADER:
-      BLOCK_SCALAR_INDENT:
-        BLOCK_SCALAR_CHOMP:
-          match: cb_add_block_scalar_chomp
-          EOL:
-            new: RULE_BLOCK_SCALAR_START
-        EOL:
-          new: RULE_BLOCK_SCALAR_START
-      BLOCK_SCALAR_CHOMP:
-        match: cb_add_block_scalar_chomp
-        BLOCK_SCALAR_INDENT:
-          EOL:
-            new: RULE_BLOCK_SCALAR_START
-        EOL:
-          new: RULE_BLOCK_SCALAR_START
-      EOL:
-        new: RULE_BLOCK_SCALAR_START
-    
-    RULE_BLOCK_SCALAR_START:
-      EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_START }
-      INDENT:
-        EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_START }
-        BLOCK_SCALAR_CONTENT:
-          match: cb_block_scalar_start_content
-          EOL: { new: RULE_BLOCK_SCALAR_CONTENT }
-      END: { match: cb_send_scalar, return: 1 }
-    
-    RULE_BLOCK_SCALAR_CONTENT:
-      EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_CONTENT }
-      INDENT:
-        EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_CONTENT }
-        BLOCK_SCALAR_CONTENT:
-          match: cb_block_scalar_content
-          EOL: { new: RULE_BLOCK_SCALAR_CONTENT }
-      END: { match: cb_send_scalar, return: 1 }
     
     NODETYPE_MAP:
       ANCHOR:
@@ -1479,12 +1361,9 @@ This is the Grammar in YAML
           EOL: { return: 1 }
         EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
     
-      LITERAL:
-        match: cb_block_scalar
-        new: RULE_BLOCK_SCALAR_HEADER
-      FOLDED:
-        match: cb_block_scalar
-        new: RULE_BLOCK_SCALAR_HEADER
+      BLOCK_SCALAR:
+        match: cb_send_block_scalar
+        return: 1
     
       FLOWSEQ_START:
         match: cb_start_flowseq

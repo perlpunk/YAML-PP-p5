@@ -511,9 +511,6 @@ sub parse_tokens {
             my $indent = $self->offset->[-1] + 1;
             my $method = $fetch_method{ $context->{value} };
             my $partial = $self->lexer->$method($indent, $context->{value});
-            unless ($partial) {
-                $self->lexer->set_next_line(undef);
-            }
             next RULE;
         }
         my $def = $next_rule->{ $got };
@@ -545,9 +542,6 @@ sub parse_tokens {
         if ($new) {
             $next_rule_name = $new;
             DEBUG and $self->got("NEW: $next_rule_name");
-#            if ($node) {
-#                $self->set_new_node($node);
-#            }
 
             if ($def->{return}) {
                 $self->set_rule($next_rule_name);
@@ -1356,43 +1350,23 @@ sub cb_insert_empty_map {
     $self->set_new_node(1);
 }
 
-sub cb_block_scalar {
+sub cb_send_block_scalar {
     my ($self, $token) = @_;
-    my $type = $token->{value};
+    my $type = $token->{subtokens}->[0]->{value};
     my $stack = $self->event_stack;
     my $info = {
         style => $type,
-        value => [],
+        value => $token->{value},
         offset => $token->{column},
     };
     if (@$stack and $stack->[-1]->[0] eq 'properties') {
         $self->fetch_inline_properties($stack, $info);
     }
     push @{ $self->event_stack }, [ scalar => $info ];
-}
+    $self->cb_send_scalar;
 
-sub cb_add_block_scalar_chomp {
-    my ($self, $token) = @_;
-    my $chomp = $token->{value};
-    $self->event_stack->[-1]->[1]->{block_chomp} = $chomp;
-}
-
-sub cb_block_scalar_empty_line {
-    my ($self, $res) = @_;
-    my $event = $self->event_stack->[-1]->[1];
-    push @{ $event->{value} }, '';
-}
-
-sub cb_block_scalar_start_content {
-    my ($self, $token) = @_;
-    my $event = $self->event_stack->[-1]->[1];
-    push @{ $event->{value} }, $token->{value};
-}
-
-sub cb_block_scalar_content {
-    my ($self, $token) = @_;
-    my $event = $self->event_stack->[-1]->[1];
-    push @{ $event->{value} }, $token->{value};
+    my $indent = $self->offset->[-1] + 1;
+    $self->lexer->fetch_next_tokens($indent);
 }
 
 1;

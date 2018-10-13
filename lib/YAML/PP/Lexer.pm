@@ -477,13 +477,16 @@ sub fetch_block {
     my $current_indent = $indent;
     my $started = 0;
     my $set_indent = 0;
+    my $chomp = '';
     if ($$yaml =~ s/\A([1-9]\d*)([+-]?)//) {
         push @tokens, ( BLOCK_SCALAR_INDENT => $1 );
         $set_indent = $1;
+        $chomp = $2 if $2;
         push @tokens, ( BLOCK_SCALAR_CHOMP => $2 ) if $2;
     }
     elsif ($$yaml =~ s/\A([+-])([1-9]\d*)?//) {
         push @tokens, ( BLOCK_SCALAR_CHOMP => $1 );
+        $chomp = $1;
         push @tokens, ( BLOCK_SCALAR_INDENT => $2 ) if $2;
         $set_indent = $2 if $2;
     }
@@ -491,33 +494,36 @@ sub fetch_block {
         $started = 1;
         $current_indent = $set_indent;
     }
-    unless (length $$yaml) {
+    if (not length $$yaml) {
         push @tokens, ( EOL => $eol );
     }
-    if ($$yaml =~ s/\A$RE_WS+(?:#.*)\z//) {
-        push @tokens, ( EOL => $eol );
+    elsif ($$yaml =~ s/\A$RE_WS+(#.*|)\z//) {
+        push @tokens, ( EOL => $1 . $eol );
+    }
+    else {
+        $self->push_tokens(\@tokens);
+        $self->exception("Invalid block scalar");
     }
 
+    my @lines;
     while (1) {
         $self->set_next_line(undef);
-        my $next_line = $self->fetch_next_line;
+        $next_line = $self->fetch_next_line;
         if (not $next_line) {
-            push @tokens, ( END => '' );
             last;
         }
         my $spaces = $next_line->[0];
         my $content = $next_line->[1];
         my $eol = $next_line->[2];
         if (not $spaces and $content =~ m/\A(---|\.\.\.)(?=$RE_WS|\z)/) {
-            push @tokens, ( END => '' );
             last;
         }
         if ((length $spaces) < $current_indent) {
             if (length $content) {
-                push @tokens, ( END => '' );
                 last;
             }
             else {
+                push @lines, '';
                 push @tokens, ( EOL => $spaces . $eol );
                 next;
             }
@@ -529,6 +535,7 @@ sub fetch_block {
             }
         }
         unless (length $content) {
+            push @lines, '';
             push @tokens, ( INDENT => $spaces, EOL => $eol );
             unless ($started) {
                 $current_indent = length $spaces;
@@ -539,14 +546,16 @@ sub fetch_block {
             $started = 1;
             $current_indent = length $spaces;
         }
+        push @lines, $content;
         push @tokens, (
             INDENT => $spaces,
             BLOCK_SCALAR_CONTENT => $content,
             EOL => $eol,
         );
     }
-    $self->push_tokens(\@tokens);
-    return 1;
+    my $value = YAML::PP::Render->render_block_scalar($context, $chomp, \@lines);
+    $self->push_subtokens( { name => 'BLOCK_SCALAR', value => $value }, \@tokens );
+    return 0;
 }
 
 sub fetch_quoted {
@@ -814,6 +823,9 @@ sub push_subtokens {
         else {
             $push->{value} = $value;
             $column += length $value unless $name eq 'CONTEXT';
+        }
+        if ($push->{name} eq 'EOL') {
+            $column = 0;
         }
         push @sub, $push;
     }

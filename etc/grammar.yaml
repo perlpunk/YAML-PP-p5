@@ -65,12 +65,9 @@ NODETYPE_SCALAR_OR_MAP:
     EOL: { node: FULLNODE , return: 1}
     WS: { node: FULLMAPVALUE_INLINE, return: 1 }
 
-  LITERAL:
-    match: cb_block_scalar
-    new: RULE_BLOCK_SCALAR_HEADER
-  FOLDED:
-    match: cb_block_scalar
-    new: RULE_BLOCK_SCALAR_HEADER
+  BLOCK_SCALAR:
+    match: cb_send_block_scalar
+    return: 1
 
   FLOWSEQ_START:
     match: cb_start_flowseq
@@ -225,11 +222,11 @@ RULE_PLAIN_MULTI:
 
 RULE_PLAIN_MULTI_FLOW:
   END: { match: cb_send_scalar, return: 1 }
-  EOL: { match: cb_empty_plain, new: RULE_PLAIN_MULTI }
+  EOL: { match: cb_empty_plain, new: RULE_PLAIN_MULTI_FLOW }
   WS:
     PLAIN:
       match: cb_take
-      EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+      EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI_FLOW }
       COMMENT:
         EOL: { match: cb_send_scalar, return: 1 }
   INDENT:
@@ -288,42 +285,6 @@ NODETYPE_SEQ:
     match: cb_seqitem
     EOL: { node: FULLNODE , return: 1}
     WS: { node: FULLNODE }
-
-RULE_BLOCK_SCALAR_HEADER:
-  BLOCK_SCALAR_INDENT:
-    BLOCK_SCALAR_CHOMP:
-      match: cb_add_block_scalar_chomp
-      EOL:
-        new: RULE_BLOCK_SCALAR_START
-    EOL:
-      new: RULE_BLOCK_SCALAR_START
-  BLOCK_SCALAR_CHOMP:
-    match: cb_add_block_scalar_chomp
-    BLOCK_SCALAR_INDENT:
-      EOL:
-        new: RULE_BLOCK_SCALAR_START
-    EOL:
-      new: RULE_BLOCK_SCALAR_START
-  EOL:
-    new: RULE_BLOCK_SCALAR_START
-
-RULE_BLOCK_SCALAR_START:
-  EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_START }
-  INDENT:
-    EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_START }
-    BLOCK_SCALAR_CONTENT:
-      match: cb_block_scalar_start_content
-      EOL: { new: RULE_BLOCK_SCALAR_CONTENT }
-  END: { match: cb_send_scalar, return: 1 }
-
-RULE_BLOCK_SCALAR_CONTENT:
-  EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_CONTENT }
-  INDENT:
-    EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_CONTENT }
-    BLOCK_SCALAR_CONTENT:
-      match: cb_block_scalar_content
-      EOL: { new: RULE_BLOCK_SCALAR_CONTENT }
-  END: { match: cb_send_scalar, return: 1 }
 
 NODETYPE_MAP:
   ANCHOR:
@@ -458,12 +419,9 @@ NODETYPE_MAPVALUE_INLINE:
       EOL: { return: 1 }
     EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
 
-  LITERAL:
-    match: cb_block_scalar
-    new: RULE_BLOCK_SCALAR_HEADER
-  FOLDED:
-    match: cb_block_scalar
-    new: RULE_BLOCK_SCALAR_HEADER
+  BLOCK_SCALAR:
+    match: cb_send_block_scalar
+    return: 1
 
   FLOWSEQ_START:
     match: cb_start_flowseq

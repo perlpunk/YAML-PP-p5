@@ -75,10 +75,7 @@ sub render_quoted {
 }
 
 sub render_block_scalar {
-    my ($self, $info) = @_;
-    my $block_type = $info->{style};
-    my $chomp = $info->{block_chomp} || '';
-    my $lines = $info->{value};
+    my ($self, $block_type, $chomp, $lines) = @_;
 
     my ($folded, $keep, $trim);
     if ($block_type eq '>') {
@@ -147,7 +144,7 @@ sub render_block_scalar {
         }
     }
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$string], ['string']);
-    $info->{value} = $string;
+    return $string;
 }
 
 sub render_multi_val {
