@@ -416,17 +416,17 @@ $GRAMMAR = {
       'match' => 'cb_start_flowseq'
     },
     'PLAIN' => {
-      'COMMENT' => {
-        'EOL' => {
-          'return' => 1
-        },
-        'match' => 'cb_send_scalar'
-      },
       'EOL' => {
-        'match' => 'cb_fetch_tokens_plain',
-        'new' => 'RULE_PLAIN_MULTI'
+        'match' => 'cb_send_scalar',
+        'return' => 1
       },
       'match' => 'cb_start_plain'
+    },
+    'PLAIN_MULTI' => {
+      'EOL' => {
+        'return' => 1
+      },
+      'match' => 'cb_send_plain_multi'
     },
     'QUOTED' => {
       'EOL' => {
@@ -516,15 +516,9 @@ $GRAMMAR = {
         },
         'match' => 'cb_insert_map'
       },
-      'COMMENT' => {
-        'EOL' => {
-          'return' => 1
-        },
-        'match' => 'cb_send_scalar'
-      },
       'EOL' => {
-        'match' => 'cb_fetch_tokens_plain',
-        'new' => 'RULE_PLAIN_MULTI'
+        'match' => 'cb_send_scalar',
+        'return' => 1
       },
       'WS' => {
         'COLON' => {
@@ -540,6 +534,12 @@ $GRAMMAR = {
         }
       },
       'match' => 'cb_start_plain'
+    },
+    'PLAIN_MULTI' => {
+      'EOL' => {
+        'return' => 1
+      },
+      'match' => 'cb_send_plain_multi'
     },
     'QUESTION' => {
       'EOL' => {
@@ -623,19 +623,19 @@ $GRAMMAR = {
       'match' => 'cb_start_flowseq'
     },
     'PLAIN' => {
-      'COMMENT' => {
-        'match' => 'cb_send_scalar',
-        'return' => 1
-      },
       'DEFAULT' => {
         'match' => 'cb_send_scalar',
         'return' => 1
       },
       'EOL' => {
-        'match' => 'cb_fetch_tokens_plain',
-        'new' => 'RULE_PLAIN_MULTI_FLOW'
+        'match' => 'cb_send_scalar',
+        'return' => 1
       },
       'match' => 'cb_start_plain'
+    },
+    'PLAIN_MULTI' => {
+      'match' => 'cb_send_plain_multi',
+      'return' => 1
     },
     'QUOTED' => {
       'DEFAULT' => {
@@ -811,108 +811,6 @@ $GRAMMAR = {
       },
       'match' => 'cb_take_quoted_key'
     }
-  },
-  'RULE_PLAIN_MULTI' => {
-    'END' => {
-      'match' => 'cb_send_scalar',
-      'return' => 1
-    },
-    'EOL' => {
-      'match' => 'cb_empty_plain',
-      'new' => 'RULE_PLAIN_MULTI'
-    },
-    'INDENT' => {
-      'WS' => {
-        'PLAIN' => {
-          'COMMENT' => {
-            'EOL' => {
-              'match' => 'cb_send_scalar',
-              'return' => 1
-            }
-          },
-          'EOL' => {
-            'match' => 'cb_fetch_tokens_plain',
-            'new' => 'RULE_PLAIN_MULTI'
-          },
-          'match' => 'cb_take'
-        }
-      }
-    },
-    'WS' => {
-      'PLAIN' => {
-        'COMMENT' => {
-          'EOL' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          }
-        },
-        'EOL' => {
-          'match' => 'cb_fetch_tokens_plain',
-          'new' => 'RULE_PLAIN_MULTI'
-        },
-        'match' => 'cb_take'
-      }
-    }
-  },
-  'RULE_PLAIN_MULTI_FLOW' => {
-    'COMMENT' => {
-      'EOL' => {
-        'match' => 'cb_send_scalar',
-        'return' => 1
-      }
-    },
-    'DEFAULT' => {
-      'match' => 'cb_send_scalar',
-      'return' => 1
-    },
-    'END' => {
-      'match' => 'cb_send_scalar',
-      'return' => 1
-    },
-    'EOL' => {
-      'match' => 'cb_empty_plain',
-      'new' => 'RULE_PLAIN_MULTI_FLOW'
-    },
-    'INDENT' => {
-      'WS' => {
-        'DEFAULT' => {
-          'match' => 'cb_send_scalar',
-          'return' => 1
-        },
-        'PLAIN' => {
-          'COMMENT' => {
-            'EOL' => {
-              'match' => 'cb_send_scalar',
-              'return' => 1
-            }
-          },
-          'DEFAULT' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          },
-          'EOL' => {
-            'match' => 'cb_fetch_tokens_plain',
-            'new' => 'RULE_PLAIN_MULTI_FLOW'
-          },
-          'match' => 'cb_take'
-        }
-      }
-    },
-    'WS' => {
-      'PLAIN' => {
-        'COMMENT' => {
-          'EOL' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          }
-        },
-        'EOL' => {
-          'match' => 'cb_fetch_tokens_plain',
-          'new' => 'RULE_PLAIN_MULTI_FLOW'
-        },
-        'match' => 'cb_take'
-      }
-    }
   }
 };
 
@@ -988,10 +886,9 @@ This is the Grammar in YAML
     
       PLAIN:
         match: cb_start_plain
-        COMMENT:
+        EOL:
           match: cb_send_scalar
-          EOL: { return: 1 }
-        EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+          return: 1
         WS:
           COLON:
             match: cb_insert_map
@@ -1001,6 +898,10 @@ This is the Grammar in YAML
           match: cb_insert_map
           EOL: { node: FULLNODE , return: 1}
           WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+    
+      PLAIN_MULTI:
+        match: cb_send_plain_multi
+        EOL: { return: 1 }
     
       COLON:
         match: cb_insert_empty_map
@@ -1083,13 +984,17 @@ This is the Grammar in YAML
     
       PLAIN:
         match: cb_start_plain
-        EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI_FLOW }
-        COMMENT:
+        EOL:
           match: cb_send_scalar
           return: 1
         DEFAULT:
           match: cb_send_scalar
           return: 1
+    
+      PLAIN_MULTI:
+        match: cb_send_plain_multi
+        return: 1
+    
     
     #  DEFAULT: { match: cb_empty_flowmap_value, return: 1 }
     
@@ -1144,47 +1049,6 @@ This is the Grammar in YAML
       DEFAULT: { new: RULE_FULLFLOWSCALAR }
     
     
-    
-    RULE_PLAIN_MULTI:
-      END: { match: cb_send_scalar, return: 1 }
-      EOL: { match: cb_empty_plain, new: RULE_PLAIN_MULTI }
-      WS:
-        PLAIN:
-          match: cb_take
-          EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
-          COMMENT:
-            EOL: { match: cb_send_scalar, return: 1 }
-      INDENT:
-        WS:
-          PLAIN:
-            match: cb_take
-            EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
-            COMMENT:
-              EOL: { match: cb_send_scalar, return: 1 }
-    
-    RULE_PLAIN_MULTI_FLOW:
-      END: { match: cb_send_scalar, return: 1 }
-      EOL: { match: cb_empty_plain, new: RULE_PLAIN_MULTI_FLOW }
-      WS:
-        PLAIN:
-          match: cb_take
-          EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI_FLOW }
-          COMMENT:
-            EOL: { match: cb_send_scalar, return: 1 }
-      INDENT:
-        WS:
-          PLAIN:
-            match: cb_take
-            EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI_FLOW }
-            COMMENT:
-              EOL: { match: cb_send_scalar, return: 1 }
-            DEFAULT: { match: cb_send_scalar, return: 1 }
-          DEFAULT: { match: cb_send_scalar, return: 1 }
-      COMMENT:
-        EOL: { match: cb_send_scalar, return: 1 }
-      DEFAULT: { match: cb_send_scalar, return: 1 }
-    
-    
     RULE_MAPKEY:
       QUESTION:
         match: cb_question
@@ -1206,6 +1070,7 @@ This is the Grammar in YAML
         COLON:
           EOL: { node: FULLNODE , return: 1}
           WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+    
       PLAIN:
         match: cb_mapkey
         WS:
@@ -1217,6 +1082,7 @@ This is the Grammar in YAML
           match: cb_send_mapkey
           EOL: { node: FULLNODE , return: 1}
           WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+    
       COLON:
         match: cb_empty_mapkey
         EOL: { node: FULLNODE , return: 1}
@@ -1356,10 +1222,13 @@ This is the Grammar in YAML
     
       PLAIN:
         match: cb_start_plain
-        COMMENT:
+        EOL:
           match: cb_send_scalar
-          EOL: { return: 1 }
-        EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+          return: 1
+    
+      PLAIN_MULTI:
+        match: cb_send_plain_multi
+        EOL: { return: 1 }
     
       BLOCK_SCALAR:
         match: cb_send_block_scalar

@@ -38,6 +38,9 @@ my %skip_events = (
     C2SP => 1,
     'NTY5' => 1,
     '4EJS' => 1,
+    '2CMS' => 1,
+    'HU3P' => 1,
+    'EW3V' => 1,
 );
 
 

@@ -400,14 +400,6 @@ my %next_event = (
     FLOWMAPVALUE => 'FLOWMAP',
 );
 
-my %render_methods = (
-    q/:/ => 'render_multi_val',
-    q/"/ => 'render_quoted',
-    q/'/ => 'render_quoted',
-    q/>/ => 'render_block_scalar',
-    q/|/ => 'render_block_scalar',
-);
-
 my %event_to_method = (
     MAP => 'mapping',
     FLOWMAP => 'mapping',
@@ -482,6 +474,7 @@ my %fetch_method = (
     "'" => 'fetch_quoted',
     '|' => 'fetch_block',
     '>' => 'fetch_block',
+    ''  => 'fetch_plain',
 );
 
 sub parse_tokens {
@@ -500,6 +493,7 @@ sub parse_tokens {
     $res->{offset} = $next_tokens->[0]->{column};
     RULE: while ($next_rule_name) {
         DEBUG and $self->info("RULE: $next_rule_name");
+        TRACE and $self->debug_tokens($next_tokens);
 
         unless (@$next_tokens) {
             $self->exception("No more tokens");
@@ -509,18 +503,14 @@ sub parse_tokens {
         if ($got eq 'CONTEXT') {
             my $context = shift @$next_tokens;
             my $indent = $self->offset->[-1] + 1;
+            $indent-- if $self->lexer->flowcontext;
             my $method = $fetch_method{ $context->{value} };
             my $partial = $self->lexer->$method($indent, $context->{value});
             next RULE;
         }
         my $def = $next_rule->{ $got };
         if ($def) {
-            if ($got eq 'END') {
-                shift @$next_tokens;
-            }
-            else {
-                push @$tokens, shift @$next_tokens;
-            }
+            push @$tokens, shift @$next_tokens;
         }
         elsif ($def = $next_rule->{DEFAULT}) {
             $got = 'DEFAULT';
@@ -776,10 +766,6 @@ sub scalar_event {
         my $properties = pop @$event_stack;
         $properties = $self->node_properties($properties->[1], $info);
     }
-    if (ref $info->{value}) {
-        my $method = $render_methods{ $info->{style} };
-        YAML::PP::Render->$method( $info );
-    }
 
     $self->callback->($self, 'scalar_event', $info);
     $self->set_new_node(undef);
@@ -807,19 +793,24 @@ sub yaml_to_tokens {
     my $error = $@;
 
     my $tokens = $yp->tokens;
-    my $next = $yp->lexer->next_tokens;
     if ($error) {
-        push @$tokens, map { +{ %$_, name => 'ERROR' } } @$next;
-        my $next_line = $yp->lexer->next_line;
-        my $remaining = $next_line ? join '', @$next_line : '';
-        $remaining .= $yp->reader->read;
-        $remaining = '' unless defined $remaining;
-        push @$tokens, { name => "ERROR", value => $remaining };
-    }
-    else {
-        push @$tokens, @$next;
+        my $remaining_tokens = $yp->_remaining_tokens;
+        push @$tokens, map { +{ %$_, name => 'ERROR' } } @$remaining_tokens;
     }
     return $error, $tokens;
+}
+
+sub _remaining_tokens {
+    my ($self) = @_;
+    my @tokens;
+    my $next = $self->lexer->next_tokens;
+    push @tokens, @$next;
+    my $next_line = $self->lexer->next_line;
+    my $remaining = $next_line ? join '', @$next_line : '';
+    $remaining .= $self->reader->read;
+    $remaining = '' unless defined $remaining;
+    push @tokens, { name => "ERROR", value => $remaining };
+    return \@tokens;
 }
 
 sub event_to_test_suite {
@@ -1224,33 +1215,33 @@ sub cb_take_quoted_key {
     $self->cb_send_mapkey;
 }
 
+sub cb_send_plain_multi {
+    my ($self, $token) = @_;
+    my $stack = $self->event_stack;
+    my $info = {
+        style => ':',
+        value => $token->{value},
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    push @{ $stack }, [ scalar => $info ];
+    $self->cb_send_scalar;
+}
+
 sub cb_start_plain {
     my ($self, $token) = @_;
     my $stack = $self->event_stack;
     my $info = {
             style => ':',
-            value => [ $token->{value} ],
+            value => $token->{value},
             offset => $token->{column},
     };
     if (@$stack and $stack->[-1]->[0] eq 'properties') {
         $self->fetch_inline_properties($stack, $info);
     }
     push @{ $stack }, [ scalar => $info ];
-}
-
-sub cb_empty_plain {
-    my ($self, $res) = @_;
-    my $stack = $self->event_stack;
-    push @{ $stack->[-1]->[1]->{value} }, '';
-    $self->cb_fetch_tokens_plain;
-}
-
-sub cb_fetch_tokens_plain {
-    my ($self) = @_;
-    my $indent = $self->offset->[-1];
-    $indent++ unless $self->lexer->flowcontext;
-    $self->lexer->set_context('plain');
-    $self->lexer->fetch_next_tokens($indent);
 }
 
 sub cb_start_flowseq {
@@ -1300,18 +1291,6 @@ sub cb_empty_flowmap_value {
     }
     $self->scalar_event($info);
     $self->set_new_node(undef);
-}
-
-sub cb_take {
-    my ($self, $token) = @_;
-    my $stack = $self->event_stack;
-    push @{ $stack->[-1]->[1]->{value} }, $token->{value};
-}
-
-sub cb_empty_quoted_line {
-    my ($self, $res) = @_;
-    my $stack = $self->event_stack;
-    push @{ $stack->[-1]->[1]->{value} }, '';
 }
 
 sub cb_insert_map_alias {

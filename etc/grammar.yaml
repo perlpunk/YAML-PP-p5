@@ -46,10 +46,9 @@ NODETYPE_SCALAR_OR_MAP:
 
   PLAIN:
     match: cb_start_plain
-    COMMENT:
+    EOL:
       match: cb_send_scalar
-      EOL: { return: 1 }
-    EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+      return: 1
     WS:
       COLON:
         match: cb_insert_map
@@ -59,6 +58,10 @@ NODETYPE_SCALAR_OR_MAP:
       match: cb_insert_map
       EOL: { node: FULLNODE , return: 1}
       WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+
+  PLAIN_MULTI:
+    match: cb_send_plain_multi
+    EOL: { return: 1 }
 
   COLON:
     match: cb_insert_empty_map
@@ -141,13 +144,17 @@ RULE_FLOWSCALAR:
 
   PLAIN:
     match: cb_start_plain
-    EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI_FLOW }
-    COMMENT:
+    EOL:
       match: cb_send_scalar
       return: 1
     DEFAULT:
       match: cb_send_scalar
       return: 1
+
+  PLAIN_MULTI:
+    match: cb_send_plain_multi
+    return: 1
+
 
 #  DEFAULT: { match: cb_empty_flowmap_value, return: 1 }
 
@@ -202,47 +209,6 @@ NODETYPE_FLOWMAP:
   DEFAULT: { new: RULE_FULLFLOWSCALAR }
 
 
-
-RULE_PLAIN_MULTI:
-  END: { match: cb_send_scalar, return: 1 }
-  EOL: { match: cb_empty_plain, new: RULE_PLAIN_MULTI }
-  WS:
-    PLAIN:
-      match: cb_take
-      EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
-      COMMENT:
-        EOL: { match: cb_send_scalar, return: 1 }
-  INDENT:
-    WS:
-      PLAIN:
-        match: cb_take
-        EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
-        COMMENT:
-          EOL: { match: cb_send_scalar, return: 1 }
-
-RULE_PLAIN_MULTI_FLOW:
-  END: { match: cb_send_scalar, return: 1 }
-  EOL: { match: cb_empty_plain, new: RULE_PLAIN_MULTI_FLOW }
-  WS:
-    PLAIN:
-      match: cb_take
-      EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI_FLOW }
-      COMMENT:
-        EOL: { match: cb_send_scalar, return: 1 }
-  INDENT:
-    WS:
-      PLAIN:
-        match: cb_take
-        EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI_FLOW }
-        COMMENT:
-          EOL: { match: cb_send_scalar, return: 1 }
-        DEFAULT: { match: cb_send_scalar, return: 1 }
-      DEFAULT: { match: cb_send_scalar, return: 1 }
-  COMMENT:
-    EOL: { match: cb_send_scalar, return: 1 }
-  DEFAULT: { match: cb_send_scalar, return: 1 }
-
-
 RULE_MAPKEY:
   QUESTION:
     match: cb_question
@@ -264,6 +230,7 @@ RULE_MAPKEY:
     COLON:
       EOL: { node: FULLNODE , return: 1}
       WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+
   PLAIN:
     match: cb_mapkey
     WS:
@@ -275,6 +242,7 @@ RULE_MAPKEY:
       match: cb_send_mapkey
       EOL: { node: FULLNODE , return: 1}
       WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+
   COLON:
     match: cb_empty_mapkey
     EOL: { node: FULLNODE , return: 1}
@@ -414,10 +382,13 @@ NODETYPE_MAPVALUE_INLINE:
 
   PLAIN:
     match: cb_start_plain
-    COMMENT:
+    EOL:
       match: cb_send_scalar
-      EOL: { return: 1 }
-    EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+      return: 1
+
+  PLAIN_MULTI:
+    match: cb_send_plain_multi
+    EOL: { return: 1 }
 
   BLOCK_SCALAR:
     match: cb_send_block_scalar

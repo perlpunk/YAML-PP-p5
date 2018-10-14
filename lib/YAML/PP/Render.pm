@@ -148,13 +148,7 @@ sub render_block_scalar {
 }
 
 sub render_multi_val {
-    my ($self, $info) = @_;
-    my $multi = $info->{value};
-    return unless ref $multi;
-    # remove empty lines at the end
-    while (@$multi and $multi->[-1] eq '') {
-        pop @$multi;
-    }
+    my ($self, $multi) = @_;
     my $string = '';
     my $start = 1;
     for my $line (@$multi) {
@@ -172,7 +166,7 @@ sub render_multi_val {
             $start = 0;
         }
     }
-    $info->{value} = $string;
+    return $string;
 }
 
 

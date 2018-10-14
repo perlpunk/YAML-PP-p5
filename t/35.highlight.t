@@ -33,7 +33,6 @@ cmp_ok($error, '=~', qr{Invalid}, "yaml_to_tokens returned an error");
     { name => "COLON", value => ":" },
     { name => "WS", value => " " },
     { name => "ERROR", value => "\@bar\n" },
-    { name => "ERROR", value => "" },
 );
 is_deeply(\@tokens, \@expected_tokens, "yaml_to_tokens returned correct error tokens");
 
