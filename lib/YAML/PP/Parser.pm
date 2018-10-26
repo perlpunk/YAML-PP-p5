@@ -527,8 +527,7 @@ sub parse_tokens {
             DEBUG and $self->info("CALLBACK $sub");
             $self->$sub($tokens->[-1]);
         }
-        my $node = $def->{node};
-        my $new = $node || $def->{new};
+        my $new = $def->{new};
         if ($new) {
             $next_rule_name = $new;
             DEBUG and $self->got("NEW: $next_rule_name");
