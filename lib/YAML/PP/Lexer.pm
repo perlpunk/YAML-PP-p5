@@ -204,7 +204,7 @@ my %ANCHOR_ALIAS_TAG =    ( '&' => 1, '*' => 1, '!' => 1 );
 my %BLOCK_SCALAR =        ( '|' => 1, '>' => 1 );
 my %COLON_DASH_QUESTION = ( ':' => 1, '-' => 1, '?' => 1 );
 my %QUOTED =              ( '"' => 1, "'" => 1 );
-my %FLOW =                ( '{' => 1, '[' => 1, '}' => 1, ']' => 1 );
+my %FLOW =                ( '{' => 1, '[' => 1, '}' => 1, ']' => 1, ',' => 1 );
 my %CONTEXT =             ( '"' => 1, "'" => 1, '>' => 1, '|' => 1 );
 
 my $RE_ESCAPES = qr{(?:
@@ -310,20 +310,14 @@ sub _fetch_next_tokens {
             }
         }
         elsif ($FLOW{ $first }) {
-            if ($first eq '{' or $first eq '[') {
-                push @tokens, ( $TOKEN_NAMES{ $first } => $first );
-                substr($$yaml, 0, 1, '');
-                $self->set_flowcontext(++$flowcontext);
-            }
-            if ($first eq '}' or $first eq ']') {
-                push @tokens, ( $TOKEN_NAMES{ $first } => $first );
-                substr($$yaml, 0, 1, '');
-                $self->set_flowcontext(--$flowcontext);
-            }
-        }
-        elsif ($first eq ',') {
             push @tokens, ( $TOKEN_NAMES{ $first } => $first );
             substr($$yaml, 0, 1, '');
+            if ($first eq '{' or $first eq '[') {
+                $self->set_flowcontext(++$flowcontext);
+            }
+            elsif ($first eq '}' or $first eq ']') {
+                $self->set_flowcontext(--$flowcontext);
+            }
         }
         else {
             $plain = 1;

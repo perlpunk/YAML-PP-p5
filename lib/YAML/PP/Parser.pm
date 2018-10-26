@@ -287,10 +287,6 @@ sub parse_document {
 
             my $res = $self->parse_tokens();
 
-#            if (@$stack) {
-#                $self->process_events( $res );
-#            }
-
             last if (not @$next_tokens or $next_tokens->[0]->{column} == 0);
         }
         unless (@$next_tokens) {
@@ -529,13 +525,13 @@ sub parse_tokens {
         }
         my $new = $def->{new};
         if ($new) {
-            $next_rule_name = $new;
-            DEBUG and $self->got("NEW: $next_rule_name");
+            DEBUG and $self->got("NEW: $new");
 
             if ($def->{return}) {
-                $self->set_rule($next_rule_name);
+                $self->set_rule($new);
                 return $res;
             }
+            $next_rule_name = $new;
 
             $next_rule = $GRAMMAR->{ $next_rule_name }
                 or die "Unexpected rule $next_rule_name";
