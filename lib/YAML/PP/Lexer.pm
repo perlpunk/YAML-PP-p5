@@ -538,7 +538,7 @@ sub fetch_block {
     if (not length $$yaml) {
         push @tokens, ( EOL => $eol );
     }
-    elsif ($$yaml =~ s/\A$RE_WS+(#.*|)\z//) {
+    elsif ($$yaml =~ s/\A($RE_WS*(?:$RE_WS#.*|))\z//) {
         push @tokens, ( EOL => $1 . $eol );
     }
     else {
