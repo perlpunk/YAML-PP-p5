@@ -148,6 +148,11 @@ RULE_FLOWSCALAR:
     WS: { return: 1 }
     EOL: { return: 1 }
 
+  FLOWMAP_END:
+    match: cb_end_flowmap_empty
+    EOL: { return: 1 }
+    DEFAULT: { return: 1 }
+
 FLOWSEQ:
   FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
   FLOWMAP_START: { match: cb_start_flowmap, new: NEWFLOWMAP }
@@ -236,7 +241,7 @@ NODETYPE_FLOWMAPVALUE:
     match: cb_empty_flowmap_value
     return: 1
   FLOWMAP_END:
-    match: cb_end_flowmap
+    match: cb_end_flowmap_empty
     EOL: { return: 1 }
     DEFAULT: { return: 1 }
 

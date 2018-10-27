@@ -701,6 +701,7 @@ sub end_flow_mapping {
     my $info = { event_name => 'mapping_end_event' };
     $self->callback->($self, $info->{event_name}, $info);
     $event_types->[-1] = $next_event{ $event_types->[-1] };
+    # TODO
 }
 
 sub start_mapping {
@@ -1326,6 +1327,13 @@ sub cb_empty_flow_mapkey {
 
 sub cb_end_flowmap {
     my ($self, $res) = @_;
+    $self->end_flow_mapping;
+    $self->set_new_node(0);
+}
+
+sub cb_end_flowmap_empty {
+    my ($self, $res) = @_;
+    $self->cb_empty_flowmap_value;
     $self->end_flow_mapping;
     $self->set_new_node(0);
 }

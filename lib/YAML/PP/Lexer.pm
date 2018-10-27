@@ -39,6 +39,7 @@ sub offset { return $_[0]->{offset} }
 sub set_offset { $_[0]->{offset} = $_[1] }
 sub inc_line { return $_[0]->{line}++ }
 sub context { return $_[0]->{context} }
+sub set_context { $_[0]->{context} = $_[1] }
 sub flowcontext { return $_[0]->{flowcontext} }
 sub set_flowcontext { $_[0]->{flowcontext} = $_[1] }
 
@@ -248,6 +249,7 @@ sub _fetch_next_tokens {
         }
         elsif ($first eq "%" and not $self->flowcontext) {
             $self->_fetch_next_tokens_directive($yaml);
+            $self->set_context(0);
             return;
         }
     }
@@ -259,8 +261,24 @@ sub _fetch_next_tokens {
             return;
         }
         $first = substr($$yaml, 0, 1);
+        my $c = $self->context;
         my $plain = 0;
 
+
+        if ($self->context) {
+            if ($$yaml =~ s/\A($RE_WS*)://) {
+                push @tokens, ( WS => $1 ) if $1;
+                push @tokens, ( COLON => ':' );
+                $self->set_context(0);
+                next;
+            }
+            if ($$yaml =~ s/\A($RE_WS*(?: #.*))\z//) {
+                push @tokens, ( EOL => $1 . $eol );
+                $self->push_tokens(\@tokens);
+                return;
+            }
+        }
+        $self->set_context(0);
         if ($CONTEXT{ $first }) {
             push @tokens, ( CONTEXT => $first );
             $self->push_tokens(\@tokens);
@@ -639,6 +657,7 @@ sub fetch_quoted {
                     { name => 'QUOTED_MULTILINE', value => $value }, \@tokens
                 );
             }
+            $self->set_context(1) if $self->flowcontext;
             if (length $$yaml) {
                 my $partial = $self->_fetch_next_tokens($indent, $next_line);
                 if (not $partial) {

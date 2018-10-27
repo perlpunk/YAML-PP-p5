@@ -575,7 +575,7 @@ $GRAMMAR = {
       'EOL' => {
         'return' => 1
       },
-      'match' => 'cb_end_flowmap'
+      'match' => 'cb_end_flowmap_empty'
     },
     'FLOW_COMMA' => {
       'match' => 'cb_empty_flowmap_value',
@@ -850,6 +850,15 @@ $GRAMMAR = {
     'ALIAS' => {
       'match' => 'cb_send_alias',
       'return' => 1
+    },
+    'FLOWMAP_END' => {
+      'DEFAULT' => {
+        'return' => 1
+      },
+      'EOL' => {
+        'return' => 1
+      },
+      'match' => 'cb_end_flowmap_empty'
     },
     'FLOWMAP_START' => {
       'match' => 'cb_start_flowmap',
@@ -1226,6 +1235,11 @@ This is the Grammar in YAML
         WS: { return: 1 }
         EOL: { return: 1 }
     
+      FLOWMAP_END:
+        match: cb_end_flowmap_empty
+        EOL: { return: 1 }
+        DEFAULT: { return: 1 }
+    
     FLOWSEQ:
       FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
       FLOWMAP_START: { match: cb_start_flowmap, new: NEWFLOWMAP }
@@ -1314,7 +1328,7 @@ This is the Grammar in YAML
         match: cb_empty_flowmap_value
         return: 1
       FLOWMAP_END:
-        match: cb_end_flowmap
+        match: cb_end_flowmap_empty
         EOL: { return: 1 }
         DEFAULT: { return: 1 }
     
