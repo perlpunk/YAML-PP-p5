@@ -324,13 +324,16 @@ sub check_indent {
     elsif ($self->level < 2 and not $self->new_node) {
         return 1;
     }
-    if ($event_types->[-1] =~ m/^FLOW/) {
-        return;
-    }
 
     my $indent = $self->offset->[ -1 ];
 
     TRACE and $self->info("INDENT: space=$space indent=$indent");
+    if ($event_types->[-1] =~ m/^FLOW/) {
+        if ($space < $indent) {
+            $self->exception("Bad indendation in " . $self->events->[-1]);
+        }
+        return;
+    }
 
     if ($space > $indent) {
         unless ($self->new_node) {
@@ -498,8 +501,8 @@ sub parse_tokens {
         my $got = $next_tokens->[0]->{name};
         if ($got eq 'CONTEXT') {
             my $context = shift @$next_tokens;
-            my $indent = $self->offset->[-1] + 1;
-            $indent-- if $self->lexer->flowcontext;
+            my $indent = $self->offset->[-1];
+            $indent++ unless $self->lexer->flowcontext;
             my $method = $fetch_method{ $context->{value} };
             my $partial = $self->lexer->$method($indent, $context->{value});
             next RULE;
@@ -632,9 +635,15 @@ sub start_sequence {
 sub start_flow_sequence {
     my ($self, $offset) = @_;
     my $offsets = $self->offset;
-    push @{ $self->events }, 'FLOWSEQ';
     my $new_offset = $offsets->[-1];
-    $new_offset = 0 if $new_offset < 0;
+    my $event_types = $self->events;
+    if ($new_offset < 0) {
+        $new_offset = 0;
+    }
+    elsif ($self->new_node) {
+        $new_offset++;
+    }
+    push @{ $self->events }, 'FLOWSEQ';
     push @{ $offsets }, $new_offset;
 
     my $event_stack = $self->event_stack;
@@ -648,9 +657,15 @@ sub start_flow_sequence {
 sub start_flow_mapping {
     my ($self, $offset) = @_;
     my $offsets = $self->offset;
-    push @{ $self->events }, 'FLOWMAP';
     my $new_offset = $offsets->[-1];
-    $new_offset = 0 if $new_offset < 0;
+    my $event_types = $self->events;
+    if ($new_offset < 0) {
+        $new_offset = 0;
+    }
+    elsif ($self->new_node) {
+        $new_offset++;
+    }
+    push @{ $self->events }, 'FLOWMAP';
     push @{ $offsets }, $new_offset;
 
     my $event_stack = $self->event_stack;
