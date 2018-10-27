@@ -280,8 +280,7 @@ $GRAMMAR = {
         'return' => 1
       },
       'WS' => {
-        'new' => 'FULLNODE',
-        'return' => 1
+        'new' => 'FULLNODE'
       },
       'match' => 'cb_complexcolon'
     },
@@ -487,8 +486,7 @@ $GRAMMAR = {
         'return' => 1
       },
       'WS' => {
-        'new' => 'FULLMAPVALUE_INLINE',
-        'return' => 1
+        'new' => 'FULLMAPVALUE_INLINE'
       },
       'match' => 'cb_insert_empty_map'
     },
@@ -511,8 +509,7 @@ $GRAMMAR = {
           'return' => 1
         },
         'WS' => {
-          'new' => 'FULLMAPVALUE_INLINE',
-          'return' => 1
+          'new' => 'FULLMAPVALUE_INLINE'
         },
         'match' => 'cb_insert_map'
       },
@@ -527,8 +524,7 @@ $GRAMMAR = {
             'return' => 1
           },
           'WS' => {
-            'new' => 'FULLMAPVALUE_INLINE',
-            'return' => 1
+            'new' => 'FULLMAPVALUE_INLINE'
           },
           'match' => 'cb_insert_map'
         }
@@ -547,8 +543,7 @@ $GRAMMAR = {
         'return' => 1
       },
       'WS' => {
-        'new' => 'FULLNODE',
-        'return' => 1
+        'new' => 'FULLNODE'
       },
       'match' => 'cb_questionstart'
     },
@@ -559,8 +554,7 @@ $GRAMMAR = {
           'return' => 1
         },
         'WS' => {
-          'new' => 'FULLMAPVALUE_INLINE',
-          'return' => 1
+          'new' => 'FULLMAPVALUE_INLINE'
         },
         'match' => 'cb_insert_map'
       },
@@ -575,8 +569,7 @@ $GRAMMAR = {
             'return' => 1
           },
           'WS' => {
-            'new' => 'FULLMAPVALUE_INLINE',
-            'return' => 1
+            'new' => 'FULLMAPVALUE_INLINE'
           },
           'match' => 'cb_insert_map'
         }
@@ -730,8 +723,7 @@ $GRAMMAR = {
             'return' => 1
           },
           'WS' => {
-            'new' => 'FULLMAPVALUE_INLINE',
-            'return' => 1
+            'new' => 'FULLMAPVALUE_INLINE'
           }
         }
       },
@@ -743,8 +735,7 @@ $GRAMMAR = {
         'return' => 1
       },
       'WS' => {
-        'new' => 'FULLMAPVALUE_INLINE',
-        'return' => 1
+        'new' => 'FULLMAPVALUE_INLINE'
       },
       'match' => 'cb_empty_mapkey'
     },
@@ -755,8 +746,7 @@ $GRAMMAR = {
           'return' => 1
         },
         'WS' => {
-          'new' => 'FULLMAPVALUE_INLINE',
-          'return' => 1
+          'new' => 'FULLMAPVALUE_INLINE'
         },
         'match' => 'cb_send_mapkey'
       },
@@ -767,8 +757,7 @@ $GRAMMAR = {
             'return' => 1
           },
           'WS' => {
-            'new' => 'FULLMAPVALUE_INLINE',
-            'return' => 1
+            'new' => 'FULLMAPVALUE_INLINE'
           },
           'match' => 'cb_send_mapkey'
         }
@@ -781,8 +770,7 @@ $GRAMMAR = {
         'return' => 1
       },
       'WS' => {
-        'new' => 'FULLNODE',
-        'return' => 1
+        'new' => 'FULLNODE'
       },
       'match' => 'cb_question'
     },
@@ -793,8 +781,7 @@ $GRAMMAR = {
           'return' => 1
         },
         'WS' => {
-          'new' => 'FULLMAPVALUE_INLINE',
-          'return' => 1
+          'new' => 'FULLMAPVALUE_INLINE'
         }
       },
       'WS' => {
@@ -804,8 +791,7 @@ $GRAMMAR = {
             'return' => 1
           },
           'WS' => {
-            'new' => 'FULLMAPVALUE_INLINE',
-            'return' => 1
+            'new' => 'FULLMAPVALUE_INLINE'
           }
         }
       },
@@ -864,7 +850,7 @@ This is the Grammar in YAML
       QUESTION:
         match: cb_questionstart
         EOL: { new: FULLNODE, return: 1 }
-        WS: { new: FULLNODE, return: 1 }
+        WS: { new: FULLNODE }
     
       QUOTED:
         match: cb_take_quoted
@@ -873,11 +859,11 @@ This is the Grammar in YAML
           COLON:
             match: cb_insert_map
             EOL: { new: FULLNODE , return: 1}
-            WS: { new: FULLMAPVALUE_INLINE, return: 1 }
+            WS: { new: FULLMAPVALUE_INLINE }
         COLON:
           match: cb_insert_map
           EOL: { new: FULLNODE , return: 1}
-          WS: { new: FULLMAPVALUE_INLINE, return: 1 }
+          WS: { new: FULLMAPVALUE_INLINE }
     
       QUOTED_MULTILINE:
         match: cb_quoted_multiline
@@ -893,11 +879,11 @@ This is the Grammar in YAML
           COLON:
             match: cb_insert_map
             EOL: { new: FULLNODE , return: 1}
-            WS: { new: FULLMAPVALUE_INLINE, return: 1 }
+            WS: { new: FULLMAPVALUE_INLINE }
         COLON:
           match: cb_insert_map
           EOL: { new: FULLNODE , return: 1}
-          WS: { new: FULLMAPVALUE_INLINE, return: 1 }
+          WS: { new: FULLMAPVALUE_INLINE }
     
       PLAIN_MULTI:
         match: cb_send_plain_multi
@@ -906,7 +892,7 @@ This is the Grammar in YAML
       COLON:
         match: cb_insert_empty_map
         EOL: { new: FULLNODE , return: 1}
-        WS: { new: FULLMAPVALUE_INLINE, return: 1 }
+        WS: { new: FULLMAPVALUE_INLINE }
     
       BLOCK_SCALAR:
         match: cb_send_block_scalar
@@ -927,7 +913,7 @@ This is the Grammar in YAML
       COLON:
         match: cb_complexcolon
         EOL: { new: FULLNODE, return: 1 }
-        WS: { new: FULLNODE, return: 1 }
+        WS: { new: FULLNODE }
       DEFAULT:
         match: cb_empty_complexvalue
         new: NODETYPE_MAP
@@ -1053,23 +1039,23 @@ This is the Grammar in YAML
       QUESTION:
         match: cb_question
         EOL: { new: FULLNODE , return: 1}
-        WS: { new: FULLNODE , return: 1}
+        WS: { new: FULLNODE }
       ALIAS:
         match: cb_send_alias
         WS:
           COLON:
             EOL: { new: FULLNODE , return: 1}
-            WS: { new: FULLMAPVALUE_INLINE, return: 1 }
+            WS: { new: FULLMAPVALUE_INLINE }
     
       QUOTED:
         match: cb_take_quoted_key
         WS:
           COLON:
             EOL: { new: FULLNODE , return: 1}
-            WS: { new: FULLMAPVALUE_INLINE, return: 1 }
+            WS: { new: FULLMAPVALUE_INLINE }
         COLON:
           EOL: { new: FULLNODE , return: 1}
-          WS: { new: FULLMAPVALUE_INLINE, return: 1 }
+          WS: { new: FULLMAPVALUE_INLINE }
     
       PLAIN:
         match: cb_mapkey
@@ -1077,16 +1063,16 @@ This is the Grammar in YAML
           COLON:
             match: cb_send_mapkey
             EOL: { new: FULLNODE , return: 1}
-            WS: { new: FULLMAPVALUE_INLINE, return: 1 }
+            WS: { new: FULLMAPVALUE_INLINE }
         COLON:
           match: cb_send_mapkey
           EOL: { new: FULLNODE , return: 1}
-          WS: { new: FULLMAPVALUE_INLINE, return: 1 }
+          WS: { new: FULLMAPVALUE_INLINE }
     
       COLON:
         match: cb_empty_mapkey
         EOL: { new: FULLNODE , return: 1}
-        WS: { new: FULLMAPVALUE_INLINE, return: 1 }
+        WS: { new: FULLMAPVALUE_INLINE }
     
     NODETYPE_SEQ:
       DASH:
