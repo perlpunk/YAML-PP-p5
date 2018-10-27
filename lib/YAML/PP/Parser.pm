@@ -80,7 +80,7 @@ sub init {
     my ($self) = @_;
     $self->set_offset([]);
     $self->set_events([]);
-    $self->set_new_node(undef);
+    $self->set_new_node(0);
     $self->set_tagmap({
         '!!' => "tag:yaml.org,2002:",
     });
@@ -481,7 +481,8 @@ sub parse_tokens {
     my $res = {};
     my $next_rule_name = $self->rule;
     DEBUG and $self->info("----------------> parse_tokens($next_rule_name)");
-    my $next_rule = $GRAMMAR->{ $next_rule_name };
+    my $next_rule = $GRAMMAR->{ $next_rule_name }
+        or die "Could not find rule $next_rule_name";
 
     TRACE and $self->debug_rules($next_rule);
     TRACE and $self->debug_yaml;
@@ -541,7 +542,7 @@ sub parse_tokens {
             next RULE;
         }
         elsif ($def->{return}) {
-            $self->set_new_node(undef);
+            $self->set_new_node(0);
             return $res;
         }
         $next_rule_name .= " - $got"; # for debugging
@@ -684,6 +685,12 @@ sub end_flow_sequence {
     my $info = { event_name => 'sequence_end_event' };
     $self->callback->($self, $info->{event_name}, $info);
     $event_types->[-1] = $next_event{ $event_types->[-1] };
+    if ($event_types->[-1] =~ m/^FLOW/) {
+        $self->set_new_node(1);
+    }
+    else {
+        $self->set_new_node(0);
+    }
 }
 
 sub end_flow_mapping {
@@ -778,7 +785,12 @@ sub scalar_event {
     }
 
     $self->callback->($self, 'scalar_event', $info);
-    $self->set_new_node(undef);
+    if ($event_types->[-1] =~ m/^FLOW/) {
+        $self->set_new_node(1);
+    }
+    else {
+        $self->set_new_node(0);
+    }
     $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
 
@@ -790,7 +802,12 @@ sub alias_event {
     }
     my $event_types = $self->events;
     $self->callback->($self, 'alias_event', $info);
-    $self->set_new_node(undef);
+    if ($event_types->[-1] =~ m/^FLOW/) {
+        $self->set_new_node(1);
+    }
+    else {
+        $self->set_new_node(0);
+    }
     $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
 
@@ -1133,6 +1150,12 @@ sub cb_empty_mapkey {
     $self->set_new_node(1);
 }
 
+sub cb_send_flow_alias {
+    my ($self, $token) = @_;
+    my $alias = substr($token->{value}, 1);
+    $self->alias_event({ value => $alias });
+}
+
 sub cb_send_alias {
     my ($self, $token) = @_;
     my $alias = substr($token->{value}, 1);
@@ -1157,6 +1180,11 @@ sub cb_alias {
 }
 
 sub cb_question {
+    my ($self, $res) = @_;
+    $self->set_new_node(1);
+}
+
+sub cb_flow_question {
     my ($self, $res) = @_;
     $self->set_new_node(1);
 }
@@ -1257,24 +1285,23 @@ sub cb_start_plain {
 sub cb_start_flowseq {
     my ($self, $token) = @_;
     $self->start_flow_sequence($token->{column});
-    $self->set_new_node(1);
+    $self->set_new_node(0);
 }
 
 sub cb_start_flowmap {
     my ($self, $token) = @_;
     $self->start_flow_mapping($token->{column});
-    $self->set_new_node(1);
+    $self->set_new_node(0);
 }
 
 sub cb_end_flowseq {
     my ($self, $res) = @_;
     $self->end_flow_sequence;
-    $self->set_new_node(undef);
 }
 
 sub cb_flow_comma {
     my ($self) = @_;
-    $self->set_new_node(1);
+    $self->set_new_node(0);
 }
 
 sub cb_flow_colon {
@@ -1282,10 +1309,68 @@ sub cb_flow_colon {
     $self->set_new_node(1);
 }
 
+sub cb_empty_flow_mapkey {
+    my ($self, $token) = @_;
+    my $stack = $self->event_stack;
+    my $info = {
+        style => ':',
+        value => undef,
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    $self->scalar_event($info);
+    $self->set_new_node(1);
+}
+
 sub cb_end_flowmap {
     my ($self, $res) = @_;
     $self->end_flow_mapping;
-    $self->set_new_node(undef);
+    $self->set_new_node(0);
+}
+
+sub cb_flow_plain {
+    my ($self, $token) = @_;
+    my $stack = $self->event_stack;
+    my $info = {
+        style => ':',
+        value => $token->{value},
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    $self->scalar_event($info);
+}
+
+sub cb_flowkey_plain {
+    my ($self, $token) = @_;
+    my $stack = $self->event_stack;
+    my $info = {
+        style => ':',
+        value => $token->{value},
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    $self->scalar_event($info);
+}
+
+sub cb_flowkey_quoted {
+    my ($self, $token) = @_;
+    my $stack = $self->event_stack;
+    my $subtokens = $token->{subtokens};
+    my $info = {
+        style => $subtokens->[0]->{value},
+        value => $token->{value},
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    $self->scalar_event($info);
 }
 
 sub cb_empty_flowmap_value {
@@ -1300,7 +1385,7 @@ sub cb_empty_flowmap_value {
         $self->fetch_inline_properties($stack, $info);
     }
     $self->scalar_event($info);
-    $self->set_new_node(undef);
+    $self->set_new_node(0);
 }
 
 sub cb_insert_map_alias {
