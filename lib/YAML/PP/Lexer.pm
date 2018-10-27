@@ -386,6 +386,7 @@ sub fetch_plain {
     if (defined $1) {
         push @tokens, ( PLAIN => $plain, EOL => $1 . $eol );
         $self->push_tokens(\@tokens);
+        $self->set_next_line(undef);
         return;
     }
     $eol = $2 . $eol;
@@ -439,8 +440,8 @@ sub fetch_plain {
             next LOOP;
         }
         if ($$yaml =~ s/\A(#.*)\z//) {
-            $eol = $ws . $1 . $eol;
-            $fetch_next = 1;
+            push @tokens, ( EOL => $ws . $1 . $eol );
+            $self->set_next_line(undef);
             last LOOP;
         }
 
