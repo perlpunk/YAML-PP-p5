@@ -248,7 +248,7 @@ sub _fetch_next_tokens {
             push @tokens, ( INDENT => $spaces );
         }
         elsif ($first eq "%" and not $self->flowcontext) {
-            $self->_fetch_next_tokens_directive($yaml);
+            $self->_fetch_next_tokens_directive($yaml, $eol);
             $self->set_context(0);
             return;
         }
@@ -757,7 +757,7 @@ sub _read_doublequoted {
 }
 
 sub _fetch_next_tokens_directive {
-    my ($self, $yaml) = @_;
+    my ($self, $yaml, $eol) = @_;
     my @tokens;
 
     if ($$yaml =~ s/\A(\s*%YAML)//) {
@@ -811,7 +811,7 @@ sub _fetch_next_tokens_directive {
         return;
     }
     if (not length $$yaml) {
-        push @tokens, ( EOL => '' );
+        push @tokens, ( EOL => $eol );
     }
     else {
         push @tokens, ( 'Invalid directive' => $$yaml );
