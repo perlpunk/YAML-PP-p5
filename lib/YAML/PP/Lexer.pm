@@ -267,6 +267,7 @@ sub _fetch_next_tokens {
             return 1;
         }
         elsif ($COLON_DASH_QUESTION{ $first }) {
+            my $token_name = $TOKEN_NAMES{ $first };
             if ($$yaml =~ s/\A\Q$first\E(?:($RE_WS+)|\z)//) {
                 my $token_name = $TOKEN_NAMES{ $first };
                 push @tokens, ( $token_name => $first );
@@ -282,6 +283,10 @@ sub _fetch_next_tokens {
                     return;
                 }
                 push @tokens, ( WS => $ws );
+                next;
+            }
+            elsif ($self->flowcontext and $$yaml =~ s/\A:(?=[,\{\}\[\]])//) {
+                push @tokens, ( $token_name => $first );
                 next;
             }
             $plain = 1;
