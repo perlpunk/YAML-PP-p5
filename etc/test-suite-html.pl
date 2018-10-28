@@ -171,21 +171,42 @@ sub highlight_test {
     if ($error) {
         $error =~ s{\Q$Bin/../lib/}{};
         $class = "error";
-        my $remaining_tokens = $ypp->loader->parser->lexer->next_tokens;
-        push @$tokens, map {
-            { name => 'ERROR', value => $_->{value} } } @$remaining_tokens;
-        my $remaining = $ypp->loader->parser->lexer->reader->read;
-        push @$tokens, { name => 'ERROR', value => $remaining };
-        my $out = join '', map { $_->{value} } @$tokens;
+        my $remaining_tokens = $ypp->loader->parser->_remaining_tokens;
+        push @$tokens, map { +{ %$_, name => 'ERROR' } } @$remaining_tokens;
+        my $out = join '', map {
+            my $value = $_->{value};
+            my $sub = $_->{subtokens};
+            if ($sub) {
+                $value = join '', map {
+                    defined $_->{orig} ? $_->{orig} : $_->{value}
+                } @$sub;
+            }
+            $value;
+        } @$tokens;
         if ($out ne $yaml) {
+            local $Data::Dumper::Useqq = 1;
+            warn __PACKAGE__.': '.__LINE__.$".Data::Dumper->Dump([\$out], ['out']);
+            warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
             warn "$id error diff";
             $diff = 1;
         }
     }
     else {
-        my $out = join '', map { $_->{value} } @$tokens;
+        my $out = join '', map {
+            my $value = $_->{value};
+            my $sub = $_->{subtokens};
+            if ($sub) {
+                $value = join '', map {
+                    defined $_->{orig} ? $_->{orig} : $_->{value}
+                } @$sub;
+            }
+            $value;
+        } @$tokens;
         if ($out ne $yaml) {
             $class = "diff";
+            local $Data::Dumper::Useqq = 1;
+            warn __PACKAGE__.': '.__LINE__.$".Data::Dumper->Dump([\$out], ['out']);
+            warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$yaml], ['yaml']);
             warn "$id diff";
             $diff = 1;
         }
