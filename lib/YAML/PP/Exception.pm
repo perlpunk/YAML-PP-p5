@@ -34,7 +34,7 @@ sub to_string {
     }
     $column = '???' unless defined $column;
 
-    my $remaining_yaml = $self->{yaml}->[0];
+    my $remaining_yaml = $self->{yaml};
     $remaining_yaml = '' unless defined $remaining_yaml;
     $yaml .= $remaining_yaml;
     {
@@ -52,7 +52,7 @@ sub to_string {
     if ($self->{got} and $self->{expected}) {
         $lines = 6;
         $line = $self->{got}->{line};
-        $column = $self->{got}->{column};
+        $column = $self->{got}->{column} + 1;
         @fields = (
             "Line" => $line,
             "Column" => $column,

@@ -912,7 +912,7 @@ sub exception {
         msg => $msg,
         next => $next,
         where => $caller[1] . ' line ' . $caller[2],
-        yaml => [$yaml],
+        yaml => $yaml,
     );
     croak $e;
 }

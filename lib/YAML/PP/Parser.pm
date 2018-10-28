@@ -282,7 +282,9 @@ sub parse_document {
         DEBUG and $self->info("----------------> parse_next_line");
         while (1) {
             unless ($self->new_node) {
-                $self->set_rule( $nodetypes{ $event_types->[-1] } );
+                my $new_rule = $nodetypes{ $event_types->[-1] }
+                    or die "Expected document end";
+                $self->set_rule( $new_rule );
             }
 
             my $res = $self->parse_tokens();
@@ -834,7 +836,15 @@ sub _remaining_tokens {
     my $next = $self->lexer->next_tokens;
     push @tokens, @$next;
     my $next_line = $self->lexer->next_line;
-    my $remaining = $next_line ? join '', @$next_line : '';
+    my $remaining = '';
+    if ($next_line) {
+        if ($self->lexer->offset > 0) {
+            $remaining = $next_line->[1] . $next_line->[2];
+        }
+        else {
+            $remaining = join '', @$next_line;
+        }
+    }
     $remaining .= $self->reader->read;
     $remaining = '' unless defined $remaining;
     push @tokens, { name => "ERROR", value => $remaining };
@@ -1041,7 +1051,17 @@ sub exception {
     my $next = $self->lexer->next_tokens;
     my $line = @$next ? $next->[0]->{line} : $self->lexer->line;
     my $offset = @$next ? $next->[0]->{column} : $self->lexer->offset;
+    $offset++;
     my $next_line = $self->lexer->next_line;
+    my $remaining = '';
+    if ($next_line) {
+        if ($self->lexer->offset > 0) {
+            $remaining = $next_line->[1] . $next_line->[2];
+        }
+        else {
+            $remaining = join '', @$next_line;
+        }
+    }
     my $caller = $args{caller} || [ caller(0) ];
     my $e = YAML::PP::Exception->new(
         got => $args{got},
@@ -1051,7 +1071,7 @@ sub exception {
         msg => $msg,
         next => $next,
         where => $caller->[1] . ' line ' . $caller->[2],
-        yaml => $next_line,
+        yaml => $remaining,
     );
     croak $e;
 }
