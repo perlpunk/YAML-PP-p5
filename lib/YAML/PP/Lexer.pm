@@ -788,6 +788,7 @@ sub _fetch_next_tokens_directive {
             $$yaml =~ s/\A(.*)//;
             $dir .= $1;
             push @tokens, ( 'Invalid directive' => $dir );
+            push @tokens, ( EOL => $eol );
             $self->push_tokens(\@tokens);
             return;
         }
@@ -810,6 +811,7 @@ sub _fetch_next_tokens_directive {
     }
     else {
         push @tokens, ( 'Invalid directive' => $$yaml );
+        push @tokens, ( EOL => $eol );
         $self->push_tokens(\@tokens);
         return;
     }
@@ -818,6 +820,7 @@ sub _fetch_next_tokens_directive {
     }
     else {
         push @tokens, ( 'Invalid directive' => $$yaml );
+        push @tokens, ( EOL => $eol );
     }
     $self->push_tokens(\@tokens);
     return;
