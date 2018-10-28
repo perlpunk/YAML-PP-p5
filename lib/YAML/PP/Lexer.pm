@@ -462,6 +462,8 @@ sub fetch_plain {
 
             if ($$yaml =~ s/\A(#.*)\z//) {
                 push @tokens, EOL => $ws . $1 . $eol;
+                $self->set_next_line(undef);
+                last LOOP;
             }
             else {
                 push @tokens, WS => $ws if $ws;
