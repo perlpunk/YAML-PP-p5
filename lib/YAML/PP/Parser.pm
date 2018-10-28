@@ -80,7 +80,7 @@ sub init {
     my ($self) = @_;
     $self->set_offset([]);
     $self->set_events([]);
-    $self->set_new_node(undef);
+    $self->set_new_node(0);
     $self->set_tagmap({
         '!!' => "tag:yaml.org,2002:",
     });
@@ -282,14 +282,12 @@ sub parse_document {
         DEBUG and $self->info("----------------> parse_next_line");
         while (1) {
             unless ($self->new_node) {
-                $self->set_rule( $nodetypes{ $event_types->[-1] } );
+                my $new_rule = $nodetypes{ $event_types->[-1] }
+                    or die "Expected document end";
+                $self->set_rule( $new_rule );
             }
 
             my $res = $self->parse_tokens();
-
-#            if (@$stack) {
-#                $self->process_events( $res );
-#            }
 
             last if (not @$next_tokens or $next_tokens->[0]->{column} == 0);
         }
@@ -328,13 +326,16 @@ sub check_indent {
     elsif ($self->level < 2 and not $self->new_node) {
         return 1;
     }
-    if ($event_types->[-1] =~ m/^FLOW/) {
-        return;
-    }
 
     my $indent = $self->offset->[ -1 ];
 
     TRACE and $self->info("INDENT: space=$space indent=$indent");
+    if ($event_types->[-1] =~ m/^FLOW/) {
+        if ($space < $indent) {
+            $self->exception("Bad indendation in " . $self->events->[-1]);
+        }
+        return;
+    }
 
     if ($space > $indent) {
         unless ($self->new_node) {
@@ -398,14 +399,6 @@ my %next_event = (
     FLOWSEQ => 'FLOWSEQ',
     FLOWMAP => 'FLOWMAPVALUE',
     FLOWMAPVALUE => 'FLOWMAP',
-);
-
-my %render_methods = (
-    q/:/ => 'render_multi_val',
-    q/"/ => 'render_quoted',
-    q/'/ => 'render_quoted',
-    q/>/ => 'render_block_scalar',
-    q/|/ => 'render_block_scalar',
 );
 
 my %event_to_method = (
@@ -477,12 +470,21 @@ my %event_to_method = (
 #    }
 #}
 
+my %fetch_method = (
+    '"' => 'fetch_quoted',
+    "'" => 'fetch_quoted',
+    '|' => 'fetch_block',
+    '>' => 'fetch_block',
+    ''  => 'fetch_plain',
+);
+
 sub parse_tokens {
     my ($self) = @_;
     my $res = {};
     my $next_rule_name = $self->rule;
     DEBUG and $self->info("----------------> parse_tokens($next_rule_name)");
-    my $next_rule = $GRAMMAR->{ $next_rule_name };
+    my $next_rule = $GRAMMAR->{ $next_rule_name }
+        or die "Could not find rule $next_rule_name";
 
     TRACE and $self->debug_rules($next_rule);
     TRACE and $self->debug_yaml;
@@ -493,20 +495,24 @@ sub parse_tokens {
     $res->{offset} = $next_tokens->[0]->{column};
     RULE: while ($next_rule_name) {
         DEBUG and $self->info("RULE: $next_rule_name");
+        TRACE and $self->debug_tokens($next_tokens);
 
         unless (@$next_tokens) {
             $self->exception("No more tokens");
         }
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens->[0]], ['next_token']);
         my $got = $next_tokens->[0]->{name};
+        if ($got eq 'CONTEXT') {
+            my $context = shift @$next_tokens;
+            my $indent = $self->offset->[-1];
+            $indent++ unless $self->lexer->flowcontext;
+            my $method = $fetch_method{ $context->{value} };
+            my $partial = $self->lexer->$method($indent, $context->{value});
+            next RULE;
+        }
         my $def = $next_rule->{ $got };
         if ($def) {
-            if ($got eq 'END') {
-                shift @$next_tokens;
-            }
-            else {
-                push @$tokens, shift @$next_tokens;
-            }
+            push @$tokens, shift @$next_tokens;
         }
         elsif ($def = $next_rule->{DEFAULT}) {
             $got = 'DEFAULT';
@@ -523,26 +529,22 @@ sub parse_tokens {
             DEBUG and $self->info("CALLBACK $sub");
             $self->$sub($tokens->[-1]);
         }
-        my $node = $def->{node};
-        my $new = $node || $def->{new};
+        my $new = $def->{new};
         if ($new) {
-            $next_rule_name = $new;
-            DEBUG and $self->got("NEW: $next_rule_name");
-#            if ($node) {
-#                $self->set_new_node($node);
-#            }
+            DEBUG and $self->got("NEW: $new");
 
             if ($def->{return}) {
-                $self->set_rule($next_rule_name);
+                $self->set_rule($new);
                 return $res;
             }
+            $next_rule_name = $new;
 
             $next_rule = $GRAMMAR->{ $next_rule_name }
                 or die "Unexpected rule $next_rule_name";
             next RULE;
         }
         elsif ($def->{return}) {
-            $self->set_new_node(undef);
+            $self->set_new_node(0);
             return $res;
         }
         $next_rule_name .= " - $got"; # for debugging
@@ -636,9 +638,15 @@ sub start_sequence {
 sub start_flow_sequence {
     my ($self, $offset) = @_;
     my $offsets = $self->offset;
-    push @{ $self->events }, 'FLOWSEQ';
     my $new_offset = $offsets->[-1];
-    $new_offset = 0 if $new_offset < 0;
+    my $event_types = $self->events;
+    if ($new_offset < 0) {
+        $new_offset = 0;
+    }
+    elsif ($self->new_node) {
+        $new_offset++;
+    }
+    push @{ $self->events }, 'FLOWSEQ';
     push @{ $offsets }, $new_offset;
 
     my $event_stack = $self->event_stack;
@@ -652,9 +660,15 @@ sub start_flow_sequence {
 sub start_flow_mapping {
     my ($self, $offset) = @_;
     my $offsets = $self->offset;
-    push @{ $self->events }, 'FLOWMAP';
     my $new_offset = $offsets->[-1];
-    $new_offset = 0 if $new_offset < 0;
+    my $event_types = $self->events;
+    if ($new_offset < 0) {
+        $new_offset = 0;
+    }
+    elsif ($self->new_node) {
+        $new_offset++;
+    }
+    push @{ $self->events }, 'FLOWMAP';
     push @{ $offsets }, $new_offset;
 
     my $event_stack = $self->event_stack;
@@ -673,6 +687,12 @@ sub end_flow_sequence {
     my $info = { event_name => 'sequence_end_event' };
     $self->callback->($self, $info->{event_name}, $info);
     $event_types->[-1] = $next_event{ $event_types->[-1] };
+    if ($event_types->[-1] =~ m/^FLOW/) {
+        $self->set_new_node(1);
+    }
+    else {
+        $self->set_new_node(0);
+    }
 }
 
 sub end_flow_mapping {
@@ -683,6 +703,7 @@ sub end_flow_mapping {
     my $info = { event_name => 'mapping_end_event' };
     $self->callback->($self, $info->{event_name}, $info);
     $event_types->[-1] = $next_event{ $event_types->[-1] };
+    # TODO
 }
 
 sub start_mapping {
@@ -765,11 +786,14 @@ sub scalar_event {
         my $properties = pop @$event_stack;
         $properties = $self->node_properties($properties->[1], $info);
     }
-    my $method = $render_methods{ $info->{style} };
-    YAML::PP::Render->$method( $info );
 
     $self->callback->($self, 'scalar_event', $info);
-    $self->set_new_node(undef);
+    if ($event_types->[-1] =~ m/^FLOW/) {
+        $self->set_new_node(1);
+    }
+    else {
+        $self->set_new_node(0);
+    }
     $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
 
@@ -781,7 +805,12 @@ sub alias_event {
     }
     my $event_types = $self->events;
     $self->callback->($self, 'alias_event', $info);
-    $self->set_new_node(undef);
+    if ($event_types->[-1] =~ m/^FLOW/) {
+        $self->set_new_node(1);
+    }
+    else {
+        $self->set_new_node(0);
+    }
     $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
 
@@ -794,17 +823,32 @@ sub yaml_to_tokens {
     my $error = $@;
 
     my $tokens = $yp->tokens;
-    my $next = $yp->lexer->next_tokens;
     if ($error) {
-        push @$tokens, map { +{ %$_, name => 'ERROR' } } @$next;
-        my $remaining = $yp->reader->read;
-        $remaining = '' unless defined $remaining;
-        push @$tokens, { name => "ERROR", value => $remaining };
-    }
-    else {
-        push @$tokens, @$next;
+        my $remaining_tokens = $yp->_remaining_tokens;
+        push @$tokens, map { +{ %$_, name => 'ERROR' } } @$remaining_tokens;
     }
     return $error, $tokens;
+}
+
+sub _remaining_tokens {
+    my ($self) = @_;
+    my @tokens;
+    my $next = $self->lexer->next_tokens;
+    push @tokens, @$next;
+    my $next_line = $self->lexer->next_line;
+    my $remaining = '';
+    if ($next_line) {
+        if ($self->lexer->offset > 0) {
+            $remaining = $next_line->[1] . $next_line->[2];
+        }
+        else {
+            $remaining = join '', @$next_line;
+        }
+    }
+    $remaining .= $self->reader->read;
+    $remaining = '' unless defined $remaining;
+    push @tokens, { name => "ERROR", value => $remaining };
+    return \@tokens;
 }
 
 sub event_to_test_suite {
@@ -1006,16 +1050,28 @@ sub exception {
     my ($self, $msg, %args) = @_;
     my $next = $self->lexer->next_tokens;
     my $line = @$next ? $next->[0]->{line} : $self->lexer->line;
+    my $offset = @$next ? $next->[0]->{column} : $self->lexer->offset;
+    $offset++;
     my $next_line = $self->lexer->next_line;
+    my $remaining = '';
+    if ($next_line) {
+        if ($self->lexer->offset > 0) {
+            $remaining = $next_line->[1] . $next_line->[2];
+        }
+        else {
+            $remaining = join '', @$next_line;
+        }
+    }
     my $caller = $args{caller} || [ caller(0) ];
     my $e = YAML::PP::Exception->new(
         got => $args{got},
         expected => $args{expected},
         line => $line,
+        column => $offset,
         msg => $msg,
         next => $next,
         where => $caller->[1] . ' line ' . $caller->[2],
-        yaml => $next_line,
+        yaml => $remaining,
     );
     croak $e;
 }
@@ -1117,6 +1173,12 @@ sub cb_empty_mapkey {
     $self->set_new_node(1);
 }
 
+sub cb_send_flow_alias {
+    my ($self, $token) = @_;
+    my $alias = substr($token->{value}, 1);
+    $self->alias_event({ value => $alias });
+}
+
 sub cb_send_alias {
     my ($self, $token) = @_;
     my $alias = substr($token->{value}, 1);
@@ -1141,6 +1203,11 @@ sub cb_alias {
 }
 
 sub cb_question {
+    my ($self, $res) = @_;
+    $self->set_new_node(1);
+}
+
+sub cb_flow_question {
     my ($self, $res) = @_;
     $self->set_new_node(1);
 }
@@ -1172,12 +1239,13 @@ sub cb_seqitem {
     $self->set_new_node(1);
 }
 
-sub cb_start_quoted {
+sub cb_take_quoted {
     my ($self, $token) = @_;
+    my $subtokens = $token->{subtokens};
     my $stack = $self->event_stack;
     my $info = {
-        style => $token->{value},
-        value => [],
+        style => $subtokens->[0]->{value},
+        value => $token->{value},
         offset => $token->{column},
     };
     if (@$stack and $stack->[-1]->[0] eq 'properties') {
@@ -1186,10 +1254,41 @@ sub cb_start_quoted {
     push @{ $stack }, [ scalar => $info ];
 }
 
-sub cb_fetch_tokens_quoted {
-    my ($self) = @_;
-    my $indent = $self->offset->[-1] + 1;
-    $self->lexer->fetch_next_tokens($indent);
+sub cb_quoted_multiline {
+    my ($self, $token) = @_;
+    my $subtokens = $token->{subtokens};
+    my $stack = $self->event_stack;
+    my $info = {
+        style => $subtokens->[0]->{value},
+        value => $token->{value},
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    push @{ $stack }, [ scalar => $info ];
+    $self->cb_send_scalar;
+}
+
+sub cb_take_quoted_key {
+    my ($self, $token) = @_;
+    $self->cb_take_quoted($token);
+    $self->cb_send_mapkey;
+}
+
+sub cb_send_plain_multi {
+    my ($self, $token) = @_;
+    my $stack = $self->event_stack;
+    my $info = {
+        style => ':',
+        value => $token->{value},
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    push @{ $stack }, [ scalar => $info ];
+    $self->cb_send_scalar;
 }
 
 sub cb_start_plain {
@@ -1197,7 +1296,7 @@ sub cb_start_plain {
     my $stack = $self->event_stack;
     my $info = {
             style => ':',
-            value => [ $token->{value} ],
+            value => $token->{value},
             offset => $token->{column},
     };
     if (@$stack and $stack->[-1]->[0] eq 'properties') {
@@ -1206,42 +1305,26 @@ sub cb_start_plain {
     push @{ $stack }, [ scalar => $info ];
 }
 
-sub cb_empty_plain {
-    my ($self, $res) = @_;
-    my $stack = $self->event_stack;
-    push @{ $stack->[-1]->[1]->{value} }, '';
-    $self->cb_fetch_tokens_plain;
-}
-
-sub cb_fetch_tokens_plain {
-    my ($self) = @_;
-    my $indent = $self->offset->[-1];
-    $indent++ unless $self->lexer->flowcontext;
-    $self->lexer->set_context('plain');
-    $self->lexer->fetch_next_tokens($indent);
-}
-
 sub cb_start_flowseq {
     my ($self, $token) = @_;
     $self->start_flow_sequence($token->{column});
-    $self->set_new_node(1);
+    $self->set_new_node(0);
 }
 
 sub cb_start_flowmap {
     my ($self, $token) = @_;
     $self->start_flow_mapping($token->{column});
-    $self->set_new_node(1);
+    $self->set_new_node(0);
 }
 
 sub cb_end_flowseq {
     my ($self, $res) = @_;
     $self->end_flow_sequence;
-    $self->set_new_node(undef);
 }
 
 sub cb_flow_comma {
     my ($self) = @_;
-    $self->set_new_node(1);
+    $self->set_new_node(0);
 }
 
 sub cb_flow_colon {
@@ -1249,10 +1332,75 @@ sub cb_flow_colon {
     $self->set_new_node(1);
 }
 
+sub cb_empty_flow_mapkey {
+    my ($self, $token) = @_;
+    my $stack = $self->event_stack;
+    my $info = {
+        style => ':',
+        value => undef,
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    $self->scalar_event($info);
+    $self->set_new_node(1);
+}
+
 sub cb_end_flowmap {
     my ($self, $res) = @_;
     $self->end_flow_mapping;
-    $self->set_new_node(undef);
+    $self->set_new_node(0);
+}
+
+sub cb_end_flowmap_empty {
+    my ($self, $res) = @_;
+    $self->cb_empty_flowmap_value;
+    $self->end_flow_mapping;
+    $self->set_new_node(0);
+}
+
+sub cb_flow_plain {
+    my ($self, $token) = @_;
+    my $stack = $self->event_stack;
+    my $info = {
+        style => ':',
+        value => $token->{value},
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    $self->scalar_event($info);
+}
+
+sub cb_flowkey_plain {
+    my ($self, $token) = @_;
+    my $stack = $self->event_stack;
+    my $info = {
+        style => ':',
+        value => $token->{value},
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    $self->scalar_event($info);
+}
+
+sub cb_flowkey_quoted {
+    my ($self, $token) = @_;
+    my $stack = $self->event_stack;
+    my $subtokens = $token->{subtokens};
+    my $info = {
+        style => $subtokens->[0]->{value},
+        value => $token->{value},
+        offset => $token->{column},
+    };
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $self->fetch_inline_properties($stack, $info);
+    }
+    $self->scalar_event($info);
 }
 
 sub cb_empty_flowmap_value {
@@ -1267,20 +1415,7 @@ sub cb_empty_flowmap_value {
         $self->fetch_inline_properties($stack, $info);
     }
     $self->scalar_event($info);
-    $self->set_new_node(undef);
-}
-
-sub cb_take {
-    my ($self, $token) = @_;
-    my $stack = $self->event_stack;
-    push @{ $stack->[-1]->[1]->{value} }, $token->{value};
-}
-
-sub cb_empty_quoted_line {
-    my ($self, $res) = @_;
-    my $stack = $self->event_stack;
-    push @{ $stack->[-1]->[1]->{value} }, '';
-    $self->cb_fetch_tokens_quoted;
+    $self->set_new_node(0);
 }
 
 sub cb_insert_map_alias {
@@ -1319,69 +1454,23 @@ sub cb_insert_empty_map {
     $self->set_new_node(1);
 }
 
-sub cb_block_scalar {
+sub cb_send_block_scalar {
     my ($self, $token) = @_;
-    my $type = $token->{value};
+    my $type = $token->{subtokens}->[0]->{value};
     my $stack = $self->event_stack;
     my $info = {
         style => $type,
-        value => [],
-        current_indent => $self->offset->[-1] + 1,
+        value => $token->{value},
         offset => $token->{column},
     };
     if (@$stack and $stack->[-1]->[0] eq 'properties') {
         $self->fetch_inline_properties($stack, $info);
     }
     push @{ $self->event_stack }, [ scalar => $info ];
-    $self->lexer->set_context('block_scalar_start');
-}
+    $self->cb_send_scalar;
 
-sub cb_add_block_scalar_indent {
-    my ($self, $token) = @_;
-    my $indent = $token->{value};
-    my $event = $self->event_stack->[-1]->[1];
-    $event->{block_indent} = $indent;
-    $event->{got_indent} = 1;
-    $event->{current_indent} = $indent;
-    $self->lexer->set_context('block_scalar');
-}
-
-sub cb_add_block_scalar_chomp {
-    my ($self, $token) = @_;
-    my $chomp = $token->{value};
-    $self->event_stack->[-1]->[1]->{block_chomp} = $chomp;
-}
-
-sub cb_block_scalar_empty_line {
-    my ($self, $res) = @_;
-    my $event = $self->event_stack->[-1]->[1];
-    push @{ $event->{value} }, '';
-    $self->lexer->fetch_next_tokens($event->{current_indent});
-}
-
-sub cb_block_scalar_start_indent {
-    my ($self, $token) = @_;
-    my $event = $self->event_stack->[-1]->[1];
-    $event->{current_indent} = length $token->{value};
-}
-
-sub cb_fetch_tokens_block_scalar {
-    my ($self, $res) = @_;
-    my $event = $self->event_stack->[-1]->[1];
-    $self->lexer->fetch_next_tokens($event->{current_indent})
-}
-
-sub cb_block_scalar_start_content {
-    my ($self, $token) = @_;
-    my $event = $self->event_stack->[-1]->[1];
-    push @{ $event->{value} }, $token->{value};
-    $self->lexer->set_context('block_scalar');
-}
-
-sub cb_block_scalar_content {
-    my ($self, $token) = @_;
-    my $event = $self->event_stack->[-1]->[1];
-    push @{ $event->{value} }, $token->{value};
+    my $indent = $self->offset->[-1] + 1;
+    $self->lexer->fetch_next_tokens($indent);
 }
 
 1;

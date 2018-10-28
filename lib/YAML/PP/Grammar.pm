@@ -16,6 +16,99 @@ our $GRAMMAR = {};
 # This grammar is automatically generated from etc/grammar.yaml
 
 $GRAMMAR = {
+  'FLOWMAP' => {
+    'ALIAS' => {
+      'match' => 'cb_send_alias',
+      'return' => 1
+    },
+    'COLON' => {
+      'EOL' => {
+        'match' => 'cb_empty_flow_mapkey',
+        'new' => 'RULE_FULLFLOWSCALAR',
+        'return' => 1
+      },
+      'WS' => {
+        'match' => 'cb_empty_flow_mapkey',
+        'new' => 'RULE_FULLFLOWSCALAR'
+      }
+    },
+    'FLOWMAP_START' => {
+      'match' => 'cb_start_flowmap',
+      'new' => 'NEWFLOWMAP'
+    },
+    'FLOWSEQ_START' => {
+      'match' => 'cb_start_flowseq',
+      'new' => 'NEWFLOWSEQ'
+    },
+    'PLAIN' => {
+      'match' => 'cb_flowkey_plain',
+      'return' => 1
+    },
+    'PLAIN_MULTI' => {
+      'match' => 'cb_send_plain_multi',
+      'return' => 1
+    },
+    'QUOTED' => {
+      'match' => 'cb_flowkey_quoted',
+      'return' => 1
+    },
+    'QUOTED_MULTILINE' => {
+      'match' => 'cb_quoted_multiline',
+      'return' => 1
+    }
+  },
+  'FLOWSEQ' => {
+    'ALIAS' => {
+      'match' => 'cb_send_flow_alias',
+      'new' => 'FLOWSEQ_NEXT'
+    },
+    'FLOWMAP_START' => {
+      'match' => 'cb_start_flowmap',
+      'new' => 'NEWFLOWMAP'
+    },
+    'FLOWSEQ_START' => {
+      'match' => 'cb_start_flowseq',
+      'new' => 'NEWFLOWSEQ'
+    },
+    'PLAIN' => {
+      'match' => 'cb_flow_plain',
+      'new' => 'FLOWSEQ_NEXT'
+    },
+    'PLAIN_MULTI' => {
+      'match' => 'cb_send_plain_multi',
+      'new' => 'FLOWSEQ_NEXT'
+    },
+    'QUOTED' => {
+      'match' => 'cb_flowkey_quoted',
+      'new' => 'FLOWSEQ_NEXT'
+    },
+    'QUOTED_MULTILINE' => {
+      'match' => 'cb_quoted_multiline',
+      'new' => 'FLOWSEQ_NEXT'
+    }
+  },
+  'FLOWSEQ_NEXT' => {
+    'EOL' => {
+      'new' => 'FLOWSEQ_NEXT',
+      'return' => 1
+    },
+    'FLOWSEQ_END' => {
+      'DEFAULT' => {
+        'return' => 1
+      },
+      'EOL' => {
+        'return' => 1
+      },
+      'match' => 'cb_end_flowseq'
+    },
+    'FLOW_COMMA' => {
+      'match' => 'cb_flow_comma',
+      'return' => 1
+    },
+    'WS' => {
+      'new' => 'FLOWSEQ_NEXT'
+    }
+  },
   'FULLMAPVALUE_INLINE' => {
     'ANCHOR' => {
       'EOL' => {
@@ -231,55 +324,30 @@ $GRAMMAR = {
       'match' => 'cb_tag'
     }
   },
-  'MULTILINE_DOUBLEQUOTED' => {
-    'DOUBLEQUOTED_LINE' => {
-      'DOUBLEQUOTE' => {
-        'DEFAULT' => {
-          'match' => 'cb_send_scalar',
-          'return' => 1
-        },
-        'EOL' => {
-          'match' => 'cb_send_scalar',
-          'return' => 1
-        }
-      },
-      'EOL' => {
-        'match' => 'cb_fetch_tokens_quoted',
-        'new' => 'MULTILINE_DOUBLEQUOTED'
-      },
-      'match' => 'cb_take'
-    },
-    'EOL' => {
-      'match' => 'cb_empty_quoted_line',
-      'new' => 'MULTILINE_DOUBLEQUOTED'
-    }
-  },
-  'MULTILINE_SINGLEQUOTED' => {
-    'EOL' => {
-      'match' => 'cb_empty_quoted_line',
-      'new' => 'MULTILINE_SINGLEQUOTED'
-    },
-    'SINGLEQUOTED_LINE' => {
-      'EOL' => {
-        'match' => 'cb_fetch_tokens_quoted',
-        'new' => 'MULTILINE_SINGLEQUOTED'
-      },
-      'SINGLEQUOTE' => {
-        'DEFAULT' => {
-          'match' => 'cb_send_scalar',
-          'return' => 1
-        },
-        'EOL' => {
-          'match' => 'cb_send_scalar',
-          'return' => 1
-        }
-      },
-      'match' => 'cb_take'
-    }
-  },
   'NEWFLOWMAP' => {
+    'ANCHOR' => {
+      'EOL' => {
+        'new' => 'NEWFLOWMAP_ANCHOR',
+        'return' => 1
+      },
+      'WS' => {
+        'new' => 'NEWFLOWMAP_ANCHOR'
+      },
+      'match' => 'cb_anchor'
+    },
+    'COLON' => {
+      'EOL' => {
+        'match' => 'cb_empty_flow_mapkey',
+        'new' => 'RULE_FULLFLOWSCALAR',
+        'return' => 1
+      },
+      'WS' => {
+        'match' => 'cb_empty_flow_mapkey',
+        'new' => 'RULE_FULLFLOWSCALAR'
+      }
+    },
     'DEFAULT' => {
-      'new' => 'RULE_FULLFLOWSCALAR'
+      'new' => 'FLOWMAP'
     },
     'EOL' => {
       'new' => 'NEWFLOWMAP',
@@ -294,13 +362,81 @@ $GRAMMAR = {
       },
       'match' => 'cb_end_flowmap'
     },
+    'QUESTION' => {
+      'match' => 'cb_flow_question',
+      'new' => 'NEWFLOWMAP'
+    },
+    'TAG' => {
+      'EOL' => {
+        'new' => 'NEWFLOWMAP_TAG',
+        'return' => 1
+      },
+      'WS' => {
+        'new' => 'NEWFLOWMAP_TAG'
+      },
+      'match' => 'cb_tag'
+    },
     'WS' => {
       'new' => 'NEWFLOWMAP'
     }
   },
-  'NEWFLOWSEQ' => {
+  'NEWFLOWMAP_ANCHOR' => {
     'DEFAULT' => {
-      'new' => 'RULE_FULLFLOWSCALAR'
+      'new' => 'FLOWMAP'
+    },
+    'EOL' => {
+      'new' => 'NEWFLOWMAP_ANCHOR',
+      'return' => 1
+    },
+    'TAG' => {
+      'EOL' => {
+        'new' => 'FLOWMAP',
+        'return' => 1
+      },
+      'WS' => {
+        'new' => 'FLOWMAP'
+      },
+      'match' => 'cb_tag'
+    },
+    'WS' => {
+      'new' => 'NEWFLOWMAP_ANCHOR'
+    }
+  },
+  'NEWFLOWMAP_TAG' => {
+    'ANCHOR' => {
+      'EOL' => {
+        'new' => 'FLOWMAP',
+        'return' => 1
+      },
+      'WS' => {
+        'new' => 'FLOWMAP'
+      },
+      'match' => 'cb_anchor'
+    },
+    'DEFAULT' => {
+      'new' => 'FLOWMAP'
+    },
+    'EOL' => {
+      'new' => 'NEWFLOWMAP_TAG',
+      'return' => 1
+    },
+    'WS' => {
+      'new' => 'NEWFLOWMAP_TAG'
+    }
+  },
+  'NEWFLOWSEQ' => {
+    'ANCHOR' => {
+      'EOL' => {
+        'new' => 'NEWFLOWSEQ_ANCHOR',
+        'return' => 1
+      },
+      'WS' => {
+        'new' => 'NEWFLOWSEQ_ANCHOR'
+      },
+      'match' => 'cb_anchor'
+    },
+    'DEFAULT' => {
+      'new' => 'FLOWSEQ'
     },
     'EOL' => {
       'new' => 'NEWFLOWSEQ',
@@ -315,19 +451,72 @@ $GRAMMAR = {
       },
       'match' => 'cb_end_flowseq'
     },
+    'TAG' => {
+      'EOL' => {
+        'new' => 'NEWFLOWSEQ_TAG',
+        'return' => 1
+      },
+      'WS' => {
+        'new' => 'NEWFLOWSEQ_TAG'
+      },
+      'match' => 'cb_tag'
+    },
     'WS' => {
       'new' => 'NEWFLOWSEQ'
+    }
+  },
+  'NEWFLOWSEQ_ANCHOR' => {
+    'DEFAULT' => {
+      'new' => 'FLOWSEQ'
+    },
+    'EOL' => {
+      'new' => 'NEWFLOWSEQ_ANCHOR',
+      'return' => 1
+    },
+    'TAG' => {
+      'EOL' => {
+        'new' => 'FLOWSEQ',
+        'return' => 1
+      },
+      'WS' => {
+        'new' => 'FLOWSEQ'
+      },
+      'match' => 'cb_tag'
+    },
+    'WS' => {
+      'new' => 'NEWFLOWSEQ_ANCHOR'
+    }
+  },
+  'NEWFLOWSEQ_TAG' => {
+    'ANCHOR' => {
+      'EOL' => {
+        'new' => 'FLOWSEQ',
+        'return' => 1
+      },
+      'WS' => {
+        'new' => 'FLOWSEQ'
+      },
+      'match' => 'cb_anchor'
+    },
+    'DEFAULT' => {
+      'new' => 'FLOWSEQ'
+    },
+    'EOL' => {
+      'new' => 'NEWFLOWSEQ_TAG',
+      'return' => 1
+    },
+    'WS' => {
+      'new' => 'NEWFLOWSEQ_TAG'
     }
   },
   'NODETYPE_COMPLEX' => {
     'COLON' => {
       'EOL' => {
-        'node' => 'FULLNODE',
+        'new' => 'FULLNODE',
         'return' => 1
       },
       'WS' => {
-        'node' => 'FULLNODE',
-        'return' => 1
+        'new' => 'FULLNODE'
       },
       'match' => 'cb_complexcolon'
     },
@@ -338,7 +527,7 @@ $GRAMMAR = {
   },
   'NODETYPE_FLOWMAP' => {
     'DEFAULT' => {
-      'new' => 'RULE_FULLFLOWSCALAR'
+      'new' => 'NEWFLOWMAP'
     },
     'EOL' => {
       'new' => 'NODETYPE_FLOWMAP',
@@ -375,7 +564,20 @@ $GRAMMAR = {
       },
       'match' => 'cb_flow_colon'
     },
-    'DEFAULT' => {
+    'EOL' => {
+      'new' => 'NODETYPE_FLOWMAPVALUE',
+      'return' => 1
+    },
+    'FLOWMAP_END' => {
+      'DEFAULT' => {
+        'return' => 1
+      },
+      'EOL' => {
+        'return' => 1
+      },
+      'match' => 'cb_end_flowmap_empty'
+    },
+    'FLOW_COMMA' => {
       'match' => 'cb_empty_flowmap_value',
       'return' => 1
     },
@@ -384,6 +586,9 @@ $GRAMMAR = {
     }
   },
   'NODETYPE_FLOWSEQ' => {
+    'DEFAULT' => {
+      'new' => 'NEWFLOWSEQ'
+    },
     'EOL' => {
       'new' => 'NODETYPE_FLOWSEQ',
       'return' => 1
@@ -396,10 +601,6 @@ $GRAMMAR = {
         'return' => 1
       },
       'match' => 'cb_end_flowseq'
-    },
-    'FLOW_COMMA' => {
-      'match' => 'cb_flow_comma',
-      'new' => 'NEWFLOWSEQ'
     },
     'WS' => {
       'new' => 'NODETYPE_FLOWSEQ'
@@ -445,24 +646,9 @@ $GRAMMAR = {
       },
       'match' => 'cb_send_alias'
     },
-    'DOUBLEQUOTE' => {
-      'DOUBLEQUOTED' => {
-        'DOUBLEQUOTE' => {
-          'EOL' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          }
-        },
-        'match' => 'cb_take'
-      },
-      'DOUBLEQUOTED_LINE' => {
-        'EOL' => {
-          'match' => 'cb_fetch_tokens_quoted',
-          'new' => 'MULTILINE_DOUBLEQUOTED'
-        },
-        'match' => 'cb_take'
-      },
-      'match' => 'cb_start_quoted'
+    'BLOCK_SCALAR' => {
+      'match' => 'cb_send_block_scalar',
+      'return' => 1
     },
     'FLOWMAP_START' => {
       'DEFAULT' => {
@@ -476,55 +662,41 @@ $GRAMMAR = {
       },
       'match' => 'cb_start_flowseq'
     },
-    'FOLDED' => {
-      'match' => 'cb_block_scalar',
-      'new' => 'RULE_BLOCK_SCALAR_HEADER'
-    },
-    'LITERAL' => {
-      'match' => 'cb_block_scalar',
-      'new' => 'RULE_BLOCK_SCALAR_HEADER'
-    },
     'PLAIN' => {
-      'COMMENT' => {
-        'EOL' => {
-          'return' => 1
-        },
-        'match' => 'cb_send_scalar'
-      },
       'EOL' => {
-        'match' => 'cb_fetch_tokens_plain',
-        'new' => 'RULE_PLAIN_MULTI'
+        'match' => 'cb_send_scalar',
+        'return' => 1
       },
       'match' => 'cb_start_plain'
     },
-    'SINGLEQUOTE' => {
-      'SINGLEQUOTED' => {
-        'SINGLEQUOTE' => {
-          'EOL' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          }
-        },
-        'match' => 'cb_take'
+    'PLAIN_MULTI' => {
+      'EOL' => {
+        'return' => 1
       },
-      'SINGLEQUOTED_LINE' => {
-        'EOL' => {
-          'match' => 'cb_fetch_tokens_quoted',
-          'new' => 'MULTILINE_SINGLEQUOTED'
-        },
-        'match' => 'cb_take'
+      'match' => 'cb_send_plain_multi'
+    },
+    'QUOTED' => {
+      'EOL' => {
+        'match' => 'cb_send_scalar',
+        'return' => 1
       },
-      'match' => 'cb_start_quoted'
+      'match' => 'cb_take_quoted'
+    },
+    'QUOTED_MULTILINE' => {
+      'EOL' => {
+        'return' => 1
+      },
+      'match' => 'cb_quoted_multiline'
     }
   },
   'NODETYPE_NODE' => {
     'DASH' => {
       'EOL' => {
-        'node' => 'FULLNODE',
+        'new' => 'FULLNODE',
         'return' => 1
       },
       'WS' => {
-        'node' => 'FULLNODE'
+        'new' => 'FULLNODE'
       },
       'match' => 'cb_seqstart'
     },
@@ -541,70 +713,30 @@ $GRAMMAR = {
       'WS' => {
         'COLON' => {
           'EOL' => {
-            'node' => 'FULLNODE',
+            'new' => 'FULLNODE',
             'return' => 1
           },
           'WS' => {
-            'node' => 'FULLMAPVALUE_INLINE'
+            'new' => 'FULLMAPVALUE_INLINE'
           },
           'match' => 'cb_insert_map_alias'
         }
       },
       'match' => 'cb_alias'
     },
+    'BLOCK_SCALAR' => {
+      'match' => 'cb_send_block_scalar',
+      'return' => 1
+    },
     'COLON' => {
       'EOL' => {
-        'node' => 'FULLNODE',
+        'new' => 'FULLNODE',
         'return' => 1
       },
       'WS' => {
-        'node' => 'FULLMAPVALUE_INLINE',
-        'return' => 1
+        'new' => 'FULLMAPVALUE_INLINE'
       },
       'match' => 'cb_insert_empty_map'
-    },
-    'DOUBLEQUOTE' => {
-      'DOUBLEQUOTED' => {
-        'DOUBLEQUOTE' => {
-          'COLON' => {
-            'EOL' => {
-              'node' => 'FULLNODE',
-              'return' => 1
-            },
-            'WS' => {
-              'node' => 'FULLMAPVALUE_INLINE',
-              'return' => 1
-            },
-            'match' => 'cb_insert_map'
-          },
-          'EOL' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          },
-          'WS' => {
-            'COLON' => {
-              'EOL' => {
-                'node' => 'FULLNODE',
-                'return' => 1
-              },
-              'WS' => {
-                'node' => 'FULLMAPVALUE_INLINE',
-                'return' => 1
-              },
-              'match' => 'cb_insert_map'
-            }
-          }
-        },
-        'match' => 'cb_take'
-      },
-      'DOUBLEQUOTED_LINE' => {
-        'EOL' => {
-          'match' => 'cb_fetch_tokens_quoted',
-          'new' => 'MULTILINE_DOUBLEQUOTED'
-        },
-        'match' => 'cb_take'
-      },
-      'match' => 'cb_start_quoted'
     },
     'FLOWMAP_START' => {
       'DEFAULT' => {
@@ -618,104 +750,85 @@ $GRAMMAR = {
       },
       'match' => 'cb_start_flowseq'
     },
-    'FOLDED' => {
-      'match' => 'cb_block_scalar',
-      'new' => 'RULE_BLOCK_SCALAR_HEADER'
-    },
-    'LITERAL' => {
-      'match' => 'cb_block_scalar',
-      'new' => 'RULE_BLOCK_SCALAR_HEADER'
-    },
     'PLAIN' => {
       'COLON' => {
         'EOL' => {
-          'node' => 'FULLNODE',
+          'new' => 'FULLNODE',
           'return' => 1
         },
         'WS' => {
-          'node' => 'FULLMAPVALUE_INLINE',
-          'return' => 1
+          'new' => 'FULLMAPVALUE_INLINE'
         },
         'match' => 'cb_insert_map'
       },
-      'COMMENT' => {
-        'EOL' => {
-          'return' => 1
-        },
-        'match' => 'cb_send_scalar'
-      },
       'EOL' => {
-        'match' => 'cb_fetch_tokens_plain',
-        'new' => 'RULE_PLAIN_MULTI'
+        'match' => 'cb_send_scalar',
+        'return' => 1
       },
       'WS' => {
         'COLON' => {
           'EOL' => {
-            'node' => 'FULLNODE',
+            'new' => 'FULLNODE',
             'return' => 1
           },
           'WS' => {
-            'node' => 'FULLMAPVALUE_INLINE',
-            'return' => 1
+            'new' => 'FULLMAPVALUE_INLINE'
           },
           'match' => 'cb_insert_map'
         }
       },
       'match' => 'cb_start_plain'
     },
+    'PLAIN_MULTI' => {
+      'EOL' => {
+        'return' => 1
+      },
+      'match' => 'cb_send_plain_multi'
+    },
     'QUESTION' => {
       'EOL' => {
-        'node' => 'FULLNODE',
+        'new' => 'FULLNODE',
         'return' => 1
       },
       'WS' => {
-        'node' => 'FULLNODE',
-        'return' => 1
+        'new' => 'FULLNODE'
       },
       'match' => 'cb_questionstart'
     },
-    'SINGLEQUOTE' => {
-      'SINGLEQUOTED' => {
-        'SINGLEQUOTE' => {
-          'COLON' => {
-            'EOL' => {
-              'node' => 'FULLNODE',
-              'return' => 1
-            },
-            'WS' => {
-              'node' => 'FULLMAPVALUE_INLINE',
-              'return' => 1
-            },
-            'match' => 'cb_insert_map'
-          },
+    'QUOTED' => {
+      'COLON' => {
+        'EOL' => {
+          'new' => 'FULLNODE',
+          'return' => 1
+        },
+        'WS' => {
+          'new' => 'FULLMAPVALUE_INLINE'
+        },
+        'match' => 'cb_insert_map'
+      },
+      'EOL' => {
+        'match' => 'cb_send_scalar',
+        'return' => 1
+      },
+      'WS' => {
+        'COLON' => {
           'EOL' => {
-            'match' => 'cb_send_scalar',
+            'new' => 'FULLNODE',
             'return' => 1
           },
           'WS' => {
-            'COLON' => {
-              'EOL' => {
-                'node' => 'FULLNODE',
-                'return' => 1
-              },
-              'WS' => {
-                'node' => 'FULLMAPVALUE_INLINE',
-                'return' => 1
-              },
-              'match' => 'cb_insert_map'
-            }
-          }
-        },
-        'match' => 'cb_take'
+            'new' => 'FULLMAPVALUE_INLINE'
+          },
+          'match' => 'cb_insert_map'
+        }
       },
-      'SINGLEQUOTED_LINE' => {
-        'EOL' => {
-          'match' => 'cb_fetch_tokens_quoted',
-          'new' => 'MULTILINE_SINGLEQUOTED'
-        },
-        'match' => 'cb_take'
+      'match' => 'cb_take_quoted'
+    },
+    'QUOTED_MULTILINE' => {
+      'EOL' => {
+        'return' => 1
       },
-      'match' => 'cb_start_quoted'
+      'match' => 'cb_quoted_multiline'
     },
     'WS' => {
       'new' => 'FULLMAPVALUE_INLINE'
@@ -724,94 +837,13 @@ $GRAMMAR = {
   'NODETYPE_SEQ' => {
     'DASH' => {
       'EOL' => {
-        'node' => 'FULLNODE',
+        'new' => 'FULLNODE',
         'return' => 1
       },
       'WS' => {
-        'node' => 'FULLNODE'
+        'new' => 'FULLNODE'
       },
       'match' => 'cb_seqitem'
-    }
-  },
-  'RULE_BLOCK_SCALAR_CONTENT' => {
-    'END' => {
-      'match' => 'cb_send_scalar',
-      'return' => 1
-    },
-    'EOL' => {
-      'match' => 'cb_block_scalar_empty_line',
-      'new' => 'RULE_BLOCK_SCALAR_CONTENT'
-    },
-    'INDENT' => {
-      'BLOCK_SCALAR_CONTENT' => {
-        'EOL' => {
-          'match' => 'cb_fetch_tokens_block_scalar',
-          'new' => 'RULE_BLOCK_SCALAR_CONTENT'
-        },
-        'match' => 'cb_block_scalar_content'
-      },
-      'EOL' => {
-        'match' => 'cb_block_scalar_empty_line',
-        'new' => 'RULE_BLOCK_SCALAR_CONTENT'
-      }
-    }
-  },
-  'RULE_BLOCK_SCALAR_HEADER' => {
-    'BLOCK_SCALAR_CHOMP' => {
-      'BLOCK_SCALAR_INDENT' => {
-        'EOL' => {
-          'match' => 'cb_fetch_tokens_block_scalar',
-          'new' => 'RULE_BLOCK_SCALAR_START'
-        },
-        'match' => 'cb_add_block_scalar_indent'
-      },
-      'EOL' => {
-        'match' => 'cb_fetch_tokens_block_scalar',
-        'new' => 'RULE_BLOCK_SCALAR_START'
-      },
-      'match' => 'cb_add_block_scalar_chomp'
-    },
-    'BLOCK_SCALAR_INDENT' => {
-      'BLOCK_SCALAR_CHOMP' => {
-        'EOL' => {
-          'match' => 'cb_fetch_tokens_block_scalar',
-          'new' => 'RULE_BLOCK_SCALAR_START'
-        },
-        'match' => 'cb_add_block_scalar_chomp'
-      },
-      'EOL' => {
-        'match' => 'cb_fetch_tokens_block_scalar',
-        'new' => 'RULE_BLOCK_SCALAR_START'
-      },
-      'match' => 'cb_add_block_scalar_indent'
-    },
-    'EOL' => {
-      'match' => 'cb_fetch_tokens_block_scalar',
-      'new' => 'RULE_BLOCK_SCALAR_START'
-    }
-  },
-  'RULE_BLOCK_SCALAR_START' => {
-    'END' => {
-      'match' => 'cb_send_scalar',
-      'return' => 1
-    },
-    'EOL' => {
-      'match' => 'cb_block_scalar_empty_line',
-      'new' => 'RULE_BLOCK_SCALAR_START'
-    },
-    'INDENT' => {
-      'BLOCK_SCALAR_CONTENT' => {
-        'EOL' => {
-          'match' => 'cb_fetch_tokens_block_scalar',
-          'new' => 'RULE_BLOCK_SCALAR_CONTENT'
-        },
-        'match' => 'cb_block_scalar_start_content'
-      },
-      'EOL' => {
-        'match' => 'cb_block_scalar_empty_line',
-        'new' => 'RULE_BLOCK_SCALAR_START'
-      },
-      'match' => 'cb_block_scalar_start_indent'
     }
   },
   'RULE_FLOWSCALAR' => {
@@ -819,103 +851,77 @@ $GRAMMAR = {
       'match' => 'cb_send_alias',
       'return' => 1
     },
-    'DOUBLEQUOTE' => {
-      'DOUBLEQUOTED' => {
-        'DOUBLEQUOTE' => {
-          'DEFAULT' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          },
-          'EOL' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          },
-          'WS' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          }
-        },
-        'match' => 'cb_take'
-      },
-      'DOUBLEQUOTED_LINE' => {
-        'EOL' => {
-          'match' => 'cb_fetch_tokens_quoted',
-          'new' => 'MULTILINE_DOUBLEQUOTED'
-        },
-        'match' => 'cb_take'
-      },
-      'match' => 'cb_start_quoted'
-    },
-    'FLOWMAP_START' => {
+    'FLOWMAP_END' => {
       'DEFAULT' => {
-        'new' => 'NEWFLOWMAP'
-      },
-      'match' => 'cb_start_flowmap'
-    },
-    'FLOWSEQ_START' => {
-      'DEFAULT' => {
-        'new' => 'NEWFLOWSEQ'
-      },
-      'match' => 'cb_start_flowseq'
-    },
-    'PLAIN' => {
-      'COMMENT' => {
-        'match' => 'cb_send_scalar',
         'return' => 1
       },
+      'EOL' => {
+        'return' => 1
+      },
+      'match' => 'cb_end_flowmap_empty'
+    },
+    'FLOWMAP_START' => {
+      'match' => 'cb_start_flowmap',
+      'new' => 'NEWFLOWMAP'
+    },
+    'FLOWSEQ_START' => {
+      'match' => 'cb_start_flowseq',
+      'new' => 'NEWFLOWSEQ'
+    },
+    'FLOW_COMMA' => {
+      'EOL' => {
+        'return' => 1
+      },
+      'WS' => {
+        'return' => 1
+      },
+      'match' => 'cb_empty_flow_mapkey'
+    },
+    'PLAIN' => {
       'DEFAULT' => {
         'match' => 'cb_send_scalar',
         'return' => 1
       },
       'EOL' => {
-        'match' => 'cb_fetch_tokens_plain',
-        'new' => 'RULE_PLAIN_MULTI_FLOW'
+        'match' => 'cb_send_scalar',
+        'return' => 1
       },
       'match' => 'cb_start_plain'
     },
-    'SINGLEQUOTE' => {
-      'SINGLEQUOTED' => {
-        'SINGLEQUOTE' => {
-          'EOL' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          },
-          'WS' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          }
-        },
-        'match' => 'cb_take'
+    'PLAIN_MULTI' => {
+      'match' => 'cb_send_plain_multi',
+      'return' => 1
+    },
+    'QUOTED' => {
+      'DEFAULT' => {
+        'match' => 'cb_send_scalar',
+        'return' => 1
       },
-      'SINGLEQUOTED_LINE' => {
-        'EOL' => {
-          'match' => 'cb_fetch_tokens_quoted',
-          'new' => 'MULTILINE_SINGLEQUOTED'
-        },
-        'match' => 'cb_take'
+      'EOL' => {
+        'match' => 'cb_send_scalar',
+        'return' => 1
       },
-      'match' => 'cb_start_quoted'
+      'WS' => {
+        'match' => 'cb_send_scalar',
+        'return' => 1
+      },
+      'match' => 'cb_take_quoted'
+    },
+    'QUOTED_MULTILINE' => {
+      'EOL' => {
+        'return' => 1
+      },
+      'match' => 'cb_quoted_multiline'
     }
   },
   'RULE_FULLFLOWSCALAR' => {
     'ANCHOR' => {
       'DEFAULT' => {
-        'new' => 'RULE_FLOWSCALAR'
+        'new' => 'RULE_FULLFLOWSCALAR_ANCHOR'
       },
       'EOL' => {
         'new' => 'RULE_FULLFLOWSCALAR_ANCHOR',
         'return' => 1
-      },
-      'WS' => {
-        'DEFAULT' => {
-          'new' => 'RULE_FLOWSCALAR'
-        },
-        'TAG' => {
-          'WS' => {
-            'new' => 'RULE_FLOWSCALAR'
-          },
-          'match' => 'cb_tag'
-        }
       },
       'match' => 'cb_anchor'
     },
@@ -924,24 +930,31 @@ $GRAMMAR = {
     },
     'TAG' => {
       'DEFAULT' => {
-        'new' => 'RULE_FLOWSCALAR'
+        'new' => 'RULE_FULLFLOWSCALAR_TAG'
       },
       'EOL' => {
         'new' => 'RULE_FULLFLOWSCALAR_TAG',
         'return' => 1
       },
+      'match' => 'cb_tag'
+    }
+  },
+  'RULE_FULLFLOWSCALAR_ANCHOR' => {
+    'DEFAULT' => {
+      'new' => 'RULE_FLOWSCALAR'
+    },
+    'TAG' => {
+      'EOL' => {
+        'new' => 'RULE_FLOWSCALAR',
+        'return' => 1
+      },
       'WS' => {
-        'ANCHOR' => {
-          'WS' => {
-            'new' => 'RULE_FLOWSCALAR'
-          },
-          'match' => 'cb_anchor'
-        },
-        'DEFAULT' => {
-          'new' => 'RULE_FLOWSCALAR'
-        }
+        'new' => 'RULE_FLOWSCALAR'
       },
       'match' => 'cb_tag'
+    },
+    'WS' => {
+      'new' => 'RULE_FULLFLOWSCALAR_ANCHOR'
     }
   },
   'RULE_FULLFLOWSCALAR_TAG' => {
@@ -957,6 +970,9 @@ $GRAMMAR = {
     },
     'DEFAULT' => {
       'new' => 'RULE_FLOWSCALAR'
+    },
+    'WS' => {
+      'new' => 'RULE_FULLFLOWSCALAR_TAG'
     }
   },
   'RULE_MAPKEY' => {
@@ -964,12 +980,11 @@ $GRAMMAR = {
       'WS' => {
         'COLON' => {
           'EOL' => {
-            'node' => 'FULLNODE',
+            'new' => 'FULLNODE',
             'return' => 1
           },
           'WS' => {
-            'node' => 'FULLMAPVALUE_INLINE',
-            'return' => 1
+            'new' => 'FULLMAPVALUE_INLINE'
           }
         }
       },
@@ -977,67 +992,33 @@ $GRAMMAR = {
     },
     'COLON' => {
       'EOL' => {
-        'node' => 'FULLNODE',
+        'new' => 'FULLNODE',
         'return' => 1
       },
       'WS' => {
-        'node' => 'FULLMAPVALUE_INLINE',
-        'return' => 1
+        'new' => 'FULLMAPVALUE_INLINE'
       },
       'match' => 'cb_empty_mapkey'
-    },
-    'DOUBLEQUOTE' => {
-      'DOUBLEQUOTED' => {
-        'DOUBLEQUOTE' => {
-          'COLON' => {
-            'EOL' => {
-              'node' => 'FULLNODE',
-              'return' => 1
-            },
-            'WS' => {
-              'node' => 'FULLMAPVALUE_INLINE',
-              'return' => 1
-            }
-          },
-          'WS' => {
-            'COLON' => {
-              'EOL' => {
-                'node' => 'FULLNODE',
-                'return' => 1
-              },
-              'WS' => {
-                'node' => 'FULLMAPVALUE_INLINE',
-                'return' => 1
-              }
-            }
-          },
-          'match' => 'cb_send_mapkey'
-        },
-        'match' => 'cb_take'
-      },
-      'match' => 'cb_start_quoted'
     },
     'PLAIN' => {
       'COLON' => {
         'EOL' => {
-          'node' => 'FULLNODE',
+          'new' => 'FULLNODE',
           'return' => 1
         },
         'WS' => {
-          'node' => 'FULLMAPVALUE_INLINE',
-          'return' => 1
+          'new' => 'FULLMAPVALUE_INLINE'
         },
         'match' => 'cb_send_mapkey'
       },
       'WS' => {
         'COLON' => {
           'EOL' => {
-            'node' => 'FULLNODE',
+            'new' => 'FULLNODE',
             'return' => 1
           },
           'WS' => {
-            'node' => 'FULLMAPVALUE_INLINE',
-            'return' => 1
+            'new' => 'FULLMAPVALUE_INLINE'
           },
           'match' => 'cb_send_mapkey'
         }
@@ -1046,147 +1027,36 @@ $GRAMMAR = {
     },
     'QUESTION' => {
       'EOL' => {
-        'node' => 'FULLNODE',
+        'new' => 'FULLNODE',
         'return' => 1
       },
       'WS' => {
-        'node' => 'FULLNODE',
-        'return' => 1
+        'new' => 'FULLNODE'
       },
       'match' => 'cb_question'
     },
-    'SINGLEQUOTE' => {
-      'SINGLEQUOTED' => {
-        'SINGLEQUOTE' => {
-          'COLON' => {
-            'EOL' => {
-              'node' => 'FULLNODE',
-              'return' => 1
-            },
-            'WS' => {
-              'node' => 'FULLMAPVALUE_INLINE',
-              'return' => 1
-            }
-          },
-          'WS' => {
-            'COLON' => {
-              'EOL' => {
-                'node' => 'FULLNODE',
-                'return' => 1
-              },
-              'WS' => {
-                'node' => 'FULLMAPVALUE_INLINE',
-                'return' => 1
-              }
-            }
-          },
-          'match' => 'cb_send_mapkey'
-        },
-        'match' => 'cb_take'
-      },
-      'match' => 'cb_start_quoted'
-    }
-  },
-  'RULE_PLAIN_MULTI' => {
-    'END' => {
-      'match' => 'cb_send_scalar',
-      'return' => 1
-    },
-    'EOL' => {
-      'match' => 'cb_empty_plain',
-      'new' => 'RULE_PLAIN_MULTI'
-    },
-    'INDENT' => {
-      'WS' => {
-        'PLAIN' => {
-          'COMMENT' => {
-            'EOL' => {
-              'match' => 'cb_send_scalar',
-              'return' => 1
-            }
-          },
-          'EOL' => {
-            'match' => 'cb_fetch_tokens_plain',
-            'new' => 'RULE_PLAIN_MULTI'
-          },
-          'match' => 'cb_take'
-        }
-      }
-    },
-    'WS' => {
-      'PLAIN' => {
-        'COMMENT' => {
-          'EOL' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          }
-        },
+    'QUOTED' => {
+      'COLON' => {
         'EOL' => {
-          'match' => 'cb_fetch_tokens_plain',
-          'new' => 'RULE_PLAIN_MULTI'
-        },
-        'match' => 'cb_take'
-      }
-    }
-  },
-  'RULE_PLAIN_MULTI_FLOW' => {
-    'COMMENT' => {
-      'EOL' => {
-        'match' => 'cb_send_scalar',
-        'return' => 1
-      }
-    },
-    'DEFAULT' => {
-      'match' => 'cb_send_scalar',
-      'return' => 1
-    },
-    'END' => {
-      'match' => 'cb_send_scalar',
-      'return' => 1
-    },
-    'EOL' => {
-      'match' => 'cb_empty_plain',
-      'new' => 'RULE_PLAIN_MULTI'
-    },
-    'INDENT' => {
-      'WS' => {
-        'DEFAULT' => {
-          'match' => 'cb_send_scalar',
+          'new' => 'FULLNODE',
           'return' => 1
         },
-        'PLAIN' => {
-          'COMMENT' => {
-            'EOL' => {
-              'match' => 'cb_send_scalar',
-              'return' => 1
-            }
-          },
-          'DEFAULT' => {
-            'match' => 'cb_send_scalar',
-            'return' => 1
-          },
-          'EOL' => {
-            'match' => 'cb_fetch_tokens_plain',
-            'new' => 'RULE_PLAIN_MULTI_FLOW'
-          },
-          'match' => 'cb_take'
+        'WS' => {
+          'new' => 'FULLMAPVALUE_INLINE'
         }
-      }
-    },
-    'WS' => {
-      'PLAIN' => {
-        'COMMENT' => {
+      },
+      'WS' => {
+        'COLON' => {
           'EOL' => {
-            'match' => 'cb_send_scalar',
+            'new' => 'FULLNODE',
             'return' => 1
+          },
+          'WS' => {
+            'new' => 'FULLMAPVALUE_INLINE'
           }
-        },
-        'EOL' => {
-          'match' => 'cb_fetch_tokens_plain',
-          'new' => 'RULE_PLAIN_MULTI'
-        },
-        'match' => 'cb_take'
-      }
+        }
+      },
+      'match' => 'cb_take_quoted_key'
     }
   }
 };
@@ -1219,8 +1089,8 @@ This is the Grammar in YAML
     NODETYPE_NODE:
       DASH:
         match: cb_seqstart
-        EOL: { node: FULLNODE , return: 1}
-        WS: { node: FULLNODE }
+        EOL: { new: FULLNODE , return: 1}
+        WS: { new: FULLNODE }
     
       DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
     
@@ -1235,79 +1105,59 @@ This is the Grammar in YAML
         WS:
           COLON:
             match: cb_insert_map_alias
-            EOL: { node: FULLNODE, return: 1 }
-            WS: { node: FULLMAPVALUE_INLINE }
+            EOL: { new: FULLNODE, return: 1 }
+            WS: { new: FULLMAPVALUE_INLINE }
     
       QUESTION:
         match: cb_questionstart
-        EOL: { node: FULLNODE, return: 1 }
-        WS: { node: FULLNODE, return: 1 }
+        EOL: { new: FULLNODE, return: 1 }
+        WS: { new: FULLNODE }
     
-      SINGLEQUOTE:
-        match: cb_start_quoted
-        SINGLEQUOTED:
-          match: cb_take
-          SINGLEQUOTE:
-            EOL: { match: cb_send_scalar, return: 1 }
-            COLON:
-              match: cb_insert_map
-              EOL: { node: FULLNODE, return: 1 }
-              WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-            WS:
-              COLON:
-                match: cb_insert_map
-                EOL: { node: FULLNODE, return: 1 }
-                WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-        SINGLEQUOTED_LINE:
-          match: cb_take
-          EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
-    
-      DOUBLEQUOTE:
-        match: cb_start_quoted
-        DOUBLEQUOTED:
-          match: cb_take
-          DOUBLEQUOTE:
-            EOL: { match: cb_send_scalar, return: 1 }
-            WS:
-              COLON:
-                match: cb_insert_map
-                EOL: { node: FULLNODE , return: 1}
-                WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-            COLON:
-              match: cb_insert_map
-              EOL: { node: FULLNODE , return: 1}
-              WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-        DOUBLEQUOTED_LINE:
-          match: cb_take
-          EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
-    
-      PLAIN:
-        match: cb_start_plain
-        COMMENT:
-          match: cb_send_scalar
-          EOL: { return: 1 }
-        EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+      QUOTED:
+        match: cb_take_quoted
+        EOL: { match: cb_send_scalar, return: 1 }
         WS:
           COLON:
             match: cb_insert_map
-            EOL: { node: FULLNODE , return: 1}
-            WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+            EOL: { new: FULLNODE , return: 1}
+            WS: { new: FULLMAPVALUE_INLINE }
         COLON:
           match: cb_insert_map
-          EOL: { node: FULLNODE , return: 1}
-          WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+          EOL: { new: FULLNODE , return: 1}
+          WS: { new: FULLMAPVALUE_INLINE }
+    
+      QUOTED_MULTILINE:
+        match: cb_quoted_multiline
+        EOL: { return: 1 }
+    
+    
+      PLAIN:
+        match: cb_start_plain
+        EOL:
+          match: cb_send_scalar
+          return: 1
+        WS:
+          COLON:
+            match: cb_insert_map
+            EOL: { new: FULLNODE , return: 1}
+            WS: { new: FULLMAPVALUE_INLINE }
+        COLON:
+          match: cb_insert_map
+          EOL: { new: FULLNODE , return: 1}
+          WS: { new: FULLMAPVALUE_INLINE }
+    
+      PLAIN_MULTI:
+        match: cb_send_plain_multi
+        EOL: { return: 1 }
     
       COLON:
         match: cb_insert_empty_map
-        EOL: { node: FULLNODE , return: 1}
-        WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+        EOL: { new: FULLNODE , return: 1}
+        WS: { new: FULLMAPVALUE_INLINE }
     
-      LITERAL:
-        match: cb_block_scalar
-        new: RULE_BLOCK_SCALAR_HEADER
-      FOLDED:
-        match: cb_block_scalar
-        new: RULE_BLOCK_SCALAR_HEADER
+      BLOCK_SCALAR:
+        match: cb_send_block_scalar
+        return: 1
     
       FLOWSEQ_START:
         match: cb_start_flowseq
@@ -1323,52 +1173,33 @@ This is the Grammar in YAML
     NODETYPE_COMPLEX:
       COLON:
         match: cb_complexcolon
-        EOL: { node: FULLNODE, return: 1 }
-        WS: { node: FULLNODE, return: 1 }
+        EOL: { new: FULLNODE, return: 1 }
+        WS: { new: FULLNODE }
       DEFAULT:
         match: cb_empty_complexvalue
         new: NODETYPE_MAP
     
-    MULTILINE_SINGLEQUOTED:
-      SINGLEQUOTED_LINE:
-        match: cb_take
-        EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
-        SINGLEQUOTE:
-          EOL: { match: cb_send_scalar, return: 1 }
-          DEFAULT: { match: cb_send_scalar, return: 1 }
-      EOL: { match: cb_empty_quoted_line, new: MULTILINE_SINGLEQUOTED }
-    
-    MULTILINE_DOUBLEQUOTED:
-      DOUBLEQUOTED_LINE:
-        match: cb_take
-        EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
-        DOUBLEQUOTE:
-          EOL: { match: cb_send_scalar, return: 1 }
-          DEFAULT: { match: cb_send_scalar, return: 1 }
-      EOL: { match: cb_empty_quoted_line, new: MULTILINE_DOUBLEQUOTED }
-    
     RULE_FULLFLOWSCALAR:
       ANCHOR:
         match: cb_anchor
-        WS:
-          TAG:
-            match: cb_tag
-            WS: { new: RULE_FLOWSCALAR }
-          DEFAULT: { new: RULE_FLOWSCALAR }
         EOL: { new: RULE_FULLFLOWSCALAR_ANCHOR, return: 1 }
-        DEFAULT: { new: RULE_FLOWSCALAR }
+        DEFAULT: { new: RULE_FULLFLOWSCALAR_ANCHOR }
       TAG:
         match: cb_tag
-        WS:
-          ANCHOR:
-            match: cb_anchor
-            WS: { new: RULE_FLOWSCALAR }
-          DEFAULT: { new: RULE_FLOWSCALAR }
         EOL: { new: RULE_FULLFLOWSCALAR_TAG, return: 1 }
-        DEFAULT: { new: RULE_FLOWSCALAR }
+        DEFAULT: { new: RULE_FULLFLOWSCALAR_TAG }
+      DEFAULT: { new: RULE_FLOWSCALAR }
+    
+    RULE_FULLFLOWSCALAR_ANCHOR:
+      WS: { new: RULE_FULLFLOWSCALAR_ANCHOR }
+      TAG:
+        match: cb_tag
+        WS: { new: RULE_FLOWSCALAR }
+        EOL: { new: RULE_FLOWSCALAR, return: 1 }
       DEFAULT: { new: RULE_FLOWSCALAR }
     
     RULE_FULLFLOWSCALAR_TAG:
+      WS: { new: RULE_FULLFLOWSCALAR_TAG }
       ANCHOR:
         match: cb_anchor
         WS: { new: RULE_FLOWSCALAR }
@@ -1376,61 +1207,105 @@ This is the Grammar in YAML
       DEFAULT: { new: RULE_FLOWSCALAR }
     
     RULE_FLOWSCALAR:
-      FLOWSEQ_START:
-        match: cb_start_flowseq
-        DEFAULT: { new: NEWFLOWSEQ }
-      FLOWMAP_START:
-        match: cb_start_flowmap
-        DEFAULT: { new: NEWFLOWMAP }
+      FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
+      FLOWMAP_START: { match: cb_start_flowmap, new: NEWFLOWMAP }
+      FLOW_COMMA: { match: cb_empty_complexvalue, return: 1 }
     
-      ALIAS:
-        match: cb_send_alias
-        return: 1
+      ALIAS: { match: cb_send_alias, return: 1 }
     
-      SINGLEQUOTE:
-        match: cb_start_quoted
-        SINGLEQUOTED:
-          match: cb_take
-          SINGLEQUOTE:
-            EOL: { match: cb_send_scalar, return: 1 }
-            WS: { match: cb_send_scalar, return: 1 }
-        SINGLEQUOTED_LINE:
-          match: cb_take
-          EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
+      QUOTED:
+        match: cb_take_quoted
+        EOL: { match: cb_send_scalar, return: 1 }
+        WS: { match: cb_send_scalar, return: 1 }
+        DEFAULT: { match: cb_send_scalar, return: 1 }
     
-      DOUBLEQUOTE:
-        match: cb_start_quoted
-        DOUBLEQUOTED:
-          match: cb_take
-          DOUBLEQUOTE:
-            EOL: { match: cb_send_scalar, return: 1 }
-            WS: { match: cb_send_scalar, return: 1 }
-            DEFAULT: { match: cb_send_scalar, return: 1 }
-        DOUBLEQUOTED_LINE:
-          match: cb_take
-          EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
+      QUOTED_MULTILINE:
+        match: cb_quoted_multiline
+        EOL: { return: 1 }
     
       PLAIN:
         match: cb_start_plain
-        EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI_FLOW }
-        COMMENT:
-          match: cb_send_scalar
-          return: 1
-        DEFAULT:
-          match: cb_send_scalar
-          return: 1
+        EOL: { match: cb_send_scalar, return: 1 }
+        DEFAULT: { match: cb_send_scalar, return: 1 }
     
-    #  DEFAULT: { match: cb_empty_flowmap_value, return: 1 }
+      PLAIN_MULTI: { match: cb_send_plain_multi, return: 1 }
+    
+      FLOW_COMMA:
+        match: cb_empty_flow_mapkey
+        WS: { return: 1 }
+        EOL: { return: 1 }
+    
+      FLOWMAP_END:
+        match: cb_end_flowmap_empty
+        EOL: { return: 1 }
+        DEFAULT: { return: 1 }
+    
+    FLOWSEQ:
+      FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
+      FLOWMAP_START: { match: cb_start_flowmap, new: NEWFLOWMAP }
+    
+      ALIAS: { match: cb_send_flow_alias, new: FLOWSEQ_NEXT }
+    
+      PLAIN: { match: cb_flow_plain, new: FLOWSEQ_NEXT }
+      PLAIN_MULTI: { match: cb_send_plain_multi, new: FLOWSEQ_NEXT }
+    
+      QUOTED: { match: cb_flowkey_quoted, new: FLOWSEQ_NEXT }
+      QUOTED_MULTILINE: { match: cb_quoted_multiline, new: FLOWSEQ_NEXT }
+    
+    FLOWSEQ_NEXT:
+      WS: { new: FLOWSEQ_NEXT }
+      EOL: { new: FLOWSEQ_NEXT, return: 1 }
+    
+      FLOW_COMMA:
+        match: cb_flow_comma
+        return: 1
+    
+      FLOWSEQ_END:
+        match: cb_end_flowseq
+        EOL: { return: 1 }
+        DEFAULT: { return: 1 }
+    
+    FLOWMAP:
+      FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
+      FLOWMAP_START: { match: cb_start_flowmap, new: NEWFLOWMAP }
+    
+      ALIAS: { match: cb_send_alias, return: 1 }
+    
+      PLAIN: { match: cb_flowkey_plain, return: 1 }
+      PLAIN_MULTI: { match: cb_send_plain_multi, return: 1 }
+    
+      QUOTED: { match: cb_flowkey_quoted, return: 1 }
+      QUOTED_MULTILINE: { match: cb_quoted_multiline, return: 1 }
+    
+      COLON:
+        WS:
+          match: cb_empty_flow_mapkey
+          new: RULE_FULLFLOWSCALAR
+        EOL:
+          match: cb_empty_flow_mapkey
+          new: RULE_FULLFLOWSCALAR
+          return: 1
     
     
     NEWFLOWSEQ:
       EOL: { new: NEWFLOWSEQ, return: 1 }
       WS: { new: NEWFLOWSEQ }
+    
+      ANCHOR:
+        match: cb_anchor
+        WS: { new: NEWFLOWSEQ_ANCHOR }
+        EOL: { new: NEWFLOWSEQ_ANCHOR, return: 1 }
+      TAG:
+        match: cb_tag
+        WS: { new: NEWFLOWSEQ_TAG }
+        EOL: { new: NEWFLOWSEQ_TAG, return: 1 }
+    
       FLOWSEQ_END:
         match: cb_end_flowseq
         EOL: { return: 1 }
         DEFAULT: { return: 1 }
-      DEFAULT: { new: RULE_FULLFLOWSCALAR }
+    
+      DEFAULT: { new: FLOWSEQ }
     
     NODETYPE_FLOWSEQ:
       EOL: { new: NODETYPE_FLOWSEQ, return: 1 }
@@ -1439,28 +1314,91 @@ This is the Grammar in YAML
         match: cb_end_flowseq
         EOL: { return: 1 }
         DEFAULT: { return: 1 }
-      FLOW_COMMA: { match: cb_flow_comma, new: NEWFLOWSEQ }
+      DEFAULT: { new: NEWFLOWSEQ }
     
     NODETYPE_FLOWMAPVALUE:
+      WS: { new: NODETYPE_FLOWMAPVALUE }
+      EOL: { new: NODETYPE_FLOWMAPVALUE, return: 1 }
       COLON:
         match: cb_flow_colon
         WS: { new: RULE_FULLFLOWSCALAR }
         EOL: { new: RULE_FULLFLOWSCALAR, return: 1 }
         DEFAULT: { new: RULE_FULLFLOWSCALAR }
-      WS: { new: NODETYPE_FLOWMAPVALUE }
-      DEFAULT:
+      FLOW_COMMA:
         match: cb_empty_flowmap_value
         return: 1
+      FLOWMAP_END:
+        match: cb_end_flowmap_empty
+        EOL: { return: 1 }
+        DEFAULT: { return: 1 }
     
+    NEWFLOWSEQ_ANCHOR:
+      WS: { new: NEWFLOWSEQ_ANCHOR }
+      EOL: { new: NEWFLOWSEQ_ANCHOR, return: 1 }
+      TAG:
+        match: cb_tag
+        WS: { new: FLOWSEQ }
+        EOL: { new: FLOWSEQ, return: 1 }
+      DEFAULT: { new: FLOWSEQ }
+    
+    NEWFLOWSEQ_TAG:
+      WS: { new: NEWFLOWSEQ_TAG }
+      EOL: { new: NEWFLOWSEQ_TAG, return: 1 }
+      ANCHOR:
+        match: cb_anchor
+        WS: { new: FLOWSEQ }
+        EOL: { new: FLOWSEQ, return: 1 }
+      DEFAULT: { new: FLOWSEQ }
+    
+    
+    NEWFLOWMAP_ANCHOR:
+      WS: { new: NEWFLOWMAP_ANCHOR }
+      EOL: { new: NEWFLOWMAP_ANCHOR, return: 1 }
+      TAG:
+        match: cb_tag
+        WS: { new: FLOWMAP }
+        EOL: { new: FLOWMAP, return: 1 }
+      DEFAULT: { new: FLOWMAP }
+    
+    NEWFLOWMAP_TAG:
+      WS: { new: NEWFLOWMAP_TAG }
+      EOL: { new: NEWFLOWMAP_TAG, return: 1 }
+      ANCHOR:
+        match: cb_anchor
+        WS: { new: FLOWMAP }
+        EOL: { new: FLOWMAP, return: 1 }
+      DEFAULT: { new: FLOWMAP }
     
     NEWFLOWMAP:
       EOL: { new: NEWFLOWMAP, return: 1 }
       WS: { new: NEWFLOWMAP }
+      # TODO
+      QUESTION: { match: cb_flow_question, new: NEWFLOWMAP }
+    
+      ANCHOR:
+        match: cb_anchor
+        WS: { new: NEWFLOWMAP_ANCHOR }
+        EOL: { new: NEWFLOWMAP_ANCHOR, return: 1 }
+      TAG:
+        match: cb_tag
+        WS: { new: NEWFLOWMAP_TAG }
+        EOL: { new: NEWFLOWMAP_TAG, return: 1 }
+    
       FLOWMAP_END:
         match: cb_end_flowmap
         EOL: { return: 1 }
         DEFAULT: { return: 1 }
-      DEFAULT: { new: RULE_FULLFLOWSCALAR }
+    
+      COLON:
+        WS:
+          match: cb_empty_flow_mapkey
+          new: RULE_FULLFLOWSCALAR
+        EOL:
+          match: cb_empty_flow_mapkey
+          new: RULE_FULLFLOWSCALAR
+          return: 1
+    
+      DEFAULT: { new: FLOWMAP }
     
     NODETYPE_FLOWMAP:
       EOL: { new: NODETYPE_FLOWMAP, return: 1 }
@@ -1470,152 +1408,53 @@ This is the Grammar in YAML
         EOL: { return: 1 }
         DEFAULT: { return: 1 }
       FLOW_COMMA: { match: cb_flow_comma, new: NEWFLOWMAP }
-      DEFAULT: { new: RULE_FULLFLOWSCALAR }
-    
-    
-    
-    RULE_PLAIN_MULTI:
-      END: { match: cb_send_scalar, return: 1 }
-      EOL: { match: cb_empty_plain, new: RULE_PLAIN_MULTI }
-      WS:
-        PLAIN:
-          match: cb_take
-          EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
-          COMMENT:
-            EOL: { match: cb_send_scalar, return: 1 }
-      INDENT:
-        WS:
-          PLAIN:
-            match: cb_take
-            EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
-            COMMENT:
-              EOL: { match: cb_send_scalar, return: 1 }
-    
-    RULE_PLAIN_MULTI_FLOW:
-      END: { match: cb_send_scalar, return: 1 }
-      EOL: { match: cb_empty_plain, new: RULE_PLAIN_MULTI }
-      WS:
-        PLAIN:
-          match: cb_take
-          EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
-          COMMENT:
-            EOL: { match: cb_send_scalar, return: 1 }
-      INDENT:
-        WS:
-          PLAIN:
-            match: cb_take
-            EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI_FLOW }
-            COMMENT:
-              EOL: { match: cb_send_scalar, return: 1 }
-            DEFAULT: { match: cb_send_scalar, return: 1 }
-          DEFAULT: { match: cb_send_scalar, return: 1 }
-      COMMENT:
-        EOL: { match: cb_send_scalar, return: 1 }
-      DEFAULT: { match: cb_send_scalar, return: 1 }
+      DEFAULT: { new: NEWFLOWMAP }
     
     
     RULE_MAPKEY:
       QUESTION:
         match: cb_question
-        EOL: { node: FULLNODE , return: 1}
-        WS: { node: FULLNODE , return: 1}
+        EOL: { new: FULLNODE , return: 1}
+        WS: { new: FULLNODE }
       ALIAS:
         match: cb_send_alias
         WS:
           COLON:
-            EOL: { node: FULLNODE , return: 1}
-            WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-      DOUBLEQUOTE:
-        match: cb_start_quoted
-        DOUBLEQUOTED:
-          match: cb_take
-          DOUBLEQUOTE:
-            match: cb_send_mapkey
-            WS:
-              COLON:
-                EOL: { node: FULLNODE , return: 1}
-                WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-            COLON:
-              EOL: { node: FULLNODE , return: 1}
-              WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-      SINGLEQUOTE:
-        match: cb_start_quoted
-        SINGLEQUOTED:
-          match: cb_take
-          SINGLEQUOTE:
-            match: cb_send_mapkey
-            WS:
-              COLON:
-                EOL: { node: FULLNODE , return: 1}
-                WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-            COLON:
-              EOL: { node: FULLNODE , return: 1}
-              WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+            EOL: { new: FULLNODE , return: 1}
+            WS: { new: FULLMAPVALUE_INLINE }
+    
+      QUOTED:
+        match: cb_take_quoted_key
+        WS:
+          COLON:
+            EOL: { new: FULLNODE , return: 1}
+            WS: { new: FULLMAPVALUE_INLINE }
+        COLON:
+          EOL: { new: FULLNODE , return: 1}
+          WS: { new: FULLMAPVALUE_INLINE }
+    
       PLAIN:
         match: cb_mapkey
         WS:
           COLON:
             match: cb_send_mapkey
-            EOL: { node: FULLNODE , return: 1}
-            WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+            EOL: { new: FULLNODE , return: 1}
+            WS: { new: FULLMAPVALUE_INLINE }
         COLON:
           match: cb_send_mapkey
-          EOL: { node: FULLNODE , return: 1}
-          WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+          EOL: { new: FULLNODE , return: 1}
+          WS: { new: FULLMAPVALUE_INLINE }
+    
       COLON:
         match: cb_empty_mapkey
-        EOL: { node: FULLNODE , return: 1}
-        WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+        EOL: { new: FULLNODE , return: 1}
+        WS: { new: FULLMAPVALUE_INLINE }
     
     NODETYPE_SEQ:
       DASH:
         match: cb_seqitem
-        EOL: { node: FULLNODE , return: 1}
-        WS: { node: FULLNODE }
-    
-    RULE_BLOCK_SCALAR_HEADER:
-      BLOCK_SCALAR_INDENT:
-        match: cb_add_block_scalar_indent
-        BLOCK_SCALAR_CHOMP:
-          match: cb_add_block_scalar_chomp
-          EOL:
-            match: cb_fetch_tokens_block_scalar
-            new: RULE_BLOCK_SCALAR_START
-        EOL:
-          match: cb_fetch_tokens_block_scalar
-          new: RULE_BLOCK_SCALAR_START
-      BLOCK_SCALAR_CHOMP:
-        match: cb_add_block_scalar_chomp
-        BLOCK_SCALAR_INDENT:
-          match: cb_add_block_scalar_indent
-          EOL:
-            match: cb_fetch_tokens_block_scalar
-            new: RULE_BLOCK_SCALAR_START
-        EOL:
-          match: cb_fetch_tokens_block_scalar
-          new: RULE_BLOCK_SCALAR_START
-      EOL:
-        match: cb_fetch_tokens_block_scalar
-        new: RULE_BLOCK_SCALAR_START
-    
-    RULE_BLOCK_SCALAR_START:
-      EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_START }
-      INDENT:
-        match: cb_block_scalar_start_indent
-        EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_START }
-        BLOCK_SCALAR_CONTENT:
-          match: cb_block_scalar_start_content
-          EOL: { match: cb_fetch_tokens_block_scalar, new: RULE_BLOCK_SCALAR_CONTENT }
-      END: { match: cb_send_scalar, return: 1 }
-    
-    RULE_BLOCK_SCALAR_CONTENT:
-      EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_CONTENT }
-      INDENT:
-        EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_CONTENT }
-        BLOCK_SCALAR_CONTENT:
-          match: cb_block_scalar_content
-          EOL: { match: cb_fetch_tokens_block_scalar, new: RULE_BLOCK_SCALAR_CONTENT }
-      END: { match: cb_send_scalar, return: 1 }
+        EOL: { new: FULLNODE , return: 1}
+        WS: { new: FULLNODE }
     
     NODETYPE_MAP:
       ANCHOR:
@@ -1735,39 +1574,27 @@ This is the Grammar in YAML
         match: cb_send_alias
         EOL: { return: 1 }
     
-      SINGLEQUOTE:
-        match: cb_start_quoted
-        SINGLEQUOTED:
-          match: cb_take
-          SINGLEQUOTE:
-            EOL: { match: cb_send_scalar, return: 1 }
-        SINGLEQUOTED_LINE:
-          match: cb_take
-          EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
+      QUOTED:
+        match: cb_take_quoted
+        EOL: { match: cb_send_scalar, return: 1 }
     
-      DOUBLEQUOTE:
-        match: cb_start_quoted
-        DOUBLEQUOTED:
-          match: cb_take
-          DOUBLEQUOTE:
-            EOL: { match: cb_send_scalar, return: 1 }
-        DOUBLEQUOTED_LINE:
-          match: cb_take
-          EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
+      QUOTED_MULTILINE:
+        match: cb_quoted_multiline
+        EOL: { return: 1 }
     
       PLAIN:
         match: cb_start_plain
-        COMMENT:
+        EOL:
           match: cb_send_scalar
-          EOL: { return: 1 }
-        EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+          return: 1
     
-      LITERAL:
-        match: cb_block_scalar
-        new: RULE_BLOCK_SCALAR_HEADER
-      FOLDED:
-        match: cb_block_scalar
-        new: RULE_BLOCK_SCALAR_HEADER
+      PLAIN_MULTI:
+        match: cb_send_plain_multi
+        EOL: { return: 1 }
+    
+      BLOCK_SCALAR:
+        match: cb_send_block_scalar
+        return: 1
     
       FLOWSEQ_START:
         match: cb_start_flowseq

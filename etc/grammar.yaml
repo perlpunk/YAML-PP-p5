@@ -2,8 +2,8 @@
 NODETYPE_NODE:
   DASH:
     match: cb_seqstart
-    EOL: { node: FULLNODE , return: 1}
-    WS: { node: FULLNODE }
+    EOL: { new: FULLNODE , return: 1}
+    WS: { new: FULLNODE }
 
   DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
 
@@ -18,79 +18,59 @@ NODETYPE_SCALAR_OR_MAP:
     WS:
       COLON:
         match: cb_insert_map_alias
-        EOL: { node: FULLNODE, return: 1 }
-        WS: { node: FULLMAPVALUE_INLINE }
+        EOL: { new: FULLNODE, return: 1 }
+        WS: { new: FULLMAPVALUE_INLINE }
 
   QUESTION:
     match: cb_questionstart
-    EOL: { node: FULLNODE, return: 1 }
-    WS: { node: FULLNODE, return: 1 }
+    EOL: { new: FULLNODE, return: 1 }
+    WS: { new: FULLNODE }
 
-  SINGLEQUOTE:
-    match: cb_start_quoted
-    SINGLEQUOTED:
-      match: cb_take
-      SINGLEQUOTE:
-        EOL: { match: cb_send_scalar, return: 1 }
-        COLON:
-          match: cb_insert_map
-          EOL: { node: FULLNODE, return: 1 }
-          WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-        WS:
-          COLON:
-            match: cb_insert_map
-            EOL: { node: FULLNODE, return: 1 }
-            WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-    SINGLEQUOTED_LINE:
-      match: cb_take
-      EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
-
-  DOUBLEQUOTE:
-    match: cb_start_quoted
-    DOUBLEQUOTED:
-      match: cb_take
-      DOUBLEQUOTE:
-        EOL: { match: cb_send_scalar, return: 1 }
-        WS:
-          COLON:
-            match: cb_insert_map
-            EOL: { node: FULLNODE , return: 1}
-            WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-        COLON:
-          match: cb_insert_map
-          EOL: { node: FULLNODE , return: 1}
-          WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-    DOUBLEQUOTED_LINE:
-      match: cb_take
-      EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
-
-  PLAIN:
-    match: cb_start_plain
-    COMMENT:
-      match: cb_send_scalar
-      EOL: { return: 1 }
-    EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+  QUOTED:
+    match: cb_take_quoted
+    EOL: { match: cb_send_scalar, return: 1 }
     WS:
       COLON:
         match: cb_insert_map
-        EOL: { node: FULLNODE , return: 1}
-        WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+        EOL: { new: FULLNODE , return: 1}
+        WS: { new: FULLMAPVALUE_INLINE }
     COLON:
       match: cb_insert_map
-      EOL: { node: FULLNODE , return: 1}
-      WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+      EOL: { new: FULLNODE , return: 1}
+      WS: { new: FULLMAPVALUE_INLINE }
+
+  QUOTED_MULTILINE:
+    match: cb_quoted_multiline
+    EOL: { return: 1 }
+
+
+  PLAIN:
+    match: cb_start_plain
+    EOL:
+      match: cb_send_scalar
+      return: 1
+    WS:
+      COLON:
+        match: cb_insert_map
+        EOL: { new: FULLNODE , return: 1}
+        WS: { new: FULLMAPVALUE_INLINE }
+    COLON:
+      match: cb_insert_map
+      EOL: { new: FULLNODE , return: 1}
+      WS: { new: FULLMAPVALUE_INLINE }
+
+  PLAIN_MULTI:
+    match: cb_send_plain_multi
+    EOL: { return: 1 }
 
   COLON:
     match: cb_insert_empty_map
-    EOL: { node: FULLNODE , return: 1}
-    WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+    EOL: { new: FULLNODE , return: 1}
+    WS: { new: FULLMAPVALUE_INLINE }
 
-  LITERAL:
-    match: cb_block_scalar
-    new: RULE_BLOCK_SCALAR_HEADER
-  FOLDED:
-    match: cb_block_scalar
-    new: RULE_BLOCK_SCALAR_HEADER
+  BLOCK_SCALAR:
+    match: cb_send_block_scalar
+    return: 1
 
   FLOWSEQ_START:
     match: cb_start_flowseq
@@ -106,52 +86,33 @@ NODETYPE_SCALAR_OR_MAP:
 NODETYPE_COMPLEX:
   COLON:
     match: cb_complexcolon
-    EOL: { node: FULLNODE, return: 1 }
-    WS: { node: FULLNODE, return: 1 }
+    EOL: { new: FULLNODE, return: 1 }
+    WS: { new: FULLNODE }
   DEFAULT:
     match: cb_empty_complexvalue
     new: NODETYPE_MAP
 
-MULTILINE_SINGLEQUOTED:
-  SINGLEQUOTED_LINE:
-    match: cb_take
-    EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
-    SINGLEQUOTE:
-      EOL: { match: cb_send_scalar, return: 1 }
-      DEFAULT: { match: cb_send_scalar, return: 1 }
-  EOL: { match: cb_empty_quoted_line, new: MULTILINE_SINGLEQUOTED }
-
-MULTILINE_DOUBLEQUOTED:
-  DOUBLEQUOTED_LINE:
-    match: cb_take
-    EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
-    DOUBLEQUOTE:
-      EOL: { match: cb_send_scalar, return: 1 }
-      DEFAULT: { match: cb_send_scalar, return: 1 }
-  EOL: { match: cb_empty_quoted_line, new: MULTILINE_DOUBLEQUOTED }
-
 RULE_FULLFLOWSCALAR:
   ANCHOR:
     match: cb_anchor
-    WS:
-      TAG:
-        match: cb_tag
-        WS: { new: RULE_FLOWSCALAR }
-      DEFAULT: { new: RULE_FLOWSCALAR }
     EOL: { new: RULE_FULLFLOWSCALAR_ANCHOR, return: 1 }
-    DEFAULT: { new: RULE_FLOWSCALAR }
+    DEFAULT: { new: RULE_FULLFLOWSCALAR_ANCHOR }
   TAG:
     match: cb_tag
-    WS:
-      ANCHOR:
-        match: cb_anchor
-        WS: { new: RULE_FLOWSCALAR }
-      DEFAULT: { new: RULE_FLOWSCALAR }
     EOL: { new: RULE_FULLFLOWSCALAR_TAG, return: 1 }
-    DEFAULT: { new: RULE_FLOWSCALAR }
+    DEFAULT: { new: RULE_FULLFLOWSCALAR_TAG }
+  DEFAULT: { new: RULE_FLOWSCALAR }
+
+RULE_FULLFLOWSCALAR_ANCHOR:
+  WS: { new: RULE_FULLFLOWSCALAR_ANCHOR }
+  TAG:
+    match: cb_tag
+    WS: { new: RULE_FLOWSCALAR }
+    EOL: { new: RULE_FLOWSCALAR, return: 1 }
   DEFAULT: { new: RULE_FLOWSCALAR }
 
 RULE_FULLFLOWSCALAR_TAG:
+  WS: { new: RULE_FULLFLOWSCALAR_TAG }
   ANCHOR:
     match: cb_anchor
     WS: { new: RULE_FLOWSCALAR }
@@ -159,61 +120,105 @@ RULE_FULLFLOWSCALAR_TAG:
   DEFAULT: { new: RULE_FLOWSCALAR }
 
 RULE_FLOWSCALAR:
-  FLOWSEQ_START:
-    match: cb_start_flowseq
-    DEFAULT: { new: NEWFLOWSEQ }
-  FLOWMAP_START:
-    match: cb_start_flowmap
-    DEFAULT: { new: NEWFLOWMAP }
+  FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
+  FLOWMAP_START: { match: cb_start_flowmap, new: NEWFLOWMAP }
+  FLOW_COMMA: { match: cb_empty_complexvalue, return: 1 }
 
-  ALIAS:
-    match: cb_send_alias
-    return: 1
+  ALIAS: { match: cb_send_alias, return: 1 }
 
-  SINGLEQUOTE:
-    match: cb_start_quoted
-    SINGLEQUOTED:
-      match: cb_take
-      SINGLEQUOTE:
-        EOL: { match: cb_send_scalar, return: 1 }
-        WS: { match: cb_send_scalar, return: 1 }
-    SINGLEQUOTED_LINE:
-      match: cb_take
-      EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
+  QUOTED:
+    match: cb_take_quoted
+    EOL: { match: cb_send_scalar, return: 1 }
+    WS: { match: cb_send_scalar, return: 1 }
+    DEFAULT: { match: cb_send_scalar, return: 1 }
 
-  DOUBLEQUOTE:
-    match: cb_start_quoted
-    DOUBLEQUOTED:
-      match: cb_take
-      DOUBLEQUOTE:
-        EOL: { match: cb_send_scalar, return: 1 }
-        WS: { match: cb_send_scalar, return: 1 }
-        DEFAULT: { match: cb_send_scalar, return: 1 }
-    DOUBLEQUOTED_LINE:
-      match: cb_take
-      EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
+  QUOTED_MULTILINE:
+    match: cb_quoted_multiline
+    EOL: { return: 1 }
 
   PLAIN:
     match: cb_start_plain
-    EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI_FLOW }
-    COMMENT:
-      match: cb_send_scalar
-      return: 1
-    DEFAULT:
-      match: cb_send_scalar
-      return: 1
+    EOL: { match: cb_send_scalar, return: 1 }
+    DEFAULT: { match: cb_send_scalar, return: 1 }
 
-#  DEFAULT: { match: cb_empty_flowmap_value, return: 1 }
+  PLAIN_MULTI: { match: cb_send_plain_multi, return: 1 }
+
+  FLOW_COMMA:
+    match: cb_empty_flow_mapkey
+    WS: { return: 1 }
+    EOL: { return: 1 }
+
+  FLOWMAP_END:
+    match: cb_end_flowmap_empty
+    EOL: { return: 1 }
+    DEFAULT: { return: 1 }
+
+FLOWSEQ:
+  FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
+  FLOWMAP_START: { match: cb_start_flowmap, new: NEWFLOWMAP }
+
+  ALIAS: { match: cb_send_flow_alias, new: FLOWSEQ_NEXT }
+
+  PLAIN: { match: cb_flow_plain, new: FLOWSEQ_NEXT }
+  PLAIN_MULTI: { match: cb_send_plain_multi, new: FLOWSEQ_NEXT }
+
+  QUOTED: { match: cb_flowkey_quoted, new: FLOWSEQ_NEXT }
+  QUOTED_MULTILINE: { match: cb_quoted_multiline, new: FLOWSEQ_NEXT }
+
+FLOWSEQ_NEXT:
+  WS: { new: FLOWSEQ_NEXT }
+  EOL: { new: FLOWSEQ_NEXT, return: 1 }
+
+  FLOW_COMMA:
+    match: cb_flow_comma
+    return: 1
+
+  FLOWSEQ_END:
+    match: cb_end_flowseq
+    EOL: { return: 1 }
+    DEFAULT: { return: 1 }
+
+FLOWMAP:
+  FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
+  FLOWMAP_START: { match: cb_start_flowmap, new: NEWFLOWMAP }
+
+  ALIAS: { match: cb_send_alias, return: 1 }
+
+  PLAIN: { match: cb_flowkey_plain, return: 1 }
+  PLAIN_MULTI: { match: cb_send_plain_multi, return: 1 }
+
+  QUOTED: { match: cb_flowkey_quoted, return: 1 }
+  QUOTED_MULTILINE: { match: cb_quoted_multiline, return: 1 }
+
+  COLON:
+    WS:
+      match: cb_empty_flow_mapkey
+      new: RULE_FULLFLOWSCALAR
+    EOL:
+      match: cb_empty_flow_mapkey
+      new: RULE_FULLFLOWSCALAR
+      return: 1
 
 
 NEWFLOWSEQ:
   EOL: { new: NEWFLOWSEQ, return: 1 }
   WS: { new: NEWFLOWSEQ }
+
+  ANCHOR:
+    match: cb_anchor
+    WS: { new: NEWFLOWSEQ_ANCHOR }
+    EOL: { new: NEWFLOWSEQ_ANCHOR, return: 1 }
+  TAG:
+    match: cb_tag
+    WS: { new: NEWFLOWSEQ_TAG }
+    EOL: { new: NEWFLOWSEQ_TAG, return: 1 }
+
   FLOWSEQ_END:
     match: cb_end_flowseq
     EOL: { return: 1 }
     DEFAULT: { return: 1 }
-  DEFAULT: { new: RULE_FULLFLOWSCALAR }
+
+  DEFAULT: { new: FLOWSEQ }
 
 NODETYPE_FLOWSEQ:
   EOL: { new: NODETYPE_FLOWSEQ, return: 1 }
@@ -222,28 +227,91 @@ NODETYPE_FLOWSEQ:
     match: cb_end_flowseq
     EOL: { return: 1 }
     DEFAULT: { return: 1 }
-  FLOW_COMMA: { match: cb_flow_comma, new: NEWFLOWSEQ }
+  DEFAULT: { new: NEWFLOWSEQ }
 
 NODETYPE_FLOWMAPVALUE:
+  WS: { new: NODETYPE_FLOWMAPVALUE }
+  EOL: { new: NODETYPE_FLOWMAPVALUE, return: 1 }
   COLON:
     match: cb_flow_colon
     WS: { new: RULE_FULLFLOWSCALAR }
     EOL: { new: RULE_FULLFLOWSCALAR, return: 1 }
     DEFAULT: { new: RULE_FULLFLOWSCALAR }
-  WS: { new: NODETYPE_FLOWMAPVALUE }
-  DEFAULT:
+  FLOW_COMMA:
     match: cb_empty_flowmap_value
     return: 1
+  FLOWMAP_END:
+    match: cb_end_flowmap_empty
+    EOL: { return: 1 }
+    DEFAULT: { return: 1 }
 
+NEWFLOWSEQ_ANCHOR:
+  WS: { new: NEWFLOWSEQ_ANCHOR }
+  EOL: { new: NEWFLOWSEQ_ANCHOR, return: 1 }
+  TAG:
+    match: cb_tag
+    WS: { new: FLOWSEQ }
+    EOL: { new: FLOWSEQ, return: 1 }
+  DEFAULT: { new: FLOWSEQ }
+
+NEWFLOWSEQ_TAG:
+  WS: { new: NEWFLOWSEQ_TAG }
+  EOL: { new: NEWFLOWSEQ_TAG, return: 1 }
+  ANCHOR:
+    match: cb_anchor
+    WS: { new: FLOWSEQ }
+    EOL: { new: FLOWSEQ, return: 1 }
+  DEFAULT: { new: FLOWSEQ }
+
+
+NEWFLOWMAP_ANCHOR:
+  WS: { new: NEWFLOWMAP_ANCHOR }
+  EOL: { new: NEWFLOWMAP_ANCHOR, return: 1 }
+  TAG:
+    match: cb_tag
+    WS: { new: FLOWMAP }
+    EOL: { new: FLOWMAP, return: 1 }
+  DEFAULT: { new: FLOWMAP }
+
+NEWFLOWMAP_TAG:
+  WS: { new: NEWFLOWMAP_TAG }
+  EOL: { new: NEWFLOWMAP_TAG, return: 1 }
+  ANCHOR:
+    match: cb_anchor
+    WS: { new: FLOWMAP }
+    EOL: { new: FLOWMAP, return: 1 }
+  DEFAULT: { new: FLOWMAP }
 
 NEWFLOWMAP:
   EOL: { new: NEWFLOWMAP, return: 1 }
   WS: { new: NEWFLOWMAP }
+  # TODO
+  QUESTION: { match: cb_flow_question, new: NEWFLOWMAP }
+
+  ANCHOR:
+    match: cb_anchor
+    WS: { new: NEWFLOWMAP_ANCHOR }
+    EOL: { new: NEWFLOWMAP_ANCHOR, return: 1 }
+  TAG:
+    match: cb_tag
+    WS: { new: NEWFLOWMAP_TAG }
+    EOL: { new: NEWFLOWMAP_TAG, return: 1 }
+
   FLOWMAP_END:
     match: cb_end_flowmap
     EOL: { return: 1 }
     DEFAULT: { return: 1 }
-  DEFAULT: { new: RULE_FULLFLOWSCALAR }
+
+  COLON:
+    WS:
+      match: cb_empty_flow_mapkey
+      new: RULE_FULLFLOWSCALAR
+    EOL:
+      match: cb_empty_flow_mapkey
+      new: RULE_FULLFLOWSCALAR
+      return: 1
+
+  DEFAULT: { new: FLOWMAP }
 
 NODETYPE_FLOWMAP:
   EOL: { new: NODETYPE_FLOWMAP, return: 1 }
@@ -253,152 +321,53 @@ NODETYPE_FLOWMAP:
     EOL: { return: 1 }
     DEFAULT: { return: 1 }
   FLOW_COMMA: { match: cb_flow_comma, new: NEWFLOWMAP }
-  DEFAULT: { new: RULE_FULLFLOWSCALAR }
-
-
-
-RULE_PLAIN_MULTI:
-  END: { match: cb_send_scalar, return: 1 }
-  EOL: { match: cb_empty_plain, new: RULE_PLAIN_MULTI }
-  WS:
-    PLAIN:
-      match: cb_take
-      EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
-      COMMENT:
-        EOL: { match: cb_send_scalar, return: 1 }
-  INDENT:
-    WS:
-      PLAIN:
-        match: cb_take
-        EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
-        COMMENT:
-          EOL: { match: cb_send_scalar, return: 1 }
-
-RULE_PLAIN_MULTI_FLOW:
-  END: { match: cb_send_scalar, return: 1 }
-  EOL: { match: cb_empty_plain, new: RULE_PLAIN_MULTI }
-  WS:
-    PLAIN:
-      match: cb_take
-      EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
-      COMMENT:
-        EOL: { match: cb_send_scalar, return: 1 }
-  INDENT:
-    WS:
-      PLAIN:
-        match: cb_take
-        EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI_FLOW }
-        COMMENT:
-          EOL: { match: cb_send_scalar, return: 1 }
-        DEFAULT: { match: cb_send_scalar, return: 1 }
-      DEFAULT: { match: cb_send_scalar, return: 1 }
-  COMMENT:
-    EOL: { match: cb_send_scalar, return: 1 }
-  DEFAULT: { match: cb_send_scalar, return: 1 }
+  DEFAULT: { new: NEWFLOWMAP }
 
 
 RULE_MAPKEY:
   QUESTION:
     match: cb_question
-    EOL: { node: FULLNODE , return: 1}
-    WS: { node: FULLNODE , return: 1}
+    EOL: { new: FULLNODE , return: 1}
+    WS: { new: FULLNODE }
   ALIAS:
     match: cb_send_alias
     WS:
       COLON:
-        EOL: { node: FULLNODE , return: 1}
-        WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-  DOUBLEQUOTE:
-    match: cb_start_quoted
-    DOUBLEQUOTED:
-      match: cb_take
-      DOUBLEQUOTE:
-        match: cb_send_mapkey
-        WS:
-          COLON:
-            EOL: { node: FULLNODE , return: 1}
-            WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-        COLON:
-          EOL: { node: FULLNODE , return: 1}
-          WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-  SINGLEQUOTE:
-    match: cb_start_quoted
-    SINGLEQUOTED:
-      match: cb_take
-      SINGLEQUOTE:
-        match: cb_send_mapkey
-        WS:
-          COLON:
-            EOL: { node: FULLNODE , return: 1}
-            WS: { node: FULLMAPVALUE_INLINE, return: 1 }
-        COLON:
-          EOL: { node: FULLNODE , return: 1}
-          WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+        EOL: { new: FULLNODE , return: 1}
+        WS: { new: FULLMAPVALUE_INLINE }
+
+  QUOTED:
+    match: cb_take_quoted_key
+    WS:
+      COLON:
+        EOL: { new: FULLNODE , return: 1}
+        WS: { new: FULLMAPVALUE_INLINE }
+    COLON:
+      EOL: { new: FULLNODE , return: 1}
+      WS: { new: FULLMAPVALUE_INLINE }
+
   PLAIN:
     match: cb_mapkey
     WS:
       COLON:
         match: cb_send_mapkey
-        EOL: { node: FULLNODE , return: 1}
-        WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+        EOL: { new: FULLNODE , return: 1}
+        WS: { new: FULLMAPVALUE_INLINE }
     COLON:
       match: cb_send_mapkey
-      EOL: { node: FULLNODE , return: 1}
-      WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+      EOL: { new: FULLNODE , return: 1}
+      WS: { new: FULLMAPVALUE_INLINE }
+
   COLON:
     match: cb_empty_mapkey
-    EOL: { node: FULLNODE , return: 1}
-    WS: { node: FULLMAPVALUE_INLINE, return: 1 }
+    EOL: { new: FULLNODE , return: 1}
+    WS: { new: FULLMAPVALUE_INLINE }
 
 NODETYPE_SEQ:
   DASH:
     match: cb_seqitem
-    EOL: { node: FULLNODE , return: 1}
-    WS: { node: FULLNODE }
-
-RULE_BLOCK_SCALAR_HEADER:
-  BLOCK_SCALAR_INDENT:
-    match: cb_add_block_scalar_indent
-    BLOCK_SCALAR_CHOMP:
-      match: cb_add_block_scalar_chomp
-      EOL:
-        match: cb_fetch_tokens_block_scalar
-        new: RULE_BLOCK_SCALAR_START
-    EOL:
-      match: cb_fetch_tokens_block_scalar
-      new: RULE_BLOCK_SCALAR_START
-  BLOCK_SCALAR_CHOMP:
-    match: cb_add_block_scalar_chomp
-    BLOCK_SCALAR_INDENT:
-      match: cb_add_block_scalar_indent
-      EOL:
-        match: cb_fetch_tokens_block_scalar
-        new: RULE_BLOCK_SCALAR_START
-    EOL:
-      match: cb_fetch_tokens_block_scalar
-      new: RULE_BLOCK_SCALAR_START
-  EOL:
-    match: cb_fetch_tokens_block_scalar
-    new: RULE_BLOCK_SCALAR_START
-
-RULE_BLOCK_SCALAR_START:
-  EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_START }
-  INDENT:
-    match: cb_block_scalar_start_indent
-    EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_START }
-    BLOCK_SCALAR_CONTENT:
-      match: cb_block_scalar_start_content
-      EOL: { match: cb_fetch_tokens_block_scalar, new: RULE_BLOCK_SCALAR_CONTENT }
-  END: { match: cb_send_scalar, return: 1 }
-
-RULE_BLOCK_SCALAR_CONTENT:
-  EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_CONTENT }
-  INDENT:
-    EOL: { match: cb_block_scalar_empty_line, new: RULE_BLOCK_SCALAR_CONTENT }
-    BLOCK_SCALAR_CONTENT:
-      match: cb_block_scalar_content
-      EOL: { match: cb_fetch_tokens_block_scalar, new: RULE_BLOCK_SCALAR_CONTENT }
-  END: { match: cb_send_scalar, return: 1 }
+    EOL: { new: FULLNODE , return: 1}
+    WS: { new: FULLNODE }
 
 NODETYPE_MAP:
   ANCHOR:
@@ -518,39 +487,27 @@ NODETYPE_MAPVALUE_INLINE:
     match: cb_send_alias
     EOL: { return: 1 }
 
-  SINGLEQUOTE:
-    match: cb_start_quoted
-    SINGLEQUOTED:
-      match: cb_take
-      SINGLEQUOTE:
-        EOL: { match: cb_send_scalar, return: 1 }
-    SINGLEQUOTED_LINE:
-      match: cb_take
-      EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_SINGLEQUOTED }
+  QUOTED:
+    match: cb_take_quoted
+    EOL: { match: cb_send_scalar, return: 1 }
 
-  DOUBLEQUOTE:
-    match: cb_start_quoted
-    DOUBLEQUOTED:
-      match: cb_take
-      DOUBLEQUOTE:
-        EOL: { match: cb_send_scalar, return: 1 }
-    DOUBLEQUOTED_LINE:
-      match: cb_take
-      EOL: { match: cb_fetch_tokens_quoted, new: MULTILINE_DOUBLEQUOTED  }
+  QUOTED_MULTILINE:
+    match: cb_quoted_multiline
+    EOL: { return: 1 }
 
   PLAIN:
     match: cb_start_plain
-    COMMENT:
+    EOL:
       match: cb_send_scalar
-      EOL: { return: 1 }
-    EOL: { match: cb_fetch_tokens_plain, new: RULE_PLAIN_MULTI }
+      return: 1
 
-  LITERAL:
-    match: cb_block_scalar
-    new: RULE_BLOCK_SCALAR_HEADER
-  FOLDED:
-    match: cb_block_scalar
-    new: RULE_BLOCK_SCALAR_HEADER
+  PLAIN_MULTI:
+    match: cb_send_plain_multi
+    EOL: { return: 1 }
+
+  BLOCK_SCALAR:
+    match: cb_send_block_scalar
+    return: 1
 
   FLOWSEQ_START:
     match: cb_start_flowseq

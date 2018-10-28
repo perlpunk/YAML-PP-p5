@@ -14,13 +14,9 @@ $|++;
 my $yts = "$Bin/../yaml-test-suite";
 
 my @skip = qw/
-    4H7K
-    G9HC
-
-
-    9C9N
     CXX2
 
+    9KBC
 /;
 
 # in case of error events might not be exactly matching
@@ -37,6 +33,11 @@ my %skip_events = (
     C2SP => 1,
     'NTY5' => 1,
     '4EJS' => 1,
+    '2CMS' => 1,
+    'HU3P' => 1,
+    'EW3V' => 1,
+    'G9HC' => 1,
+    '4H7K' => 1,
 );
 
 

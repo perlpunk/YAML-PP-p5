@@ -16,6 +16,7 @@ sub new {
         yaml => $args{yaml},
         got => $args{got},
         expected => $args{expected},
+        column => $args{column},
     }, $class;
     return $self;
 }
@@ -24,17 +25,16 @@ sub to_string {
     my ($self) = @_;
     my $next = $self->{next};
     my $line = $self->{line};
-    my $column;
+    my $column = $self->{column};
 
     my $yaml = '';
     for my $token (@$next) {
         last if $token->{name} eq 'EOL';
-        $column = $token->{column} unless defined $column;
         $yaml .= $token->{value};
     }
     $column = '???' unless defined $column;
 
-    my $remaining_yaml = $self->{yaml}->[0];
+    my $remaining_yaml = $self->{yaml};
     $remaining_yaml = '' unless defined $remaining_yaml;
     $yaml .= $remaining_yaml;
     {
@@ -52,7 +52,7 @@ sub to_string {
     if ($self->{got} and $self->{expected}) {
         $lines = 6;
         $line = $self->{got}->{line};
-        $column = $self->{got}->{column};
+        $column = $self->{got}->{column} + 1;
         @fields = (
             "Line" => $line,
             "Column" => $column,

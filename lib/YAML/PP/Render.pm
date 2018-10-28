@@ -6,7 +6,6 @@ package YAML::PP::Render;
 our $VERSION = '0.000'; # VERSION
 
 use constant TRACE => $ENV{YAML_PP_TRACE} ? 1 : 0;
-my $WS = '[\t ]';
 
 sub render_tag {
     my ($tag, $map) = @_;
@@ -36,44 +35,18 @@ sub render_tag {
     return $tag;
 }
 
-my %control = (
-    '\\' => '\\', '/' => '/', n => "\n", t => "\t", r => "\r", b => "\b",
-    'a' => "\a", 'b' => "\b", 'e' => "\e", 'f' => "\f", 'v' => "\x0b",
-    'P' => "\x{2029}", L => "\x{2028}", 'N' => "\x85",
-    '0' => "\0", '_' => "\xa0", ' ' => ' ', q/"/ => q/"/,
-);
-
 sub render_quoted {
-    my ($self, $info) = @_;
-    my $double = $info->{style} eq '"';
-    my $lines = $info->{value};
-
-    if ($#$lines == 0) {
-        my $quoted = $lines->[0];
-        if ($double) {
-            $quoted =~ s{(?:
-                \\([ \\\/_0abefnrtvLNP"]) | \\x([0-9a-fA-F]{2})
-                | \\u([A-Fa-f0-9]{4}) | \\U([A-Fa-f0-9]{4,8})
-            )}{
-            defined $1 ? $control{ $1 } : defined $2 ? chr hex $2 :
-            defined $3 ? chr hex $3 : chr hex $4
-            }xeg;
-        }
-        else {
-            $quoted =~ s/''/'/g;
-        }
-        $info->{value} = $quoted;
-        return;
-    }
+    my ($self, $style, $lines) = @_;
 
     my $quoted = '';
     my $addspace = 0;
 
     for my $i (0 .. $#$lines) {
         my $line = $lines->[ $i ];
+        my $value = $line->{value};
         my $last = $i == $#$lines;
         my $first = $i == 0;
-        if ($line =~ s/^$WS*$/\n/) {
+        if ($value eq '') {
             if ($first) {
                 $addspace = 1;
             }
@@ -89,37 +62,20 @@ sub render_quoted {
 
         $quoted .= ' ' if $addspace;
         $addspace = 1;
-        if (not $first) {
-            $line =~ s/^$WS+//;
-        }
-        if (not $last) {
-            $line =~ s/$WS+$//;
-        }
-        if ($double) {
-            $line =~ s{(?:
-                \\([ \\\/_0abefnrtvLNP"]) | \\x([0-9a-fA-F]{2})
-                | \\u([A-Fa-f0-9]{4}) | \\U([A-Fa-f0-9]{4,8})
-            )}{
-            defined $1 ? $control{ $1 } : defined $2 ? chr hex $2 :
-            defined $3 ? chr hex $3 : chr hex $4
-            }xeg;
-            if ($line =~ s/\\$//) {
+        if ($style eq '"') {
+            if ($line->{orig} =~ m/\\$/) {
+                $line->{value} =~ s/\\$//;
+                $value =~ s/\\$//;
                 $addspace = 0;
             }
         }
-        else {
-            $line =~ s/''/'/g;
-        }
-        $quoted .= $line;
+        $quoted .= $value;
     }
-    $info->{value} = $quoted;
+    return $quoted;
 }
 
 sub render_block_scalar {
-    my ($self, $info) = @_;
-    my $block_type = $info->{style};
-    my $chomp = $info->{block_chomp} || '';
-    my $lines = $info->{value};
+    my ($self, $block_type, $chomp, $lines) = @_;
 
     my ($folded, $keep, $trim);
     if ($block_type eq '>') {
@@ -188,24 +144,14 @@ sub render_block_scalar {
         }
     }
     TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$string], ['string']);
-    $info->{value} = $string;
+    return $string;
 }
 
 sub render_multi_val {
-    my ($self, $info) = @_;
-    my $multi = $info->{value};
-    return $multi unless ref $multi;
-    # remove empty lines at beginning and end
-    while (@$multi and $multi->[0] eq '') {
-        shift @$multi;
-    }
-    while (@$multi and $multi->[-1] eq '') {
-        pop @$multi;
-    }
+    my ($self, $multi) = @_;
     my $string = '';
     my $start = 1;
     for my $line (@$multi) {
-        #$line =~ s/\\/\\\\/g;
         if (not $start) {
             if ($line eq '') {
                 $string .= "\n";
@@ -220,7 +166,7 @@ sub render_multi_val {
             $start = 0;
         }
     }
-    $info->{value} = $string;
+    return $string;
 }
 
 
