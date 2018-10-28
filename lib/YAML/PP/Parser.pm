@@ -1040,12 +1040,14 @@ sub exception {
     my ($self, $msg, %args) = @_;
     my $next = $self->lexer->next_tokens;
     my $line = @$next ? $next->[0]->{line} : $self->lexer->line;
+    my $offset = @$next ? $next->[0]->{column} : $self->lexer->offset;
     my $next_line = $self->lexer->next_line;
     my $caller = $args{caller} || [ caller(0) ];
     my $e = YAML::PP::Exception->new(
         got => $args{got},
         expected => $args{expected},
         line => $line,
+        column => $offset,
         msg => $msg,
         next => $next,
         where => $caller->[1] . ' line ' . $caller->[2],
