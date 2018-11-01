@@ -598,7 +598,9 @@ sub fetch_block {
         );
     }
     my $value = YAML::PP::Render->render_block_scalar($context, $chomp, \@lines);
+    my @eol = splice @tokens, -2;
     $self->push_subtokens( { name => 'BLOCK_SCALAR', value => $value }, \@tokens );
+    $self->push_tokens([ @eol ]);
     return 0;
 }
 

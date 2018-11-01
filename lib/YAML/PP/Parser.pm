@@ -249,6 +249,7 @@ my %nodetypes = (
     FLOWMAP => 'NODETYPE_FLOWMAP',
     FLOWMAPVALUE => 'NODETYPE_FLOWMAPVALUE',
     FLOWSEQ => 'NODETYPE_FLOWSEQ',
+    FLOWSEQ_NEXT => 'FLOWSEQ_NEXT',
 );
 
 sub parse_document {
@@ -259,14 +260,16 @@ sub parse_document {
     my $next_tokens = $lexer->next_tokens;
     my $event_types = $self->events;
     my $stack = $self->event_stack;
-    $lexer->fetch_next_tokens(0);
     LINE: while (1) {
 
         TRACE and $self->info("----------------------- LOOP");
         TRACE and $self->debug_events;
 
         unless (@$next_tokens) {
-            return $self->end_document;
+            $lexer->fetch_next_tokens(0);
+            unless (@$next_tokens) {
+                return $self->end_document;
+            }
         }
         if ( $next_tokens->[0]->{name} eq 'EOL' ) {
             push @{ $self->tokens }, shift @$next_tokens;
@@ -280,20 +283,15 @@ sub parse_document {
         }
 
         DEBUG and $self->info("----------------> parse_next_line");
-        while (1) {
-            unless ($self->new_node) {
-                my $new_rule = $nodetypes{ $event_types->[-1] }
-                    or die "Expected document end";
-                $self->set_rule( $new_rule );
-            }
 
-            my $res = $self->parse_tokens();
+        unless ($self->new_node) {
+            my $new_rule = $nodetypes{ $event_types->[-1] }
+                or die "Expected document end";
+            $self->set_rule( $new_rule );
+        }
 
-            last if (not @$next_tokens or $next_tokens->[0]->{column} == 0);
-        }
-        unless (@$next_tokens) {
-            $lexer->fetch_next_tokens(0);
-        }
+        my $res = $self->parse_tokens();
+
     }
 
     return;
@@ -396,7 +394,8 @@ my %next_event = (
     SEQ0 => 'SEQ0',
     DOC => 'DOC',
     STR => 'STR',
-    FLOWSEQ => 'FLOWSEQ',
+    FLOWSEQ => 'FLOWSEQ_NEXT',
+    FLOWSEQ_NEXT => 'FLOWSEQ',
     FLOWMAP => 'FLOWMAPVALUE',
     FLOWMAPVALUE => 'FLOWMAP',
 );
@@ -490,6 +489,8 @@ sub parse_tokens {
     TRACE and $self->debug_yaml;
     DEBUG and $self->debug_next_line;
 
+    my $event_types = $self->events;
+    my $offsets = $self->offset;
     my $tokens = $self->tokens;
     my $next_tokens = $self->lexer->next_tokens;
     $res->{offset} = $next_tokens->[0]->{column};
@@ -504,7 +505,7 @@ sub parse_tokens {
         my $got = $next_tokens->[0]->{name};
         if ($got eq 'CONTEXT') {
             my $context = shift @$next_tokens;
-            my $indent = $self->offset->[-1];
+            my $indent = $offsets->[-1];
             $indent++ unless $self->lexer->flowcontext;
             my $method = $fetch_method{ $context->{value} };
             my $partial = $self->lexer->$method($indent, $context->{value});
@@ -533,22 +534,31 @@ sub parse_tokens {
         if ($new) {
             DEBUG and $self->got("NEW: $new");
 
-            if ($def->{return}) {
-                $self->set_rule($new);
-                return $res;
-            }
             $next_rule_name = $new;
+            $self->set_rule($next_rule_name);
 
-            $next_rule = $GRAMMAR->{ $next_rule_name }
-                or die "Unexpected rule $next_rule_name";
-            next RULE;
+            if ($def->{return}) {
+                return 1;
+            }
+
         }
         elsif ($def->{return}) {
-            $self->set_new_node(0);
-            return $res;
+            if ($got eq 'EOL' or not @$next_tokens) {
+                return 1;
+            }
+
+            $next_rule_name = $nodetypes{ $event_types->[-1] }
+                or die "Expected document end";
+            $self->set_rule($next_rule_name);
+
         }
-        $next_rule_name .= " - $got"; # for debugging
-        $next_rule = $def;
+        else {
+            $next_rule_name .= " - $got"; # for debugging
+            $next_rule = $def;
+            next RULE;
+        }
+        $next_rule = $GRAMMAR->{ $next_rule_name }
+            or die "Unexpected rule $next_rule_name";
 
     }
 
@@ -687,12 +697,6 @@ sub end_flow_sequence {
     my $info = { event_name => 'sequence_end_event' };
     $self->callback->($self, $info->{event_name}, $info);
     $event_types->[-1] = $next_event{ $event_types->[-1] };
-    if ($event_types->[-1] =~ m/^FLOW/) {
-        $self->set_new_node(1);
-    }
-    else {
-        $self->set_new_node(0);
-    }
 }
 
 sub end_flow_mapping {
@@ -703,7 +707,6 @@ sub end_flow_mapping {
     my $info = { event_name => 'mapping_end_event' };
     $self->callback->($self, $info->{event_name}, $info);
     $event_types->[-1] = $next_event{ $event_types->[-1] };
-    # TODO
 }
 
 sub start_mapping {
@@ -789,7 +792,6 @@ sub scalar_event {
 
     $self->callback->($self, 'scalar_event', $info);
     if ($event_types->[-1] =~ m/^FLOW/) {
-        $self->set_new_node(1);
     }
     else {
         $self->set_new_node(0);
@@ -806,7 +808,6 @@ sub alias_event {
     my $event_types = $self->events;
     $self->callback->($self, 'alias_event', $info);
     if ($event_types->[-1] =~ m/^FLOW/) {
-        $self->set_new_node(1);
     }
     else {
         $self->set_new_node(0);
@@ -1156,6 +1157,7 @@ sub cb_send_scalar {
     my ($self, $res) = @_;
     my $last = pop @{ $self->event_stack };
     $self->scalar_event($last->[1]);
+    $self->set_new_node(0);
 }
 
 sub cb_empty_mapkey {
@@ -1183,14 +1185,14 @@ sub cb_send_alias {
     my ($self, $token) = @_;
     my $alias = substr($token->{value}, 1);
     $self->alias_event({ value => $alias });
-    $self->set_new_node(1);
+    $self->set_new_node(0);
 }
 
 sub cb_send_alias_from_stack {
     my ($self, $token) = @_;
     my $last = pop @{ $self->event_stack };
     $self->alias_event($last->[1]);
-    $self->set_new_node(1);
+    $self->set_new_node(0);
 }
 
 sub cb_alias {
@@ -1209,7 +1211,6 @@ sub cb_question {
 
 sub cb_flow_question {
     my ($self, $res) = @_;
-    $self->set_new_node(1);
 }
 
 sub cb_empty_complexvalue {
@@ -1308,23 +1309,26 @@ sub cb_start_plain {
 sub cb_start_flowseq {
     my ($self, $token) = @_;
     $self->start_flow_sequence($token->{column});
-    $self->set_new_node(0);
 }
 
 sub cb_start_flowmap {
     my ($self, $token) = @_;
     $self->start_flow_mapping($token->{column});
-    $self->set_new_node(0);
 }
 
 sub cb_end_flowseq {
     my ($self, $res) = @_;
     $self->end_flow_sequence;
+    $self->set_new_node(0);
 }
 
 sub cb_flow_comma {
     my ($self) = @_;
+    my $event_types = $self->events;
     $self->set_new_node(0);
+    if ($event_types->[-1] =~ m/^FLOWSEQ/) {
+        $event_types->[-1] = $next_event{ $event_types->[-1] };
+    }
 }
 
 sub cb_flow_colon {
@@ -1344,7 +1348,7 @@ sub cb_empty_flow_mapkey {
         $self->fetch_inline_properties($stack, $info);
     }
     $self->scalar_event($info);
-    $self->set_new_node(1);
+    $self->set_new_node(0);
 }
 
 sub cb_end_flowmap {
@@ -1386,6 +1390,7 @@ sub cb_flowkey_plain {
         $self->fetch_inline_properties($stack, $info);
     }
     $self->scalar_event($info);
+    $self->set_new_node(0);
 }
 
 sub cb_flowkey_quoted {
@@ -1401,6 +1406,7 @@ sub cb_flowkey_quoted {
         $self->fetch_inline_properties($stack, $info);
     }
     $self->scalar_event($info);
+    $self->set_new_node(0);
 }
 
 sub cb_empty_flowmap_value {
@@ -1415,7 +1421,6 @@ sub cb_empty_flowmap_value {
         $self->fetch_inline_properties($stack, $info);
     }
     $self->scalar_event($info);
-    $self->set_new_node(0);
 }
 
 sub cb_insert_map_alias {

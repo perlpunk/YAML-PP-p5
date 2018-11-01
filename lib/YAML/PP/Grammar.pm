@@ -647,8 +647,10 @@ $GRAMMAR = {
       'match' => 'cb_send_alias'
     },
     'BLOCK_SCALAR' => {
-      'match' => 'cb_send_block_scalar',
-      'return' => 1
+      'EOL' => {
+        'return' => 1
+      },
+      'match' => 'cb_send_block_scalar'
     },
     'FLOWMAP_START' => {
       'DEFAULT' => {
@@ -725,8 +727,10 @@ $GRAMMAR = {
       'match' => 'cb_alias'
     },
     'BLOCK_SCALAR' => {
-      'match' => 'cb_send_block_scalar',
-      'return' => 1
+      'EOL' => {
+        'return' => 1
+      },
+      'match' => 'cb_send_block_scalar'
     },
     'COLON' => {
       'EOL' => {
@@ -869,13 +873,8 @@ $GRAMMAR = {
       'new' => 'NEWFLOWSEQ'
     },
     'FLOW_COMMA' => {
-      'EOL' => {
-        'return' => 1
-      },
-      'WS' => {
-        'return' => 1
-      },
-      'match' => 'cb_empty_flow_mapkey'
+      'match' => 'cb_empty_flow_mapkey',
+      'return' => 1
     },
     'PLAIN' => {
       'DEFAULT' => {
@@ -908,10 +907,8 @@ $GRAMMAR = {
       'match' => 'cb_take_quoted'
     },
     'QUOTED_MULTILINE' => {
-      'EOL' => {
-        'return' => 1
-      },
-      'match' => 'cb_quoted_multiline'
+      'match' => 'cb_quoted_multiline',
+      'return' => 1
     }
   },
   'RULE_FULLFLOWSCALAR' => {
@@ -1157,7 +1154,7 @@ This is the Grammar in YAML
     
       BLOCK_SCALAR:
         match: cb_send_block_scalar
-        return: 1
+        EOL: { return: 1 }
     
       FLOWSEQ_START:
         match: cb_start_flowseq
@@ -1209,7 +1206,6 @@ This is the Grammar in YAML
     RULE_FLOWSCALAR:
       FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
       FLOWMAP_START: { match: cb_start_flowmap, new: NEWFLOWMAP }
-      FLOW_COMMA: { match: cb_empty_complexvalue, return: 1 }
     
       ALIAS: { match: cb_send_alias, return: 1 }
     
@@ -1219,9 +1215,7 @@ This is the Grammar in YAML
         WS: { match: cb_send_scalar, return: 1 }
         DEFAULT: { match: cb_send_scalar, return: 1 }
     
-      QUOTED_MULTILINE:
-        match: cb_quoted_multiline
-        EOL: { return: 1 }
+      QUOTED_MULTILINE: { match: cb_quoted_multiline, return: 1 }
     
       PLAIN:
         match: cb_start_plain
@@ -1230,10 +1224,7 @@ This is the Grammar in YAML
     
       PLAIN_MULTI: { match: cb_send_plain_multi, return: 1 }
     
-      FLOW_COMMA:
-        match: cb_empty_flow_mapkey
-        WS: { return: 1 }
-        EOL: { return: 1 }
+      FLOW_COMMA: { match: cb_empty_flow_mapkey, return: 1 }
     
       FLOWMAP_END:
         match: cb_end_flowmap_empty
@@ -1594,7 +1585,7 @@ This is the Grammar in YAML
     
       BLOCK_SCALAR:
         match: cb_send_block_scalar
-        return: 1
+        EOL: { return: 1 }
     
       FLOWSEQ_START:
         match: cb_start_flowseq
