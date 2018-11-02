@@ -1,10 +1,11 @@
-0.009_001 2018-10-28 13:22:40+01:00
+0.010 2018-11-02 12:53:41+01:00
 
     - Fix regex for start of plain scalars
     - Large refactoring of lexer/parser.
     - Adjacent flow mapping values are now supported (JSON compat:
       `{"foo":23}`)
     - Empty flow mapping values are now supported
+    - Fix nested flow collections
 
 0.009 2018-09-30 14:10:15+02:00
 
