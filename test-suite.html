@@ -68,9 +68,9 @@ pre.diff {
 </style>
 </head>
 <body>
-Generated with YAML::PP v0.009-33-g54956e91<br>
-<a href="#valid">Valid (231)</a><br>
-<a href="#invalid">Invalid (60)</a><br>
+Generated with YAML::PP v0.010<br>
+<a href="#valid">Valid (241)</a><br>
+<a href="#invalid">Invalid (64)</a><br>
 <h1><a name="valid">Valid</a></h1>
 <table class="highlight">
 <tr>
@@ -1493,6 +1493,40 @@ Doc 3: &quot;d e&quot;
 </span><span class="indent">  </span><span class="dash">-</span><span class="default"> </span><span class="default">two</span><span class="eol">
 </span><span class="dash">-</span><span class="default"> </span><span class="dash">-</span><span class="default"> </span><span class="default">three</span><span class="eol">
 </span><span class="indent">  </span><span class="dash">-</span><span class="default"> </span><span class="default">four</span><span class="eol">
+</span></pre>
+</td>
+</tr>
+<tr>
+<td colspan="6" valign="top" style="background-color: #dddddd"><b>5MUD - Colon and adjacent value on next line
+</b></td></tr>
+<tr>
+<td style="max-width: 15em;" valign="top" >Tags:<br>double, flow, mapping<br>
+<a href="https://github.com/yaml/yaml-test-suite/blob/master/test/5MUD.tml">View source</a><br>
+</td>
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="doc_start">---</span><span class="eol">
+</span><span class="flowmap_start">{</span><span class="default"> </span><span class="doublequote">&quot;</span><span class="doublequoted">foo</span><span class="doublequote">&quot;</span><span class="eol">
+</span><span class="indent">  </span><span class="colon">:</span><span class="default">bar</span><span class="default"> </span><span class="flowmap_end">}</span><span class="eol">
+</span></pre>
+<pre></pre>
+
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>$doc1 = { foo =&gt; &quot;bar&quot; }</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>Doc 1: {
+   &quot;foo&quot; : &quot;bar&quot;
+}
+</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="default">foo</span><span class="colon">:</span><span class="default"> </span><span class="default">bar</span><span class="eol">
+</span></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="doublequote">&quot;</span><span class="doublequoted">foo</span><span class="doublequote">&quot;</span><span class="colon">:</span><span class="default"> </span><span class="default">bar</span><span class="eol">
 </span></pre>
 </td>
 </tr>
@@ -3130,6 +3164,57 @@ YAML      : &quot;::: value&quot;
 </td>
 </tr>
 <tr>
+<td colspan="6" valign="top" style="background-color: #dddddd"><b>8KB6 - Multiline plain flow mapping key without value
+</b></td></tr>
+<tr>
+<td style="max-width: 15em;" valign="top" >Tags:<br>flow, mapping<br>
+<a href="https://github.com/yaml/yaml-test-suite/blob/master/test/8KB6.tml">View source</a><br>
+</td>
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="flowmap_start">{</span><span class="default"> </span><span class="default">single line</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">a</span><span class="colon">:</span><span class="default"> </span><span class="default">b</span><span class="flowmap_end">}</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="flowmap_start">{</span><span class="default"> </span><span class="default">multi</span><span class="eol">
+</span><span class="indent">  </span><span class="default">line</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">a</span><span class="colon">:</span><span class="default"> </span><span class="default">b</span><span class="flowmap_end">}</span><span class="eol">
+</span></pre>
+<pre></pre>
+
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>$doc1 = [
+  { &quot;a&quot; =&gt; &quot;b&quot;, &quot;single line&quot; =&gt; undef },
+  { &quot;a&quot; =&gt; &quot;b&quot;, &quot;multi line&quot; =&gt; undef },
+]</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>Doc 1: [
+   {
+      &quot;a&quot; : &quot;b&quot;,
+      &quot;single line&quot; : null
+   },
+   {
+      &quot;a&quot; : &quot;b&quot;,
+      &quot;multi line&quot; : null
+   }
+]
+</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">a</span><span class="colon">:</span><span class="default"> </span><span class="default">b</span><span class="eol">
+</span><span class="indent">  </span><span class="default">single line</span><span class="colon">:</span><span class="default"> </span><span class="default">null</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">a</span><span class="colon">:</span><span class="default"> </span><span class="default">b</span><span class="eol">
+</span><span class="indent">  </span><span class="default">multi line</span><span class="colon">:</span><span class="default"> </span><span class="default">null</span><span class="eol">
+</span></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">single line</span><span class="colon">:</span><span class="eol">
+</span><span class="indent">  </span><span class="default">a</span><span class="colon">:</span><span class="default"> </span><span class="default">b</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">multi line</span><span class="colon">:</span><span class="eol">
+</span><span class="indent">  </span><span class="default">a</span><span class="colon">:</span><span class="default"> </span><span class="default">b</span><span class="eol">
+</span></pre>
+</td>
+</tr>
+<tr>
 <td colspan="6" valign="top" style="background-color: #dddddd"><b>8MK2 - Explicit Non-Specific Tag
 </b></td></tr>
 <tr>
@@ -3415,6 +3500,57 @@ YAML      : &quot;: pair,\n&quot;
 </td>
 </tr>
 <tr>
+<td colspan="6" valign="top" style="background-color: #dddddd"><b>9BXH - Multiline doublequoted flow mapping key without value
+</b></td></tr>
+<tr>
+<td style="max-width: 15em;" valign="top" >Tags:<br>double, flow, mapping<br>
+<a href="https://github.com/yaml/yaml-test-suite/blob/master/test/9BXH.tml">View source</a><br>
+</td>
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="flowmap_start">{</span><span class="default"> </span><span class="doublequote">&quot;</span><span class="doublequoted">single line</span><span class="doublequote">&quot;</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">a</span><span class="colon">:</span><span class="default"> </span><span class="default">b</span><span class="flowmap_end">}</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="flowmap_start">{</span><span class="default"> </span><span class="doublequote">&quot;</span><span class="doublequoted">multi</span><span class="eol">
+</span><span class="default">  </span><span class="doublequoted">line</span><span class="doublequote">&quot;</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">a</span><span class="colon">:</span><span class="default"> </span><span class="default">b</span><span class="flowmap_end">}</span><span class="eol">
+</span></pre>
+<pre></pre>
+
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>$doc1 = [
+  { &quot;a&quot; =&gt; &quot;b&quot;, &quot;single line&quot; =&gt; undef },
+  { &quot;a&quot; =&gt; &quot;b&quot;, &quot;multi line&quot; =&gt; undef },
+]</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>Doc 1: [
+   {
+      &quot;a&quot; : &quot;b&quot;,
+      &quot;single line&quot; : null
+   },
+   {
+      &quot;a&quot; : &quot;b&quot;,
+      &quot;multi line&quot; : null
+   }
+]
+</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">a</span><span class="colon">:</span><span class="default"> </span><span class="default">b</span><span class="eol">
+</span><span class="indent">  </span><span class="default">single line</span><span class="colon">:</span><span class="default"> </span><span class="default">null</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">a</span><span class="colon">:</span><span class="default"> </span><span class="default">b</span><span class="eol">
+</span><span class="indent">  </span><span class="default">multi line</span><span class="colon">:</span><span class="default"> </span><span class="default">null</span><span class="eol">
+</span></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="doublequote">&quot;</span><span class="doublequoted">single line</span><span class="doublequote">&quot;</span><span class="colon">:</span><span class="eol">
+</span><span class="indent">  </span><span class="default">a</span><span class="colon">:</span><span class="default"> </span><span class="default">b</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="doublequote">&quot;</span><span class="doublequoted">multi line</span><span class="doublequote">&quot;</span><span class="colon">:</span><span class="eol">
+</span><span class="indent">  </span><span class="default">a</span><span class="colon">:</span><span class="default"> </span><span class="default">b</span><span class="eol">
+</span></pre>
+</td>
+</tr>
+<tr>
 <td colspan="6" valign="top" style="background-color: #dddddd"><b>9DXL - Spec Example 9.6. Stream [1.3]
 </b></td></tr>
 <tr>
@@ -3695,6 +3831,48 @@ YAML      : &quot;: separate ]\n&quot;
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
 <pre></pre>
+</td>
+</tr>
+<tr>
+<td colspan="6" valign="top" style="background-color: #dddddd"><b>9SA2 - Multiline double quoted flow mapping key
+</b></td></tr>
+<tr>
+<td style="max-width: 15em;" valign="top" >Tags:<br>double, flow, mapping<br>
+<a href="https://github.com/yaml/yaml-test-suite/blob/master/test/9SA2.tml">View source</a><br>
+</td>
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="flowmap_start">{</span><span class="default"> </span><span class="doublequote">&quot;</span><span class="doublequoted">single line</span><span class="doublequote">&quot;</span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="flowmap_end">}</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="flowmap_start">{</span><span class="default"> </span><span class="doublequote">&quot;</span><span class="doublequoted">multi</span><span class="eol">
+</span><span class="default">  </span><span class="doublequoted">line</span><span class="doublequote">&quot;</span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="flowmap_end">}</span><span class="eol">
+</span></pre>
+<pre></pre>
+
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>$doc1 = [{ &quot;single line&quot; =&gt; &quot;value&quot; }, { &quot;multi line&quot; =&gt; &quot;value&quot; }]</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>Doc 1: [
+   {
+      &quot;single line&quot; : &quot;value&quot;
+   },
+   {
+      &quot;multi line&quot; : &quot;value&quot;
+   }
+]
+</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">single line</span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">multi line</span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="eol">
+</span></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="doublequote">&quot;</span><span class="doublequoted">single line</span><span class="doublequote">&quot;</span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="doublequote">&quot;</span><span class="doublequoted">multi line</span><span class="doublequote">&quot;</span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="eol">
+</span></pre>
 </td>
 </tr>
 <tr>
@@ -5937,6 +6115,31 @@ YAML      : &quot;? foo\n&quot;
 </td>
 </tr>
 <tr>
+<td colspan="6" valign="top" style="background-color: #dddddd"><b>HWV9 - Document-end marker
+</b></td></tr>
+<tr>
+<td style="max-width: 15em;" valign="top" >Tags:<br>footer<br>
+<a href="https://github.com/yaml/yaml-test-suite/blob/master/test/HWV9.tml">View source</a><br>
+</td>
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="doc_end">...</span><span class="eol">
+</span></pre>
+<pre></pre>
+
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+</tr>
+<tr>
 <td colspan="6" valign="top" style="background-color: #dddddd"><b>J3BT - Spec Example 5.12. Tabs and Spaces
 </b></td></tr>
 <tr>
@@ -6372,6 +6575,40 @@ Doc 2: [
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
 <pre><span class="default">a true</span><span class="colon">:</span><span class="default"> </span><span class="default">null d</span><span class="eol">
 </span><span class="default">e 42</span><span class="colon">:</span><span class="eol">
+</span></pre>
+</td>
+</tr>
+<tr>
+<td colspan="6" valign="top" style="background-color: #dddddd"><b>K3WX - Colon and adjacent value after comment on next line
+</b></td></tr>
+<tr>
+<td style="max-width: 15em;" valign="top" >Tags:<br>tag, words<br>
+<a href="https://github.com/yaml/yaml-test-suite/blob/master/test/K3WX.tml">View source</a><br>
+</td>
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="doc_start">---</span><span class="eol">
+</span><span class="flowmap_start">{</span><span class="default"> </span><span class="doublequote">&quot;</span><span class="doublequoted">foo</span><span class="doublequote">&quot;</span><span class="eol"> # comment
+</span><span class="indent">  </span><span class="colon">:</span><span class="default">bar</span><span class="default"> </span><span class="flowmap_end">}</span><span class="eol">
+</span></pre>
+<pre></pre>
+
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>$doc1 = { foo =&gt; &quot;bar&quot; }</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>Doc 1: {
+   &quot;foo&quot; : &quot;bar&quot;
+}
+</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="default">foo</span><span class="colon">:</span><span class="default"> </span><span class="default">bar</span><span class="eol">
+</span></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="doublequote">&quot;</span><span class="doublequoted">foo</span><span class="doublequote">&quot;</span><span class="colon">:</span><span class="default"> </span><span class="default">bar</span><span class="eol">
 </span></pre>
 </td>
 </tr>
@@ -7499,6 +7736,45 @@ Doc 2: &quot;%!PS-Adobe-2.0 # Not the first line\n&quot;
 </td>
 </tr>
 <tr>
+<td colspan="6" valign="top" style="background-color: #dddddd"><b>NB6Z - Multiline plain value with tabs on empty lines
+</b></td></tr>
+<tr>
+<td style="max-width: 15em;" valign="top" >Tags:<br>scalar, whitespace<br>
+<a href="https://github.com/yaml/yaml-test-suite/blob/master/test/NB6Z.tml">View source</a><br>
+</td>
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="default">key</span><span class="colon">:</span><span class="eol">
+</span><span class="indent">  </span><span class="default">value</span><span class="eol">
+</span><span class="indent">  </span><span class="default">with</span><span class="eol">
+</span><span class="indent">  </span><span class="eol"></span><span class="tab">	</span><span class="eol">
+</span><span class="indent">  </span><span class="default">tabs</span><span class="eol">
+</span></pre>
+<pre></pre>
+
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>$doc1 = { key =&gt; &quot;value with\ntabs&quot; }</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>Doc 1: {
+   &quot;key&quot; : &quot;value with\ntabs&quot;
+}
+</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="default">key</span><span class="colon">:</span><span class="default"> </span><span class="literal">|</span><span class="default">-</span><span class="eol">
+</span><span class="indent">  </span><span class="block_scalar_content">value with</span><span class="eol">
+</span><span class="indent">  </span><span class="block_scalar_content">tabs</span><span class="eol">
+</span></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="default">key</span><span class="colon">:</span><span class="default"> </span><span class="literal">|</span><span class="default">-</span><span class="eol">
+</span><span class="indent">  </span><span class="block_scalar_content">value with</span><span class="eol">
+</span><span class="indent">  </span><span class="block_scalar_content">tabs</span><span class="eol">
+</span></pre>
+</td>
+</tr>
+<tr>
 <td colspan="6" valign="top" style="background-color: #dddddd"><b>NHX8 - Empty Lines at End of Document
 </b></td></tr>
 <tr>
@@ -7529,6 +7805,48 @@ Doc 2: &quot;%!PS-Adobe-2.0 # Not the first line\n&quot;
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
 <pre><span class="colon">:</span><span class="eol">
+</span></pre>
+</td>
+</tr>
+<tr>
+<td colspan="6" valign="top" style="background-color: #dddddd"><b>NJ66 - Multiline plain flow mapping key
+</b></td></tr>
+<tr>
+<td style="max-width: 15em;" valign="top" >Tags:<br>flow, mapping<br>
+<a href="https://github.com/yaml/yaml-test-suite/blob/master/test/NJ66.tml">View source</a><br>
+</td>
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="flowmap_start">{</span><span class="default"> </span><span class="default">single line</span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="flowmap_end">}</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="flowmap_start">{</span><span class="default"> </span><span class="default">multi</span><span class="eol">
+</span><span class="indent">  </span><span class="default">line</span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="flowmap_end">}</span><span class="eol">
+</span></pre>
+<pre></pre>
+
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>$doc1 = [{ &quot;single line&quot; =&gt; &quot;value&quot; }, { &quot;multi line&quot; =&gt; &quot;value&quot; }]</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>Doc 1: [
+   {
+      &quot;single line&quot; : &quot;value&quot;
+   },
+   {
+      &quot;multi line&quot; : &quot;value&quot;
+   }
+]
+</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">single line</span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">multi line</span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="eol">
+</span></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">single line</span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">multi line</span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="eol">
 </span></pre>
 </td>
 </tr>
@@ -7836,9 +8154,11 @@ Doc 2: null
 </span><span class="dash">-</span><span class="eol">
 </span><span class="indent">  </span><span class="anchor">&amp;a</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="default">a</span><span class="eol">
 </span><span class="indent">  </span><span class="default">b</span><span class="colon">:</span><span class="default"> </span><span class="anchor">&amp;b</span><span class="eol">
+</span><span class="dash">-</span><span class="eol">
 </span><span class="indent">  </span><span class="anchor">&amp;c</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="anchor">&amp;a</span><span class="eol">
 </span><span class="dash">-</span><span class="eol">
 </span><span class="indent">  </span><span class="question">?</span><span class="default"> </span><span class="anchor">&amp;d</span><span class="eol">
+</span><span class="dash">-</span><span class="eol">
 </span><span class="indent">  </span><span class="question">?</span><span class="default"> </span><span class="anchor">&amp;e</span><span class="eol">
 </span><span class="indent">  </span><span class="colon">:</span><span class="default"> </span><span class="anchor">&amp;a</span><span class="eol">
 </span></pre>
@@ -7846,15 +8166,28 @@ Doc 2: null
 
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre>$doc1 = [undef, &quot;a&quot;, { &quot;&quot; =&gt; undef, &quot;b&quot; =&gt; undef }, { &quot;&quot; =&gt; undef }]</pre>
+<pre>$doc1 = [
+  undef,
+  &quot;a&quot;,
+  { &quot;&quot; =&gt; &quot;a&quot;, &quot;b&quot; =&gt; undef },
+  { &quot;&quot; =&gt; undef },
+  { &quot;&quot; =&gt; undef },
+  { &quot;&quot; =&gt; undef },
+]</pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
 <pre>Doc 1: [
    null,
    &quot;a&quot;,
    {
-      &quot;&quot; : null,
+      &quot;&quot; : &quot;a&quot;,
       &quot;b&quot; : null
+   },
+   {
+      &quot;&quot; : null
+   },
+   {
+      &quot;&quot; : null
    },
    {
       &quot;&quot; : null
@@ -7866,8 +8199,10 @@ Doc 2: null
 <pre><span class="doc_start">---</span><span class="eol">
 </span><span class="dash">-</span><span class="default"> </span><span class="default">null</span><span class="eol">
 </span><span class="dash">-</span><span class="default"> </span><span class="default">a</span><span class="eol">
-</span><span class="dash">-</span><span class="default"> </span><span class="singlequote">&#39;</span><span class="singlequote">&#39;</span><span class="colon">:</span><span class="default"> </span><span class="default">null</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="singlequote">&#39;</span><span class="singlequote">&#39;</span><span class="colon">:</span><span class="default"> </span><span class="default">a</span><span class="eol">
 </span><span class="indent">  </span><span class="default">b</span><span class="colon">:</span><span class="default"> </span><span class="default">null</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="singlequote">&#39;</span><span class="singlequote">&#39;</span><span class="colon">:</span><span class="default"> </span><span class="default">null</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="singlequote">&#39;</span><span class="singlequote">&#39;</span><span class="colon">:</span><span class="default"> </span><span class="default">null</span><span class="eol">
 </span><span class="dash">-</span><span class="default"> </span><span class="singlequote">&#39;</span><span class="singlequote">&#39;</span><span class="colon">:</span><span class="default"> </span><span class="default">null</span><span class="eol">
 </span></pre>
 </td>
@@ -7876,9 +8211,9 @@ Doc 2: null
 </span><span class="dash">-</span><span class="default"> </span><span class="default">a</span><span class="eol">
 </span><span class="dash">-</span><span class="default"> </span><span class="anchor">&amp;a</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="default">a</span><span class="eol">
 </span><span class="indent">  </span><span class="default">b</span><span class="colon">:</span><span class="default"> </span><span class="anchor">&amp;b</span><span class="eol">
-</span><span class="indent">  </span><span class="anchor">&amp;c</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="anchor">&amp;a</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="anchor">&amp;c</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="anchor">&amp;a</span><span class="eol">
 </span><span class="dash">-</span><span class="default"> </span><span class="anchor">&amp;d</span><span class="default"> </span><span class="colon">:</span><span class="eol">
-</span><span class="indent">  </span><span class="anchor">&amp;e</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="anchor">&amp;a</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="anchor">&amp;e</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="anchor">&amp;a</span><span class="eol">
 </span></pre>
 </td>
 </tr>
@@ -8065,6 +8400,32 @@ YAML      : &quot;: bar\n&quot;
 </td>
 </tr>
 <tr>
+<td colspan="6" valign="top" style="background-color: #dddddd"><b>QT73 - Comment and document-end marker
+</b></td></tr>
+<tr>
+<td style="max-width: 15em;" valign="top" >Tags:<br>comment, footer<br>
+<a href="https://github.com/yaml/yaml-test-suite/blob/master/test/QT73.tml">View source</a><br>
+</td>
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="eol"># comment
+</span><span class="doc_end">...</span><span class="eol">
+</span></pre>
+<pre></pre>
+
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+</tr>
+<tr>
 <td colspan="6" valign="top" style="background-color: #dddddd"><b>R4YG - Spec Example 8.2. Block Indentation Indicator
 </b></td></tr>
 <tr>
@@ -8129,6 +8490,54 @@ YAML      : &quot;: bar\n&quot;
 </span><span class="indent">  </span><span class="block_scalar_content"></span><span class="tab">	</span><span class="eol">
 </span><span class="eol">
 </span><span class="indent">  </span><span class="block_scalar_content">detected</span><span class="eol">
+</span></pre>
+</td>
+</tr>
+<tr>
+<td colspan="6" valign="top" style="background-color: #dddddd"><b>R52L - Nested flow mapping sequence and mappings
+</b></td></tr>
+<tr>
+<td style="max-width: 15em;" valign="top" >Tags:<br>flow, mapping, sequence<br>
+<a href="https://github.com/yaml/yaml-test-suite/blob/master/test/R52L.tml">View source</a><br>
+</td>
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="doc_start">---</span><span class="eol">
+</span><span class="flowmap_start">{</span><span class="default"> </span><span class="default">top1</span><span class="colon">:</span><span class="default"> </span><span class="flowseq_start">[</span><span class="default">item1</span><span class="flow_comma">,</span><span class="default"> </span><span class="flowmap_start">{</span><span class="default">key2</span><span class="colon">:</span><span class="default"> </span><span class="default">value2</span><span class="flowmap_end">}</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">item3</span><span class="flowseq_end">]</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">top2</span><span class="colon">:</span><span class="default"> </span><span class="default">value2</span><span class="default"> </span><span class="flowmap_end">}</span><span class="eol">
+</span></pre>
+<pre></pre>
+
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>$doc1 = { top1 =&gt; [&quot;item1&quot;, { key2 =&gt; &quot;value2&quot; }, &quot;item3&quot;], top2 =&gt; &quot;value2&quot; }</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>Doc 1: {
+   &quot;top1&quot; : [
+      &quot;item1&quot;,
+      {
+         &quot;key2&quot; : &quot;value2&quot;
+      },
+      &quot;item3&quot;
+   ],
+   &quot;top2&quot; : &quot;value2&quot;
+}
+</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="default">top1</span><span class="colon">:</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">item1</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">key2</span><span class="colon">:</span><span class="default"> </span><span class="default">value2</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">item3</span><span class="eol">
+</span><span class="default">top2</span><span class="colon">:</span><span class="default"> </span><span class="default">value2</span><span class="eol">
+</span></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="default">top1</span><span class="colon">:</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">item1</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">key2</span><span class="colon">:</span><span class="default"> </span><span class="default">value2</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">item3</span><span class="eol">
+</span><span class="default">top2</span><span class="colon">:</span><span class="default"> </span><span class="default">value2</span><span class="eol">
 </span></pre>
 </td>
 </tr>
@@ -10699,6 +11108,46 @@ YAML      : &quot;- a\n&quot;
 </td>
 </tr>
 <tr>
+<td colspan="6" valign="top" style="background-color: #dddddd"><b>62EZ - Invalid block mapping key on same line as previous key
+</b></td></tr>
+<tr>
+<td style="max-width: 15em;" valign="top" >Tags:<br>error, mapping<br>
+<a href="https://github.com/yaml/yaml-test-suite/blob/master/test/62EZ.tml">View source</a><br>
+</td>
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="doc_start">---</span><span class="eol">
+</span><span class="default">x</span><span class="colon">:</span><span class="default"> </span><span class="flowmap_start">{</span><span class="default"> </span><span class="default">y</span><span class="colon">:</span><span class="default"> </span><span class="default">z</span><span class="default"> </span><span class="flowmap_end">}</span><span class="default">in</span><span class="colon">:</span><span class="default"> </span><span class="default">valid</span><span class="eol">
+</span></pre>
+<pre></pre>
+
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>$doc1 = { in =&gt; &quot;valid&quot;, x =&gt; { y =&gt; &quot;z&quot; } }</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>Doc 1: {
+   &quot;in&quot; : &quot;valid&quot;,
+   &quot;x&quot; : {
+      &quot;y&quot; : &quot;z&quot;
+   }
+}
+</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="default">in</span><span class="colon">:</span><span class="default"> </span><span class="default">valid</span><span class="eol">
+</span><span class="default">x</span><span class="colon">:</span><span class="eol">
+</span><span class="indent">  </span><span class="default">y</span><span class="colon">:</span><span class="default"> </span><span class="default">z</span><span class="eol">
+</span></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="default">x</span><span class="colon">:</span><span class="eol">
+</span><span class="indent">  </span><span class="default">y</span><span class="colon">:</span><span class="default"> </span><span class="default">z</span><span class="eol">
+</span><span class="default">in</span><span class="colon">:</span><span class="default"> </span><span class="default">valid</span><span class="eol">
+</span></pre>
+</td>
+</tr>
+<tr>
 <td colspan="6" valign="top" style="background-color: #dddddd"><b>6JTT - Flow sequence without closing bracket
 </b></td></tr>
 <tr>
@@ -10914,6 +11363,38 @@ Expected  : COLON WS
 Got       : EOL
 Where     : YAML/PP/Parser.pm line 522
 YAML      : &quot;&quot;
+  at YAML/PP/Loader.pm line 59.
+</pre>
+
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+</tr>
+<tr>
+<td colspan="6" valign="top" style="background-color: #dddddd"><b>9JBA - Invalid comment after end of flow sequence
+</b></td></tr>
+<tr>
+<td style="max-width: 15em;" valign="top" >Tags:<br>comment, error, flow, sequence<br>
+<a href="https://github.com/yaml/yaml-test-suite/blob/master/test/9JBA.tml">View source</a><br>
+</td>
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="error"><span class="doc_start">---</span><span class="eol">
+</span><span class="flowseq_start">[</span><span class="default"> </span><span class="default">a</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">b</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">c</span><span class="flow_comma">,</span><span class="default"> </span><span class="flowseq_end">]</span><span class="error">#invalid
+</span></pre>
+<pre>Line      : 2
+Column    : 13
+Message   : Invalid plain scalar
+Where     : YAML/PP/Lexer.pm line 374
+YAML      : &quot;#invalid&quot;
   at YAML/PP/Loader.pm line 59.
 </pre>
 
@@ -11242,6 +11723,39 @@ Expected  : ALIAS FLOWMAP_START FLOWSEQ_START PLAIN PLAIN_MULTI QUOTED QUOTED_MU
 Got       : FLOW_COMMA
 Where     : YAML/PP/Parser.pm line 522
 YAML      : &quot;, ]&quot;
+  at YAML/PP/Loader.pm line 59.
+</pre>
+
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+</tr>
+<tr>
+<td colspan="6" valign="top" style="background-color: #dddddd"><b>CVW2 - Invalid comment after comma
+</b></td></tr>
+<tr>
+<td style="max-width: 15em;" valign="top" >Tags:<br>comment, error, flow, sequence<br>
+<a href="https://github.com/yaml/yaml-test-suite/blob/master/test/CVW2.tml">View source</a><br>
+</td>
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="error"><span class="doc_start">---</span><span class="eol">
+</span><span class="flowseq_start">[</span><span class="default"> </span><span class="default">a</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">b</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">c</span><span class="flow_comma">,</span><span class="error">#invalid
+]
+</span></pre>
+<pre>Line      : 2
+Column    : 11
+Message   : Invalid plain scalar
+Where     : YAML/PP/Lexer.pm line 374
+YAML      : &quot;#invalid&quot;
   at YAML/PP/Loader.pm line 59.
 </pre>
 
@@ -11825,6 +12339,44 @@ YAML      : &quot;%YAML1.2&quot;
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
 <pre></pre>
+</td>
+</tr>
+<tr>
+<td colspan="6" valign="top" style="background-color: #dddddd"><b>P2EQ - Invalid sequene item on same line as previous item
+</b></td></tr>
+<tr>
+<td style="max-width: 15em;" valign="top" >Tags:<br>error, sequence<br>
+<a href="https://github.com/yaml/yaml-test-suite/blob/master/test/P2EQ.tml">View source</a><br>
+</td>
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="flowmap_start">{</span><span class="default"> </span><span class="default">y</span><span class="colon">:</span><span class="default"> </span><span class="default">z</span><span class="default"> </span><span class="flowmap_end">}</span><span class="dash">-</span><span class="default"> </span><span class="default">invalid</span><span class="eol">
+</span></pre>
+<pre></pre>
+
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>$doc1 = [{ y =&gt; &quot;z&quot; }, &quot;invalid&quot;]</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre>Doc 1: [
+   {
+      &quot;y&quot; : &quot;z&quot;
+   },
+   &quot;invalid&quot;
+]
+</pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">y</span><span class="colon">:</span><span class="default"> </span><span class="default">z</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">invalid</span><span class="eol">
+</span></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">y</span><span class="colon">:</span><span class="default"> </span><span class="default">z</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">invalid</span><span class="eol">
+</span></pre>
 </td>
 </tr>
 <tr>
