@@ -45,7 +45,7 @@ for my $yaml (@yaml) {
     $display =~ s/\t/\\t/g;
     my $title = "Without final EOL: >>$display<<";
     eval {
-        $ypp->parse($yaml);
+        $ypp->parse_string($yaml);
     };
     if ($@) {
         diag "Error: $@";
