@@ -7,6 +7,11 @@ use B ();
 use Data::Dumper;
 use YAML::PP;
 
+my $inftest1 = 0 + "inf";
+my $inftest2 = 0 - "inf";
+my $nantest = 0 + "nan";
+diag("inf: $inftest1 -inf: $inftest2 nan: $nantest");
+
 my $failsafe = <<"EOM";
 # just strings
 ---

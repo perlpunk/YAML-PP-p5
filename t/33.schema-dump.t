@@ -8,6 +8,11 @@ use YAML::PP;
 my $boolean = eval "use boolean; 1";
 my $json_pp = eval "use JSON::PP; 1";
 
+my $inftest1 = 0 + "inf";
+my $inftest2 = 0 - "inf";
+my $nantest = 0 + "nan";
+diag("inf: $inftest1 -inf: $inftest2 nan: $nantest");
+
 my $data_common = [
     # quoted
     "",
