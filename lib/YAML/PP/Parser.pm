@@ -92,13 +92,13 @@ sub init {
 
 sub parse_string {
     my ($self, $yaml) = @_;
-    $self->reader->set_input( $yaml );
+    $self->set_reader(YAML::PP::Reader->new( input => $yaml ));
     $self->parse();
 }
 
 sub parse_file {
     my ($self, $file) = @_;
-    $self->reader->set_input( $file );
+    $self->set_reader(YAML::PP::Reader::File->new( input => $file ));
     $self->parse();
 }
 
