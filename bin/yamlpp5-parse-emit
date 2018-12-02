@@ -3,6 +3,7 @@ use strict;
 use warnings;
 
 use YAML::PP;
+use YAML::PP::Common;
 use YAML::PP::Parser;
 use YAML::PP::Emitter;
 use YAML::PP::Writer;
@@ -29,8 +30,8 @@ $yaml = decode_utf8($yaml);
 my @events;
 my $parser = YAML::PP::Parser->new(
     receiver => sub {
-        my ($self, @args) = @_;
-        push @events, [@args];
+        my ($self, undef, $event) = @_;
+        push @events, $event;
     },
 );
 eval {
@@ -44,13 +45,13 @@ my $writer = YAML::PP::Writer->new;
 my $emitter = YAML::PP::Emitter->new();
 $emitter->set_writer($writer);
 for my $event (@events) {
-    my ($type, $info) = @$event;
-    my $str = YAML::PP::Parser->event_to_test_suite($event);
+    my $type = $event->{name};
+    my $str = YAML::PP::Common::event_to_test_suite($event);
     print "$str\n" if $verbose;
     if ($type eq 'sequence_start_event' or $type eq 'mapping_end_event') {
-        delete $info->{style};
+        delete $event->{style};
     }
-    $emitter->$type($info);
+    $emitter->$type($event);
 }
 my $out_yaml = $emitter->writer->output;
 print encode_utf8 $out_yaml;

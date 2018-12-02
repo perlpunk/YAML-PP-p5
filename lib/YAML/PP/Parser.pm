@@ -8,6 +8,7 @@ our $VERSION = '0.000'; # VERSION
 use constant TRACE => $ENV{YAML_PP_TRACE} ? 1 : 0;
 use constant DEBUG => ($ENV{YAML_PP_DEBUG} || $ENV{YAML_PP_TRACE}) ? 1 : 0;
 
+use YAML::PP::Common;
 use YAML::PP::Render;
 use YAML::PP::Lexer;
 use YAML::PP::Grammar qw/ $GRAMMAR /;
@@ -433,20 +434,20 @@ my %event_to_method = (
 #            $properties = $info;
 #        }
 #        elsif ($type eq 'scalar') {
-#            $info->{event_name} = 'scalar_event';
+#            $info->{name} = 'scalar_event';
 #            $event_types->[-1] = $next_event{ $event_types->[-1] };
 #            push @send_events, $info;
 #        }
 #        elsif ($type eq 'begin') {
 #            my $name = $info->{name};
-#            $info->{event_name} = $event_to_method{ $name } . '_start_event';
+#            $info->{name} = $event_to_method{ $name } . '_start_event';
 #            push @{ $event_types }, $name;
 #            push @{ $self->offset }, $info->{offset};
 #            push @send_events, $info;
 #        }
 #        elsif ($type eq 'end') {
 #            my $name = $info->{name};
-#            $info->{event_name} = $event_to_method{ $name } . '_end_event';
+#            $info->{name} = $event_to_method{ $name } . '_end_event';
 #            $self->$type($name, $info);
 #            push @send_events, $info;
 #            if (@$event_types) {
@@ -457,15 +458,15 @@ my %event_to_method = (
 #            if ($properties) {
 #                $self->exception("Parse error: Alias not allowed in this context");
 #            }
-#            $info->{event_name} = 'alias_event';
+#            $info->{name} = 'alias_event';
 #            $event_types->[-1] = $next_event{ $event_types->[-1] };
 #            push @send_events, $info;
 #        }
 #    }
 #    @$event_stack = ();
 #    for my $info (@send_events) {
-#        DEBUG and $self->debug_event( $info->{event_name} => $info );
-#        $self->callback->($self, $info->{event_name}, $info);
+#        DEBUG and $self->debug_event( $info );
+#        $self->callback->($self, $info->{name}, $info);
 #    }
 #}
 
@@ -570,8 +571,8 @@ sub end_sequence {
     my $event_types = $self->events;
     pop @{ $event_types };
     pop @{ $self->offset };
-    my $info = { event_name => 'sequence_end_event' };
-    $self->callback->($self, $info->{event_name} => $info );
+    my $info = { name => 'sequence_end_event' };
+    $self->callback->($self, $info->{name} => $info );
     $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
 
@@ -590,10 +591,10 @@ sub remove_nodes {
             $exp = 'MAP';
         }
         my $info = { name => $exp };
-        $info->{event_name} = $event_to_method{ $exp } . '_end_event';
+        $info->{name} = $event_to_method{ $exp } . '_end_event';
         pop @{ $event_types };
         pop @{ $offset };
-        $self->callback->($self, $info->{event_name} => $info );
+        $self->callback->($self, $info->{name} => $info );
         $event_types->[-1] = $next_event{ $event_types->[-1] };
         $exp = $event_types->[-1];
     }
@@ -616,14 +617,19 @@ sub start_stream {
     my ($self) = @_;
     push @{ $self->events }, 'STR';
     push @{ $self->offset }, -1;
-    $self->callback->($self, 'stream_start_event', {});
+    $self->callback->($self, 'stream_start_event', {
+        name => 'stream_start_event',
+    });
 }
 
 sub start_document {
     my ($self, $implicit) = @_;
     push @{ $self->events }, 'DOC';
     push @{ $self->offset }, -1;
-    $self->callback->($self, 'document_start_event', { implicit => $implicit });
+    $self->callback->($self, 'document_start_event', {
+        name => 'document_start_event',
+        implicit => $implicit,
+    });
 }
 
 sub start_sequence {
@@ -637,7 +643,7 @@ sub start_sequence {
     }
     push @{ $offsets }, $offset;
     my $event_stack = $self->event_stack;
-    my $info = {};
+    my $info = { name => 'sequence_start_event' };
     if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
         my $properties = pop @$event_stack;
         $self->node_properties($properties->[1], $info);
@@ -660,7 +666,7 @@ sub start_flow_sequence {
     push @{ $offsets }, $new_offset;
 
     my $event_stack = $self->event_stack;
-    my $info = { style => 'flow' };
+    my $info = { style => 'flow', name => 'sequence_start_event'  };
     if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
         $self->fetch_inline_properties($event_stack, $info);
     }
@@ -682,7 +688,7 @@ sub start_flow_mapping {
     push @{ $offsets }, $new_offset;
 
     my $event_stack = $self->event_stack;
-    my $info = { style => 'flow' };
+    my $info = { name => 'mapping_start_event', style => 'flow' };
     if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
         $self->fetch_inline_properties($event_stack, $info);
     }
@@ -694,8 +700,8 @@ sub end_flow_sequence {
     my $event_types = $self->events;
     pop @{ $event_types };
     pop @{ $self->offset };
-    my $info = { event_name => 'sequence_end_event' };
-    $self->callback->($self, $info->{event_name}, $info);
+    my $info = { name => 'sequence_end_event' };
+    $self->callback->($self, $info->{name}, $info);
     $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
 
@@ -704,8 +710,8 @@ sub end_flow_mapping {
     my $event_types = $self->events;
     pop @{ $event_types };
     pop @{ $self->offset };
-    my $info = { event_name => 'mapping_end_event' };
-    $self->callback->($self, $info->{event_name}, $info);
+    my $info = { name => 'mapping_end_event' };
+    $self->callback->($self, $info->{name}, $info);
     $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
 
@@ -715,7 +721,7 @@ sub start_mapping {
     push @{ $self->events }, 'MAP';
     push @{ $offsets }, $offset;
     my $event_stack = $self->event_stack;
-    my $info = {};
+    my $info = { name => 'mapping_start_event' };
     if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
         my $properties = pop @$event_stack;
         $self->node_properties($properties->[1], $info);
@@ -729,7 +735,10 @@ sub end_doc {
     $self->exception("Unexpected event type $last") unless $last eq 'DOC';
     pop @{ $self->offset };
     $self->set_tagmap({ '!!' => "tag:yaml.org,2002:" });
-    $self->callback->($self, 'document_end_event', { implicit => $implicit });
+    $self->callback->($self, 'document_end_event', {
+        name => 'document_end_event',
+        implicit => $implicit,
+    });
 }
 
 sub end_stream {
@@ -737,7 +746,9 @@ sub end_stream {
     my $last = pop @{ $self->events };
     $self->exception("Unexpected event type $last") unless $last eq 'STR';
     pop @{ $self->offset };
-    $self->callback->($self, 'stream_end_event', { });
+    $self->callback->($self, 'stream_end_event', {
+        name => 'stream_end_event',
+    });
 }
 
 sub fetch_inline_properties {
@@ -790,6 +801,7 @@ sub scalar_event {
         $properties = $self->node_properties($properties->[1], $info);
     }
 
+    $info->{name} = 'scalar_event';
     $self->callback->($self, 'scalar_event', $info);
     if ($event_types->[-1] =~ m/^FLOW/) {
     }
@@ -806,6 +818,7 @@ sub alias_event {
         $self->exception("Parse error: Alias not allowed in this context");
     }
     my $event_types = $self->events;
+    $info->{name} = 'alias_event';
     $self->callback->($self, 'alias_event', $info);
     if ($event_types->[-1] =~ m/^FLOW/) {
     }
@@ -854,78 +867,10 @@ sub _remaining_tokens {
 
 sub event_to_test_suite {
     my ($self, $event) = @_;
-    if (ref $event) {
-        my ($ev, $info) = @$event;
-        if ($event_to_method{ $ev }) {
-            $ev = $event_to_method{ $ev } . "_event";
-        }
-        my $string;
-        my $content = $info->{value};
-
-        my $properties = '';
-        $properties .= " &$info->{anchor}" if defined $info->{anchor};
-        $properties .= " <$info->{tag}>" if defined $info->{tag};
-
-        if ($ev eq 'document_start_event') {
-            $string = "+DOC";
-            $string .= " ---" unless $info->{implicit};
-        }
-        elsif ($ev eq 'document_end_event') {
-            $string = "-DOC";
-            $string .= " ..." unless $info->{implicit};
-        }
-        elsif ($ev eq 'stream_start_event') {
-            $string = "+STR";
-        }
-        elsif ($ev eq 'stream_end_event') {
-            $string = "-STR";
-        }
-        elsif ($ev eq 'mapping_start_event') {
-            $string = "+MAP";
-            $string .= $properties;
-            if (0) {
-                # doesn't match yaml-test-suite format
-                if ($info->{style} and $info->{style} eq 'flow') {
-                    $string .= " {}";
-                }
-            }
-        }
-        elsif ($ev eq 'sequence_start_event') {
-            $string = "+SEQ";
-            $string .= $properties;
-            if (0) {
-                # doesn't match yaml-test-suite format
-                if ($info->{style} and $info->{style} eq 'flow') {
-                    $string .= " []";
-                }
-            }
-        }
-        elsif ($ev eq 'mapping_end_event') {
-            $string = "-MAP";
-        }
-        elsif ($ev eq 'sequence_end_event') {
-            $string = "-SEQ";
-        }
-        elsif ($ev eq 'scalar_event') {
-            $string = '=VAL';
-            $string .= $properties;
-            if (defined $content) {
-                $content =~ s/\\/\\\\/g;
-                $content =~ s/\t/\\t/g;
-                $content =~ s/\r/\\r/g;
-                $content =~ s/\n/\\n/g;
-                $content =~ s/[\b]/\\b/g;
-            }
-            else {
-                $content = '';
-            }
-            $string .= ' ' . $info->{style} . $content;
-        }
-        elsif ($ev eq 'alias_event') {
-            $string = "=ALI *$content";
-        }
-        return $string;
+    if (ref $event eq 'ARRAY') {
+        return YAML::PP::Common::event_to_test_suite($event->[1]);
     }
+    return YAML::PP::Common::event_to_test_suite($event);
 }
 
 sub debug_events {
@@ -987,8 +932,8 @@ sub _colorize_warn {
 }
 
 sub debug_event {
-    my ($self, $event, $info) = @_;
-    my $str = $self->event_to_test_suite([$event, $info]);
+    my ($self, $event) = @_;
+    my $str = YAML::PP::Common::event_to_test_suite($event);
     require Term::ANSIColor;
     warn Term::ANSIColor::colored(["magenta"], "============ $str"), "\n";
 }

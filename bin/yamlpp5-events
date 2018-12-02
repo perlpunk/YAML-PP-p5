@@ -4,13 +4,14 @@ use warnings;
 
 use Encode;
 use YAML::PP::Parser;
+use YAML::PP::Common;
 
 my ($file) = @ARGV;
 
 my $parser = YAML::PP::Parser->new(
     receiver => sub {
-      my ($self, @args) = @_;
-      print encode_utf8(YAML::PP::Parser->event_to_test_suite(\@args)), "\n";
+      my ($self, undef, $event) = @_;
+      print encode_utf8(YAML::PP::Common::event_to_test_suite($event)), "\n";
     },
     $file ? (reader => YAML::PP::Reader::File->new) : (),
 );
