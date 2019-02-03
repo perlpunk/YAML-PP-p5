@@ -8,7 +8,12 @@ our $VERSION = '0.000'; # VERSION
 use constant TRACE => $ENV{YAML_PP_TRACE} ? 1 : 0;
 use constant DEBUG => ($ENV{YAML_PP_DEBUG} || $ENV{YAML_PP_TRACE}) ? 1 : 0;
 
-use YAML::PP::Common;
+use YAML::PP::Common qw/
+    YAML_PLAIN_SCALAR_STYLE YAML_SINGLE_QUOTED_SCALAR_STYLE
+    YAML_DOUBLE_QUOTED_SCALAR_STYLE
+    YAML_LITERAL_SCALAR_STYLE YAML_FOLDED_SCALAR_STYLE
+    YAML_FLOW_SEQUENCE_STYLE YAML_FLOW_MAPPING_STYLE
+/;
 use YAML::PP::Render;
 use YAML::PP::Lexer;
 use YAML::PP::Grammar qw/ $GRAMMAR /;
@@ -356,7 +361,7 @@ sub check_indent {
             return;
         }
         else {
-            $self->scalar_event({ style => ':', value => undef });
+            $self->scalar_event({ style => YAML_PLAIN_SCALAR_STYLE, value => undef });
         }
     }
 
@@ -383,7 +388,7 @@ sub end_document {
         die "Unexpected end of flow context";
     }
     if ($self->new_node) {
-        $self->scalar_event({ style => ':', value => undef });
+        $self->scalar_event({ style => YAML_PLAIN_SCALAR_STYLE, value => undef });
     }
     $self->remove_nodes(-1);
 }
@@ -587,7 +592,7 @@ sub remove_nodes {
             last;
         }
         if ($exp eq 'MAPVALUE') {
-            $self->scalar_event({ style => ':', value => undef });
+            $self->scalar_event({ style => YAML_PLAIN_SCALAR_STYLE, value => undef });
             $exp = 'MAP';
         }
         my $info = { name => $exp };
@@ -666,7 +671,7 @@ sub start_flow_sequence {
     push @{ $offsets }, $new_offset;
 
     my $event_stack = $self->event_stack;
-    my $info = { style => 'flow', name => 'sequence_start_event'  };
+    my $info = { style => YAML_FLOW_SEQUENCE_STYLE, name => 'sequence_start_event'  };
     if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
         $self->fetch_inline_properties($event_stack, $info);
     }
@@ -688,7 +693,7 @@ sub start_flow_mapping {
     push @{ $offsets }, $new_offset;
 
     my $event_stack = $self->event_stack;
-    my $info = { name => 'mapping_start_event', style => 'flow' };
+    my $info = { name => 'mapping_start_event', style => YAML_FLOW_MAPPING_STYLE };
     if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
         $self->fetch_inline_properties($event_stack, $info);
     }
@@ -1081,7 +1086,7 @@ sub cb_mapkey {
     my ($self, $token) = @_;
     my $stack = $self->event_stack;
     my $info = {
-        style => ':',
+        style => YAML_PLAIN_SCALAR_STYLE,
         value => $token->{value},
         offset => $token->{column},
     };
@@ -1109,7 +1114,7 @@ sub cb_empty_mapkey {
     my ($self, $token) = @_;
     my $stack = $self->event_stack;
     my $info = {
-        style => ':',
+        style => YAML_PLAIN_SCALAR_STYLE,
         value => undef,
         offset => $token->{column},
     };
@@ -1160,7 +1165,7 @@ sub cb_flow_question {
 
 sub cb_empty_complexvalue {
     my ($self, $res) = @_;
-    $self->scalar_event({ style => ':', value => undef });
+    $self->scalar_event({ style => YAML_PLAIN_SCALAR_STYLE, value => undef });
 }
 
 sub cb_questionstart {
@@ -1190,7 +1195,9 @@ sub cb_take_quoted {
     my $subtokens = $token->{subtokens};
     my $stack = $self->event_stack;
     my $info = {
-        style => $subtokens->[0]->{value},
+        style => $subtokens->[0]->{value} eq '"'
+            ? YAML_DOUBLE_QUOTED_SCALAR_STYLE
+            : YAML_SINGLE_QUOTED_SCALAR_STYLE,
         value => $token->{value},
         offset => $token->{column},
     };
@@ -1205,7 +1212,9 @@ sub cb_quoted_multiline {
     my $subtokens = $token->{subtokens};
     my $stack = $self->event_stack;
     my $info = {
-        style => $subtokens->[0]->{value},
+        style => $subtokens->[0]->{value} eq '"'
+            ? YAML_DOUBLE_QUOTED_SCALAR_STYLE
+            : YAML_SINGLE_QUOTED_SCALAR_STYLE,
         value => $token->{value},
         offset => $token->{column},
     };
@@ -1226,7 +1235,7 @@ sub cb_send_plain_multi {
     my ($self, $token) = @_;
     my $stack = $self->event_stack;
     my $info = {
-        style => ':',
+        style => YAML_PLAIN_SCALAR_STYLE,
         value => $token->{value},
         offset => $token->{column},
     };
@@ -1241,7 +1250,7 @@ sub cb_start_plain {
     my ($self, $token) = @_;
     my $stack = $self->event_stack;
     my $info = {
-            style => ':',
+            style => YAML_PLAIN_SCALAR_STYLE,
             value => $token->{value},
             offset => $token->{column},
     };
@@ -1285,7 +1294,7 @@ sub cb_empty_flow_mapkey {
     my ($self, $token) = @_;
     my $stack = $self->event_stack;
     my $info = {
-        style => ':',
+        style => YAML_PLAIN_SCALAR_STYLE,
         value => undef,
         offset => $token->{column},
     };
@@ -1313,7 +1322,7 @@ sub cb_flow_plain {
     my ($self, $token) = @_;
     my $stack = $self->event_stack;
     my $info = {
-        style => ':',
+        style => YAML_PLAIN_SCALAR_STYLE,
         value => $token->{value},
         offset => $token->{column},
     };
@@ -1327,7 +1336,7 @@ sub cb_flowkey_plain {
     my ($self, $token) = @_;
     my $stack = $self->event_stack;
     my $info = {
-        style => ':',
+        style => YAML_PLAIN_SCALAR_STYLE,
         value => $token->{value},
         offset => $token->{column},
     };
@@ -1343,7 +1352,9 @@ sub cb_flowkey_quoted {
     my $stack = $self->event_stack;
     my $subtokens = $token->{subtokens};
     my $info = {
-        style => $subtokens->[0]->{value},
+        style => $subtokens->[0]->{value} eq '"'
+            ? YAML_DOUBLE_QUOTED_SCALAR_STYLE
+            : YAML_SINGLE_QUOTED_SCALAR_STYLE,
         value => $token->{value},
         offset => $token->{column},
     };
@@ -1358,7 +1369,7 @@ sub cb_empty_flowmap_value {
     my ($self, $token) = @_;
     my $stack = $self->event_stack;
     my $info = {
-        style => ':',
+        style => YAML_PLAIN_SCALAR_STYLE,
         value => undef,
         offset => $token->{column},
     };
@@ -1392,7 +1403,7 @@ sub cb_insert_empty_map {
     my ($self, $token) = @_;
     my $stack = $self->event_stack;
     my $info = {
-        style => ':',
+        style => YAML_PLAIN_SCALAR_STYLE,
         value => undef,
         offset => $token->{column},
     };
@@ -1409,7 +1420,9 @@ sub cb_send_block_scalar {
     my $type = $token->{subtokens}->[0]->{value};
     my $stack = $self->event_stack;
     my $info = {
-        style => $type,
+        style => $type eq '|'
+            ? YAML_LITERAL_SCALAR_STYLE
+            : YAML_FOLDED_SCALAR_STYLE,
         value => $token->{value},
         offset => $token->{column},
     };

@@ -149,6 +149,9 @@ sub DumpFile {
 
 package YAML::PP::Schema;
 
+use YAML::PP::Common qw/ YAML_PLAIN_SCALAR_STYLE /;
+
+
 sub new {
     my ($class, %args) = @_;
 
@@ -290,7 +293,7 @@ sub load_scalar_tag {
 
 sub load_scalar {
     my ($self, $style, $value) = @_;
-    if ($style ne ':') {
+    if ($style ne YAML_PLAIN_SCALAR_STYLE) {
         return $value;
     }
     my $resolvers = $self->resolvers;

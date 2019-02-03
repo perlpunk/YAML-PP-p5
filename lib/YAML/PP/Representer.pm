@@ -6,6 +6,13 @@ our $VERSION = '0.000'; # VERSION
 
 use YAML::PP::Emitter;
 use YAML::PP::Writer;
+use YAML::PP::Common qw/
+    YAML_PLAIN_SCALAR_STYLE YAML_SINGLE_QUOTED_SCALAR_STYLE
+    YAML_DOUBLE_QUOTED_SCALAR_STYLE YAML_QUOTED_SCALAR_STYLE
+    YAML_LITERAL_SCALAR_STYLE YAML_FOLDED_SCALAR_STYLE
+    YAML_FLOW_SEQUENCE_STYLE YAML_FLOW_MAPPING_STYLE
+    YAML_BLOCK_MAPPING_STYLE YAML_BLOCK_SEQUENCE_STYLE
+/;
 use B;
 
 sub new {
@@ -94,7 +101,7 @@ sub dump_node {
         }
     }
     if (ref $node eq 'HASH') {
-        my $style = 'block';
+        my $style = YAML_BLOCK_MAPPING_STYLE;
         $self->emitter->mapping_start_event({ anchor => $anchor, style => $style });
         for my $key (sort keys %$node) {
             $self->dump_node($key);
@@ -103,7 +110,7 @@ sub dump_node {
         $self->emitter->mapping_end_event;
     }
     elsif (ref $node eq 'ARRAY') {
-        my $style = 'block';
+        my $style = YAML_BLOCK_SEQUENCE_STYLE;
         $self->emitter->sequence_start_event({ anchor => $anchor, style => $style });
         for my $elem (@$node) {
             $self->dump_node($elem);
@@ -115,7 +122,7 @@ sub dump_node {
         if (ref $node eq 'JSON::PP::Boolean' or ref $node eq 'boolean') {
             $self->emitter->scalar_event({
                 value => $node ? 'true' : 'false',
-                style => ':',
+                style => YAML_PLAIN_SCALAR_STYLE,
                 anchor => $anchor,
             });
         }
@@ -168,10 +175,10 @@ sub dump_node {
         }
         $result ||= { any => $node };
         if (exists $result->{plain}) {
-            $self->emitter->scalar_event({ value => $result->{plain}, style => ":" });
+            $self->emitter->scalar_event({ value => $result->{plain}, style => YAML_PLAIN_SCALAR_STYLE });
         }
         elsif (exists $result->{quoted}) {
-            $self->emitter->scalar_event({ value => $result->{quoted}, style => "'" });
+            $self->emitter->scalar_event({ value => $result->{quoted}, style => YAML_QUOTED_SCALAR_STYLE });
         }
         elsif (exists $result->{any}) {
             $self->emitter->scalar_event({ value => $result->{any}, style => "" });

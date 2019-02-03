@@ -4,6 +4,13 @@ package YAML::PP::Emitter;
 
 our $VERSION = '0.000'; # VERSION
 
+use YAML::PP::Common qw/
+    YAML_PLAIN_SCALAR_STYLE YAML_SINGLE_QUOTED_SCALAR_STYLE
+    YAML_DOUBLE_QUOTED_SCALAR_STYLE YAML_QUOTED_SCALAR_STYLE
+    YAML_LITERAL_SCALAR_STYLE YAML_FOLDED_SCALAR_STYLE
+    YAML_FLOW_SEQUENCE_STYLE YAML_FLOW_MAPPING_STYLE
+/;
+
 use constant DEBUG => $ENV{YAML_PP_EMIT_DEBUG} ? 1 : 0;
 
 sub new {
@@ -96,7 +103,7 @@ sub mapping_start_event {
     }
     $self->writer->write($yaml);
     my $new_info = { index => 0, indent => $new_indent, info => $info, append => $new_append };
-    if (($info->{style} || '') eq 'flow') {
+    if (($info->{style} || '') eq YAML_FLOW_MAPPING_STYLE) {
 #        $new_info->{type} = 'FLOWMAP';
         $new_info->{type} = 'MAP';
     }
@@ -197,7 +204,7 @@ sub sequence_start_event {
     $last->{index}++;
     $last->{append} = 0;
     my $new_info = { index => 0, indent => $new_indent, info => $info, append => $new_append };
-    if (($info->{style} || '') eq 'flow') {
+    if (($info->{style} || '') eq YAML_FLOW_SEQUENCE_STYLE) {
         $new_info->{type} = 'FLOWSEQ';
     }
     else {
@@ -310,62 +317,65 @@ sub scalar_event {
     DEBUG and local $Data::Dumper::Useqq = 1;
     $value = '' unless defined $value;
     if (not $style and $value eq '') {
-        $style = "'";
+        $style = YAML_SINGLE_QUOTED_SCALAR_STYLE;
     }
-    $style ||= ':';
+    $style ||= YAML_PLAIN_SCALAR_STYLE;
+    if ($style eq YAML_QUOTED_SCALAR_STYLE) {
+        $style = YAML_SINGLE_QUOTED_SCALAR_STYLE;
+    }
 
     my $first = substr($value, 0, 1);
     # no control characters anywhere
-    if ($style ne '"' and $value =~ m/[$control_re]/) {
-        $style = '"';
+    if ($style ne YAML_DOUBLE_QUOTED_SCALAR_STYLE and $value =~ m/[$control_re]/) {
+        $style = YAML_DOUBLE_QUOTED_SCALAR_STYLE;
     }
-    elsif ($style eq "'") {
+    elsif ($style eq YAML_SINGLE_QUOTED_SCALAR_STYLE) {
         if ($value =~ m/ \n/ or $value =~ m/\n / or $value =~ m/^\n/ or $value =~ m/\n$/) {
-            $style = '"';
+            $style = YAML_DOUBLE_QUOTED_SCALAR_STYLE;
         }
         elsif ($value eq "\n") {
-            $style = '"';
+            $style = YAML_DOUBLE_QUOTED_SCALAR_STYLE;
         }
     }
-    elsif ($style eq '|' or $style eq '>') {
+    elsif ($style eq YAML_LITERAL_SCALAR_STYLE or $style eq YAML_FOLDED_SCALAR_STYLE) {
     }
-    elsif ($style eq ':') {
+    elsif ($style eq YAML_PLAIN_SCALAR_STYLE) {
         if ($value =~ m/[$escape_re_without_lb]/) {
-            $style = '"';
+            $style = YAML_DOUBLE_QUOTED_SCALAR_STYLE;
         }
         elsif ($value eq "\n") {
-            $style = '"';
+            $style = YAML_DOUBLE_QUOTED_SCALAR_STYLE;
         }
         elsif ($value =~ m/\n/) {
-            $style = '|';
+            $style = YAML_LITERAL_SCALAR_STYLE;
         }
         elsif ($forbidden_first{ $first }) {
-            $style = "'";
+            $style = YAML_SINGLE_QUOTED_SCALAR_STYLE;
         }
         elsif (substr($value, 0, 2) =~ m/^([:?-] )/) {
-            $style = "'";
+            $style = YAML_SINGLE_QUOTED_SCALAR_STYLE;
         }
         elsif ($value =~ m/: /) {
-            $style = "'";
+            $style = YAML_SINGLE_QUOTED_SCALAR_STYLE;
         }
         elsif ($value =~ m/ #/) {
-            $style = "'";
+            $style = YAML_SINGLE_QUOTED_SCALAR_STYLE;
         }
         elsif ($value =~ m/[: \t]\z/) {
-            $style = "'";
+            $style = YAML_SINGLE_QUOTED_SCALAR_STYLE;
         }
         else {
-            $style = ':';
+            $style = YAML_PLAIN_SCALAR_STYLE;
         }
     }
 
-    if (($style eq '|' or $style eq '>') and $value eq '') {
-        $style = '"';
+    if (($style eq YAML_LITERAL_SCALAR_STYLE or $style eq YAML_FOLDED_SCALAR_STYLE) and $value eq '') {
+        $style = YAML_DOUBLE_QUOTED_SCALAR_STYLE;
     }
-    if ($style eq ":") {
+    if ($style eq YAML_PLAIN_SCALAR_STYLE) {
         $value =~ s/\n/\n\n/g;
     }
-    elsif ($style eq "'") {
+    elsif ($style eq YAML_SINGLE_QUOTED_SCALAR_STYLE) {
         my $new_indent = $last->{indent} . (' ' x $self->indent);
         $value =~ s/(\n+)/"\n" x (1 + (length $1))/eg;
         my @lines = split m/\n/, $value, -1;
@@ -379,7 +389,7 @@ sub scalar_event {
         $value =~ s/'/''/g;
         $value = "'" . $value . "'";
     }
-    elsif ($style eq '|') {
+    elsif ($style eq YAML_LITERAL_SCALAR_STYLE) {
         DEBUG and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$value], ['value']);
         my $indicators = '';
         if ($value =~ m/\A\n* +/) {
@@ -395,7 +405,7 @@ sub scalar_event {
         $value =~ s/^(?=.)/$indent  /gm;
         $value = "|$indicators\n$value";
     }
-    elsif ($style eq '>') {
+    elsif ($style eq YAML_FOLDED_SCALAR_STYLE) {
         DEBUG and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$value], ['value']);
         my @lines = split /\n/, $value, -1;
         DEBUG and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@lines], ['lines']);
@@ -436,7 +446,7 @@ sub scalar_event {
     elsif (length $value) {
         $pvalue .= $value;
     }
-    my $multiline = ($style eq '|' or $style eq '>');
+    my $multiline = ($style eq YAML_LITERAL_SCALAR_STYLE or $style eq YAML_FOLDED_SCALAR_STYLE);
     if ($last->{type} eq 'MAP') {
 
         if ($props and not length $value) {
