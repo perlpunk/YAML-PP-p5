@@ -4,11 +4,14 @@ package YAML::PP::Representer;
 
 our $VERSION = '0.000'; # VERSION
 
+use Scalar::Util qw/ reftype blessed/;
+
 use YAML::PP::Emitter;
 use YAML::PP::Writer;
 use YAML::PP::Common qw/
     YAML_PLAIN_SCALAR_STYLE YAML_SINGLE_QUOTED_SCALAR_STYLE
     YAML_DOUBLE_QUOTED_SCALAR_STYLE YAML_QUOTED_SCALAR_STYLE
+    YAML_ANY_SCALAR_STYLE
     YAML_LITERAL_SCALAR_STYLE YAML_FOLDED_SCALAR_STYLE
     YAML_FLOW_SEQUENCE_STYLE YAML_FLOW_MAPPING_STYLE
     YAML_BLOCK_MAPPING_STYLE YAML_BLOCK_SEQUENCE_STYLE
@@ -78,19 +81,19 @@ sub dump_document {
 }
 
 sub dump_node {
-    my ($self, $node) = @_;
+    my ($self, $value) = @_;
 
     my $schema = $self->schema;
     my $representers = $schema->representers;
     my $seen = $self->{seen};
     my $anchor;
-    if (ref $node) {
+    if (ref $value) {
 
-        if ($seen->{ $node } > 1) {
-            $anchor = $self->{refs}->{ $node };
+        if ($seen->{ $value } > 1) {
+            $anchor = $self->{refs}->{ $value };
             unless (defined $anchor) {
                 my $num = ++$self->{anchor_num};
-                $self->{refs}->{ $node } = $num;
+                $self->{refs}->{ $value } = $num;
                 $anchor = $num;
             }
             else {
@@ -100,92 +103,159 @@ sub dump_node {
 
         }
     }
-    if (ref $node eq 'HASH') {
-        my $style = YAML_BLOCK_MAPPING_STYLE;
-        $self->emitter->mapping_start_event({ anchor => $anchor, style => $style });
-        for my $key (sort keys %$node) {
-            $self->dump_node($key);
-            $self->dump_node($node->{ $key });
-        }
-        $self->emitter->mapping_end_event;
-    }
-    elsif (ref $node eq 'ARRAY') {
-        my $style = YAML_BLOCK_SEQUENCE_STYLE;
-        $self->emitter->sequence_start_event({ anchor => $anchor, style => $style });
-        for my $elem (@$node) {
-            $self->dump_node($elem);
-        }
-        $self->emitter->sequence_end_event;
-    }
-    elsif (ref $node) {
-        # TODO check configuration for boolean type
-        if (ref $node eq 'JSON::PP::Boolean' or ref $node eq 'boolean') {
-            $self->emitter->scalar_event({
-                value => $node ? 'true' : 'false',
-                style => YAML_PLAIN_SCALAR_STYLE,
-                anchor => $anchor,
-            });
-        }
-        else {
-            die "Not implemented";
-        }
-    }
-    else {
-        my $result;
-        if (not defined $node) {
+
+    my $node = {
+        value => $value,
+        reftype => reftype($value),
+        items => undef,
+        tag => undef,
+        data => undef,
+        style => undef,
+    };
+
+    my $done = 0;
+    if (not ref $value) {
+        if (not defined $value) {
             if (my $undef = $representers->{undef}) {
-                $result = $undef->($self, $node);
+                $done = $undef->($self, $node);
             }
             else {
-                $result = { plain => "" };
+                $done = 1;
+                $node->{style} = YAML_QUOTED_SCALAR_STYLE;
+                $node->{data} = '';
             }
         }
-        if (not $result and my $flag_rep = $representers->{flags}) {
+        if (not $done and my $flag_rep = $representers->{flags}) {
             for my $rep (@$flag_rep) {
                 my $check_flags = $rep->{flags};
-                my $flags = B::svref_2object(\$node)->FLAGS;
+                my $flags = B::svref_2object(\$node->{value})->FLAGS;
                 if ($flags & $check_flags) {
                     my $res = $rep->{code}->($self, $node);
-                    if (not $res->{skip}) {
-                        $result = $res;
+                    if ($res) {
+                        $done = 1;
                         last;
                     }
                 }
 
             }
         }
-        if (not $result and my $equals = $representers->{equals}) {
-            if (my $rep = $equals->{ $node }) {
+        if (not $done and my $equals = $representers->{equals}) {
+            if (my $rep = $equals->{ $node->{value} }) {
                 my $res = $rep->{code}->($self, $node);
-                if (not $res->{skip}) {
-                    $result = $res;
+                if ($res) {
+                    $done = $res;
                 }
             }
         }
-        if (not $result and my $regex = $representers->{regex}) {
+        if (not $done and my $regex = $representers->{regex}) {
             for my $rep (@$regex) {
-                if ($node =~ $rep->{regex}) {
+                if ($node->{value} =~ $rep->{regex}) {
                     my $res = $rep->{code}->($self, $node);
-                    if (not $res->{skip}) {
-                        $result = $res;
+                    if ($res) {
+                        $done = $res;
                         last;
                     }
                 }
             }
         }
-        $result ||= { any => $node };
-        if (exists $result->{plain}) {
-            $self->emitter->scalar_event({ value => $result->{plain}, style => YAML_PLAIN_SCALAR_STYLE });
+        unless (defined $node->{data}) {
+            $node->{data} = $node->{value};
         }
-        elsif (exists $result->{quoted}) {
-            $self->emitter->scalar_event({ value => $result->{quoted}, style => YAML_QUOTED_SCALAR_STYLE });
+        unless (defined $node->{style}) {
+            $node->{style} = YAML_ANY_SCALAR_STYLE;
+            $node->{style} = "";
         }
-        elsif (exists $result->{any}) {
-            $self->emitter->scalar_event({ value => $result->{any}, style => "" });
+        $node->{reftype} = reftype $node->{data};
+        $node->{reftype} = '' unless defined $node->{reftype};
+    }
+    else {
+    if (my $classname = blessed($node->{value})) {
+        if (my $class_equals = $representers->{class_equals}) {
+            if (my $def = $class_equals->{ $classname }) {
+                my $code = $def->{code};
+                my $type = $code->($self, $node);
+                $done = 1 if $type;
+            }
         }
-        else {
-            die "Unexpected";
+        if (not $done and my $class_matches = $representers->{class_matches}) {
+            for my $matches (@$class_matches) {
+                my ($re, $code) = @$matches;
+                if (ref $re and $classname =~ $re or $re) {
+                    my $type = $code->($self, $node);
+                    $done = 1 if $type;
+                    last if $type;
+                }
+            }
         }
+    }
+    if (not $done and $node->{reftype} eq 'SCALAR' and my $scalarref = $representers->{scalarref}) {
+        my $code = $scalarref->{code};
+        my $type = $code->($self, $node);
+        $done = 1 if $type;
+    }
+    unless ($done) {
+        $node->{data} = $node->{value};
+    }
+    $node->{reftype} = reftype $node->{data};
+    $node->{reftype} = '' unless defined $node->{reftype};
+
+    if ($node->{reftype} eq 'HASH' and my $tied = tied(%{ $node->{data} })) {
+        $tied = ref $tied;
+        if (my $tied_equals = $representers->{tied_equals}) {
+            if (my $def = $tied_equals->{ $tied }) {
+                my $code = $def->{code};
+                my $type = $code->($self, $node);
+            }
+        }
+    }
+    }
+
+
+    if ($node->{reftype} eq 'HASH') {
+        unless (defined $node->{items}) {
+            # by default we sort hash keys
+            for my $key (sort keys %{ $node->{data} }) {
+                push @{ $node->{items} }, $key, $node->{data}->{ $key };
+            }
+        }
+        my $style = YAML_BLOCK_MAPPING_STYLE;
+        $self->emitter->mapping_start_event({
+            anchor => $anchor,
+            style => $style,
+            tag => $node->{tag},
+        });
+        $self->dump_node($_) for @{ $node->{items} };
+        $self->emitter->mapping_end_event;
+    }
+    elsif ($node->{reftype} eq 'ARRAY') {
+        unless (defined $node->{items}) {
+            @{ $node->{items} } = @{ $node->{data} };
+        }
+        my $style = YAML_BLOCK_SEQUENCE_STYLE;
+        $self->emitter->sequence_start_event({
+            anchor => $anchor,
+            style => $style,
+            tag => $node->{tag},
+        });
+        $self->dump_node($_) for @{ $node->{items} };
+        $self->emitter->sequence_end_event;
+    }
+    elsif ($node->{reftype}) {
+        require Data::Dumper;
+        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$node->{reftype}], ['reftype']);
+        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$node->{data}], ['data']);
+        die "Not implemented";
+    }
+    else {
+        unless (defined $node->{items}) {
+            $node->{items} = [$node->{data}];
+        }
+        $self->emitter->scalar_event({
+            value => $node->{items}->[0],
+            style => $node->{style},
+            anchor => $anchor,
+            tag => $node->{tag},
+        });
     }
 }
 
@@ -199,17 +269,25 @@ sub check_references {
             return;
         }
         if (ref $doc eq 'HASH') {
-            for my $key (keys %$doc) {
-                $self->check_references($doc->{ $key });
-            }
+            $self->check_references($doc->{ $_ }) for keys %$doc;
         }
         elsif (ref $doc eq 'ARRAY') {
-            for my $elem (@$doc) {
-                $self->check_references($elem);
-            }
+            $self->check_references($_) for @$doc;
         }
         elsif (ref $doc) {
             if (ref $doc eq 'JSON::PP::Boolean' or ref $doc eq 'boolean') {
+            }
+            elsif (reftype($doc) eq 'HASH') {
+                $self->check_references($doc->{ $_ }) for keys %$doc;
+            }
+            elsif (reftype($doc) eq 'ARRAY') {
+                $self->check_references($_) for @$doc;
+            }
+            elsif (reftype($doc) eq 'Regexp') {
+            }
+            elsif (reftype($doc) eq 'REGEXP') {
+            }
+            elsif (reftype($doc) eq 'SCALAR') {
             }
             else {
                 die "Reference @{[ ref $doc ]} not implemented";
