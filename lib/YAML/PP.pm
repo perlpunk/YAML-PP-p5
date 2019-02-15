@@ -163,12 +163,30 @@ YAML::PP - YAML 1.2 processor
 
 =head1 SYNOPSIS
 
-WARNING: This is highly experimental.
+WARNING: This is not yet stable.
 
-Here are a few examples of what you can do right now:
+Here are a few examples of the basic load and dump methods:
 
     use YAML::PP;
     my $ypp = YAML::PP->new;
+    my $yaml = <<'EOM';
+    --- # Document one is a mapping
+    name: Tina
+    age: 29
+    favourite language: Perl
+
+    --- # Document two is a sequence
+    - plain string
+    - 'in single quotes'
+    - "in double quotes we have escapes! like \t and \n"
+    - | # a literal block scalar
+      line1
+      line2
+    - > # a folded block scalar
+      this is all one
+      single line because the
+      linebreaks will be folded
+    EOM
 
     my @documents = $ypp->load_string($yaml);
     my @documents = $ypp->load_file($filename);
@@ -220,6 +238,21 @@ The parser aims to parse C<YAML 1.2>. See L<http://yaml.org/>.
 You can check out all current parse and load results from the
 yaml-test-suite here:
 L<https://perlpunk.github.io/YAML-PP-p5/test-suite.html>
+
+The process of loading and dumping is split into the following steps:
+
+    Load:
+
+    YAML Stream        Tokens        Event List        Data Structure
+              --------->    --------->        --------->
+                lex           parse           construct
+
+
+    Dump:
+
+    Data Structure       Event List        YAML Stream
+                --------->        --------->
+                represent           emit
 
 =over
 
