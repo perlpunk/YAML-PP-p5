@@ -9,6 +9,8 @@ use base 'YAML::PP::Schema';
 use Scalar::Util qw/ blessed reftype /;
 use YAML::PP::Common qw/ YAML_QUOTED_SCALAR_STYLE /;
 
+use constant PREFIX_PERL => '!perl/';
+
 sub register {
     my ($self, %args) = @_;
     my $schema = $args{schema};
@@ -30,7 +32,7 @@ sub register {
         scalarref => 1,
         code => sub {
             my ($rep, $node) = @_;
-            $node->{tag} = "!perl/scalar";
+            $node->{tag} = PREFIX_PERL . "scalar";
             if (blessed($node->{value})) {
                 $node->{tag} .= ':' . blessed($node->{value});
             }
@@ -43,7 +45,7 @@ sub register {
             my ($rep, $node) = @_;
             require B::Deparse;
             my $deparse = B::Deparse->new("-p", "-sC");
-            $node->{tag} = "!perl/code";
+            $node->{tag} = PREFIX_PERL . "code";
             $node->{data} = $deparse->coderef2text($node->{value});
         },
     );
@@ -52,7 +54,8 @@ sub register {
         class_matches => 1,
         code => sub {
             my ($rep, $node) = @_;
-            $node->{tag} = sprintf "!perl/%s:%s", lc($node->{reftype}), blessed($node->{value});
+            $node->{tag} = sprintf PREFIX_PERL . "%s:%s",
+                lc($node->{reftype}), blessed($node->{value});
             if ($node->{reftype} eq 'HASH') {
                 $node->{data} = $node->{value};
             }
@@ -61,7 +64,8 @@ sub register {
             }
             elsif ($node->{reftype} eq 'REGEXP') {
                 if (blessed($node->{value}) eq 'Regexp') {
-                    $node->{tag} = sprintf "!perl/%s", lc($node->{reftype});
+                    $node->{tag} = sprintf PREFIX_PERL . "%s",
+                        lc($node->{reftype});
                 }
                 my $string = "$node->{value}";
                 @{ $node->{items} } = $string;
