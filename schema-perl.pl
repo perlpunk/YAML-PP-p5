@@ -50,6 +50,15 @@ tie(my %blessed_order, 'Tie::IxHash');
 %blessed_order = %order;
 my $blessed_order = bless \%blessed_order, 'Order';
 
+my $code = sub {
+    my ($self, %args) = @_;
+    return $args{x} + $args{y};
+};
+my $code_blessed = bless sub {
+    my ($self, %args) = @_;
+    return $args{x} - $args{y};
+}, "I::Am::Code";
+
 my $yp = YAML::PP->new(
     schema => ['JSON', 'Tie::IxHash', 'Perl'],
     boolean => 'JSON::PP',
@@ -67,5 +76,8 @@ my $yaml = $yp->dump_string({
     re2 => $bre,
     scalarref1 => $scalarref,
     scalarref2 => $scalarref2,
+    code => $code,
+    code_blessed => $code_blessed,
 });
 say $yaml;
+

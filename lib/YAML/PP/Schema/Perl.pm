@@ -37,6 +37,16 @@ sub register {
             %{ $node->{data} } = ( '=' => ${ $node->{value} } );
         },
     );
+    $schema->add_representer(
+        coderef => 1,
+        code => sub {
+            my ($rep, $node) = @_;
+            require B::Deparse;
+            my $deparse = B::Deparse->new("-p", "-sC");
+            $node->{tag} = "!perl/code";
+            $node->{data} = $deparse->coderef2text($node->{value});
+        },
+    );
 
     $schema->add_representer(
         class_matches => 1,
@@ -59,6 +69,14 @@ sub register {
             }
             elsif ($node->{reftype} eq 'SCALAR') {
                 %{ $node->{data} } = ( '=' => ${ $node->{value} } );
+            }
+            elsif ($node->{reftype} eq 'CODE') {
+                require B::Deparse;
+                my $deparse = B::Deparse->new("-p", "-sC");
+                $node->{data} = $deparse->coderef2text($node->{value});
+            }
+            else {
+                die "Reftype '$node->{reftype}' not implemented";
             }
 
             return 1;

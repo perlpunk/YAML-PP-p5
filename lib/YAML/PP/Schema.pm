@@ -139,6 +139,12 @@ sub add_representer {
         };
         return;
     }
+    if (defined(my $coderef = $args{coderef})) {
+        $representers->{coderef} = {
+            code => $args{code},
+        };
+        return;
+    }
     if (my $undef = $args{undefined}) {
         $representers->{undef} = $undef;
         return;

@@ -193,6 +193,11 @@ sub dump_node {
         my $type = $code->($self, $node);
         $done = 1 if $type;
     }
+    if (not $done and $node->{reftype} eq 'CODE' and my $coderef = $representers->{coderef}) {
+        my $code = $coderef->{code};
+        my $type = $code->($self, $node);
+        $done = 1 if $type;
+    }
     unless ($done) {
         $node->{data} = $node->{value};
     }
@@ -286,6 +291,8 @@ sub check_references {
             elsif (reftype($doc) eq 'Regexp') {
             }
             elsif (reftype($doc) eq 'REGEXP') {
+            }
+            elsif (reftype($doc) eq 'CODE') {
             }
             elsif (reftype($doc) eq 'SCALAR') {
             }
