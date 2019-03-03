@@ -1,3 +1,9 @@
+0.010_001 2019-03-03 15:40:37+01:00
+
+    - Add YAML::PP::Common; use constants for YAML styles
+    - Add YAML::PP::Schema::Perl - Dump perl objects, coderefs etc.
+    - Add YAML::PP::Schema::Tie::IxHash - keep order of hashes
+
 0.010 2018-11-02 12:53:41+01:00
 
     - Fix regex for start of plain scalars

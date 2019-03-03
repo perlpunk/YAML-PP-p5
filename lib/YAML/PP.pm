@@ -2,7 +2,6 @@
 use strict;
 use warnings;
 package YAML::PP;
-use B;
 
 our $VERSION = '0.000'; # VERSION
 
@@ -209,6 +208,9 @@ Here are a few examples of the basic load and dump methods:
     DumpFile($filename, @documents);
     DumpFile($filenhandle @documents);
 
+    my $ypp = YAML::PP->new(schema => [qw/ JSON Perl /]);
+    my $yaml = $yp->dump_string($data_with_perl_objects);
+
 
 Some utility scripts:
 
@@ -253,6 +255,14 @@ The process of loading and dumping is split into the following steps:
     Data Structure       Event List        YAML Stream
                 --------->        --------->
                 represent           emit
+
+
+You can dump basic perl types like hashes, arrays, scalars (strings, numbers).
+For dumping blessed objects and things like coderefs have a look at
+L<YAML::PP::Schema::Perl>.
+
+For keeping your ordered L<Tie::IxHash> hashes, try out
+:<YAML::PP::Schema::Tie::IxHash>.
 
 =over
 

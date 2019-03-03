@@ -43,3 +43,7 @@ test-suite-html: gh-pages
 
 grammar:
 	perl etc/generate-grammar.pl
+
+gen_examples:
+	perl etc/generate-examples.pl
+
