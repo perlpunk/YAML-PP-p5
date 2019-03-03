@@ -54,26 +54,48 @@ sub register {
         class_matches => 1,
         code => sub {
             my ($rep, $node) = @_;
+            my $blessed = blessed $node->{value};
             $node->{tag} = sprintf PREFIX_PERL . "%s:%s",
-                lc($node->{reftype}), blessed($node->{value});
+                lc($node->{reftype}), $blessed;
             if ($node->{reftype} eq 'HASH') {
                 $node->{data} = $node->{value};
             }
             elsif ($node->{reftype} eq 'ARRAY') {
                 $node->{data} = $node->{value};
             }
+
+            # Fun with regexes in perl versions!
             elsif ($node->{reftype} eq 'REGEXP') {
-                if (blessed($node->{value}) eq 'Regexp') {
+                if ($blessed eq 'Regexp') {
                     $node->{tag} = sprintf PREFIX_PERL . "%s",
                         lc($node->{reftype});
                 }
-                my $string = "$node->{value}";
-                @{ $node->{items} } = $string;
-                $node->{data} = $string;
+                $node->{data} = "$node->{value}";
             }
             elsif ($node->{reftype} eq 'SCALAR') {
-                %{ $node->{data} } = ( '=' => ${ $node->{value} } );
+
+                # in perl <= 5.10 regex reftype(regex) was SCALAR
+                if ($blessed eq 'Regexp') {
+                    $node->{tag} = PREFIX_PERL . 'regexp';
+                    $node->{data} = "$node->{value}";
+                }
+
+                # In perl <= 5.10 there seemed to be no better pure perl
+                # way to detect a blessed regex?
+                elsif (
+                    $] <= 5.010001
+                    and not defined ${ $node->{value} }
+                    and $node->{value} =~ m/^\(\?/
+                ) {
+                    $node->{tag} = PREFIX_PERL . 'regexp:' . $blessed;
+                    $node->{data} = "$node->{value}";
+                }
+                else {
+                    # phew, just a simple scalarref
+                    %{ $node->{data} } = ( '=' => ${ $node->{value} } );
+                }
             }
+
             elsif ($node->{reftype} eq 'CODE') {
                 require B::Deparse;
                 my $deparse = B::Deparse->new("-p", "-sC");
