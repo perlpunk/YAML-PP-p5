@@ -25,3 +25,116 @@ sub register {
 }
 
 1;
+
+__END__
+
+=pod
+
+=encoding utf-8
+
+=head1 NAME
+
+YAML::PP::Schema::Tie::IxHash - Schema for serializing ordered hashes
+
+=head1 SYNOPSIS
+
+    use YAML::PP;
+    use Tie::IxHash;
+    use YAML::PP::Schema::Tie::IxHash;
+    my $yp = YAML::PP->new( schema => [qw/ JSON Tie::IxHash /] );
+
+    tie(my %ordered, 'Tie::IxHash');
+    %ordered = (
+        U => 2,
+        B => 52,
+    );
+
+    my $yaml = $yp->dump_string(\%ordered);
+
+
+    # Output:
+    ---
+    U: 2
+    B: 52
+
+=head1 DESCRIPTION
+
+This schema allows you to dump ordered hashes which are tied to
+L<Tie::IxHash>.
+
+This code is pretty new and experimental.
+
+It is not yet implemented for loading yet, so for now you have to tie
+the hashes yourself.
+
+Examples:
+
+=cut
+
+### BEGIN EXAMPLE
+
+=pod
+
+=over 4
+
+=item order
+
+        # Code
+        tie(my %order, 'Tie::IxHash');
+        %order = (
+            U => 2,
+            B => 52,
+            c => 64,
+            19 => 84,
+            Disco => 2000,
+            Year => 2525,
+            days_on_earth => 20_000,
+        );
+        \%order;
+
+
+        # YAML
+        ---
+        U: 2
+        B: 52
+        c: 64
+        19: 84
+        Disco: 2000
+        Year: 2525
+        days_on_earth: 20000
+
+
+=item order_blessed
+
+        # Code
+        tie(my %order, 'Tie::IxHash');
+        %order = (
+            U => 2,
+            B => 52,
+            c => 64,
+            19 => 84,
+            Disco => 2000,
+            Year => 2525,
+            days_on_earth => 20_000,
+        );
+        bless \%order, 'Order';
+
+
+        # YAML
+        --- !perl/hash:Order
+        U: 2
+        B: 52
+        c: 64
+        19: 84
+        Disco: 2000
+        Year: 2525
+        days_on_earth: 20000
+
+
+
+
+=back
+
+=cut
+
+### END EXAMPLE

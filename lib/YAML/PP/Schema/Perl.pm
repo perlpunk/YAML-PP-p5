@@ -112,3 +112,178 @@ sub register {
 }
 
 1;
+
+__END__
+
+=pod
+
+=encoding utf-8
+
+=head1 NAME
+
+YAML::PP::Schema::Perl - Schema for serializing perl objects and special types
+
+=head1 SYNOPSIS
+
+    use YAML::PP;
+    use YAML::PP::Schema::Perl;
+    my $yp = YAML::PP->new( schema => [qw/ JSON Perl /] );
+    my $yaml = $yp->dump_string(sub { return 23 });
+
+=head1 DESCRIPTION
+
+This schema allows you to dump perl objects and special types to YAML.
+
+This code is pretty new and experimental. Typeglobs are not implemented
+yet. Dumping code references is on by default.
+
+Only dumping is supported so far.
+
+This is a list of the currently supported types and how they are dumped into
+YAML:
+
+=cut
+
+### BEGIN EXAMPLE
+
+=pod
+
+=over 4
+
+=item array
+
+        # Code
+        bless [
+            qw/ one two three four /
+        ], "Just::An::Arrayref"
+
+
+        # YAML
+        --- !perl/array:Just::An::Arrayref
+        - one
+        - two
+        - three
+        - four
+
+
+=item circular
+
+        # Code
+        my $circle = bless [ 1, 2 ], 'Circle';
+        push @$circle, $circle;
+        $circle;
+
+
+        # YAML
+        --- &1 !perl/array:Circle
+        - 1
+        - 2
+        - *1
+
+
+=item code
+
+        # Code
+        sub {
+            my ($self, %args) = @_;
+            return $args{x} + $args{y};
+        }
+
+
+        # YAML
+        --- !perl/code |-
+          {
+              use warnings;
+              use strict;
+              (my($self, %args) = @_);
+              (return ($args{'x'} + $args{'y'}));
+          }
+
+
+=item code_blessed
+
+        # Code
+        bless sub {
+            my ($self, %args) = @_;
+            return $args{x} - $args{y};
+        }, "I::Am::Code"
+
+
+        # YAML
+        --- !perl/code:I::Am::Code |-
+          {
+              use warnings;
+              use strict;
+              (my($self, %args) = @_);
+              (return ($args{'x'} - $args{'y'}));
+          }
+
+
+=item hash
+
+        # Code
+        bless {
+            U => 2,
+            B => 52,
+        }, 'A::Very::Exclusive::Class'
+
+
+        # YAML
+        --- !perl/hash:A::Very::Exclusive::Class
+        B: 52
+        U: 2
+
+
+=item regexp
+
+        # Code
+        qr{unblessed}
+
+
+        # YAML
+        --- !perl/regexp (?^:unblessed)
+
+
+=item regexp_blessed
+
+        # Code
+        bless qr{blessed}, "Foo"
+
+
+        # YAML
+        --- !perl/regexp:Foo (?^:blessed)
+
+
+=item scalarref
+
+        # Code
+        my $scalar = "some string";
+        my $scalarref = \$scalar;
+        $scalarref;
+
+
+        # YAML
+        --- !perl/scalar
+        =: some string
+
+
+=item scalarref_blessed
+
+        # Code
+        my $scalar = "some other string";
+        my $scalarref = bless \$scalar, 'Foo';
+        $scalarref;
+
+
+        # YAML
+        --- !perl/scalar:Foo
+        =: some other string
+
+
+
+
+=back
+
+=cut
+
+### END EXAMPLE
