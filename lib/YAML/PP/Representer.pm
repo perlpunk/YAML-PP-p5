@@ -4,7 +4,7 @@ package YAML::PP::Representer;
 
 our $VERSION = '0.000'; # VERSION
 
-use Scalar::Util qw/ reftype blessed/;
+use Scalar::Util qw/ reftype blessed refaddr /;
 
 use YAML::PP::Emitter;
 use YAML::PP::Writer;
@@ -30,6 +30,12 @@ sub new {
     return $self;
 }
 
+sub init {
+    my ($self) = @_;
+    $self->{refs} = {};
+    $self->{seen} = {};
+}
+
 sub emitter { return $_[0]->{emitter} }
 sub set_emitter { $_[0]->{emitter} = $_[1] }
 sub writer { $_[0]->{writer} }
@@ -51,6 +57,7 @@ sub dump_file {
 
 sub dump {
     my ($self, @docs) = @_;
+    $self->init;
     $self->emitter->set_writer($self->writer);
     $self->emitter->init;
     $self->emitter->stream_start_event({});
@@ -87,13 +94,15 @@ sub dump_node {
     my $representers = $schema->representers;
     my $seen = $self->{seen};
     my $anchor;
+    my $ref = ref $value;
     if (ref $value) {
 
-        if ($seen->{ $value } > 1) {
-            $anchor = $self->{refs}->{ $value };
+        my $refaddr = refaddr $value;
+        if ($seen->{ $refaddr } > 1) {
+            $anchor = $self->{refs}->{ $refaddr };
             unless (defined $anchor) {
                 my $num = ++$self->{anchor_num};
-                $self->{refs}->{ $value } = $num;
+                $self->{refs}->{ $refaddr } = $num;
                 $anchor = $num;
             }
             else {
@@ -269,7 +278,7 @@ sub check_references {
     if (ref $doc) {
         my $seen = $self->{seen};
         # check which references are used more than once
-        if (++$seen->{ $doc } > 1) {
+        if (++$seen->{ refaddr $doc } > 1) {
             # seen already
             return;
         }
