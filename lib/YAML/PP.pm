@@ -2,7 +2,6 @@
 use strict;
 use warnings;
 package YAML::PP;
-use B;
 
 our $VERSION = '0.000'; # VERSION
 
