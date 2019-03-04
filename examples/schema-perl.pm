@@ -116,6 +116,35 @@ EOM
 - *1
 EOM
     ],
+    refref => [
+        <<'EOM',
+        my $ref = { a => 'hash' };
+        my $refref = \$ref;
+        $refref;
+EOM
+        <<'EOM',
+---
+- &1 !perl/ref
+  =:
+    a: hash
+- *1
+EOM
+    ],
+
+    refref_blessed => [
+        <<'EOM',
+        my $ref = { a => 'hash' };
+        my $refref = bless \$ref, 'Foo';
+        $refref;
+EOM
+        <<'EOM',
+---
+- &1 !perl/ref:Foo
+  =:
+    a: hash
+- *1
+EOM
+    ],
 );
 
 ### TEST DATA END ###

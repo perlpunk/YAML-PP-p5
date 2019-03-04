@@ -40,6 +40,17 @@ sub register {
         },
     );
     $schema->add_representer(
+        refref => 1,
+        code => sub {
+            my ($rep, $node) = @_;
+            $node->{tag} = PREFIX_PERL . "ref";
+            if (blessed($node->{value})) {
+                $node->{tag} .= ':' . blessed($node->{value});
+            }
+            %{ $node->{data} } = ( '=' => ${ $node->{value} } );
+        },
+    );
+    $schema->add_representer(
         coderef => 1,
         code => sub {
             my ($rep, $node) = @_;
@@ -94,6 +105,9 @@ sub register {
                     # phew, just a simple scalarref
                     %{ $node->{data} } = ( '=' => ${ $node->{value} } );
                 }
+            }
+            elsif ($node->{reftype} eq 'REF') {
+                %{ $node->{data} } = ( '=' => ${ $node->{value} } );
             }
 
             elsif ($node->{reftype} eq 'CODE') {
@@ -232,6 +246,34 @@ YAML:
         --- !perl/hash:A::Very::Exclusive::Class
         B: 52
         U: 2
+
+
+=item refref
+
+        # Code
+        my $ref = { a => 'hash' };
+        my $refref = \$ref;
+        $refref;
+
+
+        # YAML
+        --- !perl/ref
+        =:
+          a: hash
+
+
+=item refref_blessed
+
+        # Code
+        my $ref = { a => 'hash' };
+        my $refref = bless \$ref, 'Foo';
+        $refref;
+
+
+        # YAML
+        --- !perl/ref:Foo
+        =:
+          a: hash
 
 
 =item regexp

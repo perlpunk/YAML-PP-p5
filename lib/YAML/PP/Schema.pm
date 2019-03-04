@@ -140,6 +140,12 @@ sub add_representer {
         };
         return;
     }
+    if (defined(my $refref = $args{refref})) {
+        $representers->{refref} = {
+            code => $args{code},
+        };
+        return;
+    }
     if (defined(my $coderef = $args{coderef})) {
         $representers->{coderef} = {
             code => $args{code},

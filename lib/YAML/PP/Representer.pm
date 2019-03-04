@@ -98,7 +98,7 @@ sub dump_node {
     if (ref $value) {
 
         my $refaddr = refaddr $value;
-        if ($seen->{ $refaddr } > 1) {
+        if ($seen->{ $refaddr } and $seen->{ $refaddr } > 1) {
             $anchor = $self->{refs}->{ $refaddr };
             unless (defined $anchor) {
                 my $num = ++$self->{anchor_num};
@@ -199,6 +199,11 @@ sub dump_node {
     }
     if (not $done and $node->{reftype} eq 'SCALAR' and my $scalarref = $representers->{scalarref}) {
         my $code = $scalarref->{code};
+        my $type = $code->($self, $node);
+        $done = 1 if $type;
+    }
+    if (not $done and $node->{reftype} eq 'REF' and my $refref = $representers->{refref}) {
+        my $code = $refref->{code};
         my $type = $code->($self, $node);
         $done = 1 if $type;
     }
@@ -304,6 +309,8 @@ sub check_references {
             elsif (reftype($doc) eq 'CODE') {
             }
             elsif (reftype($doc) eq 'SCALAR') {
+            }
+            elsif (reftype($doc) eq 'REF') {
             }
             else {
                 die "Reference @{[ ref $doc ]} not implemented";
