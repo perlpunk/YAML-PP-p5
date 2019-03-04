@@ -7,11 +7,14 @@ our $VERSION = '0.000'; # VERSION
 use base 'YAML::PP::Schema';
 
 use Scalar::Util qw/ blessed reftype /;
-use Tie::IxHash;
+my $ixhash = eval { require Tie::IxHash };
 
 sub register {
     my ($self, %args) = @_;
     my $schema = $args{schema};
+    unless ($ixhash) {
+        die "You need to install Tie::IxHash in order to use this module";
+    }
 
     $schema->add_representer(
         tied_equals => 'Tie::IxHash',
