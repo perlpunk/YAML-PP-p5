@@ -13,7 +13,9 @@ use Encode;
 
 sub Dump {
     my (@docs) = @_;
-    my $yp = YAML::PP->new;
+    # Dumping objects is safe, so we enable the Perl schema here
+    require YAML::PP::Schema::Perl;
+    my $yp = YAML::PP->new( schema => [qw/ Core Perl /] );
     my $yaml = $yp->dump_string(@docs);
 
     my ($error, $tokens) = YAML::PP::Parser->yaml_to_tokens(string => $yaml);
