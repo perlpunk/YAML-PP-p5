@@ -12,6 +12,8 @@ my $inftest1 = 0 + "inf";
 my $inftest2 = 0 - "inf";
 my $nantest = 0 + "nan";
 diag("inf: $inftest1 -inf: $inftest2 nan: $nantest");
+my $inf_broken = $inftest1 eq '0';
+$inf_broken and diag("inf/nan seem broken, skipping those tests");
 
 my $data_common = [
     # quoted
@@ -150,7 +152,7 @@ my $yaml_core = <<'EOM';
 - 'TRUE'
 - 'False'
 EOM
-if ($] >= 5.008009) {
+if ($] >= 5.008009 and not $inf_broken) {
     push @$data_core, (
         0+"inf",
         0-"inf",

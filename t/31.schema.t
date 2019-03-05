@@ -11,6 +11,8 @@ my $inftest1 = 0 + "inf";
 my $inftest2 = 0 - "inf";
 my $nantest = 0 + "nan";
 diag("inf: $inftest1 -inf: $inftest2 nan: $nantest");
+my $inf_broken = $inftest1 eq '0';
+$inf_broken and diag("inf/nan seem broken, skipping those tests");
 
 my $failsafe = <<"EOM";
 # just strings
@@ -234,7 +236,12 @@ sub test_float {
     my ($item) = @_;
     my $flags = B::svref_2object(\$item)->FLAGS;
     ok(not($flags & B::SVp_POK), sprintf("'%s' does not have string flag", $item));
-    ok($flags & B::SVp_NOK, sprintf("'%s' has double flag", $item));
+    if ($inf_broken) {
+        diag("Skip testing double flag, values for inf and nan seem broken");
+    }
+    else {
+        ok($flags & B::SVp_NOK, sprintf("'%s' has double flag", $item));
+    }
 }
 
 sub test_undef {
