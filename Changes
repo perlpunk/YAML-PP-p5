@@ -1,3 +1,10 @@
+0.010_002 2019-03-05 13:03:55+01:00
+
+    - Make YAML::PP::Schema::Tie::IxHash optional
+    - Add exceptions in tests for broken inf
+    - Add debugging for t/32.cyclic-refs.t
+    - Add reftype REF
+
 0.010_001 2019-03-03 15:40:37+01:00
 
     - Add YAML::PP::Common; use constants for YAML styles
