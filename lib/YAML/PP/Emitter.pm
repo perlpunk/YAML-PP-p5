@@ -541,13 +541,20 @@ sub alias_event {
     my $stack = $self->event_stack;
     my $last = $stack->[-1];
     $last->{index}++;
-    $last->{append} = 0;
+    my $append = $last->{append};
     my $indent = $last->{indent};
 
     my $alias = '*' . $info->{value};
 
     if ($last->{type} eq 'MAP') {
-        $self->writer->write("$indent$alias :");
+        my $yaml = '';
+        if ($append) {
+            $yaml .= " ";
+        }
+        else {
+            $yaml .= $indent;
+        }
+        $self->writer->write("$yaml$alias :");
         $last->{type} = 'MAPVALUE';
     }
     elsif ($last->{type} eq 'MAPVALUE') {
@@ -555,15 +562,25 @@ sub alias_event {
         $last->{type} = 'MAP';
     }
     elsif ($last->{type} eq 'SEQ') {
-        $self->writer->write("$indent- $alias\n");
+        my $yaml = '';
+        if (not $append) {
+            $yaml .= $indent;
+        }
+        else {
+            $yaml .= " ";
+        }
+        $yaml .= "- $alias\n";
+        $self->writer->write($yaml);
     }
     elsif ($last->{type} eq 'DOC') {
+        # TODO an alias at document level isn't actually valid
         $self->writer->write("$alias\n");
     }
     else {
         $self->writer->write("$indent: $alias\n");
         $last->{type} = 'MAP';
     }
+    $last->{append} = 0;
 }
 
 sub document_start_event {
