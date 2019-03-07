@@ -262,7 +262,7 @@ For dumping blessed objects and things like coderefs have a look at
 L<YAML::PP::Schema::Perl>.
 
 For keeping your ordered L<Tie::IxHash> hashes, try out
-:<YAML::PP::Schema::Tie::IxHash>.
+L<YAML::PP::Schema::Tie::IxHash>.
 
 =over
 
@@ -408,10 +408,6 @@ Example:
           "{'{a => 1,c => 2}' => 23}" : 42
        }
     }
-
-=item Tags
-
-Tags are completely ignored.
 
 =item Parse Tree
 
@@ -731,6 +727,20 @@ hierarchy of YAML::PP.
 =item Felix "flyx" Krause
 
 Felix answered countless questions about the YAML Specification.
+
+=back
+
+=head1 SEE ALSO
+
+=over
+
+=item L<YAML>
+
+=item L<YAML::XS>
+
+=item L<YAML::Syck>
+
+=item L<YAML::Tiny>
 
 =back
 
