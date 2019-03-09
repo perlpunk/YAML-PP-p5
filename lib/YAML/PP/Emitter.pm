@@ -122,7 +122,17 @@ sub mapping_end_event {
 
     my $last = pop @{ $stack };
     if ($last->{index} == 0) {
-        $self->writer->write(" {}\n");
+        my $indent = $last->{indent};
+        my $zero_indent = $last->{zero_indent};
+        if ($last->{zero_indent}) {
+            $indent .= ' ' x $self->indent;
+        }
+        if ($last->{append}) {
+            $self->writer->write(" {}\n");
+        }
+        else {
+            $self->writer->write("$indent\{}\n");
+        }
     }
     $last = $stack->[-1];
     if ($last->{type} eq 'SEQ') {
@@ -156,6 +166,7 @@ sub sequence_start_event {
     $props = join ' ', grep defined, ($anchor, $tag);
 
     my $new_append = 0;
+    my $zero_indent = 0;
     my $append = $last->{append};
     if ($last->{type} eq 'DOC') {
         if ($append and $props) {
@@ -170,6 +181,7 @@ sub sequence_start_event {
     }
     else {
         if ($last->{type} eq 'MAPVALUE') {
+            $zero_indent = 1;
         }
         else {
             if ($append) {
@@ -203,7 +215,13 @@ sub sequence_start_event {
     $self->writer->write($yaml);
     $last->{index}++;
     $last->{append} = 0;
-    my $new_info = { index => 0, indent => $new_indent, info => $info, append => $new_append };
+    my $new_info = {
+        index => 0,
+        indent => $new_indent,
+        info => $info,
+        append => $new_append,
+        zero_indent => $zero_indent,
+    };
     if (($info->{style} || '') eq YAML_FLOW_SEQUENCE_STYLE) {
         $new_info->{type} = 'FLOWSEQ';
     }
@@ -220,7 +238,17 @@ sub sequence_end_event {
 
     my $last = pop @{ $stack };
     if ($last->{index} == 0) {
-        $self->writer->write(" []\n");
+        my $indent = $last->{indent};
+        my $zero_indent = $last->{zero_indent};
+        if ($last->{zero_indent}) {
+            $indent .= ' ' x $self->indent;
+        }
+        if ($last->{append}) {
+            $self->writer->write(" []\n");
+        }
+        else {
+            $self->writer->write("$indent\[]\n");
+        }
     }
     $last = $stack->[-1];
     if ($last->{type} eq 'MAP') {
