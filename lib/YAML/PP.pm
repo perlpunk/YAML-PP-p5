@@ -235,11 +235,28 @@ Some utility scripts:
 This is Yet Another YAML Framework. For why this project was started, see
 L<"WHY">.
 
-The parser aims to parse C<YAML 1.2>. See L<http://yaml.org/>.
+It aims to support C<YAML 1.2> and C<YAML 1.1>. See L<http://yaml.org/>.
 
 You can check out all current parse and load results from the
 yaml-test-suite here:
 L<https://perlpunk.github.io/YAML-PP-p5/test-suite.html>
+
+YAML is a serialization language. The YAML input is called "YAML Stream".
+A stream consists of one or more "Documents", seperated by a line with a
+document start marker C<--->. A document optionally ends with the document
+end marker C<...>.
+
+This allows to process continuous streams additionally to a fixed input
+file or string.
+
+The YAML::PP frontend will currently load all documents, and return only
+the first if called with scalar context.
+
+The YAML backend is implemented in a modular way that allows to add
+custom handling of YAML tags, perl objects and data types. The inner API
+is not yet stable. Suggestions welcome.
+
+=head1 IMPLEMENTATION
 
 The process of loading and dumping is split into the following steps:
 
@@ -341,6 +358,10 @@ Currently loaded as single characters without validating
 =head2 YAML::PP::Constructor
 
 The Constructor now supports all three YAML 1.2 Schemas, Failsafe, JSON and Core.
+Additionally you can choose the schema for YAML 1.1 as C<YAML1_1>.
+
+Too see what strings are resolved as booleans, numbers, null etc. look at
+C<t/31.schema.t>.
 
 You can choose the Schema, however, the API for that is not yet fixed.
 Currently it looks like this:
