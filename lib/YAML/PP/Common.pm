@@ -119,6 +119,82 @@ sub event_to_test_suite {
         return $string;
 }
 
+sub test_suite_to_event {
+    my ($str) = @_;
+    my $event = {};
+    if ($str =~ s/^\+STR//) {
+        $event->{name} = 'stream_start_event';
+    }
+    elsif ($str =~ s/^\-STR//) {
+        $event->{name} = 'stream_end_event';
+    }
+    elsif ($str =~ s/^\+DOC//) {
+        $event->{name} = 'document_start_event';
+        if ($str =~ s/^ ---//) {
+            $event->{implicit} = 0;
+        }
+        else {
+            $event->{implicit} = 1;
+        }
+    }
+    elsif ($str =~ s/^\-DOC//) {
+        $event->{name} = 'document_end_event';
+        if ($str =~ s/^ \.\.\.//) {
+            $event->{implicit} = 0;
+        }
+        else {
+            $event->{implicit} = 1;
+        }
+    }
+    elsif ($str =~ s/^\+SEQ//) {
+        $event->{name} = 'sequence_start_event';
+        if ($str =~ s/^ \&(\S+)//) {
+            $event->{anchor} = $1;
+        }
+        if ($str =~ s/^ <(\S+)>//) {
+            $event->{tag} = $1;
+        }
+    }
+    elsif ($str =~ s/^\-SEQ//) {
+        $event->{name} = 'sequence_end_event';
+    }
+    elsif ($str =~ s/^\+MAP//) {
+        $event->{name} = 'mapping_start_event';
+        if ($str =~ s/^ \&(\S+)//) {
+            $event->{anchor} = $1;
+        }
+        if ($str =~ s/^ <(\S+)>//) {
+            $event->{tag} = $1;
+        }
+    }
+    elsif ($str =~ s/^\-MAP//) {
+        $event->{name} = 'mapping_end_event';
+    }
+    elsif ($str =~ s/^=VAL//) {
+        $event->{name} = 'scalar_event';
+        if ($str =~ s/^ <(\S+)>//) {
+            $event->{tag} = $1;
+        }
+        if ($str =~ s/^ [:'">|]//) {
+            $event->{style} = $1;
+        }
+        if ($str =~ s/^(.*)//) {
+            $event->{value} = $1;
+        }
+    }
+    elsif ($str =~ s/^=ALI//) {
+        $event->{name} = 'alias_event';
+        if ($str =~ s/^ \*(.*)//) {
+            $event->{value} = $1;
+        }
+    }
+    else {
+        die "Could not parse event '$str'";
+    }
+    return $event;
+}
+
+
 1;
 
 __END__
