@@ -61,4 +61,41 @@ use YAML::PP;
   like($yaml, qr/o2: !Class2/, 'o2s\' gets caught by the second class_matches');
 }
 
+package BaseClass {
+
+}
+package Class4 {
+  our @ISA = ('BaseClass');
+}
+
+{
+  my $parser = YAML::PP->new;
+  $parser->schema->add_representer(
+    class_isa => 'Class3',
+    code => sub {
+      my ($representer, $node) = @_;
+      $node->{ tag } = '!Class3';
+      return 1;
+    }
+  );
+  $parser->schema->add_representer(
+    class_isa => 'BaseClass',
+    code => sub {
+      my ($representer, $node) = @_;
+      $node->{ tag } = '!BaseClass';
+      return 1;
+    }
+  );
+
+
+  my $data = {
+    o3 => (bless {}, 'Class3'),
+    o4 => (bless {}, 'Class4'),
+  };
+
+  my $yaml = $parser->dump_string($data);
+  like($yaml, qr/o3: !Class3/, 'Class3 gets caught by its class name');
+  like($yaml, qr/o4: !BaseClass/, 'Class4 gets caught because its inherited from BaseClass');
+}
+
 done_testing; 

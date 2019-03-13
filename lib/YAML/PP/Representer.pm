@@ -196,6 +196,16 @@ sub dump_node {
                 }
             }
         }
+        if (not $done and my $class_isa = $representers->{class_isa}) {
+            for my $isa (@$class_isa) {
+                my ($class_name, $code) = @$isa;
+                if ($node->{ value }->isa($class_name)) {
+                    my $type = $code->($self, $node);
+                    $done = 1 if $type;
+                    last if $type;
+                }
+            }
+        }
     }
     if (not $done and $node->{reftype} eq 'SCALAR' and my $scalarref = $representers->{scalarref}) {
         my $code = $scalarref->{code};
