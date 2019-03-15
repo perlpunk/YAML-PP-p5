@@ -120,6 +120,11 @@ sub add_representer {
         };
         return;
     }
+    if (my $class_isa = $args{class_isa}) {
+        my $rep = $representers->{class_isa} ||= [];
+        push @$rep, [ $args{class_isa}, $args{code} ];
+        return;
+    }
     if (my $tied_equals = $args{tied_equals}) {
         my $rep = $representers->{tied_equals} ||= {};
         $rep->{ $tied_equals } = {
