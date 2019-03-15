@@ -61,12 +61,14 @@ use YAML::PP;
   like($yaml, qr/o2: !Class2/, 'o2s\' gets caught by the second class_matches');
 }
 
-package BaseClass {
+# declare some packages inline for the next test
+package BaseClass;
 
-}
-package Class4 {
+package Class4;
   our @ISA = ('BaseClass');
-}
+
+# return to the tests package
+package main;
 
 {
   my $parser = YAML::PP->new;
