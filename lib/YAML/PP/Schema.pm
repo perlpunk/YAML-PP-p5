@@ -2,6 +2,7 @@ use strict;
 use warnings;
 package YAML::PP::Schema;
 use B;
+use Module::Load qw//;
 
 our $VERSION = '0.000'; # VERSION
 
@@ -58,7 +59,13 @@ sub bool_class { return $_[0]->{bool_class} }
 sub load_subschemas {
     my ($self, @schemas) = @_;
     for my $s (@schemas) {
-        my $class = ($s =~ m/^\:(.*)/) ? "$1" : "YAML::PP::Schema::$s";
+        my $class;
+        if ($s =~ m/^\:(.*)/) {
+          $class = "$1";
+          Module::Load::load $class;
+        } else {
+          $class = "YAML::PP::Schema::$s";
+        }
         my $tags = $class->register(
             schema => $self,
         );

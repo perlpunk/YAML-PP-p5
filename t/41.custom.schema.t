@@ -7,8 +7,6 @@ use YAML::PP;
 use FindBin '$Bin';
 use lib "$Bin/lib";
 
-use MySchema;
-
 my $yp = YAML::PP->new(
     schema => [qw/ :MySchema /],
 );
