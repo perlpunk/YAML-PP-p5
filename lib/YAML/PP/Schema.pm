@@ -58,7 +58,7 @@ sub bool_class { return $_[0]->{bool_class} }
 sub load_subschemas {
     my ($self, @schemas) = @_;
     for my $s (@schemas) {
-        my $class = ($s =~ m/^\:(.*)/) ? "$1" : "YAML::PP::Schema::" . $s;
+        my $class = ($s =~ m/^\:(.*)/) ? "$1" : "YAML::PP::Schema::$s";
         my $tags = $class->register(
             schema => $self,
         );
