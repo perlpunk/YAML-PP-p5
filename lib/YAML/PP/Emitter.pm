@@ -270,6 +270,9 @@ sub sequence_end_event {
 my %forbidden_first = (qw/
     ! 1 & 1 * 1 { 1 } 1 [ 1 ] 1 | 1 > 1 @ 1 ` 1 " 1 ' 1
 /, '#' => 1, ',' => 1, " " => 1);
+my %forbidden_first_plus_space = (qw/
+    ? 1 - 1 : 1
+/);
 
 my %control = (
     "\x00" => '\0',
@@ -394,6 +397,14 @@ sub scalar_event {
         }
         else {
             $style = YAML_PLAIN_SCALAR_STYLE;
+        }
+    }
+
+    if ($style eq YAML_PLAIN_SCALAR_STYLE) {
+        if ($forbidden_first_plus_space{ $first }) {
+            if (length ($value) == 1 or substr($value, 1, 1) =~ m/^\s/) {
+                $style = YAML_SINGLE_QUOTED_SCALAR_STYLE;
+            }
         }
     }
 

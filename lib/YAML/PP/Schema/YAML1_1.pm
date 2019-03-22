@@ -205,9 +205,14 @@ sub register {
             $node->{data} = "$node->{value}";
             return 1;
         },
-    ) for ("", qw/ true TRUE True false FALSE False null NULL Null ~ /);
+    ) for ("", qw/
+        true TRUE True y Y yes Yes YES on On ON
+        false FALSE False n N n no No NO off Off OFF
+        null NULL Null ~
+        .inf .Inf .INF -.inf -.Inf -.INF +.inf +.Inf +.INF .nan .NaN .NAN
+    /);
     $schema->add_representer(
-        regex => qr{$RE_INT_1_1|$RE_FLOAT_1_1|$RE_INT_OCTAL_1_1|$RE_INT_HEX_1_1},
+        regex => qr{$RE_INT_1_1|$RE_FLOAT_1_1|$RE_INT_OCTAL_1_1|$RE_INT_HEX_1_1|$RE_INT_BIN_1_1|$RE_SEXAGESIMAL_INT|$RE_SEXAGESIMAL},
         code => sub {
             my ($rep, $node) = @_;
             $node->{style} = YAML_QUOTED_SCALAR_STYLE;
