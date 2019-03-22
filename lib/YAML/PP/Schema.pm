@@ -531,7 +531,10 @@ sub register {
             $node->{data} = "$node->{value}";
             return 1;
         },
-    ) for ("", qw/ true TRUE True false FALSE False null NULL Null ~ /);
+    ) for ("", qw/
+        true TRUE True false FALSE False null NULL Null ~
+        .inf .Inf .INF -.inf -.Inf -.INF .nan .NaN .NAN
+    /);
     $schema->add_representer(
         regex => qr{$RE_INT_CORE|$RE_FLOAT_CORE|$RE_INT_OCTAL|$RE_INT_HEX},
         code => sub {
