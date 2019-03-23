@@ -1,24 +1,15 @@
-0.010_003 2019-03-22 19:27:55+01:00
-
-    - Add YAML::PP::Schema::YAML1_1
-    - Fix indent bugs in emitter (aliases, empty lists/mappings)
-    - Fix bug in emitter for values starting with '? ' or '- '
-    - Add missing resolvers to Core and YAML1_1 Schema
-    - Add class_isa representer (PR#7 @pplu)
-    - Refactor schema testing
-
-0.010_002 2019-03-05 13:03:55+01:00
-
-    - Make YAML::PP::Schema::Tie::IxHash optional
-    - Add exceptions in tests for broken inf
-    - Add debugging for t/32.cyclic-refs.t
-    - Add reftype REF
-
-0.010_001 2019-03-03 15:40:37+01:00
+0.011 2019-03-23 12:03:12+01:00
 
     - Add YAML::PP::Common; use constants for YAML styles
     - Add YAML::PP::Schema::Perl - Dump perl objects, coderefs etc.
     - Add YAML::PP::Schema::Tie::IxHash - keep order of hashes
+    - Add YAML::PP::Schema::YAML1_1
+    - Add class_isa representer (PR#7 @pplu)
+    - Add exceptions in tests for broken inf
+    - Refactor schema testing
+    - Fix indent bugs in emitter (aliases, empty lists/mappings)
+    - Fix bug in emitter for values starting with '? ' or '- '
+    - Add missing resolvers to Core and YAML1_1 Schema
 
 0.010 2018-11-02 12:53:41+01:00
 
