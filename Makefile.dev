@@ -18,6 +18,9 @@ test-invalid-all:
 test:
 	prove -lr t
 
+testp:
+	prove -lr -j9 t
+
 testv:
 	prove -lrv t
 
