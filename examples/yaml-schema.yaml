@@ -349,6 +349,7 @@ yaml11:
 'failsafe, json, core, yaml11':
 - ['str', '" "', ' ', "' '"]
 - ['str', '"@array"', '@array', "'@array'"]
+- ['str', '"%percent"', '%percent', "'%percent'"]
 - ['str', '"`cmd`"', '`cmd`', "'`cmd`'"]
 - ['str', '"!string"', '!string', "'!string'"]
 - ['str', '"*string"', '*string', "'*string'"]

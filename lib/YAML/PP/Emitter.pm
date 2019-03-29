@@ -269,7 +269,7 @@ sub sequence_end_event {
 
 my %forbidden_first = (qw/
     ! 1 & 1 * 1 { 1 } 1 [ 1 ] 1 | 1 > 1 @ 1 ` 1 " 1 ' 1
-/, '#' => 1, ',' => 1, " " => 1);
+/, '#' => 1, '%' => 1, ',' => 1, " " => 1);
 my %forbidden_first_plus_space = (qw/
     ? 1 - 1 : 1
 /);
