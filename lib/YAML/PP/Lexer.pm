@@ -153,36 +153,6 @@ sub fetch_next_line {
     return $next_line;
 }
 
-sub fetch_next_tokens {
-    my ($self, $indent) = @_;
-    my $next = $self->next_tokens;
-    return $next if @$next;
-
-    my $next_line = $self->fetch_next_line;
-    if (not $next_line) {
-        return [];
-    }
-
-    my $spaces = $next_line->[0];
-    my $yaml = \$next_line->[1];
-    if (not length $$yaml) {
-        $self->push_tokens( [ EOL => $spaces . $next_line->[2] ] );
-        $self->set_next_line(undef);
-        return $next;
-    }
-    if (not $spaces and $$yaml =~ s/\A(---|\.\.\.)(?=$RE_WS|\z)//) {
-        my $t = $1;
-        my $token_name = { '---' => 'DOC_START', '...' => 'DOC_END' }->{ $t };
-        $self->push_tokens([ $token_name => $t ]);
-    }
-
-    my $partial = $self->_fetch_next_tokens($indent, $next_line);
-    unless ($partial) {
-        $self->set_next_line(undef);
-    }
-    return $next;
-}
-
 my %TOKEN_NAMES = (
     '"' => 'DOUBLEQUOTE',
     "'" => 'SINGLEQUOTE',
@@ -199,7 +169,52 @@ my %TOKEN_NAMES = (
     '{' => 'FLOWMAP_START',
     '}' => 'FLOWMAP_END',
     ',' => 'FLOW_COMMA',
+    '---' => 'DOC_START',
+    '...' => 'DOC_END',
 );
+
+
+sub fetch_next_tokens {
+    my ($self) = @_;
+    my $next = $self->next_tokens;
+    return $next if @$next;
+
+    my $next_line = $self->fetch_next_line;
+    if (not $next_line) {
+        return [];
+    }
+
+    my $spaces = $next_line->[0];
+    my $yaml = \$next_line->[1];
+    if (not length $$yaml) {
+        $self->push_tokens([ EOL => join('', @$next_line) ]);
+        $self->set_next_line(undef);
+        return $next;
+    }
+    if (substr($$yaml, 0, 1) eq '#') {
+        $self->push_tokens([ EOL => join('', @$next_line) ]);
+        $self->set_next_line(undef);
+        return $next;
+    }
+    if (not $spaces and substr($$yaml, 0, 1) eq "%") {
+        $self->_fetch_next_tokens_directive($yaml, $next_line->[2]);
+        $self->set_context(0);
+        $self->set_next_line(undef);
+        return $next;
+    }
+    if (not $spaces and $$yaml =~ s/\A(---|\.\.\.)(?=$RE_WS|\z)//) {
+        $self->push_tokens([ $TOKEN_NAMES{ $1 } => $1 ]);
+    }
+    else {
+        $self->push_tokens([ SPACE => $spaces ]);
+    }
+
+    my $partial = $self->_fetch_next_tokens($next_line);
+    unless ($partial) {
+        $self->set_next_line(undef);
+    }
+    return $next;
+}
 
 my %ANCHOR_ALIAS_TAG =    ( '&' => 1, '*' => 1, '!' => 1 );
 my %BLOCK_SCALAR =        ( '|' => 1, '>' => 1 );
@@ -221,38 +236,12 @@ my %CONTROL = (
 
 sub _fetch_next_tokens {
     TRACE and warn __PACKAGE__.':'.__LINE__.": _fetch_next_tokens\n";
-    my ($self, $indent, $next_line) = @_;
-    my $offset = $self->offset || 0;
-    my $flowcontext = $self->flowcontext;
-    #warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_line], ['next_line']);
+    my ($self, $next_line) = @_;
 
-    my $spaces = $next_line->[0];
     my $yaml = \$next_line->[1];
     my $eol = $next_line->[2];
-    if (not length $$yaml) {
-        $self->push_tokens( [ EOL => $spaces . $eol ] );
-        return;
-    }
-
-    my $first = substr($$yaml, 0, 1);
 
     my @tokens;
-    if ($offset == 0) {
-        if ($first eq '#') {
-            push @tokens, ( EOL => $spaces . $$yaml . $eol );
-            $$yaml = '';
-            $self->push_tokens(\@tokens);
-            return;
-        }
-        if ($spaces ) {
-            push @tokens, ( INDENT => $spaces );
-        }
-        elsif ($first eq "%" and not $self->flowcontext) {
-            $self->_fetch_next_tokens_directive($yaml, $eol);
-            $self->set_context(0);
-            return;
-        }
-    }
 
     while (1) {
         unless (length $$yaml) {
@@ -260,10 +249,8 @@ sub _fetch_next_tokens {
             $self->push_tokens(\@tokens);
             return;
         }
-        $first = substr($$yaml, 0, 1);
-        my $c = $self->context;
+        my $first = substr($$yaml, 0, 1);
         my $plain = 0;
-
 
         if ($self->context) {
             if ($$yaml =~ s/\A($RE_WS*)://) {
@@ -277,8 +264,8 @@ sub _fetch_next_tokens {
                 $self->push_tokens(\@tokens);
                 return;
             }
+            $self->set_context(0);
         }
-        $self->set_context(0);
         if ($CONTEXT{ $first }) {
             push @tokens, ( CONTEXT => $first );
             $self->push_tokens(\@tokens);
@@ -335,6 +322,7 @@ sub _fetch_next_tokens {
         elsif ($FLOW{ $first }) {
             push @tokens, ( $TOKEN_NAMES{ $first } => $first );
             substr($$yaml, 0, 1, '');
+            my $flowcontext = $self->flowcontext;
             if ($first eq '{' or $first eq '[') {
                 $self->set_flowcontext(++$flowcontext);
             }
@@ -363,8 +351,7 @@ sub fetch_plain {
     my $yaml = \$next_line->[1];
     my $eol = $next_line->[2];
     my $REGEX = $RE_PLAIN_WORDS;
-    my $flowcontext = $self->flowcontext;
-    if ($flowcontext) {
+    if ($self->flowcontext) {
         $REGEX = $RE_PLAIN_WORDS_FLOW;
     }
 
@@ -374,24 +361,29 @@ sub fetch_plain {
         $self->exception("Invalid plain scalar");
     }
     my $plain = $1;
-    unless ($$yaml =~ s/\A(?:($RE_WS+#.*)|($RE_WS*))\z//) {
-        push @tokens, ( PLAIN => $plain );
+    push @tokens, ( PLAIN => $plain );
+
+    if ($$yaml =~ s/\A(?:($RE_WS+#.*)|($RE_WS*))\z//) {
+        if (defined $1) {
+            push @tokens, ( EOL => $1 . $eol );
+            $self->push_tokens(\@tokens);
+            $self->set_next_line(undef);
+            return;
+        }
+        else {
+            push @tokens, ( EOL => $2. $eol );
+            $self->set_next_line(undef);
+        }
+    }
+    else {
         $self->push_tokens(\@tokens);
-        my $partial = $self->_fetch_next_tokens($indent, $next_line);
+        my $partial = $self->_fetch_next_tokens($next_line);
         if (not $partial) {
             $self->set_next_line(undef);
         }
-        return 0;
-    }
-    if (defined $1) {
-        push @tokens, ( PLAIN => $plain, EOL => $1 . $eol );
-        $self->push_tokens(\@tokens);
-        $self->set_next_line(undef);
         return;
     }
-    $eol = $2 . $eol;
-    push @tokens, ( PLAIN => $plain, EOL => $eol );
-    $self->set_next_line(undef);
+
     my $RE2 = $RE_PLAIN_WORDS2;
     if ($self->flowcontext) {
         $RE2 = $RE_PLAIN_WORDS_FLOW2;
@@ -414,40 +406,35 @@ sub fetch_plain {
             push @lines, '';
             next LOOP;
         }
+
         if (not $spaces and $$yaml =~ s/\A(---|\.\.\.)(?=$RE_WS|\z)//) {
-
-            my $t = $1;
-            my $token_name = { '---' => 'DOC_START', '...' => 'DOC_END' }->{ $t };
-            push @next, $token_name => $t;
-            $fetch_next = 1;
-            last LOOP;
-
-        }
-        elsif ((length $spaces) < $indent) {
+            push @next, $TOKEN_NAMES{ $1 } => $1;
             $fetch_next = 1;
             last LOOP;
         }
+        if ((length $spaces) < $indent) {
+            last LOOP;
+        }
 
-        push @tokens, INDENT => $spaces;
         my $ws = '';
         if ($$yaml =~ s/\A($RE_WS+)//) {
             $ws = $1;
         }
         if (not length $$yaml) {
-            push @tokens, ( EOL => $ws . $eol );
+            push @tokens, ( EOL => $spaces . $ws . $eol );
             $self->set_next_line(undef);
             push @lines, '';
             next LOOP;
         }
         if ($$yaml =~ s/\A(#.*)\z//) {
-            push @tokens, ( EOL => $ws . $1 . $eol );
+            push @tokens, ( EOL => $spaces . $ws . $1 . $eol );
             $self->set_next_line(undef);
             last LOOP;
         }
 
-        push @tokens, WS => $ws;
-
         if ($$yaml =~ s/\A($RE2)//) {
+            push @tokens, INDENT => $spaces;
+            push @tokens, WS => $ws;
             push @tokens, PLAIN => $1;
             push @lines, $1;
             my $ws = '';
@@ -471,6 +458,8 @@ sub fetch_plain {
             }
         }
         else {
+            push @tokens, SPACE => $spaces;
+            push @tokens, WS => $ws;
             if ($self->flowcontext) {
                 $fetch_next = 1;
             }
@@ -500,7 +489,7 @@ sub fetch_plain {
     }
     @tokens = ();
     if ($fetch_next) {
-        my $partial = $self->_fetch_next_tokens($indent, $next_line);
+        my $partial = $self->_fetch_next_tokens($next_line);
         if (not $partial) {
             $self->set_next_line(undef);
         }
@@ -664,7 +653,7 @@ sub fetch_quoted {
             }
             $self->set_context(1) if $self->flowcontext;
             if (length $$yaml) {
-                my $partial = $self->_fetch_next_tokens($indent, $next_line);
+                my $partial = $self->_fetch_next_tokens($next_line);
                 if (not $partial) {
                     $self->set_next_line(undef);
                 }
@@ -838,26 +827,17 @@ sub push_tokens {
         my $value = $new_tokens->[ $i + 1 ];
         my $name = $new_tokens->[ $i ];
         my $push = {
-            name => $new_tokens->[ $i ],
+            name => $name,
             line => $line,
             column => $column,
+            value => $value,
         };
-        if (ref $value eq 'HASH') {
-            %$push = ( %$push, %$value );
-            $column += length $value->{orig} unless $name eq 'CONTEXT';
-        }
-        else {
-            $push->{value} = $value;
-            $column += length $value unless $name eq 'CONTEXT';
-        }
+        $column += length $value unless $name eq 'CONTEXT';
         push @$next, $push;
-        if ($push->{name} eq 'EOL') {
+        if ($name eq 'EOL') {
             $column = 0;
         }
     }
-#    if ($next->[-1]->{name} eq 'EOL') {
-#        $column = 0;
-#    }
     $self->set_offset($column);
     return $next;
 }
@@ -881,11 +861,11 @@ sub push_subtokens {
         };
         if (ref $value eq 'HASH') {
             %$push = ( %$push, %$value );
-            $column += length $value->{orig} unless $name eq 'CONTEXT';
+            $column += length $value->{orig};
         }
         else {
             $push->{value} = $value;
-            $column += length $value unless $name eq 'CONTEXT';
+            $column += length $value;
         }
         if ($push->{name} eq 'EOL') {
             $column = 0;

@@ -16,6 +16,38 @@ our $GRAMMAR = {};
 # This grammar is automatically generated from etc/grammar.yaml
 
 $GRAMMAR = {
+  'DIRECTIVE' => {
+    'DOC_START' => {
+      'EOL' => {
+        'new' => 'FULLNODE'
+      },
+      'WS' => {
+        'new' => 'FULLNODE'
+      },
+      'match' => 'cb_doc_start_explicit'
+    },
+    'EOL' => {
+      'new' => 'DIRECTIVE'
+    }
+  },
+  'DOCUMENT_END' => {
+    'DOC_END' => {
+      'EOL' => {},
+      'match' => 'cb_end_document'
+    },
+    'DOC_START' => {
+      'EOL' => {
+        'new' => 'FULLNODE'
+      },
+      'WS' => {
+        'new' => 'FULLNODE'
+      },
+      'match' => 'cb_end_doc_start_document'
+    },
+    'EOL' => {
+      'new' => 'DOCUMENT_END'
+    }
+  },
   'FLOWMAP' => {
     'ALIAS' => {
       'match' => 'cb_send_alias',
@@ -24,8 +56,7 @@ $GRAMMAR = {
     'COLON' => {
       'EOL' => {
         'match' => 'cb_empty_flow_mapkey',
-        'new' => 'RULE_FULLFLOWSCALAR',
-        'return' => 1
+        'new' => 'RULE_FULLFLOWSCALAR'
       },
       'WS' => {
         'match' => 'cb_empty_flow_mapkey',
@@ -89,17 +120,11 @@ $GRAMMAR = {
   },
   'FLOWSEQ_NEXT' => {
     'EOL' => {
-      'new' => 'FLOWSEQ_NEXT',
-      'return' => 1
+      'new' => 'FLOWSEQ_NEXT'
     },
     'FLOWSEQ_END' => {
-      'DEFAULT' => {
-        'return' => 1
-      },
-      'EOL' => {
-        'return' => 1
-      },
-      'match' => 'cb_end_flowseq'
+      'match' => 'cb_end_flowseq',
+      'return' => 1
     },
     'FLOW_COMMA' => {
       'match' => 'cb_flow_comma',
@@ -113,8 +138,7 @@ $GRAMMAR = {
     'ANCHOR' => {
       'EOL' => {
         'match' => 'cb_property_eol',
-        'new' => 'FULLNODE_ANCHOR',
-        'return' => 1
+        'new' => 'FULLNODE_ANCHOR'
       },
       'WS' => {
         'DEFAULT' => {
@@ -123,8 +147,7 @@ $GRAMMAR = {
         'TAG' => {
           'EOL' => {
             'match' => 'cb_property_eol',
-            'new' => 'FULLNODE_TAG_ANCHOR',
-            'return' => 1
+            'new' => 'FULLNODE_TAG_ANCHOR'
           },
           'WS' => {
             'new' => 'NODETYPE_MAPVALUE_INLINE'
@@ -140,15 +163,13 @@ $GRAMMAR = {
     'TAG' => {
       'EOL' => {
         'match' => 'cb_property_eol',
-        'new' => 'FULLNODE_TAG',
-        'return' => 1
+        'new' => 'FULLNODE_TAG'
       },
       'WS' => {
         'ANCHOR' => {
           'EOL' => {
             'match' => 'cb_property_eol',
-            'new' => 'FULLNODE_TAG_ANCHOR',
-            'return' => 1
+            'new' => 'FULLNODE_TAG_ANCHOR'
           },
           'WS' => {
             'new' => 'NODETYPE_MAPVALUE_INLINE'
@@ -166,8 +187,7 @@ $GRAMMAR = {
     'ANCHOR' => {
       'EOL' => {
         'match' => 'cb_property_eol',
-        'new' => 'FULLNODE_ANCHOR',
-        'return' => 1
+        'new' => 'FULLNODE_ANCHOR'
       },
       'WS' => {
         'DEFAULT' => {
@@ -176,8 +196,7 @@ $GRAMMAR = {
         'TAG' => {
           'EOL' => {
             'match' => 'cb_property_eol',
-            'new' => 'FULLNODE_TAG_ANCHOR',
-            'return' => 1
+            'new' => 'FULLNODE_TAG_ANCHOR'
           },
           'WS' => {
             'new' => 'NODETYPE_SCALAR_OR_MAP'
@@ -190,18 +209,19 @@ $GRAMMAR = {
     'DEFAULT' => {
       'new' => 'NODETYPE_NODE'
     },
+    'EOL' => {
+      'new' => 'FULLNODE'
+    },
     'TAG' => {
       'EOL' => {
         'match' => 'cb_property_eol',
-        'new' => 'FULLNODE_TAG',
-        'return' => 1
+        'new' => 'FULLNODE_TAG'
       },
       'WS' => {
         'ANCHOR' => {
           'EOL' => {
             'match' => 'cb_property_eol',
-            'new' => 'FULLNODE_TAG_ANCHOR',
-            'return' => 1
+            'new' => 'FULLNODE_TAG_ANCHOR'
           },
           'WS' => {
             'new' => 'NODETYPE_SCALAR_OR_MAP'
@@ -233,11 +253,13 @@ $GRAMMAR = {
     'DEFAULT' => {
       'new' => 'NODETYPE_NODE'
     },
+    'EOL' => {
+      'new' => 'FULLNODE_ANCHOR'
+    },
     'TAG' => {
       'EOL' => {
         'match' => 'cb_property_eol',
-        'new' => 'FULLNODE_TAG_ANCHOR',
-        'return' => 1
+        'new' => 'FULLNODE_TAG_ANCHOR'
       },
       'WS' => {
         'ANCHOR' => {
@@ -257,8 +279,7 @@ $GRAMMAR = {
     'ANCHOR' => {
       'EOL' => {
         'match' => 'cb_property_eol',
-        'new' => 'FULLNODE_TAG_ANCHOR',
-        'return' => 1
+        'new' => 'FULLNODE_TAG_ANCHOR'
       },
       'WS' => {
         'DEFAULT' => {
@@ -275,6 +296,9 @@ $GRAMMAR = {
     },
     'DEFAULT' => {
       'new' => 'NODETYPE_NODE'
+    },
+    'EOL' => {
+      'new' => 'FULLNODE_TAG'
     },
     'TAG' => {
       'WS' => {
@@ -309,6 +333,9 @@ $GRAMMAR = {
     'DEFAULT' => {
       'new' => 'NODETYPE_NODE'
     },
+    'EOL' => {
+      'new' => 'FULLNODE_TAG_ANCHOR'
+    },
     'TAG' => {
       'WS' => {
         'ANCHOR' => {
@@ -327,8 +354,7 @@ $GRAMMAR = {
   'NEWFLOWMAP' => {
     'ANCHOR' => {
       'EOL' => {
-        'new' => 'NEWFLOWMAP_ANCHOR',
-        'return' => 1
+        'new' => 'NEWFLOWMAP_ANCHOR'
       },
       'WS' => {
         'new' => 'NEWFLOWMAP_ANCHOR'
@@ -338,8 +364,7 @@ $GRAMMAR = {
     'COLON' => {
       'EOL' => {
         'match' => 'cb_empty_flow_mapkey',
-        'new' => 'RULE_FULLFLOWSCALAR',
-        'return' => 1
+        'new' => 'RULE_FULLFLOWSCALAR'
       },
       'WS' => {
         'match' => 'cb_empty_flow_mapkey',
@@ -350,17 +375,11 @@ $GRAMMAR = {
       'new' => 'FLOWMAP'
     },
     'EOL' => {
-      'new' => 'NEWFLOWMAP',
-      'return' => 1
+      'new' => 'NEWFLOWMAP'
     },
     'FLOWMAP_END' => {
-      'DEFAULT' => {
-        'return' => 1
-      },
-      'EOL' => {
-        'return' => 1
-      },
-      'match' => 'cb_end_flowmap'
+      'match' => 'cb_end_flowmap',
+      'return' => 1
     },
     'QUESTION' => {
       'match' => 'cb_flow_question',
@@ -368,8 +387,7 @@ $GRAMMAR = {
     },
     'TAG' => {
       'EOL' => {
-        'new' => 'NEWFLOWMAP_TAG',
-        'return' => 1
+        'new' => 'NEWFLOWMAP_TAG'
       },
       'WS' => {
         'new' => 'NEWFLOWMAP_TAG'
@@ -385,13 +403,11 @@ $GRAMMAR = {
       'new' => 'FLOWMAP'
     },
     'EOL' => {
-      'new' => 'NEWFLOWMAP_ANCHOR',
-      'return' => 1
+      'new' => 'NEWFLOWMAP_ANCHOR'
     },
     'TAG' => {
       'EOL' => {
-        'new' => 'FLOWMAP',
-        'return' => 1
+        'new' => 'FLOWMAP'
       },
       'WS' => {
         'new' => 'FLOWMAP'
@@ -405,8 +421,7 @@ $GRAMMAR = {
   'NEWFLOWMAP_TAG' => {
     'ANCHOR' => {
       'EOL' => {
-        'new' => 'FLOWMAP',
-        'return' => 1
+        'new' => 'FLOWMAP'
       },
       'WS' => {
         'new' => 'FLOWMAP'
@@ -417,8 +432,7 @@ $GRAMMAR = {
       'new' => 'FLOWMAP'
     },
     'EOL' => {
-      'new' => 'NEWFLOWMAP_TAG',
-      'return' => 1
+      'new' => 'NEWFLOWMAP_TAG'
     },
     'WS' => {
       'new' => 'NEWFLOWMAP_TAG'
@@ -427,8 +441,7 @@ $GRAMMAR = {
   'NEWFLOWSEQ' => {
     'ANCHOR' => {
       'EOL' => {
-        'new' => 'NEWFLOWSEQ_ANCHOR',
-        'return' => 1
+        'new' => 'NEWFLOWSEQ_ANCHOR'
       },
       'WS' => {
         'new' => 'NEWFLOWSEQ_ANCHOR'
@@ -439,22 +452,15 @@ $GRAMMAR = {
       'new' => 'FLOWSEQ'
     },
     'EOL' => {
-      'new' => 'NEWFLOWSEQ',
-      'return' => 1
+      'new' => 'NEWFLOWSEQ'
     },
     'FLOWSEQ_END' => {
-      'DEFAULT' => {
-        'return' => 1
-      },
-      'EOL' => {
-        'return' => 1
-      },
-      'match' => 'cb_end_flowseq'
+      'match' => 'cb_end_flowseq',
+      'return' => 1
     },
     'TAG' => {
       'EOL' => {
-        'new' => 'NEWFLOWSEQ_TAG',
-        'return' => 1
+        'new' => 'NEWFLOWSEQ_TAG'
       },
       'WS' => {
         'new' => 'NEWFLOWSEQ_TAG'
@@ -470,13 +476,11 @@ $GRAMMAR = {
       'new' => 'FLOWSEQ'
     },
     'EOL' => {
-      'new' => 'NEWFLOWSEQ_ANCHOR',
-      'return' => 1
+      'new' => 'NEWFLOWSEQ_ANCHOR'
     },
     'TAG' => {
       'EOL' => {
-        'new' => 'FLOWSEQ',
-        'return' => 1
+        'new' => 'FLOWSEQ'
       },
       'WS' => {
         'new' => 'FLOWSEQ'
@@ -490,8 +494,7 @@ $GRAMMAR = {
   'NEWFLOWSEQ_TAG' => {
     'ANCHOR' => {
       'EOL' => {
-        'new' => 'FLOWSEQ',
-        'return' => 1
+        'new' => 'FLOWSEQ'
       },
       'WS' => {
         'new' => 'FLOWSEQ'
@@ -502,8 +505,7 @@ $GRAMMAR = {
       'new' => 'FLOWSEQ'
     },
     'EOL' => {
-      'new' => 'NEWFLOWSEQ_TAG',
-      'return' => 1
+      'new' => 'NEWFLOWSEQ_TAG'
     },
     'WS' => {
       'new' => 'NEWFLOWSEQ_TAG'
@@ -512,8 +514,7 @@ $GRAMMAR = {
   'NODETYPE_COMPLEX' => {
     'COLON' => {
       'EOL' => {
-        'new' => 'FULLNODE',
-        'return' => 1
+        'new' => 'FULLNODE'
       },
       'WS' => {
         'new' => 'FULLNODE'
@@ -523,6 +524,9 @@ $GRAMMAR = {
     'DEFAULT' => {
       'match' => 'cb_empty_complexvalue',
       'new' => 'NODETYPE_MAP'
+    },
+    'EOL' => {
+      'new' => 'NODETYPE_COMPLEX'
     }
   },
   'NODETYPE_FLOWMAP' => {
@@ -530,17 +534,11 @@ $GRAMMAR = {
       'new' => 'NEWFLOWMAP'
     },
     'EOL' => {
-      'new' => 'NODETYPE_FLOWMAP',
-      'return' => 1
+      'new' => 'NODETYPE_FLOWMAP'
     },
     'FLOWMAP_END' => {
-      'DEFAULT' => {
-        'return' => 1
-      },
-      'EOL' => {
-        'return' => 1
-      },
-      'match' => 'cb_end_flowmap'
+      'match' => 'cb_end_flowmap',
+      'return' => 1
     },
     'FLOW_COMMA' => {
       'match' => 'cb_flow_comma',
@@ -556,8 +554,7 @@ $GRAMMAR = {
         'new' => 'RULE_FULLFLOWSCALAR'
       },
       'EOL' => {
-        'new' => 'RULE_FULLFLOWSCALAR',
-        'return' => 1
+        'new' => 'RULE_FULLFLOWSCALAR'
       },
       'WS' => {
         'new' => 'RULE_FULLFLOWSCALAR'
@@ -565,17 +562,11 @@ $GRAMMAR = {
       'match' => 'cb_flow_colon'
     },
     'EOL' => {
-      'new' => 'NODETYPE_FLOWMAPVALUE',
-      'return' => 1
+      'new' => 'NODETYPE_FLOWMAPVALUE'
     },
     'FLOWMAP_END' => {
-      'DEFAULT' => {
-        'return' => 1
-      },
-      'EOL' => {
-        'return' => 1
-      },
-      'match' => 'cb_end_flowmap_empty'
+      'match' => 'cb_end_flowmap_empty',
+      'return' => 1
     },
     'FLOW_COMMA' => {
       'match' => 'cb_empty_flowmap_value',
@@ -590,17 +581,11 @@ $GRAMMAR = {
       'new' => 'NEWFLOWSEQ'
     },
     'EOL' => {
-      'new' => 'NODETYPE_FLOWSEQ',
-      'return' => 1
+      'new' => 'NODETYPE_FLOWSEQ'
     },
     'FLOWSEQ_END' => {
-      'DEFAULT' => {
-        'return' => 1
-      },
-      'EOL' => {
-        'return' => 1
-      },
-      'match' => 'cb_end_flowseq'
+      'match' => 'cb_end_flowseq',
+      'return' => 1
     },
     'WS' => {
       'new' => 'NODETYPE_FLOWSEQ'
@@ -641,61 +626,50 @@ $GRAMMAR = {
   },
   'NODETYPE_MAPVALUE_INLINE' => {
     'ALIAS' => {
-      'EOL' => {
-        'return' => 1
-      },
+      'EOL' => {},
       'match' => 'cb_send_alias'
     },
     'BLOCK_SCALAR' => {
-      'EOL' => {
-        'return' => 1
-      },
+      'EOL' => {},
       'match' => 'cb_send_block_scalar'
     },
+    'DOC_END' => {
+      'EOL' => {},
+      'match' => 'cb_end_document'
+    },
     'FLOWMAP_START' => {
-      'DEFAULT' => {
-        'new' => 'NEWFLOWMAP'
-      },
-      'match' => 'cb_start_flowmap'
+      'match' => 'cb_start_flowmap',
+      'new' => 'NEWFLOWMAP'
     },
     'FLOWSEQ_START' => {
-      'DEFAULT' => {
-        'new' => 'NEWFLOWSEQ'
-      },
-      'match' => 'cb_start_flowseq'
+      'match' => 'cb_start_flowseq',
+      'new' => 'NEWFLOWSEQ'
     },
     'PLAIN' => {
       'EOL' => {
-        'match' => 'cb_send_scalar',
-        'return' => 1
+        'match' => 'cb_send_scalar'
       },
       'match' => 'cb_start_plain'
     },
     'PLAIN_MULTI' => {
-      'EOL' => {
-        'return' => 1
-      },
+      'EOL' => {},
       'match' => 'cb_send_plain_multi'
     },
     'QUOTED' => {
       'EOL' => {
-        'match' => 'cb_send_scalar',
-        'return' => 1
+        'match' => 'cb_send_scalar'
       },
       'match' => 'cb_take_quoted'
     },
     'QUOTED_MULTILINE' => {
-      'EOL' => {
-        'return' => 1
-      },
+      'EOL' => {},
       'match' => 'cb_quoted_multiline'
     }
   },
   'NODETYPE_NODE' => {
     'DASH' => {
       'EOL' => {
-        'new' => 'FULLNODE',
-        'return' => 1
+        'new' => 'FULLNODE'
       },
       'WS' => {
         'new' => 'FULLNODE'
@@ -709,14 +683,12 @@ $GRAMMAR = {
   'NODETYPE_SCALAR_OR_MAP' => {
     'ALIAS' => {
       'EOL' => {
-        'match' => 'cb_send_alias_from_stack',
-        'return' => 1
+        'match' => 'cb_send_alias_from_stack'
       },
       'WS' => {
         'COLON' => {
           'EOL' => {
-            'new' => 'FULLNODE',
-            'return' => 1
+            'new' => 'FULLNODE'
           },
           'WS' => {
             'new' => 'FULLMAPVALUE_INLINE'
@@ -727,38 +699,46 @@ $GRAMMAR = {
       'match' => 'cb_alias'
     },
     'BLOCK_SCALAR' => {
-      'EOL' => {
-        'return' => 1
-      },
+      'EOL' => {},
       'match' => 'cb_send_block_scalar'
     },
     'COLON' => {
       'EOL' => {
-        'new' => 'FULLNODE',
-        'return' => 1
+        'new' => 'FULLNODE'
       },
       'WS' => {
         'new' => 'FULLMAPVALUE_INLINE'
       },
       'match' => 'cb_insert_empty_map'
     },
-    'FLOWMAP_START' => {
-      'DEFAULT' => {
-        'new' => 'NEWFLOWMAP'
+    'DOC_END' => {
+      'EOL' => {},
+      'match' => 'cb_end_document'
+    },
+    'DOC_START' => {
+      'EOL' => {
+        'new' => 'FULLNODE'
       },
-      'match' => 'cb_start_flowmap'
+      'WS' => {
+        'new' => 'FULLNODE'
+      },
+      'match' => 'cb_end_doc_start_document'
+    },
+    'EOL' => {
+      'new' => 'NODETYPE_SCALAR_OR_MAP'
+    },
+    'FLOWMAP_START' => {
+      'match' => 'cb_start_flowmap',
+      'new' => 'NEWFLOWMAP'
     },
     'FLOWSEQ_START' => {
-      'DEFAULT' => {
-        'new' => 'NEWFLOWSEQ'
-      },
-      'match' => 'cb_start_flowseq'
+      'match' => 'cb_start_flowseq',
+      'new' => 'NEWFLOWSEQ'
     },
     'PLAIN' => {
       'COLON' => {
         'EOL' => {
-          'new' => 'FULLNODE',
-          'return' => 1
+          'new' => 'FULLNODE'
         },
         'WS' => {
           'new' => 'FULLMAPVALUE_INLINE'
@@ -766,14 +746,12 @@ $GRAMMAR = {
         'match' => 'cb_insert_map'
       },
       'EOL' => {
-        'match' => 'cb_send_scalar',
-        'return' => 1
+        'match' => 'cb_send_scalar'
       },
       'WS' => {
         'COLON' => {
           'EOL' => {
-            'new' => 'FULLNODE',
-            'return' => 1
+            'new' => 'FULLNODE'
           },
           'WS' => {
             'new' => 'FULLMAPVALUE_INLINE'
@@ -784,15 +762,12 @@ $GRAMMAR = {
       'match' => 'cb_start_plain'
     },
     'PLAIN_MULTI' => {
-      'EOL' => {
-        'return' => 1
-      },
+      'EOL' => {},
       'match' => 'cb_send_plain_multi'
     },
     'QUESTION' => {
       'EOL' => {
-        'new' => 'FULLNODE',
-        'return' => 1
+        'new' => 'FULLNODE'
       },
       'WS' => {
         'new' => 'FULLNODE'
@@ -802,8 +777,7 @@ $GRAMMAR = {
     'QUOTED' => {
       'COLON' => {
         'EOL' => {
-          'new' => 'FULLNODE',
-          'return' => 1
+          'new' => 'FULLNODE'
         },
         'WS' => {
           'new' => 'FULLMAPVALUE_INLINE'
@@ -811,14 +785,12 @@ $GRAMMAR = {
         'match' => 'cb_insert_map'
       },
       'EOL' => {
-        'match' => 'cb_send_scalar',
-        'return' => 1
+        'match' => 'cb_send_scalar'
       },
       'WS' => {
         'COLON' => {
           'EOL' => {
-            'new' => 'FULLNODE',
-            'return' => 1
+            'new' => 'FULLNODE'
           },
           'WS' => {
             'new' => 'FULLMAPVALUE_INLINE'
@@ -829,9 +801,7 @@ $GRAMMAR = {
       'match' => 'cb_take_quoted'
     },
     'QUOTED_MULTILINE' => {
-      'EOL' => {
-        'return' => 1
-      },
+      'EOL' => {},
       'match' => 'cb_quoted_multiline'
     },
     'WS' => {
@@ -841,13 +811,28 @@ $GRAMMAR = {
   'NODETYPE_SEQ' => {
     'DASH' => {
       'EOL' => {
-        'new' => 'FULLNODE',
-        'return' => 1
+        'new' => 'FULLNODE'
       },
       'WS' => {
         'new' => 'FULLNODE'
       },
       'match' => 'cb_seqitem'
+    },
+    'DOC_END' => {
+      'EOL' => {},
+      'match' => 'cb_end_document'
+    },
+    'DOC_START' => {
+      'EOL' => {
+        'new' => 'FULLNODE'
+      },
+      'WS' => {
+        'new' => 'FULLNODE'
+      },
+      'match' => 'cb_end_doc_start_document'
+    },
+    'EOL' => {
+      'new' => 'NODETYPE_SEQ'
     }
   },
   'RULE_FLOWSCALAR' => {
@@ -856,13 +841,8 @@ $GRAMMAR = {
       'return' => 1
     },
     'FLOWMAP_END' => {
-      'DEFAULT' => {
-        'return' => 1
-      },
-      'EOL' => {
-        'return' => 1
-      },
-      'match' => 'cb_end_flowmap_empty'
+      'match' => 'cb_end_flowmap_empty',
+      'return' => 1
     },
     'FLOWMAP_START' => {
       'match' => 'cb_start_flowmap',
@@ -882,8 +862,7 @@ $GRAMMAR = {
         'return' => 1
       },
       'EOL' => {
-        'match' => 'cb_send_scalar',
-        'return' => 1
+        'match' => 'cb_send_scalar'
       },
       'match' => 'cb_start_plain'
     },
@@ -897,8 +876,7 @@ $GRAMMAR = {
         'return' => 1
       },
       'EOL' => {
-        'match' => 'cb_send_scalar',
-        'return' => 1
+        'match' => 'cb_send_scalar'
       },
       'WS' => {
         'match' => 'cb_send_scalar',
@@ -917,8 +895,7 @@ $GRAMMAR = {
         'new' => 'RULE_FULLFLOWSCALAR_ANCHOR'
       },
       'EOL' => {
-        'new' => 'RULE_FULLFLOWSCALAR_ANCHOR',
-        'return' => 1
+        'new' => 'RULE_FULLFLOWSCALAR_ANCHOR'
       },
       'match' => 'cb_anchor'
     },
@@ -930,8 +907,7 @@ $GRAMMAR = {
         'new' => 'RULE_FULLFLOWSCALAR_TAG'
       },
       'EOL' => {
-        'new' => 'RULE_FULLFLOWSCALAR_TAG',
-        'return' => 1
+        'new' => 'RULE_FULLFLOWSCALAR_TAG'
       },
       'match' => 'cb_tag'
     }
@@ -942,8 +918,7 @@ $GRAMMAR = {
     },
     'TAG' => {
       'EOL' => {
-        'new' => 'RULE_FLOWSCALAR',
-        'return' => 1
+        'new' => 'RULE_FLOWSCALAR'
       },
       'WS' => {
         'new' => 'RULE_FLOWSCALAR'
@@ -957,8 +932,7 @@ $GRAMMAR = {
   'RULE_FULLFLOWSCALAR_TAG' => {
     'ANCHOR' => {
       'EOL' => {
-        'new' => 'RULE_FLOWSCALAR',
-        'return' => 1
+        'new' => 'RULE_FLOWSCALAR'
       },
       'WS' => {
         'new' => 'RULE_FLOWSCALAR'
@@ -977,8 +951,7 @@ $GRAMMAR = {
       'WS' => {
         'COLON' => {
           'EOL' => {
-            'new' => 'FULLNODE',
-            'return' => 1
+            'new' => 'FULLNODE'
           },
           'WS' => {
             'new' => 'FULLMAPVALUE_INLINE'
@@ -989,19 +962,33 @@ $GRAMMAR = {
     },
     'COLON' => {
       'EOL' => {
-        'new' => 'FULLNODE',
-        'return' => 1
+        'new' => 'FULLNODE'
       },
       'WS' => {
         'new' => 'FULLMAPVALUE_INLINE'
       },
       'match' => 'cb_empty_mapkey'
     },
+    'DOC_END' => {
+      'EOL' => {},
+      'match' => 'cb_end_document'
+    },
+    'DOC_START' => {
+      'EOL' => {
+        'new' => 'FULLNODE'
+      },
+      'WS' => {
+        'new' => 'FULLNODE'
+      },
+      'match' => 'cb_end_doc_start_document'
+    },
+    'EOL' => {
+      'new' => 'RULE_MAPKEY'
+    },
     'PLAIN' => {
       'COLON' => {
         'EOL' => {
-          'new' => 'FULLNODE',
-          'return' => 1
+          'new' => 'FULLNODE'
         },
         'WS' => {
           'new' => 'FULLMAPVALUE_INLINE'
@@ -1011,8 +998,7 @@ $GRAMMAR = {
       'WS' => {
         'COLON' => {
           'EOL' => {
-            'new' => 'FULLNODE',
-            'return' => 1
+            'new' => 'FULLNODE'
           },
           'WS' => {
             'new' => 'FULLMAPVALUE_INLINE'
@@ -1024,8 +1010,7 @@ $GRAMMAR = {
     },
     'QUESTION' => {
       'EOL' => {
-        'new' => 'FULLNODE',
-        'return' => 1
+        'new' => 'FULLNODE'
       },
       'WS' => {
         'new' => 'FULLNODE'
@@ -1035,8 +1020,7 @@ $GRAMMAR = {
     'QUOTED' => {
       'COLON' => {
         'EOL' => {
-          'new' => 'FULLNODE',
-          'return' => 1
+          'new' => 'FULLNODE'
         },
         'WS' => {
           'new' => 'FULLMAPVALUE_INLINE'
@@ -1045,8 +1029,7 @@ $GRAMMAR = {
       'WS' => {
         'COLON' => {
           'EOL' => {
-            'new' => 'FULLNODE',
-            'return' => 1
+            'new' => 'FULLNODE'
           },
           'WS' => {
             'new' => 'FULLMAPVALUE_INLINE'
@@ -1054,6 +1037,54 @@ $GRAMMAR = {
         }
       },
       'match' => 'cb_take_quoted_key'
+    }
+  },
+  'STREAM' => {
+    'DEFAULT' => {
+      'match' => 'cb_doc_start_implicit',
+      'new' => 'FULLNODE'
+    },
+    'DOC_END' => {
+      'EOL' => {},
+      'match' => 'cb_end_document_empty'
+    },
+    'DOC_START' => {
+      'EOL' => {
+        'new' => 'FULLNODE'
+      },
+      'WS' => {
+        'new' => 'FULLNODE'
+      },
+      'match' => 'cb_doc_start_explicit'
+    },
+    'EOL' => {
+      'new' => 'STREAM'
+    },
+    'RESERVED_DIRECTIVE' => {
+      'EOL' => {
+        'new' => 'DIRECTIVE'
+      },
+      'WS' => {
+        'new' => 'DIRECTIVE'
+      },
+      'match' => 'cb_reserved_directive'
+    },
+    'TAG_DIRECTIVE' => {
+      'EOL' => {
+        'new' => 'DIRECTIVE'
+      },
+      'WS' => {
+        'new' => 'DIRECTIVE'
+      },
+      'match' => 'cb_tag_directive'
+    },
+    'YAML_DIRECTIVE' => {
+      'EOL' => {
+        'new' => 'DIRECTIVE'
+      },
+      'WS' => {
+        'new' => 'DIRECTIVE'
+      }
     }
   }
 };
@@ -1086,7 +1117,7 @@ This is the Grammar in YAML
     NODETYPE_NODE:
       DASH:
         match: cb_seqstart
-        EOL: { new: FULLNODE , return: 1}
+        EOL: { new: FULLNODE }
         WS: { new: FULLNODE }
     
       DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
@@ -1098,92 +1129,102 @@ This is the Grammar in YAML
     
       ALIAS:
         match: cb_alias
-        EOL: { match: cb_send_alias_from_stack, return: 1 }
+        EOL: { match: cb_send_alias_from_stack }
         WS:
           COLON:
             match: cb_insert_map_alias
-            EOL: { new: FULLNODE, return: 1 }
+            EOL: { new: FULLNODE }
             WS: { new: FULLMAPVALUE_INLINE }
     
       QUESTION:
         match: cb_questionstart
-        EOL: { new: FULLNODE, return: 1 }
+        EOL: { new: FULLNODE }
         WS: { new: FULLNODE }
     
       QUOTED:
         match: cb_take_quoted
-        EOL: { match: cb_send_scalar, return: 1 }
+        EOL: { match: cb_send_scalar }
         WS:
           COLON:
             match: cb_insert_map
-            EOL: { new: FULLNODE , return: 1}
+            EOL: { new: FULLNODE }
             WS: { new: FULLMAPVALUE_INLINE }
         COLON:
           match: cb_insert_map
-          EOL: { new: FULLNODE , return: 1}
+          EOL: { new: FULLNODE }
           WS: { new: FULLMAPVALUE_INLINE }
     
       QUOTED_MULTILINE:
         match: cb_quoted_multiline
-        EOL: { return: 1 }
+        EOL: {  }
     
     
       PLAIN:
         match: cb_start_plain
         EOL:
           match: cb_send_scalar
-          return: 1
         WS:
           COLON:
             match: cb_insert_map
-            EOL: { new: FULLNODE , return: 1}
+            EOL: { new: FULLNODE }
             WS: { new: FULLMAPVALUE_INLINE }
         COLON:
           match: cb_insert_map
-          EOL: { new: FULLNODE , return: 1}
+          EOL: { new: FULLNODE }
           WS: { new: FULLMAPVALUE_INLINE }
     
       PLAIN_MULTI:
         match: cb_send_plain_multi
-        EOL: { return: 1 }
+        EOL: { }
     
       COLON:
         match: cb_insert_empty_map
-        EOL: { new: FULLNODE , return: 1}
+        EOL: { new: FULLNODE }
         WS: { new: FULLMAPVALUE_INLINE }
     
       BLOCK_SCALAR:
         match: cb_send_block_scalar
-        EOL: { return: 1 }
+        EOL: { }
     
       FLOWSEQ_START:
         match: cb_start_flowseq
-        DEFAULT: { new: NEWFLOWSEQ }
+        new: NEWFLOWSEQ
     
       FLOWMAP_START:
         match: cb_start_flowmap
-        DEFAULT: { new: NEWFLOWMAP }
+        new: NEWFLOWMAP
     
+      DOC_END:
+        match: cb_end_document
+        EOL: { }
     
+      DOC_START:
+        match: cb_end_doc_start_document
+        EOL: { new: FULLNODE }
+        WS: { new: FULLNODE }
     
+      EOL:
+        new: NODETYPE_SCALAR_OR_MAP
     
     NODETYPE_COMPLEX:
       COLON:
         match: cb_complexcolon
-        EOL: { new: FULLNODE, return: 1 }
+        EOL: { new: FULLNODE }
         WS: { new: FULLNODE }
       DEFAULT:
         match: cb_empty_complexvalue
         new: NODETYPE_MAP
+      EOL:
+        new: NODETYPE_COMPLEX
     
     RULE_FULLFLOWSCALAR:
       ANCHOR:
         match: cb_anchor
-        EOL: { new: RULE_FULLFLOWSCALAR_ANCHOR, return: 1 }
+        EOL: { new: RULE_FULLFLOWSCALAR_ANCHOR }
         DEFAULT: { new: RULE_FULLFLOWSCALAR_ANCHOR }
       TAG:
         match: cb_tag
-        EOL: { new: RULE_FULLFLOWSCALAR_TAG, return: 1 }
+        EOL: { new: RULE_FULLFLOWSCALAR_TAG }
         DEFAULT: { new: RULE_FULLFLOWSCALAR_TAG }
       DEFAULT: { new: RULE_FLOWSCALAR }
     
@@ -1192,7 +1233,7 @@ This is the Grammar in YAML
       TAG:
         match: cb_tag
         WS: { new: RULE_FLOWSCALAR }
-        EOL: { new: RULE_FLOWSCALAR, return: 1 }
+        EOL: { new: RULE_FLOWSCALAR }
       DEFAULT: { new: RULE_FLOWSCALAR }
     
     RULE_FULLFLOWSCALAR_TAG:
@@ -1200,7 +1241,7 @@ This is the Grammar in YAML
       ANCHOR:
         match: cb_anchor
         WS: { new: RULE_FLOWSCALAR }
-        EOL: { new: RULE_FLOWSCALAR, return: 1 }
+        EOL: { new: RULE_FLOWSCALAR }
       DEFAULT: { new: RULE_FLOWSCALAR }
     
     RULE_FLOWSCALAR:
@@ -1211,7 +1252,7 @@ This is the Grammar in YAML
     
       QUOTED:
         match: cb_take_quoted
-        EOL: { match: cb_send_scalar, return: 1 }
+        EOL: { match: cb_send_scalar }
         WS: { match: cb_send_scalar, return: 1 }
         DEFAULT: { match: cb_send_scalar, return: 1 }
     
@@ -1219,7 +1260,7 @@ This is the Grammar in YAML
     
       PLAIN:
         match: cb_start_plain
-        EOL: { match: cb_send_scalar, return: 1 }
+        EOL: { match: cb_send_scalar }
         DEFAULT: { match: cb_send_scalar, return: 1 }
     
       PLAIN_MULTI: { match: cb_send_plain_multi, return: 1 }
@@ -1228,8 +1269,7 @@ This is the Grammar in YAML
     
       FLOWMAP_END:
         match: cb_end_flowmap_empty
-        EOL: { return: 1 }
-        DEFAULT: { return: 1 }
+        return: 1
     
     FLOWSEQ:
       FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
@@ -1245,7 +1285,7 @@ This is the Grammar in YAML
     
     FLOWSEQ_NEXT:
       WS: { new: FLOWSEQ_NEXT }
-      EOL: { new: FLOWSEQ_NEXT, return: 1 }
+      EOL: { new: FLOWSEQ_NEXT }
     
       FLOW_COMMA:
         match: cb_flow_comma
@@ -1253,8 +1293,7 @@ This is the Grammar in YAML
     
       FLOWSEQ_END:
         match: cb_end_flowseq
-        EOL: { return: 1 }
-        DEFAULT: { return: 1 }
+        return: 1
     
     FLOWMAP:
       FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
@@ -1275,93 +1314,89 @@ This is the Grammar in YAML
         EOL:
           match: cb_empty_flow_mapkey
           new: RULE_FULLFLOWSCALAR
-          return: 1
     
     
     NEWFLOWSEQ:
-      EOL: { new: NEWFLOWSEQ, return: 1 }
+      EOL: { new: NEWFLOWSEQ }
       WS: { new: NEWFLOWSEQ }
     
       ANCHOR:
         match: cb_anchor
         WS: { new: NEWFLOWSEQ_ANCHOR }
-        EOL: { new: NEWFLOWSEQ_ANCHOR, return: 1 }
+        EOL: { new: NEWFLOWSEQ_ANCHOR }
       TAG:
         match: cb_tag
         WS: { new: NEWFLOWSEQ_TAG }
-        EOL: { new: NEWFLOWSEQ_TAG, return: 1 }
+        EOL: { new: NEWFLOWSEQ_TAG }
     
       FLOWSEQ_END:
         match: cb_end_flowseq
-        EOL: { return: 1 }
-        DEFAULT: { return: 1 }
+        return: 1
     
       DEFAULT: { new: FLOWSEQ }
     
     NODETYPE_FLOWSEQ:
-      EOL: { new: NODETYPE_FLOWSEQ, return: 1 }
+      EOL: { new: NODETYPE_FLOWSEQ }
       WS: { new: NODETYPE_FLOWSEQ }
       FLOWSEQ_END:
         match: cb_end_flowseq
-        EOL: { return: 1 }
-        DEFAULT: { return: 1 }
+        return: 1
       DEFAULT: { new: NEWFLOWSEQ }
     
     NODETYPE_FLOWMAPVALUE:
       WS: { new: NODETYPE_FLOWMAPVALUE }
-      EOL: { new: NODETYPE_FLOWMAPVALUE, return: 1 }
+      EOL: { new: NODETYPE_FLOWMAPVALUE }
       COLON:
         match: cb_flow_colon
         WS: { new: RULE_FULLFLOWSCALAR }
-        EOL: { new: RULE_FULLFLOWSCALAR, return: 1 }
+        EOL: { new: RULE_FULLFLOWSCALAR }
         DEFAULT: { new: RULE_FULLFLOWSCALAR }
       FLOW_COMMA:
         match: cb_empty_flowmap_value
         return: 1
       FLOWMAP_END:
         match: cb_end_flowmap_empty
-        EOL: { return: 1 }
-        DEFAULT: { return: 1 }
+        return: 1
     
     NEWFLOWSEQ_ANCHOR:
       WS: { new: NEWFLOWSEQ_ANCHOR }
-      EOL: { new: NEWFLOWSEQ_ANCHOR, return: 1 }
+      EOL: { new: NEWFLOWSEQ_ANCHOR }
       TAG:
         match: cb_tag
         WS: { new: FLOWSEQ }
-        EOL: { new: FLOWSEQ, return: 1 }
+        EOL: { new: FLOWSEQ }
       DEFAULT: { new: FLOWSEQ }
     
     NEWFLOWSEQ_TAG:
       WS: { new: NEWFLOWSEQ_TAG }
-      EOL: { new: NEWFLOWSEQ_TAG, return: 1 }
+      EOL: { new: NEWFLOWSEQ_TAG }
       ANCHOR:
         match: cb_anchor
         WS: { new: FLOWSEQ }
-        EOL: { new: FLOWSEQ, return: 1 }
+        EOL: { new: FLOWSEQ }
       DEFAULT: { new: FLOWSEQ }
     
     
     NEWFLOWMAP_ANCHOR:
       WS: { new: NEWFLOWMAP_ANCHOR }
-      EOL: { new: NEWFLOWMAP_ANCHOR, return: 1 }
+      EOL: { new: NEWFLOWMAP_ANCHOR }
       TAG:
         match: cb_tag
         WS: { new: FLOWMAP }
-        EOL: { new: FLOWMAP, return: 1 }
+        EOL: { new: FLOWMAP }
       DEFAULT: { new: FLOWMAP }
     
     NEWFLOWMAP_TAG:
       WS: { new: NEWFLOWMAP_TAG }
-      EOL: { new: NEWFLOWMAP_TAG, return: 1 }
+      EOL: { new: NEWFLOWMAP_TAG }
       ANCHOR:
         match: cb_anchor
         WS: { new: FLOWMAP }
-        EOL: { new: FLOWMAP, return: 1 }
+        EOL: { new: FLOWMAP }
       DEFAULT: { new: FLOWMAP }
     
     NEWFLOWMAP:
-      EOL: { new: NEWFLOWMAP, return: 1 }
+      EOL: { new: NEWFLOWMAP }
       WS: { new: NEWFLOWMAP }
       # TODO
       QUESTION: { match: cb_flow_question, new: NEWFLOWMAP }
@@ -1369,16 +1404,15 @@ This is the Grammar in YAML
       ANCHOR:
         match: cb_anchor
         WS: { new: NEWFLOWMAP_ANCHOR }
-        EOL: { new: NEWFLOWMAP_ANCHOR, return: 1 }
+        EOL: { new: NEWFLOWMAP_ANCHOR }
       TAG:
         match: cb_tag
         WS: { new: NEWFLOWMAP_TAG }
-        EOL: { new: NEWFLOWMAP_TAG, return: 1 }
+        EOL: { new: NEWFLOWMAP_TAG }
     
       FLOWMAP_END:
         match: cb_end_flowmap
-        EOL: { return: 1 }
-        DEFAULT: { return: 1 }
+        return: 1
     
       COLON:
         WS:
@@ -1387,17 +1421,15 @@ This is the Grammar in YAML
         EOL:
           match: cb_empty_flow_mapkey
           new: RULE_FULLFLOWSCALAR
-          return: 1
     
       DEFAULT: { new: FLOWMAP }
     
     NODETYPE_FLOWMAP:
-      EOL: { new: NODETYPE_FLOWMAP, return: 1 }
+      EOL: { new: NODETYPE_FLOWMAP }
       WS: { new: NODETYPE_FLOWMAP }
       FLOWMAP_END:
         match: cb_end_flowmap
-        EOL: { return: 1 }
-        DEFAULT: { return: 1 }
+        return: 1
       FLOW_COMMA: { match: cb_flow_comma, new: NEWFLOWMAP }
       DEFAULT: { new: NEWFLOWMAP }
     
@@ -1405,23 +1437,23 @@ This is the Grammar in YAML
     RULE_MAPKEY:
       QUESTION:
         match: cb_question
-        EOL: { new: FULLNODE , return: 1}
+        EOL: { new: FULLNODE }
         WS: { new: FULLNODE }
       ALIAS:
         match: cb_send_alias
         WS:
           COLON:
-            EOL: { new: FULLNODE , return: 1}
+            EOL: { new: FULLNODE }
             WS: { new: FULLMAPVALUE_INLINE }
     
       QUOTED:
         match: cb_take_quoted_key
         WS:
           COLON:
-            EOL: { new: FULLNODE , return: 1}
+            EOL: { new: FULLNODE }
             WS: { new: FULLMAPVALUE_INLINE }
         COLON:
-          EOL: { new: FULLNODE , return: 1}
+          EOL: { new: FULLNODE }
           WS: { new: FULLMAPVALUE_INLINE }
     
       PLAIN:
@@ -1429,23 +1461,46 @@ This is the Grammar in YAML
         WS:
           COLON:
             match: cb_send_mapkey
-            EOL: { new: FULLNODE , return: 1}
+            EOL: { new: FULLNODE }
             WS: { new: FULLMAPVALUE_INLINE }
         COLON:
           match: cb_send_mapkey
-          EOL: { new: FULLNODE , return: 1}
+          EOL: { new: FULLNODE }
           WS: { new: FULLMAPVALUE_INLINE }
     
       COLON:
         match: cb_empty_mapkey
-        EOL: { new: FULLNODE , return: 1}
+        EOL: { new: FULLNODE }
         WS: { new: FULLMAPVALUE_INLINE }
+    
+      DOC_END:
+        match: cb_end_document
+        EOL: { }
+    
+      DOC_START:
+        match: cb_end_doc_start_document
+        EOL: { new: FULLNODE }
+        WS: { new: FULLNODE }
+    
+      EOL:
+        new: RULE_MAPKEY
+    
     
     NODETYPE_SEQ:
       DASH:
         match: cb_seqitem
-        EOL: { new: FULLNODE , return: 1}
+        EOL: { new: FULLNODE }
         WS: { new: FULLNODE }
+      DOC_END:
+        match: cb_end_document
+        EOL: { }
+      DOC_START:
+        match: cb_end_doc_start_document
+        EOL: { new: FULLNODE }
+        WS: { new: FULLNODE }
+    
+      EOL:
+        new: NODETYPE_SEQ
     
     NODETYPE_MAP:
       ANCHOR:
@@ -1467,7 +1522,7 @@ This is the Grammar in YAML
     FULLNODE_ANCHOR:
       TAG:
         match: cb_tag
-        EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR , return: 1}
+        EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR }
         WS:
           ANCHOR:
             match: cb_anchor
@@ -1480,12 +1535,13 @@ This is the Grammar in YAML
             match: cb_tag
             WS: { new: NODETYPE_SCALAR_OR_MAP  }
           DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
+      EOL: { new: FULLNODE_ANCHOR }
       DEFAULT: { new: NODETYPE_NODE }
     
     FULLNODE_TAG:
       ANCHOR:
         match: cb_anchor
-        EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR , return: 1}
+        EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR }
         WS:
           TAG:
             match: cb_tag
@@ -1498,6 +1554,7 @@ This is the Grammar in YAML
             match: cb_anchor
             WS: { new: NODETYPE_SCALAR_OR_MAP  }
           DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
+      EOL: { new: FULLNODE_TAG }
       DEFAULT: { new: NODETYPE_NODE }
     
     FULLNODE_TAG_ANCHOR:
@@ -1515,46 +1572,48 @@ This is the Grammar in YAML
             match: cb_anchor
             WS: { new: NODETYPE_SCALAR_OR_MAP  }
           DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
+      EOL: { new: FULLNODE_TAG_ANCHOR }
       DEFAULT: { new: NODETYPE_NODE }
     
     FULLNODE:
       ANCHOR:
         match: cb_anchor
-        EOL: { match: cb_property_eol, new: FULLNODE_ANCHOR , return: 1}
+        EOL: { match: cb_property_eol, new: FULLNODE_ANCHOR }
         WS:
           TAG:
             match: cb_tag
-            EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR , return: 1}
+            EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR }
             WS: { new: NODETYPE_SCALAR_OR_MAP  }
           DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
       TAG:
         match: cb_tag
-        EOL: { match: cb_property_eol, new: FULLNODE_TAG , return: 1}
+        EOL: { match: cb_property_eol, new: FULLNODE_TAG }
         WS:
           ANCHOR:
             match: cb_anchor
-            EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR , return: 1}
+            EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR }
             WS: { new: NODETYPE_SCALAR_OR_MAP  }
           DEFAULT: { new: NODETYPE_SCALAR_OR_MAP }
+      EOL: { new: FULLNODE }
       DEFAULT: { new: NODETYPE_NODE }
     
     FULLMAPVALUE_INLINE:
       ANCHOR:
         match: cb_anchor
-        EOL: { match: cb_property_eol, new: FULLNODE_ANCHOR , return: 1}
+        EOL: { match: cb_property_eol, new: FULLNODE_ANCHOR }
         WS:
           TAG:
             match: cb_tag
-            EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR , return: 1}
+            EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR }
             WS: { new: NODETYPE_MAPVALUE_INLINE  }
           DEFAULT: { new: NODETYPE_MAPVALUE_INLINE }
       TAG:
         match: cb_tag
-        EOL: { match: cb_property_eol, new: FULLNODE_TAG , return: 1}
+        EOL: { match: cb_property_eol, new: FULLNODE_TAG }
         WS:
           ANCHOR:
             match: cb_anchor
-            EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR , return: 1}
+            EOL: { match: cb_property_eol, new: FULLNODE_TAG_ANCHOR }
             WS: { new: NODETYPE_MAPVALUE_INLINE  }
           DEFAULT: { new: NODETYPE_MAPVALUE_INLINE }
       DEFAULT: { new: NODETYPE_MAPVALUE_INLINE }
@@ -1563,37 +1622,91 @@ This is the Grammar in YAML
     NODETYPE_MAPVALUE_INLINE:
       ALIAS:
         match: cb_send_alias
-        EOL: { return: 1 }
+        EOL: { }
     
       QUOTED:
         match: cb_take_quoted
-        EOL: { match: cb_send_scalar, return: 1 }
+        EOL: { match: cb_send_scalar }
     
       QUOTED_MULTILINE:
         match: cb_quoted_multiline
-        EOL: { return: 1 }
+        EOL: { }
     
       PLAIN:
         match: cb_start_plain
         EOL:
           match: cb_send_scalar
-          return: 1
     
       PLAIN_MULTI:
         match: cb_send_plain_multi
-        EOL: { return: 1 }
+        EOL: { }
     
       BLOCK_SCALAR:
         match: cb_send_block_scalar
-        EOL: { return: 1 }
+        EOL: { }
     
       FLOWSEQ_START:
         match: cb_start_flowseq
-        DEFAULT: { new: NEWFLOWSEQ }
+        new: NEWFLOWSEQ
     
       FLOWMAP_START:
         match: cb_start_flowmap
-        DEFAULT: { new: NEWFLOWMAP }
+        new: NEWFLOWMAP
+    
+      DOC_END:
+        match: cb_end_document
+        EOL: { }
+    
+    
+    DOCUMENT_END:
+      DOC_END:
+        match: cb_end_document
+        EOL: { }
+      DOC_START:
+        match: cb_end_doc_start_document
+        EOL: { new: FULLNODE }
+        WS: { new: FULLNODE }
+    
+      EOL:
+        new: DOCUMENT_END
+    
+    
+    STREAM:
+    
+      DOC_END:
+        match: cb_end_document_empty
+        EOL: {  }
+      DOC_START:
+        match: cb_doc_start_explicit
+        EOL: { new: FULLNODE }
+        WS: { new: FULLNODE }
+      YAML_DIRECTIVE:
+        EOL: { new: DIRECTIVE }
+        WS: { new: DIRECTIVE }
+      RESERVED_DIRECTIVE:
+        match: cb_reserved_directive
+        EOL: { new: DIRECTIVE }
+        WS: { new: DIRECTIVE }
+      TAG_DIRECTIVE:
+        match: cb_tag_directive
+        EOL: { new: DIRECTIVE }
+        WS: { new: DIRECTIVE }
+    
+      EOL:
+        new: STREAM
+    
+      DEFAULT:
+        match: cb_doc_start_implicit
+        new: FULLNODE
+    
+    DIRECTIVE:
+      DOC_START:
+        match: cb_doc_start_explicit
+        EOL: { new: FULLNODE }
+        WS: { new: FULLNODE }
+    
+      EOL:
+        new: DIRECTIVE
 
 
     # END OF YAML INLINE

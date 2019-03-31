@@ -21,6 +21,6 @@ my $output = '';
 
 $parser->parse_string($yaml);
 
-cmp_ok($output, '=~', qr{parse_next_line}, "Debug output");
+cmp_ok($output, '=~', qr{lex_next_tokens}, "Debug output");
 
 done_testing;
