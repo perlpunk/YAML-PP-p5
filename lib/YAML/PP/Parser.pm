@@ -373,7 +373,7 @@ sub parse_tokens {
         DEBUG and $self->got("---got $got");
         if (my $sub = $def->{match}) {
             DEBUG and $self->info("CALLBACK $sub");
-            $self->$sub($tokens->[-1]);
+            $self->$sub(@$tokens ? $tokens->[-1] : ());
         }
         my $eol = $got eq 'EOL';
         my $new = $def->{new};
