@@ -12,3 +12,11 @@ perl:
   - "5.26"
   - "5.28"
 sudo: false             # faster builds as long as you don't need sudo access
+
+before_install:
+
+# Travis branch-specific clone problem workaround:
+- git config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*
+- git fetch
+- git branch test-suite --track origin/test-suite
+- git worktree add test-suite test-suite
