@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:yaml/yaml-test-suite
+	branch = data
+	commit = 3e224fcb3b48308bf0018f6f0007362b2185e21d
+	parent = 12c3352648771f5271093cc44395d2c86c33226c
+	method = merge
+	cmdver = 0.4.0
