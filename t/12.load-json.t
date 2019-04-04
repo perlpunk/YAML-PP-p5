@@ -18,7 +18,7 @@ unless ($json_pp) {
     exit;
 }
 
-my $yts = "$Bin/../yaml-test-suite";
+my $yts = "$Bin/../test-suite/yaml-test-suite-data";
 
 
 $|++;

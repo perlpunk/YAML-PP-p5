@@ -22,7 +22,7 @@ $ENV{YAML_PP_RESERVED_DIRECTIVE} = 'ignore';
 
 $|++;
 
-my $yts = "$Bin/../yaml-test-suite";
+my $yts = "$Bin/../test-suite/yaml-test-suite-data";
 
 # skip tests that parser can't parse
 my @skip = qw/

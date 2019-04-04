@@ -11,7 +11,7 @@ use YAML::PP::Parser;
 
 $|++;
 
-my $yts = "$Bin/../yaml-test-suite";
+my $yts = "$Bin/../test-suite/yaml-test-suite-data";
 
 my @skip = qw/
     CXX2

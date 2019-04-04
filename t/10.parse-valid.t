@@ -14,7 +14,7 @@ $ENV{YAML_PP_RESERVED_DIRECTIVE} = 'ignore';
 
 $|++;
 
-my $yts = "$Bin/../yaml-test-suite";
+my $yts = "$Bin/../test-suite/yaml-test-suite-data";
 
 my @skip = qw/
     87E4 8CWC 8UDB 9MMW

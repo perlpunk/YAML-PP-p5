@@ -63,6 +63,7 @@ sub get_tests {
         Test::More::diag("\n############################");
         Test::More::diag("No yaml-test-suite directory");
         Test::More::diag("Using only local tests");
+        Test::More::diag("Checkout with: git worktree add test-suite test-suite");
         Test::More::diag("############################");
     }
 

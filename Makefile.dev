@@ -1,3 +1,6 @@
+test-suite:
+	git branch test-suite --track origin/test-suite
+	git worktree add test-suite test-suite
 
 cover:
 	HARNESS_PERL_SWITCHES="-MDevel::Cover=+ignore,local,+ignore,^t/,+ignore,^xt/" prove -lr t
