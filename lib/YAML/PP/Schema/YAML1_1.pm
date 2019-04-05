@@ -40,28 +40,24 @@ my $RE_INT_OCTAL_1_1 = qr{^([+-]?)0([0-7_]+)$};
 my $RE_INT_HEX_1_1 = qr{^([+-]?)(0x[0-9a-fA-F_]+)$};
 my $RE_INT_BIN_1_1 = qr{^([-+]?)(0b[0-1_]+)$};
 
-
-sub new {
-    my ($class, %args) = @_;
-    my $self = bless {}, $class;
-    return $self;
-}
-
 sub _from_oct {
-    my ($sign, $oct) = @_;
+    my ($constructor, $event, $matches) = @_;
+    my ($sign, $oct) = @$matches;
     $oct =~ tr/_//d;
     my $result = oct $oct;
     $result = -$result if $sign eq '-';
     return $result;
 }
 sub _from_hex {
-    my ($sign, $hex) = @_;
+    my ($constructor, $event, $matches) = @_;
+    my ($sign, $hex) = @$matches;
     my $result = hex $hex;
     $result = -$result if $sign eq '-';
     return $result;
 }
 sub _sexa_to_float {
-    my ($float) = @_;
+    my ($constructor, $event, $matches) = @_;
+    my ($float) = @$matches;
     my $result = 0;
     my $i = 0;
     my $sign = 1;
@@ -74,13 +70,15 @@ sub _sexa_to_float {
     return $result * $sign;
 }
 sub _to_float {
-    my ($float) = @_;
+    my ($constructor, $event, $matches) = @_;
+    my ($float) = @$matches;
     $float =~ tr/_//d;
     $float = unpack F => pack F => $float;
     return $float;
 }
 sub _to_int {
-    my ($int) = @_;
+    my ($constructor, $event, $matches) = @_;
+    my ($int) = @$matches;
     $int =~ tr/_//d;
     0 + $int;
 }
@@ -143,7 +141,7 @@ sub register {
     ) for (qw/ .nan .NaN .NAN /);
     $schema->add_resolver(
         tag => 'tag:yaml.org,2002:str',
-        match => [ regex => qr{^(.*)$} => sub { $_[0] } ],
+        match => [ regex => qr{^(.*)$} => sub { $_[2]->[0] } ],
         implicit => 0,
     );
 

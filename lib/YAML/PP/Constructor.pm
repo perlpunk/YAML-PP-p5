@@ -135,7 +135,7 @@ sub stream_end_event {}
 sub scalar_event {
     my ($self, $event) = @_;
     DEBUG and warn "CONTENT $event->{value} ($event->{style})\n";
-    my $value = $self->schema->load_scalar($event);
+    my $value = $self->schema->load_scalar($self, $event);
     if (defined (my $name = $event->{anchor})) {
         $self->anchors->{ $name } = { data => $value, finished => 1 };
     }
@@ -217,7 +217,7 @@ Resets any data being used during construction.
 
 =item document_start_event, document_end_event, mapping_start_event, mapping_end_event, sequence_start_event, sequence_end_event, scalar_event, alias_event, stream_start_event, stream_end_event
 
-These methods are called from YAML::PP::Parser:
+These methods are called from L<YAML::PP::Parser>:
 
     $constructor->document_start_event($event);
 
@@ -246,8 +246,8 @@ Holds a L<YAML::PP::Schema> object
 When constructing a hash and getting a non-scalar key, this method is
 used to stringify the key.
 
-It uses a terse Data::Dumper output. L<YAML::XS>, for example, just uses
-the default stringification, .ie. C<ARRAY(0x55617c0c7398)>.
+It uses a terse Data::Dumper output. Other modules, like L<YAML::XS>, use
+the default stringification, C<ARRAY(0x55617c0c7398)> for example.
 
 =back
 

@@ -171,7 +171,7 @@ sub add_representer {
 }
 
 sub load_scalar {
-    my ($self, $event) = @_;
+    my ($self, $constructor, $event) = @_;
     my $tag = $event->{tag};
     my $value = $event->{value};
 
@@ -191,7 +191,7 @@ sub load_scalar {
         if (exists $equals->{ $value }) {
             my $res = $equals->{ $value };
             if (ref $res eq 'CODE') {
-                return $res->();
+                return $res->($constructor, $event);
             }
             return $res;
         }
@@ -201,7 +201,7 @@ sub load_scalar {
             my ($re, $sub) = @$item;
             my @matches = $value =~ $re;
             if (@matches) {
-                return $sub->(@matches);
+                return $sub->($constructor, $event, \@matches);
             }
         }
     }
@@ -260,10 +260,10 @@ sub new {
     return $self;
 }
 
-sub _to_int { 0 + $_[0] }
+sub _to_int { 0 + $_[2]->[0] }
 
 # DaTa++ && shmem++
-sub _to_float { unpack F => pack F => $_[0] }
+sub _to_float { unpack F => pack F => $_[2]->[0] }
 
 sub register {
     my ($self, %args) = @_;
@@ -296,7 +296,7 @@ sub register {
     );
     $schema->add_resolver(
         tag => 'tag:yaml.org,2002:str',
-        match => [ regex => qr{^(.*)$} => sub { $_[0] } ],
+        match => [ regex => qr{^(.*)$} => sub { $_[2]->[0] } ],
         implicit => 0,
     );
 
@@ -404,8 +404,8 @@ sub new {
     return $self;
 }
 
-sub _from_oct { oct $_[0] }
-sub _from_hex { hex $_[0] }
+sub _from_oct { oct $_[2]->[0] }
+sub _from_hex { hex $_[2]->[0] }
 
 sub register {
     my ($self, %args) = @_;
@@ -453,7 +453,7 @@ sub register {
     ) for (qw/ .nan .NaN .NAN /);
     $schema->add_resolver(
         tag => 'tag:yaml.org,2002:str',
-        match => [ regex => qr{^(.*)$} => sub { $_[0] } ],
+        match => [ regex => qr{^(.*)$} => sub { $_[2]->[0] } ],
         implicit => 0,
     );
 
