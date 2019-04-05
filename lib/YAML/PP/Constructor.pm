@@ -44,18 +44,9 @@ sub set_docs { $_[0]->{docs} = $_[1] }
 sub set_stack { $_[0]->{stack} = $_[1] }
 sub set_anchors { $_[0]->{anchors} = $_[1] }
 sub schema { return $_[0]->{schema} }
+sub set_schema { $_[0]->{schema} = $_[1] }
 sub cyclic_refs { return $_[0]->{cyclic_refs} }
-
-sub begin {
-    my ($self, $ref, $event) = @_;
-
-    my $stack = $self->stack;
-
-    push @$stack, $ref;
-    if (defined(my $anchor = $event->{anchor})) {
-        $self->anchors->{ $anchor } = { data => $ref->{data} };
-    }
-}
+sub set_cyclic_refs { $_[0]->{cyclic_refs} = $_[1] }
 
 sub document_start_event {
     my ($self, $event) = @_;
@@ -68,21 +59,25 @@ sub document_end_event {
     my ($self, $event) = @_;
     my $stack = $self->stack;
     my $last = pop @$stack;
-    my ($type, $ref) = @{ $last }{qw/ type ref /};
-    $type eq 'document' or die "Expected mapping, but got $type";
+    $last->{type} eq 'document' or die "Expected mapping, but got $last->{type}";
     if (@$stack) {
         die "Got unexpected end of document";
     }
     my $docs = $self->docs;
-    push @$docs, $ref->[0];
+    push @$docs, $last->{ref}->[0];
     $self->set_anchors({});
     $self->set_stack([]);
 }
 
 sub mapping_start_event {
     my ($self, $event) = @_;
-    my $data = { type => 'mapping', ref => [], data => {}, event => $event };
-    $self->begin($data, $event);
+    my $ref = { type => 'mapping', ref => [], data => {}, event => $event };
+    my $stack = $self->stack;
+
+    push @$stack, $ref;
+    if (defined(my $anchor = $event->{anchor})) {
+        $self->anchors->{ $anchor } = { data => $ref->{data} };
+    }
 }
 
 sub mapping_end_event {
@@ -90,8 +85,8 @@ sub mapping_end_event {
     my $stack = $self->stack;
 
     my $last = pop @$stack;
-    my ($type, $ref, $hash, $start_event) = @{ $last }{qw/ type ref data event /};
-    $type eq 'mapping' or die "Expected mapping, but got $type";
+    my ($ref, $data) = @{ $last }{qw/ ref data /};
+    $last->{type} eq 'mapping' or die "Expected mapping, but got $last->{type}";
 
     for (my $i = 0; $i < @$ref; $i += 2) {
         my ($key, $value) = @$ref[ $i, $i + 1 ];
@@ -99,42 +94,43 @@ sub mapping_end_event {
         if (ref $key) {
             $key = $self->stringify_complex($key);
         }
-        $hash->{ $key } = $value;
+        $data->{ $key } = $value;
     }
-    push @{ $stack->[-1]->{ref} }, $hash;
-    if (defined(my $anchor = $start_event->{anchor})) {
-        my $anchors = $self->anchors;
-        $anchors->{ $anchor }->{finished} = 1;
+    push @{ $stack->[-1]->{ref} }, $data;
+    if (defined(my $anchor = $last->{event}->{anchor})) {
+        $self->anchors->{ $anchor }->{finished} = 1;
     }
     return;
 }
 
 sub sequence_start_event {
     my ($self, $event) = @_;
-    my $ref = [];
-    my $data = { type => 'sequence', ref => $ref, data => $ref, event => $event };
-    $self->begin($data, $event);
+    my $data = [];
+    my $ref = { type => 'sequence', ref => $data, data => $data, event => $event };
+    my $stack = $self->stack;
+
+    push @$stack, $ref;
+    if (defined(my $anchor = $event->{anchor})) {
+        $self->anchors->{ $anchor } = { data => $ref->{data} };
+    }
 }
 
 sub sequence_end_event {
     my ($self, $event) = @_;
     my $stack = $self->stack;
     my $last = pop @$stack;
-    my ($type, $ref, $start_event) = @{ $last }{qw/ type ref event /};
-    $type eq 'sequence' or die "Expected mapping, but got $type";
-    push @{ $stack->[-1]->{ref} }, $ref;
-    if (defined(my $anchor = $start_event->{anchor})) {
-        my $anchors = $self->anchors;
-        $anchors->{ $anchor }->{finished} = 1;
+    $last->{type} eq 'sequence' or die "Expected mapping, but got $last->{type}";
+
+    push @{ $stack->[-1]->{ref} }, $last->{ref};
+    if (defined(my $anchor = $last->{event}->{anchor})) {
+        $self->anchors->{ $anchor }->{finished} = 1;
     }
     return;
 }
 
-sub stream_start_event {
-}
+sub stream_start_event {}
 
 sub stream_end_event {}
-
 
 sub scalar_event {
     my ($self, $event) = @_;
@@ -143,7 +139,8 @@ sub scalar_event {
     if (defined (my $name = $event->{anchor})) {
         $self->anchors->{ $name } = { data => $value, finished => 1 };
     }
-    $self->add_scalar($value);
+    my $last = $self->stack->[-1];
+    push @{ $last->{ref} }, $value;
 }
 
 sub alias_event {
@@ -170,16 +167,8 @@ sub alias_event {
         }
         $value = $anchor->{data};
     }
-    $self->add_scalar($value);
-}
-
-sub add_scalar {
-    my ($self, $value) = @_;
-
     my $last = $self->stack->[-1];
-
-    my ($type, $ref) = @{ $last }{qw/ type ref /};
-    push @$ref, $value;
+    push @{ $last->{ref} }, $value;
 }
 
 sub stringify_complex {
@@ -196,3 +185,70 @@ sub stringify_complex {
 }
 
 1;
+
+__END__
+
+=pod
+
+=encoding utf-8
+
+=head1 NAME
+
+YAML::PP::Constructor - Constructing data structure from parsing events
+
+=head1 METHODS
+
+=over
+
+=item new
+
+The Constructor constructor
+
+    my $constructor = YAML::PP::Constructor->new(
+        schema => $schema,
+        cyclic_refs => $cyclic_refs,
+    );
+
+=item init
+
+Resets any data being used during construction.
+
+    $constructor->init;
+
+=item document_start_event, document_end_event, mapping_start_event, mapping_end_event, sequence_start_event, sequence_end_event, scalar_event, alias_event, stream_start_event, stream_end_event
+
+These methods are called from YAML::PP::Parser:
+
+    $constructor->document_start_event($event);
+
+=item anchors, set_anchors
+
+Helper for storing anchors during construction
+
+=item docs, set_docs
+
+Helper for storing resulting documents during construction
+
+=item stack, set_stack
+
+Helper for storing data during construction
+
+=item cyclic_refs, set_cyclic_refs
+
+Option for controlling the behaviour when finding circular references
+
+=item schema, set_schema
+
+Holds a L<YAML::PP::Schema> object
+
+=item stringify_complex
+
+When constructing a hash and getting a non-scalar key, this method is
+used to stringify the key.
+
+It uses a terse Data::Dumper output. L<YAML::XS>, for example, just uses
+the default stringification, .ie. C<ARRAY(0x55617c0c7398)>.
+
+=back
+
+=cut
