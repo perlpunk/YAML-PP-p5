@@ -174,7 +174,6 @@ sub load_scalar_tag {
     my ($self, $event) = @_;
     my $tag = $event->{tag};
     my $value = $event->{value};
-    $value = '' unless defined $value;
     my $resolvers = $self->resolvers;
     my $res = $resolvers->{tag}->{ $tag };
 
@@ -197,7 +196,6 @@ sub load_scalar_tag {
         }
         die "Tag $tag ($value)";
     }
-#    die "Tag $tag ($value)";
     return $value;
 }
 
@@ -208,7 +206,6 @@ sub load_scalar {
     }
     my $resolvers = $self->resolvers;
     my $res = $resolvers->{value};
-    $value = '' unless defined $value;
 
     if (my $equals = $res->{equals}) {
         if (exists $equals->{ $value }) {

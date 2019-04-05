@@ -187,7 +187,7 @@ sub lex_next_tokens {
     }
     if ($self->new_node) {
         if ($space < $indent) {
-            $self->scalar_event({ style => YAML_PLAIN_SCALAR_STYLE, value => undef });
+            $self->scalar_event({ style => YAML_PLAIN_SCALAR_STYLE, value => '' });
             $self->remove_nodes($space);
         }
         else {
@@ -197,7 +197,7 @@ sub lex_next_tokens {
             if ( $seq_start and ($exp eq 'MAPVALUE' or $exp eq 'MAP')) {
             }
             else {
-                $self->scalar_event({ style => YAML_PLAIN_SCALAR_STYLE, value => undef });
+                $self->scalar_event({ style => YAML_PLAIN_SCALAR_STYLE, value => '' });
             }
         }
     }
@@ -437,7 +437,7 @@ sub remove_nodes {
             last;
         }
         if ($exp eq 'MAPVALUE') {
-            $self->scalar_event({ style => YAML_PLAIN_SCALAR_STYLE, value => undef });
+            $self->scalar_event({ style => YAML_PLAIN_SCALAR_STYLE, value => '' });
             $exp = 'MAP';
         }
         my $info = { name => $exp };
@@ -580,7 +580,7 @@ sub end_document {
         die "Unexpected end of flow context";
     }
     if ($self->new_node) {
-        $self->scalar_event({ style => YAML_PLAIN_SCALAR_STYLE, value => undef });
+        $self->scalar_event({ style => YAML_PLAIN_SCALAR_STYLE, value => '' });
     }
     $self->remove_nodes(-1);
 
@@ -962,7 +962,7 @@ sub cb_empty_mapkey {
     my $stack = $self->event_stack;
     my $info = {
         style => YAML_PLAIN_SCALAR_STYLE,
-        value => undef,
+        value => '',
         offset => $token->{column},
     };
     if (@$stack and $stack->[-1]->[0] eq 'properties') {
@@ -1010,7 +1010,7 @@ sub cb_flow_question {
 
 sub cb_empty_complexvalue {
     my ($self, $res) = @_;
-    $self->scalar_event({ style => YAML_PLAIN_SCALAR_STYLE, value => undef });
+    $self->scalar_event({ style => YAML_PLAIN_SCALAR_STYLE, value => '' });
 }
 
 sub cb_questionstart {
@@ -1140,7 +1140,7 @@ sub cb_empty_flow_mapkey {
     my $stack = $self->event_stack;
     my $info = {
         style => YAML_PLAIN_SCALAR_STYLE,
-        value => undef,
+        value => '',
         offset => $token->{column},
     };
     if (@$stack and $stack->[-1]->[0] eq 'properties') {
@@ -1212,7 +1212,7 @@ sub cb_empty_flowmap_value {
     my $stack = $self->event_stack;
     my $info = {
         style => YAML_PLAIN_SCALAR_STYLE,
-        value => undef,
+        value => '',
         offset => $token->{column},
     };
     if (@$stack and $stack->[-1]->[0] eq 'properties') {
@@ -1246,7 +1246,7 @@ sub cb_insert_empty_map {
     my $stack = $self->event_stack;
     my $info = {
         style => YAML_PLAIN_SCALAR_STYLE,
-        value => undef,
+        value => '',
         offset => $token->{column},
     };
     if (@$stack and $stack->[-1]->[0] eq 'properties') {
