@@ -139,13 +139,7 @@ sub stream_end_event {}
 sub scalar_event {
     my ($self, $event) = @_;
     DEBUG and warn "CONTENT $event->{value} ($event->{style})\n";
-    my $value;
-    if ($event->{tag}) {
-        $value = $self->schema->load_scalar_tag($event);
-    }
-    else {
-        $value = $self->schema->load_scalar($event->{style}, $event->{value});
-    }
+    my $value = $self->schema->load_scalar($event);
     if (defined (my $name = $event->{anchor})) {
         $self->anchors->{ $name } = { data => $value, finished => 1 };
     }

@@ -170,42 +170,22 @@ sub add_representer {
     }
 }
 
-sub load_scalar_tag {
+sub load_scalar {
     my ($self, $event) = @_;
     my $tag = $event->{tag};
     my $value = $event->{value};
-    my $resolvers = $self->resolvers;
-    my $res = $resolvers->{tag}->{ $tag };
 
-    if (my $equals = $res->{equals}) {
-        if (exists $equals->{ $value }) {
-            my $res = $equals->{ $value };
-            if (ref $res eq 'CODE') {
-                return $res->();
-            }
-            return $res;
+    my $resolvers = $self->resolvers;
+    my $res;
+    if ($tag) {
+        $res = $resolvers->{tag}->{ $tag };
+    }
+    else {
+        $res = $resolvers->{value};
+        if ($event->{style} ne YAML_PLAIN_SCALAR_STYLE) {
+            return $value;
         }
     }
-    if (my $regex = $res->{regex}) {
-        for my $item (@$regex) {
-            my ($re, $sub) = @$item;
-            my @matches = $value =~ $re;
-            if (@matches) {
-                return $sub->(@matches);
-            }
-        }
-        die "Tag $tag ($value)";
-    }
-    return $value;
-}
-
-sub load_scalar {
-    my ($self, $style, $value) = @_;
-    if ($style ne YAML_PLAIN_SCALAR_STYLE) {
-        return $value;
-    }
-    my $resolvers = $self->resolvers;
-    my $res = $resolvers->{value};
 
     if (my $equals = $res->{equals}) {
         if (exists $equals->{ $value }) {
