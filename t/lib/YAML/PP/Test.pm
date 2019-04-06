@@ -310,6 +310,109 @@ sub compare_parse_events {
     }
 }
 
+sub parse_tokens {
+    my ($class, $testcase) = @_;
+
+    my $parser = YAML::PP::Parser->new(
+        receiver => sub {
+            my ($self, @args) = @_;
+        },
+    );
+    eval {
+        $parser->parse_string($testcase->{in_yaml});
+    };
+    my $err = $@;
+    my $tokens = $parser->tokens;
+    return {
+        err => $err,
+        tokens => $tokens,
+    };
+}
+
+sub compare_tokens {
+    my ($self, $testcase, $result) = @_;
+    my $id = $testcase->{id};
+    my $title = $testcase->{title};
+    my $yaml = $testcase->{in_yaml};
+
+    my $all_tokens = $result->{tokens};
+    my @yaml_lines = split /(?<=\n)/, $yaml;
+
+    my $error;
+    my $ok = 1;
+    LINE: for my $i (0 .. $#yaml_lines) {
+        my $line_number = $i + 1;
+#        diag("============== Line $line_number");
+        my $line = $yaml_lines[ $i ];
+        my @tokens;
+        TOKEN: while (@$all_tokens) {
+            my $next = $all_tokens->[0];
+            if (my $sub = $next->{subtokens}) {
+                shift @$all_tokens;
+                unshift @$all_tokens, @$sub;
+                next TOKEN;
+            }
+            if ($next->{line} < $line_number) {
+                $error = {
+                    token => $next,
+                    msg => "Wrong line",
+                };
+                $ok = 0;
+                last LINE;
+            }
+            last if $next->{line} > $line_number;
+            $next = shift @$all_tokens;
+            push @tokens, $next;
+        }
+
+        my $column = 0;
+        while (@tokens) {
+            my $token = shift @tokens;
+            my $token_column = $token->{column};
+            my $value = $token->{value};
+            if ($token->{orig}) {
+                $value = $token->{orig};
+            }
+            unless ($token->{column} == $column) {
+                $ok = 0;
+                $error = {
+                    token => $token,
+                    msg => "Wrong column",
+                };
+                last LINE;
+            }
+            unless ($line =~ s/^\Q$value//) {
+                $ok = 0;
+                $error = {
+                    token => $token,
+                    msg => "Token does not match YAML",
+                };
+                last LINE;
+            }
+            $column += length($value);
+        }
+        if (length $line) {
+            $ok = 0;
+            $error = {
+                msg => "Line is longer than tokens",
+            };
+        }
+
+    }
+
+    if (@$all_tokens) {
+        $ok = 0;
+        $error = {
+            msg => "More tokens than YAML lines",
+        };
+    }
+    unless ($ok) {
+        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([$error], ['error']);
+        diag($yaml);
+    }
+    ok($ok, "$id - Tokens match YAML");
+}
+
 sub compare_invalid_parse_events {
     my ($self, $testcase, $result) = @_;
     my $stats = $self->{stats};
