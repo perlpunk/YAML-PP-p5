@@ -2,11 +2,28 @@
 use strict;
 use warnings;
 
-### TEST DATA ###
+my $qr = qr{unblessed};
 
 my %tests = (
 
     hash => [
+        <<'EOM',
+        {
+            U => 2,
+            B => 52,
+        }
+EOM
+        <<'EOM',
+---
+- &1 !perl/hash
+  B: 52
+  U: 2
+- *1
+EOM
+        { load_only => 1 },
+    ],
+
+    hash_blessed => [
         <<'EOM',
         bless {
             U => 2,
@@ -23,6 +40,24 @@ EOM
     ],
 
     array => [
+        <<'EOM',
+        [
+            qw/ one two three four /
+        ]
+EOM
+        <<'EOM',
+---
+- &1 !perl/array
+  - one
+  - two
+  - three
+  - four
+- *1
+EOM
+        { load_only => 1 },
+    ],
+
+    array_blessed => [
         <<'EOM',
         bless [
             qw/ one two three four /
@@ -43,7 +78,12 @@ EOM
         <<'EOM',
         qr{unblessed}
 EOM
-        qr{- &1 !perl/regexp .*unblessed.*- \*1}s,
+        <<"EOM",
+---
+- &1 !perl/regexp $qr
+- *1
+EOM
+#        qr{- &1 !perl/regexp .*unblessed.*- \*1}s,
     ],
 
     regexp_blessed => [
@@ -69,24 +109,26 @@ EOM
 EOM
     ],
 
-    code => [
+    coderef => [
         <<'EOM',
         sub {
-            my ($self, %args) = @_;
+            my (%args) = @_;
             return $args{x} + $args{y};
         }
 EOM
         qr{- &1 !perl/code \|-.*return.*args.*x.*\+.*y}s,
+        { load_code => 1 },
     ],
 
-    code_blessed => [
+    coderef_blessed => [
         <<'EOM',
         bless sub {
-            my ($self, %args) = @_;
+            my (%args) = @_;
             return $args{x} - $args{y};
         }, "I::Am::Code"
 EOM
         qr{- &1 !perl/code:I::Am::Code \|-.*return.*args.*x.*\-.*y}s,
+        { load_code => 1 },
     ],
 
     scalarref => [
@@ -146,7 +188,5 @@ EOM
 EOM
     ],
 );
-
-### TEST DATA END ###
 
 \%tests;

@@ -58,17 +58,30 @@ sub bool_class { return $_[0]->{bool_class} }
 
 sub load_subschemas {
     my ($self, @schemas) = @_;
-    for my $s (@schemas) {
+    my $i = 0;
+    while ($i < @schemas) {
+        my $item = $schemas[ $i ];
+        $i++;
+        my %options;
+        while ($i < @schemas and $schemas[ $i ] =~ m/^\+(\w+)$/) {
+            my $option = $1;
+            $options{with}->{ $option } = 1;
+            $i++;
+        }
+
         my $class;
-        if ($s =~ m/^\:(.*)/) {
+        if ($item =~ m/^\:(.*)/) {
           $class = "$1";
           Module::Load::load $class;
-        } else {
-          $class = "YAML::PP::Schema::$s";
+        }
+        else {
+          $class = "YAML::PP::Schema::$item";
         }
         my $tags = $class->register(
             schema => $self,
+            options => \%options,
         );
+
     }
 }
 
@@ -80,15 +93,22 @@ sub add_resolver {
     my ($type, $match, $value) = @$rule;
     my $implicit = $args{implicit};
     $implicit = 1 unless defined $implicit;
-    my @resolvers;
+    my $resolver_list = [];
     if ($tag) {
-        my $res = $resolvers->{tag}->{ $tag } ||= {};
-        push @resolvers, $res;
+        if (ref $tag eq 'Regexp') {
+            my $res = $resolvers->{tags} ||= [];
+            push @$res, [ $tag, {} ];
+            push @$resolver_list, $res->[-1]->[1];
+        }
+        else {
+            my $res = $resolvers->{tag}->{ $tag } ||= {};
+            push @$resolver_list, $res;
+        }
     }
     if ($implicit) {
-        push @resolvers, $resolvers->{value} ||= {};
+        push @$resolver_list, $resolvers->{value} ||= {};
     }
-    for my $res (@resolvers) {
+    for my $res (@$resolver_list) {
         if ($type eq 'equals') {
             unless (exists $res->{equals}->{ $match }) {
                 $res->{equals}->{ $match } = $value;
@@ -98,6 +118,37 @@ sub add_resolver {
         if ($type eq 'regex') {
             push @{ $res->{regex} }, [ $match => $value ];
         }
+    }
+}
+
+sub add_sequence_resolver {
+    my ($self, %args) = @_;
+    return $self->add_collection_resolver(sequence => %args);
+}
+
+sub add_mapping_resolver {
+    my ($self, %args) = @_;
+    return $self->add_collection_resolver(mapping => %args);
+}
+
+sub add_collection_resolver {
+    my ($self, $type, %args) = @_;
+    my $tag = $args{tag};
+    my $implicit = $args{implicit};
+    my $resolvers = $self->resolvers;
+
+    if ($tag and ref $tag eq 'Regexp') {
+        my $res = $resolvers->{ $type }->{tags} ||= [];
+        push @$res, [ $tag, {
+            on_create => $args{on_create},
+            on_data => $args{on_data},
+        } ];
+    }
+    elsif ($tag) {
+        my $res = $resolvers->{ $type }->{tag}->{ $tag } ||= {
+            on_create => $args{on_create},
+            on_data => $args{on_data},
+        };
     }
 }
 
@@ -179,6 +230,15 @@ sub load_scalar {
     my $res;
     if ($tag) {
         $res = $resolvers->{tag}->{ $tag };
+        if (not $res and my $matches = $resolvers->{tags}) {
+            for my $match (@$matches) {
+                my ($re, $rule) = @$match;
+                if ($tag =~ $re) {
+                    $res = $rule;
+                    last;
+                }
+            }
+        }
     }
     else {
         $res = $resolvers->{value};
@@ -206,6 +266,60 @@ sub load_scalar {
         }
     }
     return $value;
+}
+
+sub create_sequence {
+    my ($self, $constructor, $event) = @_;
+    my $tag = $event->{tag};
+    my $data = [];
+    my $on_data;
+
+    my $resolvers = $self->resolvers->{sequence};
+    if ($tag) {
+        if (my $matches = $resolvers->{tags}) {
+            for my $match (@$matches) {
+                my ($re, $actions) = @$match;
+                my $on_create = $actions->{on_create};
+                if ($tag =~ $re) {
+                    $on_data = $actions->{on_data};
+                    $on_create and $data = $on_create->($constructor, $event);
+                    return ($data, $on_data);
+                }
+            }
+        }
+    }
+
+    return ($data, $on_data);
+}
+
+sub create_mapping {
+    my ($self, $constructor, $event) = @_;
+    my $tag = $event->{tag};
+    my $data = {};
+    my $on_data;
+
+    my $resolvers = $self->resolvers->{mapping};
+    if ($tag) {
+        if (my $matches = $resolvers->{tags}) {
+            for my $match (@$matches) {
+                my ($re, $actions) = @$match;
+                my $on_create = $actions->{on_create};
+                if ($tag =~ $re) {
+                    $on_data = $actions->{on_data};
+                    $on_create and $data = $on_create->($constructor, $event);
+                    return ($data, $on_data);
+                }
+            }
+        }
+        if (my $equals = $resolvers->{tag}->{ $tag }) {
+            my $on_create = $equals->{on_create};
+            $on_data = $equals->{on_data};
+            $on_create and $data = $on_create->($constructor, $event);
+            return ($data, $on_data);
+        }
+    }
+
+    return ($data, $on_data);
 }
 
 sub bool_jsonpp_true { JSON::PP::true() }

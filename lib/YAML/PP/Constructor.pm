@@ -71,7 +71,14 @@ sub document_end_event {
 
 sub mapping_start_event {
     my ($self, $event) = @_;
-    my $ref = { type => 'mapping', ref => [], data => {}, event => $event };
+    my ($data, $on_data) = $self->schema->create_mapping($self, $event);
+    my $ref = {
+        type => 'mapping',
+        ref => [],
+        data => $data,
+        event => $event,
+        on_data => $on_data,
+    };
     my $stack = $self->stack;
 
     push @$stack, $ref;
@@ -88,14 +95,18 @@ sub mapping_end_event {
     my ($ref, $data) = @{ $last }{qw/ ref data /};
     $last->{type} eq 'mapping' or die "Expected mapping, but got $last->{type}";
 
-    for (my $i = 0; $i < @$ref; $i += 2) {
-        my ($key, $value) = @$ref[ $i, $i + 1 ];
-        $key = '' unless defined $key;
-        if (ref $key) {
-            $key = $self->stringify_complex($key);
+    my $on_data = $last->{on_data} || sub {
+        my ($self, $hash, $list) = @_;
+        for (my $i = 0; $i < @$list; $i += 2) {
+            my ($key, $value) = @$list[ $i, $i + 1 ];
+            $key = '' unless defined $key;
+            if (ref $key) {
+                $key = $self->stringify_complex($key);
+            }
+            $hash->{ $key } = $value;
         }
-        $data->{ $key } = $value;
-    }
+    };
+    $on_data->($self, $data, $ref);
     push @{ $stack->[-1]->{ref} }, $data;
     if (defined(my $anchor = $last->{event}->{anchor})) {
         $self->anchors->{ $anchor }->{finished} = 1;
@@ -105,7 +116,7 @@ sub mapping_end_event {
 
 sub sequence_start_event {
     my ($self, $event) = @_;
-    my $data = [];
+    my ($data, $on_data) = $self->schema->create_sequence($self, $event);
     my $ref = { type => 'sequence', ref => $data, data => $data, event => $event };
     my $stack = $self->stack;
 
