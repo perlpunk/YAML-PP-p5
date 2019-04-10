@@ -71,11 +71,11 @@ sub load_subschemas {
 
         my $class;
         if ($item =~ m/^\:(.*)/) {
-          $class = "$1";
-          Module::Load::load $class;
+            $class = "$1";
+            Module::Load::load $class;
         }
         else {
-          $class = "YAML::PP::Schema::$item";
+            $class = "YAML::PP::Schema::$item";
         }
         my $tags = $class->register(
             schema => $self,

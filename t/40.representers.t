@@ -16,12 +16,12 @@ use YAML::PP;
             return 1;
         }
     );
-  
+
     my $data = {
         o1 => (bless {}, 'Class1'),
         o2 => (bless {}, 'Class2'),
     };
-  
+
     my $yaml = $parser->dump_string($data);
     like($yaml, qr/o1: !Class1/, 'o1s\' class has a representer that converts it to a tag');
     like($yaml, qr/o2:\n  \{\}/, 'o2s\' class doesn\'t have a representer. It gets converted to an empty hash');
@@ -48,13 +48,13 @@ use YAML::PP;
             return 1;
         }
     );
-  
-  
+
+
     my $data = {
         o1 => (bless {}, 'Class1'),
         o2 => (bless {}, 'Class2'),
     };
-  
+
     my $yaml = $parser->dump_string($data);
     # o1 serializes to Class1 because the first catchall says it's done
     like($yaml, qr/o1: !Class1/, 'o1s\' gets caught only by the first class_matches, since it sets work as done');
@@ -88,13 +88,13 @@ package main;
             return 1;
         }
     );
-  
-  
+
+
     my $data = {
         o3 => (bless {}, 'Class3'),
         o4 => (bless {}, 'Class4'),
       };
-  
+
     my $yaml = $parser->dump_string($data);
     like($yaml, qr/o3: !Class3/, 'Class3 gets caught by its class name');
     like($yaml, qr/o4: !BaseClass/, 'Class4 gets caught because its inherited from BaseClass');
