@@ -77,10 +77,16 @@ sub load_subschemas {
         my $class;
         if ($item =~ m/^\:(.*)/) {
             $class = "$1";
+            unless ($class =~ m/\A[A-Za-z0-9_:]+\z/) {
+                die "Module name '$class' is invalid";
+            }
             Module::Load::load $class;
         }
         else {
             $class = "YAML::PP::Schema::$item";
+            unless ($class =~ m/\A[A-Za-z0-9_:]+\z/) {
+                die "Module name '$class' is invalid";
+            }
             $LOADED_SCHEMA{ $item } ||= Module::Load::load $class;
         }
         my $tags = $class->register(
