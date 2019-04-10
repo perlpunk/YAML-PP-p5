@@ -33,9 +33,9 @@ sub register {
     if ($options->{with}->{loadcode}) {
         $schema->add_resolver(
             tag => '!perl/code',
-            match => [ regex => qr{^(.*)$}s => sub {
-                my ($constructor, $event, $matches) = @_;
-                my $code = $matches->[0];
+            match => [ all => sub {
+                my ($constructor, $event) = @_;
+                my $code = $event->{value};
                 $code = "sub $code";
                 my $sub = eval $code;
                 if ($@) {
@@ -47,11 +47,11 @@ sub register {
         );
         $schema->add_resolver(
             tag => qr{^!perl/code:.*},
-            match => [ regex => qr{^(.*)$}s => sub {
-                my ($constructor, $event, $matches) = @_;
+            match => [ all => sub {
+                my ($constructor, $event) = @_;
                 my $class = $event->{tag};
                 $class =~ s{^!perl/code:}{};
-                my $code = $matches->[0];
+                my $code = $event->{value};
                 $code = "sub $code";
                 my $sub = eval $code;
                 if ($@) {
@@ -65,8 +65,8 @@ sub register {
     else {
         $schema->add_resolver(
             tag => '!perl/code',
-            match => [ regex => qr{^(.*)$}s => sub {
-                my ($constructor, $event, $matches) = @_;
+            match => [ all => sub {
+                my ($constructor, $event) = @_;
                 my $code = sub {};
                 return $code;
             }],
@@ -74,8 +74,8 @@ sub register {
         );
         $schema->add_resolver(
             tag => qr{^!perl/code:.*},
-            match => [ regex => qr{^(.*)$}s => sub {
-                my ($constructor, $event, $matches) = @_;
+            match => [ all => sub {
+                my ($constructor, $event) = @_;
                 my $class = $event->{tag};
                 $class =~ s{^!perl/code:}{};
                 my $code = sub {};
@@ -87,9 +87,9 @@ sub register {
 
     $schema->add_resolver(
         tag => '!perl/regexp',
-        match => [ regex => qr{^(.*)$}s => sub {
-            my ($constructor, $event, $matches) = @_;
-            my $regex = $matches->[0];
+        match => [ all => sub {
+            my ($constructor, $event) = @_;
+            my $regex = $event->{value};
             if ($regex =~ m/^\Q$qr_prefix\E(.*)\)\z/s) {
                 $regex = $1;
             }
@@ -100,11 +100,11 @@ sub register {
     );
     $schema->add_resolver(
         tag => qr{^!perl/regexp:.*},
-        match => [ regex => qr{^(.*)$}s => sub {
-            my ($constructor, $event, $matches) = @_;
+        match => [ all => sub {
+            my ($constructor, $event) = @_;
             my $class = $event->{tag};
             $class =~ s{^!perl/regexp:}{};
-            my $regex = $matches->[0];
+            my $regex = $event->{value};
             if ($regex =~ m/^\Q$qr_prefix\E(.*)\)\z/s) {
                 $regex = $1;
             }

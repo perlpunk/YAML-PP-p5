@@ -17,18 +17,18 @@ my $external_data = {
 my $schema = $ypp->schema;
 $schema->add_resolver(
     tag => "!external",
-    match => [ regex => qr{^(.*)$} => sub {
-        my ($constructor, $event, $matches) = @_;
-        my ($value) = @$matches;
+    match => [ all => => sub {
+        my ($constructor, $event) = @_;
+        my $value = $event->{value};
         path($external_data, $value)
     }],
     implicit => 0,
 );
 $schema->add_resolver(
     tag => "!template",
-    match => [ regex => qr{^(.*)$} => sub {
-        my ($constructor, $event, $matches) = @_;
-        my ($value) = @$matches;
+    match => [ all => sub {
+        my ($constructor, $event) = @_;
+        my $value = $event->{value};
         template($external_data, $value)
     }],
     implicit => 0,

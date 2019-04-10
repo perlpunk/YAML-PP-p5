@@ -90,7 +90,7 @@ sub add_resolver {
     my $tag = $args{tag};
     my $rule = $args{match};
     my $resolvers = $self->resolvers;
-    my ($type, $match, $value) = @$rule;
+    my ($type, @rule) = @$rule;
     my $implicit = $args{implicit};
     $implicit = 1 unless defined $implicit;
     my $resolver_list = [];
@@ -110,13 +110,19 @@ sub add_resolver {
     }
     for my $res (@$resolver_list) {
         if ($type eq 'equals') {
+            my ($match, $value) = @rule;
             unless (exists $res->{equals}->{ $match }) {
                 $res->{equals}->{ $match } = $value;
             }
             next;
         }
-        if ($type eq 'regex') {
+        elsif ($type eq 'regex') {
+            my ($match, $value) = @rule;
             push @{ $res->{regex} }, [ $match => $value ];
+        }
+        elsif ($type eq 'all') {
+            my ($value) = @rule;
+            $res->{all} = $value;
         }
     }
 }
@@ -265,6 +271,12 @@ sub load_scalar {
             }
         }
     }
+    if (my $catch_all = $res->{all}) {
+        if (ref $catch_all eq 'CODE') {
+            return $catch_all->($constructor, $event);
+        }
+        return $catch_all;
+    }
     return $value;
 }
 
@@ -410,7 +422,7 @@ sub register {
     );
     $schema->add_resolver(
         tag => 'tag:yaml.org,2002:str',
-        match => [ regex => qr{^(.*)$} => sub { $_[2]->[0] } ],
+        match => [ all => sub { $_[1]->{value} } ],
         implicit => 0,
     );
 
@@ -567,7 +579,7 @@ sub register {
     ) for (qw/ .nan .NaN .NAN /);
     $schema->add_resolver(
         tag => 'tag:yaml.org,2002:str',
-        match => [ regex => qr{^(.*)$} => sub { $_[2]->[0] } ],
+        match => [ all => sub { $_[1]->{value} } ],
         implicit => 0,
     );
 

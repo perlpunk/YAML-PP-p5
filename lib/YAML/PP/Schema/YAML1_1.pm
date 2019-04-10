@@ -141,7 +141,7 @@ sub register {
     ) for (qw/ .nan .NaN .NAN /);
     $schema->add_resolver(
         tag => 'tag:yaml.org,2002:str',
-        match => [ regex => qr{^(.*)$} => sub { $_[2]->[0] } ],
+        match => [ all => sub { $_[1]->{value} } ],
         implicit => 0,
     );
 
