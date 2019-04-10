@@ -56,6 +56,11 @@ sub true { return $_[0]->{true} }
 sub false { return $_[0]->{false} }
 sub bool_class { return $_[0]->{bool_class} }
 
+my %LOADED_SCHEMA = (
+    Failsafe => 1,
+    JSON => 1,
+    Core => 1,
+);
 sub load_subschemas {
     my ($self, @schemas) = @_;
     my $i = 0;
@@ -76,6 +81,7 @@ sub load_subschemas {
         }
         else {
             $class = "YAML::PP::Schema::$item";
+            $LOADED_SCHEMA{ $item } ||= Module::Load::load $class;
         }
         my $tags = $class->register(
             schema => $self,

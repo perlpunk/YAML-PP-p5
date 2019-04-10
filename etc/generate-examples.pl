@@ -5,8 +5,6 @@ use Data::Dumper;
 use FindBin '$Bin';
 use lib "$Bin/../lib";
 use YAML::PP;
-use YAML::PP::Schema::Perl;
-use YAML::PP::Schema::Tie::IxHash;
 
 my $tests_perl = require "$Bin/../examples/schema-perl.pm";
 my $tests_ixhash = require "$Bin/../examples/schema-ixhash.pm";

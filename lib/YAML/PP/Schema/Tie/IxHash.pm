@@ -43,7 +43,6 @@ YAML::PP::Schema::Tie::IxHash - Schema for serializing ordered hashes
 
     use YAML::PP;
     use Tie::IxHash;
-    use YAML::PP::Schema::Tie::IxHash;
     my $yp = YAML::PP->new( schema => [qw/ JSON Tie::IxHash /] );
 
     tie(my %ordered, 'Tie::IxHash');

@@ -339,7 +339,6 @@ YAML::PP::Schema::Perl - Schema for serializing perl objects and special types
 =head1 SYNOPSIS
 
     use YAML::PP;
-    use YAML::PP::Schema::Perl;
     # This can be dangerous when loading untrusted YAML!
     my $yp = YAML::PP->new( schema => [qw/ JSON Perl /] );
     # or

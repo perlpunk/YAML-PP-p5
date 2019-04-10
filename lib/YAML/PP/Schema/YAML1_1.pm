@@ -252,7 +252,6 @@ YAML::PP::Schema::YAML1_1 - YAML 1.1 Schema for YAML::PP
 =head1 SYNOPSIS
 
     use YAML::PP;
-    use YAML::PP::Schema::YAML1_1;
 
     my $yp = YAML::PP->new( schema => ['YAML1_1'] );
     my $yaml = <<'EOM';

@@ -7,7 +7,6 @@ use B ();
 use Data::Dumper;
 use Scalar::Util qw/ blessed /;
 use YAML::PP;
-use YAML::PP::Schema::YAML1_1;
 
 my $jsonpp = eval { require JSON::PP };
 

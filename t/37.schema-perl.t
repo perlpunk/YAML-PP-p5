@@ -7,7 +7,6 @@ use Data::Dumper;
 use Test::Deep;
 use Scalar::Util ();
 use YAML::PP;
-use YAML::PP::Schema::Perl;
 my $tests = require "$Bin/../examples/schema-perl.pm";
 
 my $yp_perl = YAML::PP->new(

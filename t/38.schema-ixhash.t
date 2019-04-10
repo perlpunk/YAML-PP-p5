@@ -5,14 +5,12 @@ use Test::More;
 use FindBin '$Bin';
 use Data::Dumper;
 use YAML::PP;
-use YAML::PP::Schema::Perl;
 my $ixhash = eval { require Tie::IxHash };
 unless ($ixhash) {
     plan skip_all => "Tie::IxHash not installed";
     exit;
 }
 
-use YAML::PP::Schema::Tie::IxHash;
 my $tests = require "$Bin/../examples/schema-ixhash.pm";
 
 my $yp = YAML::PP->new(
