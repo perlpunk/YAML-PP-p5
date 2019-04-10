@@ -3,6 +3,7 @@ use strict;
 use warnings;
 
 my $qr = qr{unblessed};
+my $qr_blessed = qr{blessed}i;
 
 my %tests = (
 
@@ -80,17 +81,20 @@ EOM
 EOM
         <<"EOM",
 ---
-- &1 !perl/regexp $qr
+- &1 !perl/regexp unblessed
 - *1
 EOM
-#        qr{- &1 !perl/regexp .*unblessed.*- \*1}s,
     ],
 
     regexp_blessed => [
         <<'EOM',
         bless qr{blessed}, "Foo"
 EOM
-        qr{- &1 !perl/regexp:Foo .*blessed.*- \*1}s,
+        <<"EOM",
+---
+- &1 !perl/regexp:Foo blessed
+- *1
+EOM
     ],
 
     circular => [

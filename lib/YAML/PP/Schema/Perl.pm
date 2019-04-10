@@ -277,17 +277,24 @@ sub register {
             # Fun with regexes in perl versions!
             elsif ($node->{reftype} eq 'REGEXP') {
                 if ($blessed eq 'Regexp') {
-                    $node->{tag} = sprintf PREFIX_PERL . "%s",
-                        lc($node->{reftype});
+                    $node->{tag} = PREFIX_PERL . "regexp";
                 }
-                $node->{data} = "$node->{value}";
+                my $regex = "$node->{value}";
+                if ($regex =~ m/^\Q$qr_prefix\E(.*)\)\z/s) {
+                    $regex = $1;
+                }
+                $node->{data} = $regex;
             }
             elsif ($node->{reftype} eq 'SCALAR') {
 
                 # in perl <= 5.10 regex reftype(regex) was SCALAR
                 if ($blessed eq 'Regexp') {
                     $node->{tag} = PREFIX_PERL . 'regexp';
-                    $node->{data} = "$node->{value}";
+                    my $regex = "$node->{value}";
+                    if ($regex =~ m/^\Q$qr_prefix\E(.*)\)\z/s) {
+                        $regex = $1;
+                    }
+                    $node->{data} = $regex;
                 }
 
                 # In perl <= 5.10 there seemed to be no better pure perl
@@ -298,7 +305,11 @@ sub register {
                     and $node->{value} =~ m/^\(\?/
                 ) {
                     $node->{tag} = PREFIX_PERL . 'regexp:' . $blessed;
-                    $node->{data} = "$node->{value}";
+                    my $regex = "$node->{value}";
+                    if ($regex =~ m/^\Q$qr_prefix\E(.*)\)\z/s) {
+                        $regex = $1;
+                    }
+                    $node->{data} = $regex;
                 }
                 else {
                     # phew, just a simple scalarref
@@ -543,7 +554,7 @@ YAML:
 
 
         # YAML
-        --- !perl/regexp (?^:unblessed)
+        --- !perl/regexp unblessed
 
 
 =item regexp_blessed
@@ -553,7 +564,7 @@ YAML:
 
 
         # YAML
-        --- !perl/regexp:Foo (?^:blessed)
+        --- !perl/regexp:Foo blessed
 
 
 =item scalarref
