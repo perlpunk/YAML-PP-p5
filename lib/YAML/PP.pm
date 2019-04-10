@@ -276,7 +276,7 @@ The process of loading and dumping is split into the following steps:
 
 You can dump basic perl types like hashes, arrays, scalars (strings, numbers).
 For dumping blessed objects and things like coderefs have a look at
-L<YAML::PP::Schema::Perl>.
+L<YAML::PP::Perl>/L<YAML::PP::Schema::Perl>.
 
 For keeping your ordered L<Tie::IxHash> hashes, try out
 L<YAML::PP::Schema::Tie::IxHash>.

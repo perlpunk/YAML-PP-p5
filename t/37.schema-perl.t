@@ -7,10 +7,10 @@ use Data::Dumper;
 use Test::Deep;
 use Scalar::Util ();
 use YAML::PP;
+use YAML::PP::Perl;
 my $tests = require "$Bin/../examples/schema-perl.pm";
 
-my $yp_perl = YAML::PP->new(
-    schema => [qw/ JSON Perl /],
+my $yp_perl = YAML::PP::Perl->new(
 );
 my $yp_loadcode = YAML::PP->new(
     schema => [qw/ JSON Perl +loadcode /],
