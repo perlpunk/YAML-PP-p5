@@ -28,7 +28,6 @@ my $warn      = YAML::PP->new( cyclic_refs => 'warn' );
 my $ignore    = YAML::PP->new( cyclic_refs => 'ignore' );
 my $allow     = YAML::PP->new( cyclic_refs => 'allow' );
 my $allow2    = YAML::PP->new( );
-my $nonsense  = YAML::PP->new( cyclic_refs => 'nonsense');
 
 my $data = eval {
     $fatal->load_string($yaml);
@@ -51,6 +50,7 @@ $data = $allow2->load_string($yaml);
 cmp_ok($data->[0]->{link}->{link}->{name}, 'eq', 'A', "cyclic_refs unset (default=allow)");
 
 $data = eval {
+    my $nonsense  = YAML::PP->new( cyclic_refs => 'nonsense');
     $nonsense->load_string($yaml);
 };
 $error = $@;

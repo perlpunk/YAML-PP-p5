@@ -6,6 +6,8 @@ package YAML::PP;
 our $VERSION = '0.000'; # VERSION
 
 use YAML::PP::Schema;
+use YAML::PP::Loader;
+use YAML::PP::Dumper;
 
 use base 'Exporter';
 our @EXPORT_OK = qw/ Load LoadFile Dump DumpFile /;
@@ -25,20 +27,23 @@ sub new {
     );
     $schema->load_subschemas(@$schemas);
 
-    my $self = bless {
-        boolean => $bool,
+    my $loader = YAML::PP::Loader->new(
         schema => $schema,
         cyclic_refs => $cyclic_refs,
         parser => $parser,
+    );
+    my $dumper = YAML::PP::Dumper->new(
+        schema => $schema,
         emitter => $emitter,
+    );
+
+    my $self = bless {
+        schema => $schema,
+        loader => $loader,
+        dumper => $dumper,
     }, $class;
     return $self;
 }
-
-sub boolean { return $_[0]->{boolean} }
-sub cyclic_refs { return $_[0]->{cyclic_refs} }
-sub parser { return $_[0]->{parser} }
-sub emitter { return $_[0]->{emitter} }
 
 sub loader {
     if (@_ > 1) {
@@ -70,61 +75,22 @@ sub default_schema {
 
 sub load_string {
     my ($self, $yaml) = @_;
-    my $loader = $self->loader;
-    unless ($loader) {
-        require YAML::PP::Loader;
-        $loader = YAML::PP::Loader->new(
-            schema => $self->schema,
-            cyclic_refs => $self->cyclic_refs,
-            parser => $self->parser,
-        );
-        $self->loader($loader);
-    }
-    return $loader->load_string($yaml);
+    return $self->loader->load_string($yaml);
 }
 
 sub load_file {
     my ($self, $file) = @_;
-    my $loader = $self->loader;
-    unless ($loader) {
-        require YAML::PP::Loader;
-        $loader = YAML::PP::Loader->new(
-            schema => $self->schema,
-            cyclic_refs => $self->cyclic_refs,
-            parser => $self->parser,
-        );
-        $self->loader($loader);
-    }
-    return $loader->load_file($file);
+    return $self->loader->load_file($file);
 }
 
 sub dump_string {
     my ($self, @data) = @_;
-    my $dumper = $self->dumper;
-    unless ($dumper) {
-        require YAML::PP::Dumper;
-
-        $dumper = YAML::PP::Dumper->new(
-            schema => $self->schema,
-            emitter => $self->emitter,
-        );
-        $self->dumper($dumper);
-    }
-    return $dumper->dump_string(@data);
+    return $self->dumper->dump_string(@data);
 }
 
 sub dump_file {
     my ($self, $file, @data) = @_;
-    my $dumper = $self->dumper;
-    unless ($dumper) {
-        require YAML::PP::Dumper;
-        $dumper = YAML::PP::Dumper->new(
-            schema => $self->schema,
-            emitter => $self->emitter,
-        );
-        $self->dumper($dumper);
-    }
-    return $dumper->dump_file($file, @data);
+    return $self->dumper->dump_file($file, @data);
 }
 
 # legagy interface
@@ -535,6 +501,22 @@ Output will be UTF-8 decoded
     $ypp->dump_file("file.yaml", @docs);
 
 File will be written UTF-8 encoded
+
+=item loader
+
+Returns or sets the loader object, by default L<YAML::PP::Loader>
+
+=item dumper
+
+Returns or sets the dumper object, by default L<YAML::PP::Dumper>
+
+=item schema
+
+Returns or sets the schema object
+
+=item default_schema
+
+Creates and returns the default schema
 
 =back
 
