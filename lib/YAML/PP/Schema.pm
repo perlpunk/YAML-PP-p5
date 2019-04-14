@@ -311,6 +311,12 @@ sub create_sequence {
                 }
             }
         }
+        if (my $equals = $resolvers->{tag}->{ $tag }) {
+            my $on_create = $equals->{on_create};
+            $on_data = $equals->{on_data};
+            $on_create and $data = $on_create->($constructor, $event);
+            return ($data, $on_data);
+        }
     }
 
     return ($data, $on_data);

@@ -78,4 +78,84 @@ for my $name (@tests) {
     }
 }
 
+subtest dummy_code => sub {
+    my $yaml = <<'EOM';
+---
+- !perl/code |
+  {
+    die "oops";
+  }
+- !perl/code:Foo |
+  {
+    die "oops";
+  }
+EOM
+    my $data = $yp_perl->load_string($yaml);
+    my $code1 = $data->[0];
+    my $code2 = $data->[1];
+    isa_ok($code2, 'Foo', "Code is blessed 'Foo'");
+    is($code1->(), undef, "Dummy code 1 returns undef");
+    is($code2->(), undef, "Dummy code 2 returns undef");
+};
+
+subtest invalid_code => sub {
+    my $yaml = <<'EOM';
+---
+- !perl/code |
+    die "oops";
+EOM
+    my $data = eval { $yp_loadcode->load_string($yaml) };
+    my $error = $@;
+    cmp_ok($error, '=~', qr{eval code}, "Loading invalid code dies");
+    $yaml = <<'EOM';
+---
+- !perl/code:Foo |
+    die "oops";
+EOM
+    $data = eval { $yp_loadcode->load_string($yaml) };
+    $error = $@;
+    cmp_ok($error, '=~', qr{eval code}, "Loading invalid code dies");
+};
+
+subtest regex => sub {
+    my $re = qr{foo};
+    my $yaml = <<"EOM";
+---
+- !perl/regexp $re
+- !perl/regexp:Foo $re
+EOM
+    my $data = $yp_perl->load_string($yaml);
+    my ($regex1, $regex2) = @$data;
+    isa_ok($regex2, 'Foo', "Regex is blessed 'Foo'");
+    cmp_ok('foo', '=~', $regex1, "Loaded regex 1 matches");
+    cmp_ok('foo', '=~', $regex2, "Loaded regex 2 matches");
+};
+
+subtest simple_array => sub {
+    my $yaml = <<"EOM";
+--- !perl/array [a, b]
+EOM
+    my $data = $yp_perl->load_string($yaml);
+    cmp_deeply($data, [qw/ a b /], "Loaded simple array");
+};
+
+subtest invalid_ref => sub {
+    my @yaml = (
+        ['!perl/ref',        q#--- !perl/ref        {==: Invalid}#],
+        ['!perl/ref:Foo',    q#--- !perl/ref:Foo    {==: Invalid}#],
+        ['!perl/scalar',     q#--- !perl/scalar     {==: Invalid}#],
+        ['!perl/scalar:Foo', q#--- !perl/scalar:Foo {==: Invalid}#],
+        ['!perl/ref',        q#--- !perl/ref        {}#],
+        ['!perl/ref:Foo',    q#--- !perl/ref:Foo    {}#],
+        ['!perl/scalar',     q#--- !perl/scalar     {}#],
+        ['!perl/scalar:Foo', q#--- !perl/scalar:Foo {}#],
+    );
+    for my $test (@yaml) {
+        my ($type, $yaml) = @$test;
+        my $data = eval { $yp_perl->load_string($yaml) };
+        my $error = $@;
+        cmp_ok($error, '=~', qr{Unexpected data}, "Invalid $type dies");
+    }
+};
+
 done_testing;

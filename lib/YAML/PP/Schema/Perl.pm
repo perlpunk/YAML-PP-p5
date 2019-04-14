@@ -155,7 +155,7 @@ sub register {
         },
         on_data => sub {
             my ($constructor, $ref, $list) = @_;
-            if (@$list > 2) {
+            if (@$list != 2) {
                 die "Unexpected data in !perl/scalar construction";
             }
             my ($key, $value) = @$list;
@@ -176,7 +176,7 @@ sub register {
         },
         on_data => sub {
             my ($constructor, $ref, $list) = @_;
-            if (@$list > 2) {
+            if (@$list != 2) {
                 die "Unexpected data in !perl/scalar construction";
             }
             my ($key, $value) = @$list;
@@ -195,7 +195,7 @@ sub register {
         },
         on_data => sub {
             my ($constructor, $ref, $list) = @_;
-            if (@$list > 2) {
+            if (@$list != 2) {
                 die "Unexpected data in !perl/scalar construction";
             }
             my ($key, $value) = @$list;
@@ -216,7 +216,7 @@ sub register {
         },
         on_data => sub {
             my ($constructor, $ref, $list) = @_;
-            if (@$list > 2) {
+            if (@$list != 2) {
                 die "Unexpected data in !perl/scalar construction";
             }
             my ($key, $value) = @$list;
@@ -232,9 +232,6 @@ sub register {
         code => sub {
             my ($rep, $node) = @_;
             $node->{tag} = PREFIX_PERL . "scalar";
-            if (blessed($node->{value})) {
-                $node->{tag} .= ':' . blessed($node->{value});
-            }
             %{ $node->{data} } = ( '=' => ${ $node->{value} } );
         },
     );
@@ -243,9 +240,6 @@ sub register {
         code => sub {
             my ($rep, $node) = @_;
             $node->{tag} = PREFIX_PERL . "ref";
-            if (blessed($node->{value})) {
-                $node->{tag} .= ':' . blessed($node->{value});
-            }
             %{ $node->{data} } = ( '=' => ${ $node->{value} } );
         },
     );
