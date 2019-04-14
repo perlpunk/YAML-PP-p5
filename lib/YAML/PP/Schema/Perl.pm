@@ -365,7 +365,7 @@ YAML::PP::Schema::Perl - Schema for serializing perl objects and special types
 
 =head1 DESCRIPTION
 
-This schema allows you to dump perl objects and special types to YAML.
+This schema allows you to load and dump perl objects and special types.
 
 Please note that loading objects of arbitrary classes can be dangerous
 in Perl. You have to load the modules yourself, but if an exploitable module

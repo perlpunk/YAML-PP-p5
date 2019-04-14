@@ -1,17 +1,14 @@
-0.011_002 2019-04-12 00:05:21+02:00
-
-    - Implement loading of perl objects
-    - Add a catchall resolver for scalars
-
-0.011_001 2019-04-08 20:03:46+02:00
+0.012 2019-04-14 14:02:36+02:00
 
     - Fix bug in emitter (strings starting with % must be quoted)
     - Implement loading of schema classes not prefixed with YAML::PP::Schema
       (PR#8 @pplu)
+    - Implement loading of perl objects
+    - Fix line number of multiline tokens
     - Refactor parser/lexer. All tokens (except indentation) are now
       parsed by the grammar.
-    - Fix line number of multiline tokens
     - Change arguments of resolver callback
+    - Add a catchall resolver for scalars
 
 0.011 2019-03-23 12:03:12+01:00
 
