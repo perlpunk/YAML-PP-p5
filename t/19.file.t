@@ -8,6 +8,7 @@ use YAML::PP;
 
 my $file = "$Bin/data/simple.yaml";
 my $file_out = "$Bin/data/simple-out.yaml";
+my $invalid_file = "/non/existant/path/for/yaml/pp";
 my $yaml = do { open my $fh, '<', $file or die $!; local $/; <$fh> };
 
 my $data = { a => 1 };
@@ -37,6 +38,13 @@ YAML::PP::DumpFile($fh_out, $data);
 close $fh_out;
 $yaml2 = do { open my $fh, '<', $file_out or die $!; local $/; <$fh> };
 cmp_ok($yaml2, 'eq', $yaml, "DumpFile(filehandle) data correct");
+
+eval {
+    YAML::PP::DumpFile($invalid_file, $data);
+};
+my $error = $@;
+cmp_ok($error, '=~', qr{Could not open});
+
 
 done_testing;
 

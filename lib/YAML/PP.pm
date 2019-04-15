@@ -20,9 +20,11 @@ sub new {
     my $schemas = delete $args{schema} || ['Core'];
     my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
     my $indent = $args{indent};
+    my $writer = $args{writer};
     my $parser = delete $args{parser};
     my $emitter = delete $args{emitter} || {
         indent => $indent,
+        writer => $writer,
     };
 
     my $schema = YAML::PP::Schema->new(
@@ -84,6 +86,11 @@ sub load_string {
 sub load_file {
     my ($self, $file) = @_;
     return $self->loader->load_file($file);
+}
+
+sub dump {
+    my ($self, @data) = @_;
+    return $self->dumper->dump(@data);
 }
 
 sub dump_string {
@@ -505,6 +512,17 @@ Output will be UTF-8 decoded
     $ypp->dump_file("file.yaml", @docs);
 
 File will be written UTF-8 encoded
+
+=item dump
+
+This will dump to a predefined writer. By default it will just use the
+L<YAML::PP::Writer> and output a string.
+
+    my $writer = MyWriter->new(\my $output);
+    my $yp = YAML::PP->new(
+        writer => $writer,
+    );
+    $yp->dump($data);
 
 =item loader
 

@@ -23,45 +23,67 @@ sub write {
 }
 
 sub init {
-    $_[0]->{output} = '';
+    $_[0]->set_output('');
 }
 
 sub finish {
     my ($self) = @_;
-    $self->{output} = undef;
-}
-
-package YAML::PP::Writer::File;
-
-use Scalar::Util qw/ openhandle /;
-
-our @ISA = qw/ YAML::PP::Writer /;
-
-use Carp qw/ croak /;
-
-sub open_handle {
-    if (openhandle($_[0]->{output})) {
-        return $_[0]->{output};
-    }
-    open my $fh, '>:encoding(UTF-8)', $_[0]->{output}
-        or croak "Could not open '$_[0]->{output}' for writing: $!";
-    return $fh;
-}
-
-sub write {
-    my ($self, $line) = @_;
-    my $fh = $self->{filehandle} ||= $self->open_handle;
-    print $fh $line;
-}
-
-sub init {
-    my ($self) = @_;
-    my $fh = $self->{filehandle} ||= $self->open_handle;
-}
-
-sub finish {
-    my ($self) = @_;
-    close $self->{filehandle};
+    $_[0]->set_output(undef);
 }
 
 1;
+
+__END__
+
+=pod
+
+=encoding utf-8
+
+=head1 NAME
+
+YAML::PP::Writer - Write YAML output
+
+=head1 SYNOPSIS
+
+    my $writer = YAML::PP::Writer->new;
+
+=head1 DESCRIPTION
+
+The L<YAML::PP::Emitter> sends its output to the writer.
+
+You can use your own writer. if you want to send the YAML output to
+somewhere else. See t/44.writer.t for an example.
+
+=head1 METHODS
+
+=over
+
+=item new
+
+    my $writer = YAML::PP::Writer->new;
+
+Constructor.
+
+=item write
+
+    $writer->write('- ');
+
+=item init
+
+    $writer->init;
+
+Initialize
+
+=item finish
+
+    $writer->finish;
+
+Gets called when the output ends.
+
+=item output, set_output
+
+Getter/setter for the YAML output
+
+=back
+
+=cut

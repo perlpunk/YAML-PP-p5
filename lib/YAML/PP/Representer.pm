@@ -8,6 +8,7 @@ use Scalar::Util qw/ reftype blessed refaddr /;
 
 use YAML::PP::Emitter;
 use YAML::PP::Writer;
+use YAML::PP::Writer::File;
 use YAML::PP::Common qw/
     YAML_PLAIN_SCALAR_STYLE YAML_SINGLE_QUOTED_SCALAR_STYLE
     YAML_DOUBLE_QUOTED_SCALAR_STYLE YAML_QUOTED_SCALAR_STYLE
@@ -38,28 +39,11 @@ sub init {
 
 sub emitter { return $_[0]->{emitter} }
 sub set_emitter { $_[0]->{emitter} = $_[1] }
-sub writer { $_[0]->{writer} }
-sub set_writer { $_[0]->{writer} = $_[1] }
 sub schema { return $_[0]->{schema} }
-
-sub dump_string {
-    my ($self, @docs) = @_;
-    $self->set_writer(YAML::PP::Writer->new);
-    $self->dump(@docs);
-}
-
-sub dump_file {
-    my ($self, $file, @docs) = @_;
-    $self->set_writer(YAML::PP::Writer::File->new(output => $file));
-    $self->emitter->set_writer($self->writer);
-    $self->dump(@docs);
-}
 
 sub dump {
     my ($self, @docs) = @_;
     $self->init;
-    $self->emitter->set_writer($self->writer);
-    $self->emitter->init;
     $self->emitter->stream_start_event({});
     if (@docs) {
         $self->emitter->document_start_event({ implicit => 0 });
@@ -74,9 +58,7 @@ sub dump {
         $self->emitter->document_end_event({ implicit => 1 });
     }
     $self->emitter->stream_end_event({});
-    my $yaml = $self->writer->output;
-    $self->emitter->finish;
-    return $yaml;
+    return 1;
 }
 
 sub dump_document {

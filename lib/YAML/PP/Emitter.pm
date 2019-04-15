@@ -17,6 +17,7 @@ sub new {
     my ($class, %args) = @_;
     my $self = bless {
         indent => $args{indent} || 2,
+        writer => $args{writer},
     }, $class;
     return $self;
 }
@@ -30,6 +31,10 @@ sub set_writer { $_[0]->{writer} = $_[1] }
 
 sub init {
     my ($self) = @_;
+    unless ($self->writer) {
+        $self->set_writer(YAML::PP::Writer->new);
+    }
+    $self->writer->init;
 }
 
 sub mapping_start_event {
@@ -679,6 +684,7 @@ sub finish {
 }
 
 1;
+
 __END__
 
 =pod
@@ -723,7 +729,15 @@ type. The arguments are mostly the same as the events from L<YAML::PP::Parser>.
         indent => 4,
     );
 
-Constructor. Currently takes one option C<indent>.
+Constructor. Currently takes these options:
+
+=over
+
+=item indent
+
+=item writer
+
+=back
 
 =item stream_start_event, stream_end_event, document_start_event, document_end_event, sequence_start_event, sequence_end_event, mapping_start_event, mapping_end_event, scalar_event, alias_event
 
@@ -732,6 +746,11 @@ Constructor. Currently takes one option C<indent>.
 Getter/setter for number of indentation spaces.
 
 TODO: Currently sequences are always zero-indented.
+
+=item writer, set_writer
+
+Getter/setter for the writer object. By default L<YAML::PP::Writer>.
+You can pass your own writer if you want to output the resulting YAML yorself.
 
 =item init
 
