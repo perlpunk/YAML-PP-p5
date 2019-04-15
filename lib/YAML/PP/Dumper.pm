@@ -4,6 +4,7 @@ package YAML::PP::Dumper;
 
 our $VERSION = '0.000'; # VERSION
 
+use Scalar::Util qw/ blessed /;
 use YAML::PP;
 use YAML::PP::Representer;
 
@@ -15,6 +16,11 @@ sub new {
     );
 
     my $emitter = delete $args{emitter} || YAML::PP::Emitter->new;
+    unless (blessed($emitter)) {
+        $emitter = YAML::PP::Emitter->new(
+            %$emitter
+        );
+    }
     my $self = bless {
         representer => YAML::PP::Representer->new(
             schema => $schema,

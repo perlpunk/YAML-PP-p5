@@ -19,8 +19,11 @@ sub new {
     $bool = 'perl' unless defined $bool;
     my $schemas = delete $args{schema} || ['Core'];
     my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
+    my $indent = $args{indent};
     my $parser = delete $args{parser};
-    my $emitter = delete $args{emitter};
+    my $emitter = delete $args{emitter} || {
+        indent => $indent,
+    };
 
     my $schema = YAML::PP::Schema->new(
         boolean => $bool,
@@ -470,6 +473,7 @@ The layout is like libyaml output:
         boolean => 'JSON::PP',
         schema => ['JSON'],
         cyclic_refs => 'fatal',
+        indent => 4, # use 4 spaces for dumping indentation
     );
 
 =item load_string

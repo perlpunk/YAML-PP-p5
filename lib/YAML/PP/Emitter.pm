@@ -679,3 +679,66 @@ sub finish {
 }
 
 1;
+__END__
+
+=pod
+
+=encoding utf-8
+
+=head1 NAME
+
+YAML::PP::Emitter - Emitting events
+
+=head1 SYNOPSIS
+
+    my $emitter = YAML::PP::Emitter->new(
+        indent => 4,
+    );
+
+    $emitter->init;
+
+    $emitter->stream_start_event;
+    $emitter->document_start_event({ implicit => 1 });
+    $emitter->sequence_start_event;
+    $emitter->scalar_event({ value => $input, style => $style });
+    $emitter->sequence_end_event;
+    $emitter->document_end_event({ implicit => 1 });
+    $emitter->stream_end_event;
+
+    my $yaml = $emitter->writer->output;
+    $emitter->finish;
+
+=head1 DESCRIPTION
+
+The emitter emits events to YAML. It provides methods for each event
+type. The arguments are mostly the same as the events from L<YAML::PP::Parser>.
+
+=head1 METHODS
+
+=over
+
+=item new
+
+    my $emitter = YAML::PP::Emitter->new(
+        indent => 4,
+    );
+
+Constructor. Currently takes one option C<indent>.
+
+=item stream_start_event, stream_end_event, document_start_event, document_end_event, sequence_start_event, sequence_end_event, mapping_start_event, mapping_end_event, scalar_event, alias_event
+
+=item indent, set_indent
+
+Getter/setter for number of indentation spaces.
+
+TODO: Currently sequences are always zero-indented.
+
+=item init
+
+Initialize
+
+=item finish
+
+=back
+
+=cut
