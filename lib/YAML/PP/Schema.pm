@@ -42,7 +42,19 @@ sub new {
 
     my $self = bless {
         resolvers => {},
-        representers => {},
+        representers => {
+            'undef' => undef,
+            flags => [],
+            equals => {},
+            regex => [],
+            class_equals => {},
+            class_matches => [],
+            class_isa => [],
+            scalarref => undef,
+            refref => undef,
+            coderef => undef,
+            tied_equals => {},
+        },
         true => $true,
         false => $false,
         bool_class => $bool_class,

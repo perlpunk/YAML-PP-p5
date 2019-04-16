@@ -7,6 +7,8 @@ our $VERSION = '0.000'; # VERSION
 use Scalar::Util qw/ blessed /;
 use YAML::PP;
 use YAML::PP::Representer;
+use YAML::PP::Writer;
+use YAML::PP::Writer::File;
 
 sub new {
     my ($class, %args) = @_;

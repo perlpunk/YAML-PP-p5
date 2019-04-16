@@ -7,8 +7,6 @@ our $VERSION = '0.000'; # VERSION
 use Scalar::Util qw/ reftype blessed refaddr /;
 
 use YAML::PP::Emitter;
-use YAML::PP::Writer;
-use YAML::PP::Writer::File;
 use YAML::PP::Common qw/
     YAML_PLAIN_SCALAR_STYLE YAML_SINGLE_QUOTED_SCALAR_STYLE
     YAML_DOUBLE_QUOTED_SCALAR_STYLE YAML_QUOTED_SCALAR_STYLE
@@ -72,8 +70,6 @@ sub dump_document {
 sub dump_node {
     my ($self, $value) = @_;
 
-    my $schema = $self->schema;
-    my $representers = $schema->representers;
     my $seen = $self->{seen};
     my $anchor;
     my $ref = ref $value;
@@ -104,123 +100,23 @@ sub dump_node {
         style => undef,
     };
 
-    my $done = 0;
-    if (not ref $value) {
-        if (not defined $value) {
-            if (my $undef = $representers->{undef}) {
-                $done = $undef->($self, $node);
-            }
-            else {
-                $done = 1;
-                $node->{style} = YAML_QUOTED_SCALAR_STYLE;
-                $node->{data} = '';
-            }
-        }
-        if (not $done and my $flag_rep = $representers->{flags}) {
-            for my $rep (@$flag_rep) {
-                my $check_flags = $rep->{flags};
-                my $flags = B::svref_2object(\$node->{value})->FLAGS;
-                if ($flags & $check_flags) {
-                    my $res = $rep->{code}->($self, $node);
-                    if ($res) {
-                        $done = 1;
-                        last;
-                    }
-                }
-
-            }
-        }
-        if (not $done and my $equals = $representers->{equals}) {
-            if (my $rep = $equals->{ $node->{value} }) {
-                my $res = $rep->{code}->($self, $node);
-                if ($res) {
-                    $done = $res;
-                }
-            }
-        }
-        if (not $done and my $regex = $representers->{regex}) {
-            for my $rep (@$regex) {
-                if ($node->{value} =~ $rep->{regex}) {
-                    my $res = $rep->{code}->($self, $node);
-                    if ($res) {
-                        $done = $res;
-                        last;
-                    }
-                }
-            }
-        }
-        unless (defined $node->{data}) {
-            $node->{data} = $node->{value};
-        }
-        unless (defined $node->{style}) {
-            $node->{style} = YAML_ANY_SCALAR_STYLE;
-            $node->{style} = "";
-        }
-        $node->{reftype} = reftype $node->{data};
-        $node->{reftype} = '' unless defined $node->{reftype};
+    if (ref $value) {
+        $self->represent_noderef($node);
     }
     else {
-    if (my $classname = blessed($node->{value})) {
-        if (my $class_equals = $representers->{class_equals}) {
-            if (my $def = $class_equals->{ $classname }) {
-                my $code = $def->{code};
-                my $type = $code->($self, $node);
-                $done = 1 if $type;
-            }
-        }
-        if (not $done and my $class_matches = $representers->{class_matches}) {
-            for my $matches (@$class_matches) {
-                my ($re, $code) = @$matches;
-                if (ref $re and $classname =~ $re or $re) {
-                    my $type = $code->($self, $node);
-                    $done = 1 if $type;
-                    last if $type;
-                }
-            }
-        }
-        if (not $done and my $class_isa = $representers->{class_isa}) {
-            for my $isa (@$class_isa) {
-                my ($class_name, $code) = @$isa;
-                if ($node->{ value }->isa($class_name)) {
-                    my $type = $code->($self, $node);
-                    $done = 1 if $type;
-                    last if $type;
-                }
-            }
-        }
-    }
-    if (not $done and $node->{reftype} eq 'SCALAR' and my $scalarref = $representers->{scalarref}) {
-        my $code = $scalarref->{code};
-        my $type = $code->($self, $node);
-        $done = 1 if $type;
-    }
-    if (not $done and $node->{reftype} eq 'REF' and my $refref = $representers->{refref}) {
-        my $code = $refref->{code};
-        my $type = $code->($self, $node);
-        $done = 1 if $type;
-    }
-    if (not $done and $node->{reftype} eq 'CODE' and my $coderef = $representers->{coderef}) {
-        my $code = $coderef->{code};
-        my $type = $code->($self, $node);
-        $done = 1 if $type;
-    }
-    unless ($done) {
-        $node->{data} = $node->{value};
+        $self->represent_node($node);
     }
     $node->{reftype} = reftype $node->{data};
     $node->{reftype} = '' unless defined $node->{reftype};
 
     if ($node->{reftype} eq 'HASH' and my $tied = tied(%{ $node->{data} })) {
+        my $representers = $self->schema->representers;
         $tied = ref $tied;
-        if (my $tied_equals = $representers->{tied_equals}) {
-            if (my $def = $tied_equals->{ $tied }) {
-                my $code = $def->{code};
-                my $type = $code->($self, $node);
-            }
+        if (my $def = $representers->{tied_equals}->{ $tied }) {
+            my $code = $def->{code};
+            my $done = $code->($self, $node);
         }
     }
-    }
-
 
     if ($node->{reftype} eq 'HASH') {
         unless (defined $node->{items}) {
@@ -252,10 +148,7 @@ sub dump_node {
         $self->emitter->sequence_end_event;
     }
     elsif ($node->{reftype}) {
-        require Data::Dumper;
-        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$node->{reftype}], ['reftype']);
-        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$node->{data}], ['data']);
-        die "Not implemented";
+        die "Reftype $node->{reftype} not implemented";
     }
     else {
         unless (defined $node->{items}) {
@@ -270,44 +163,114 @@ sub dump_node {
     }
 }
 
+sub represent_node {
+    my ($self, $node) = @_;
+    my $representers = $self->schema->representers;
+
+    if (not defined $node->{value}) {
+        if (my $undef = $representers->{undef}) {
+            return 1 if $undef->($self, $node);
+        }
+        else {
+            $node->{style} = YAML_QUOTED_SCALAR_STYLE;
+            $node->{data} = '';
+            return 1;
+        }
+    }
+    for my $rep (@{ $representers->{flags} }) {
+        my $check_flags = $rep->{flags};
+        my $flags = B::svref_2object(\$node->{value})->FLAGS;
+        if ($flags & $check_flags) {
+            return 1 if $rep->{code}->($self, $node);
+        }
+
+    }
+    if (my $rep = $representers->{equals}->{ $node->{value} }) {
+        return 1 if $rep->{code}->($self, $node);
+    }
+    for my $rep (@{ $representers->{regex} }) {
+        if ($node->{value} =~ $rep->{regex}) {
+            return 1 if $rep->{code}->($self, $node);
+        }
+    }
+    unless (defined $node->{data}) {
+        $node->{data} = $node->{value};
+    }
+    unless (defined $node->{style}) {
+        $node->{style} = YAML_ANY_SCALAR_STYLE;
+        $node->{style} = "";
+    }
+}
+
+sub represent_noderef {
+    my ($self, $node) = @_;
+    my $representers = $self->schema->representers;
+
+    if (my $classname = blessed($node->{value})) {
+        if (my $def = $representers->{class_equals}->{ $classname }) {
+            my $code = $def->{code};
+            return 1 if $code->($self, $node);
+        }
+        for my $matches (@{ $representers->{class_matches} }) {
+            my ($re, $code) = @$matches;
+            if (ref $re and $classname =~ $re or $re) {
+                return 1 if $code->($self, $node);
+            }
+        }
+        for my $isa (@{ $representers->{class_isa} }) {
+            my ($class_name, $code) = @$isa;
+            if ($node->{ value }->isa($class_name)) {
+                return 1 if $code->($self, $node);
+            }
+        }
+    }
+    if ($node->{reftype} eq 'SCALAR' and my $scalarref = $representers->{scalarref}) {
+        my $code = $scalarref->{code};
+        return 1 if $code->($self, $node);
+    }
+    if ($node->{reftype} eq 'REF' and my $refref = $representers->{refref}) {
+        my $code = $refref->{code};
+        return 1 if $code->($self, $node);
+    }
+    if ($node->{reftype} eq 'CODE' and my $coderef = $representers->{coderef}) {
+        my $code = $coderef->{code};
+        return 1 if $code->($self, $node);
+    }
+    $node->{data} = $node->{value};
+
+}
+
+my %_reftypes = (
+    HASH => 1,
+    ARRAY => 1,
+    Regexp => 1,
+    REGEXP => 1,
+    CODE => 1,
+    SCALAR => 1,
+    REF => 1,
+);
+
 sub check_references {
     my ($self, $doc) = @_;
-    if (ref $doc) {
-        my $seen = $self->{seen};
-        # check which references are used more than once
-        if (++$seen->{ refaddr $doc } > 1) {
-            # seen already
-            return;
-        }
-        if (ref $doc eq 'HASH') {
-            $self->check_references($doc->{ $_ }) for keys %$doc;
-        }
-        elsif (ref $doc eq 'ARRAY') {
-            $self->check_references($_) for @$doc;
-        }
-        elsif (ref $doc) {
-            if (ref $doc eq 'JSON::PP::Boolean' or ref $doc eq 'boolean') {
-            }
-            elsif (reftype($doc) eq 'HASH') {
-                $self->check_references($doc->{ $_ }) for keys %$doc;
-            }
-            elsif (reftype($doc) eq 'ARRAY') {
-                $self->check_references($_) for @$doc;
-            }
-            elsif (reftype($doc) eq 'Regexp') {
-            }
-            elsif (reftype($doc) eq 'REGEXP') {
-            }
-            elsif (reftype($doc) eq 'CODE') {
-            }
-            elsif (reftype($doc) eq 'SCALAR') {
-            }
-            elsif (reftype($doc) eq 'REF') {
-            }
-            else {
-                die "Reference @{[ ref $doc ]} not implemented";
-            }
-        }
+    my $reftype = reftype $doc or return;
+    my $seen = $self->{seen};
+    # check which references are used more than once
+    if (++$seen->{ refaddr $doc } > 1) {
+        # seen already
+        return;
+    }
+    unless ($_reftypes{ $reftype }) {
+        die sprintf "Reference %s not implemented",
+            $reftype;
+    }
+    if ($reftype eq 'HASH') {
+        $self->check_references($doc->{ $_ }) for keys %$doc;
+    }
+    elsif ($reftype eq 'ARRAY') {
+        $self->check_references($_) for @$doc;
+    }
+    elsif ($reftype eq 'REF') {
+        $self->check_references($$doc);
     }
 }
 
