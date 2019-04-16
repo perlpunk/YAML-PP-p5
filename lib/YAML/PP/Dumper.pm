@@ -34,7 +34,6 @@ sub new {
 
 sub representer { return $_[0]->{representer} }
 sub set_representer { $_[0]->{representer} = $_[1] }
-sub schema { return $_[0]->{schema} }
 
 sub dump {
     my ($self, @docs) = @_;

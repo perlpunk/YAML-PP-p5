@@ -28,7 +28,6 @@ sub new {
     my $self = bless {
         parser => $parser,
         constructor => $constructor,
-        schema => $schema,
     }, $class;
     $parser->set_receiver($constructor);
     return $self;
@@ -36,7 +35,6 @@ sub new {
 
 sub parser { return $_[0]->{parser} }
 sub constructor { return $_[0]->{constructor} }
-sub schema { return $_[0]->{schema} }
 
 sub load_string {
     my ($self, $yaml) = @_;
