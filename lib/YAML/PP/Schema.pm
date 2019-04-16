@@ -187,41 +187,41 @@ sub add_representer {
 
     my $representers = $self->representers;
     if (my $flags = $args{flags}) {
-        my $rep = $representers->{flags} ||= [];
+        my $rep = $representers->{flags};
         push @$rep, \%args;
         return;
     }
     if (my $regex = $args{regex}) {
-        my $rep = $representers->{regex} ||= [];
+        my $rep = $representers->{regex};
         push @$rep, \%args;
         return;
     }
     if (my $regex = $args{class_matches}) {
-        my $rep = $representers->{class_matches} ||= [];
+        my $rep = $representers->{class_matches};
         push @$rep, [ $args{class_matches}, $args{code} ];
         return;
     }
     if (my $class_equals = $args{class_equals}) {
-        my $rep = $representers->{class_equals} ||= {};
+        my $rep = $representers->{class_equals};
         $rep->{ $class_equals } = {
             code => $args{code},
         };
         return;
     }
     if (my $class_isa = $args{class_isa}) {
-        my $rep = $representers->{class_isa} ||= [];
+        my $rep = $representers->{class_isa};
         push @$rep, [ $args{class_isa}, $args{code} ];
         return;
     }
     if (my $tied_equals = $args{tied_equals}) {
-        my $rep = $representers->{tied_equals} ||= {};
+        my $rep = $representers->{tied_equals};
         $rep->{ $tied_equals } = {
             code => $args{code},
         };
         return;
     }
     if (defined(my $equals = $args{equals})) {
-        my $rep = $representers->{equals} ||= {};
+        my $rep = $representers->{equals};
         $rep->{ $equals } = {
             code => $args{code},
         };
