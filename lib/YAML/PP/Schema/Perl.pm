@@ -36,6 +36,9 @@ sub register {
             match => [ all => sub {
                 my ($constructor, $event) = @_;
                 my $code = $event->{value};
+                unless ($code =~ m/^ \s* \{ .* \} \s* \z/xs) {
+                    die "Malformed code";
+                }
                 $code = "sub $code";
                 my $sub = eval $code;
                 if ($@) {
@@ -52,6 +55,9 @@ sub register {
                 my $class = $event->{tag};
                 $class =~ s{^!perl/code:}{};
                 my $code = $event->{value};
+                unless ($code =~ m/^ \s* \{ .* \} \s* \z/xs) {
+                    die "Malformed code";
+                }
                 $code = "sub $code";
                 my $sub = eval $code;
                 if ($@) {

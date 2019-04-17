@@ -106,11 +106,30 @@ subtest invalid_code => sub {
 EOM
     my $data = eval { $yp_loadcode->load_string($yaml) };
     my $error = $@;
-    cmp_ok($error, '=~', qr{eval code}, "Loading invalid code dies");
+    cmp_ok($error, '=~', qr{Malformed code}, "Loading invalid code dies");
+
     $yaml = <<'EOM';
 ---
 - !perl/code:Foo |
     die "oops";
+EOM
+    $data = eval { $yp_loadcode->load_string($yaml) };
+    $error = $@;
+    cmp_ok($error, '=~', qr{Malformed code}, "Loading invalid code dies");
+
+    $yaml = <<'EOM';
+---
+- !perl/code |
+    { =====> invalid <===== }
+EOM
+    $data = eval { $yp_loadcode->load_string($yaml) };
+    $error = $@;
+    cmp_ok($error, '=~', qr{eval code}, "Loading invalid code dies");
+
+    $yaml = <<'EOM';
+---
+- !perl/code:Foo |
+    { =====> invalid <===== }
 EOM
     $data = eval { $yp_loadcode->load_string($yaml) };
     $error = $@;
