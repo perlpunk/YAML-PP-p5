@@ -379,8 +379,6 @@ sub bool_perl_false { !1 }
 
 package YAML::PP::Schema::Failsafe;
 
-use base 'YAML::PP::Schema';
-
 use YAML::PP::Common qw/ YAML_QUOTED_SCALAR_STYLE /;
 
 sub register {
@@ -403,18 +401,11 @@ sub register {
 }
 
 package YAML::PP::Schema::JSON;
-use base 'YAML::PP::Schema';
 
 use YAML::PP::Common qw/ YAML_PLAIN_SCALAR_STYLE YAML_QUOTED_SCALAR_STYLE /;
 
 my $RE_INT = qr{^(-?(?:0|[1-9][0-9]*))$};
 my $RE_FLOAT = qr{^(-?(?:0|[1-9][0-9]*)(?:\.[0-9]*)?(?:[eE][+-]?[0-9]+)?)$};
-
-sub new {
-    my ($class, %args) = @_;
-    my $self = bless {}, $class;
-    return $self;
-}
 
 sub _to_int { 0 + $_[2]->[0] }
 
@@ -453,7 +444,6 @@ sub register {
     $schema->add_resolver(
         tag => 'tag:yaml.org,2002:str',
         match => [ all => sub { $_[1]->{value} } ],
-        implicit => 0,
     );
 
     $schema->add_representer(
@@ -544,7 +534,6 @@ sub register {
 }
 
 package YAML::PP::Schema::Core;
-use base 'YAML::PP::Schema';
 
 use YAML::PP::Common qw/ YAML_PLAIN_SCALAR_STYLE YAML_QUOTED_SCALAR_STYLE /;
 
@@ -552,13 +541,6 @@ my $RE_INT_CORE = qr{^([+-]?(?:[0-9]+))$};
 my $RE_FLOAT_CORE = qr{^([+-]?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?)(?:[eE][+-]?[0-9]+)?)$};
 my $RE_INT_OCTAL = qr{^0o([0-7]+)$};
 my $RE_INT_HEX = qr{^0x([0-9a-fA-F]+)$};
-
-
-sub new {
-    my ($class, %args) = @_;
-    my $self = bless {}, $class;
-    return $self;
-}
 
 sub _from_oct { oct $_[2]->[0] }
 sub _from_hex { hex $_[2]->[0] }
@@ -610,7 +592,6 @@ sub register {
     $schema->add_resolver(
         tag => 'tag:yaml.org,2002:str',
         match => [ all => sub { $_[1]->{value} } ],
-        implicit => 0,
     );
 
     $schema->add_representer(
