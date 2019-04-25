@@ -6,6 +6,7 @@ package YAML::PP;
 our $VERSION = '0.000'; # VERSION
 
 use YAML::PP::Schema;
+use YAML::PP::Schema::JSON;
 use YAML::PP::Loader;
 use YAML::PP::Dumper;
 
