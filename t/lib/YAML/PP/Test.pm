@@ -455,7 +455,7 @@ sub compare_invalid_parse_events {
 sub load_json {
     my ($self, $testcase) = @_;
 
-    my $ypp = YAML::PP->new(boolean => 'JSON::PP');
+    my $ypp = YAML::PP->new(boolean => 'JSON::PP', schema => [qw/ Core /]);
     my @docs = eval { $ypp->load_string($testcase->{in_yaml}) };
 
     my $err = $@;

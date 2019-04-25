@@ -17,7 +17,7 @@ sub new {
 
     my $bool = delete $args{boolean};
     $bool = 'perl' unless defined $bool;
-    my $schemas = delete $args{schema} || ['Core'];
+    my $schemas = delete $args{schema} || ['JSON'];
     my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
     my $indent = $args{indent};
     my $writer = $args{writer};
@@ -74,7 +74,7 @@ sub default_schema {
     my $schema = YAML::PP::Schema->new(
         boolean => $args{boolean},
     );
-    $schema->load_subschemas(qw/ Core /);
+    $schema->load_subschemas(qw/ JSON /);
     return $schema;
 }
 
@@ -333,7 +333,7 @@ Currently loaded as single characters without validating
 
 =head2 YAML::PP::Constructor
 
-The Constructor now supports all three YAML 1.2 Schemas, Failsafe, JSON and Core.
+The Constructor now supports all three YAML 1.2 Schemas, Failsafe, JSON and JSON.
 Additionally you can choose the schema for YAML 1.1 as C<YAML1_1>.
 
 Too see what strings are resolved as booleans, numbers, null etc. look at
@@ -342,7 +342,7 @@ C<t/31.schema.t>.
 You can choose the Schema, however, the API for that is not yet fixed.
 Currently it looks like this:
 
-    my $ypp = YAML::PP->new(schema => ['JSON']); # default is 'Core' for now
+    my $ypp = YAML::PP->new(schema => ['Core']); # default is 'JSON'
 
 The Tags C<!!seq> and C<!!map> are still ignored for now.
 
