@@ -11,9 +11,28 @@ use YAML::PP::Perl;
 my $tests = require "$Bin/../examples/schema-perl.pm";
 
 my $yp_perl = YAML::PP::Perl->new(
+    schema => [qw/ JSON Perl tag=! /],
 );
 my $yp_loadcode = YAML::PP->new(
     schema => [qw/ JSON Perl +loadcode /],
+);
+my $yp_perl_two = YAML::PP::Perl->new(
+    schema => [qw/ JSON Perl tag=!! /],
+);
+my $yp_loadcode_two = YAML::PP->new(
+    schema => [qw/ JSON Perl tag=!! +loadcode /],
+);
+my $yp_loadcode_one_two = YAML::PP->new(
+    schema => [qw/ JSON Perl tag=!! +loadcode =!+!! /],
+);
+my $yp_loadcode_two_one = YAML::PP->new(
+    schema => [qw/ JSON Perl tag=!! +loadcode =!!+! /],
+);
+my $yp_perl_one_two = YAML::PP::Perl->new(
+    schema => [qw/ JSON Perl tag=!+!! /],
+);
+my $yp_perl_two_one = YAML::PP::Perl->new(
+    schema => [qw/ JSON Perl tag=!!+! /],
 );
 
 my @tests = sort keys %$tests;
@@ -36,15 +55,41 @@ my @tests = sort keys %$tests;
     diag("QR PREFIX: $qr_prefix");
 }
 
-for my $name (@tests) {
+my %loaders_perl = (
+    one => $yp_perl,
+    two => $yp_perl_two,
+    onetwo => $yp_perl_one_two,
+    twoone => $yp_perl_two_one,
+);
+my %loaders_perl_code = (
+    one => $yp_loadcode,
+    two => $yp_loadcode_two,
+    onetwo => $yp_loadcode_one_two,
+    twoone => $yp_loadcode_two_one,
+);
+my @tagtypes = qw/ one two onetwo twoone /;
+for my $type (@tagtypes) {
+    for my $name (@tests) {
+        test_perl($type, $name);
+    }
+}
+
+sub test_perl {
+    my ($type, $name) = @_;
     my $test = $tests->{ $name };
     my $yp = $yp_perl;
+    $yp = $loaders_perl{ $type };
     my ($code, $yaml, $options) = @$test;
+    if ($type eq 'two' or $type eq 'twoone') {
+        unless (ref $yaml) {
+            $yaml =~ s/\!perl/!!perl/g;
+        }
+    }
     my $data = eval $code;
     my $docs = [ $data, $data ];
     my $out;
     if ($options->{load_code}) {
-        $yp = $yp_loadcode;
+        $yp = $loaders_perl_code{ $type };
     }
     if ($options->{load_only}) {
         $out = $yaml;
@@ -52,10 +97,10 @@ for my $name (@tests) {
     else {
         $out = $yp->dump_string($docs);
         if (ref $yaml) {
-            cmp_ok($out, '=~', $yaml, "$name: dump_string()");
+            cmp_ok($out, '=~', $yaml, "tagtype=$type $name: dump_string()");
         }
         else {
-            cmp_ok($out, 'eq', $yaml, "$name: dump_string()");
+            cmp_ok($out, 'eq', $yaml, "tagtype=$type $name: dump_string()");
         }
         note($out);
     }
@@ -67,16 +112,17 @@ for my $name (@tests) {
             my %args = ( x => 23, y => 42 );
             my $result1 = $data->(%args);
             my $result2 = $sub->(%args);
-            cmp_ok($result2, 'eq', $result1, "Coderef returns the same as original");
+            cmp_ok($result2, 'eq', $result1, "tagtype=$type Coderef returns the same as original");
         }
         else {
-            ok(0, "Did not reload as coderef");
+            ok(0, "tagtype=$type Did not reload as coderef");
         }
     }
     else {
-        cmp_deeply($reload_docs, $docs, "$name: Reloaded data equals original");
+        cmp_deeply($reload_docs, $docs, "tagtype=$type $name: Reloaded data equals original");
     }
 }
+
 
 subtest dummy_code => sub {
     my $yaml = <<'EOM';
@@ -176,5 +222,31 @@ subtest invalid_ref => sub {
         cmp_ok($error, '=~', qr{Unexpected data}, "Invalid $type dies");
     }
 };
+
+{
+    my $object = bless [qw/ a b /], "Foo";
+    my $yaml_one_two = $yp_perl_one_two->dump_string($object);
+    my $yaml_one_two_expected = <<'EOM';
+--- !perl/array:Foo
+- a
+- b
+EOM
+    my $yaml_two_one_expected = <<'EOM';
+--- !!perl/array:Foo
+- a
+- b
+EOM
+    my $yaml_two_one = $yp_perl_two_one->dump_string($object);
+    cmp_ok($yaml_one_two, 'eq', $yaml_one_two_expected, "Perl =!+!! dump");
+    cmp_ok($yaml_two_one, 'eq', $yaml_two_one_expected, "Perl =!!+! dump");
+    my $reload1 = $yp_perl_two_one->load_string($yaml_one_two);
+    my $reload2 = $yp_perl_two_one->load_string($yaml_two_one);
+    my $reload3 = $yp_perl_one_two->load_string($yaml_one_two);
+    my $reload4 = $yp_perl_one_two->load_string($yaml_two_one);
+    cmp_deeply($reload1, $object, "Reload 1");
+    cmp_deeply($reload2, $object, "Reload 2");
+    cmp_deeply($reload3, $object, "Reload 3");
+    cmp_deeply($reload4, $object, "Reload 4");
+}
 
 done_testing;

@@ -79,10 +79,15 @@ sub load_subschemas {
     while ($i < @schemas) {
         my $item = $schemas[ $i ];
         $i++;
-        my %options;
-        while ($i < @schemas and $schemas[ $i ] =~ m/^\+(\w+)$/) {
-            my $option = $1;
-            $options{with}->{ $option } = 1;
+        my @options;
+        while ($i < @schemas
+            and (
+                $schemas[ $i ] =~ m/^[^A-Za-z]/
+                or
+                $schemas[ $i ] =~ m/^[a-zA-Z0-9]+=/
+                )
+            ) {
+            push @options, $schemas[ $i ];
             $i++;
         }
 
@@ -103,7 +108,7 @@ sub load_subschemas {
         }
         my $tags = $class->register(
             schema => $self,
-            options => \%options,
+            options => \@options,
         );
 
     }

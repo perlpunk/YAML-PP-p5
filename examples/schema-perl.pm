@@ -120,7 +120,7 @@ EOM
             return $args{x} + $args{y};
         }
 EOM
-        qr{- &1 !perl/code \|-.*return.*args.*x.*\+.*y}s,
+        qr{- &1 !{1,2}perl/code \|-.*return.*args.*x.*\+.*y}s,
         { load_code => 1 },
     ],
 
@@ -131,7 +131,7 @@ EOM
             return $args{x} - $args{y};
         }, "I::Am::Code"
 EOM
-        qr{- &1 !perl/code:I::Am::Code \|-.*return.*args.*x.*\-.*y}s,
+        qr{- &1 !{1,2}perl/code:I::Am::Code \|-.*return.*args.*x.*\-.*y}s,
         { load_code => 1 },
     ],
 

@@ -65,6 +65,8 @@ YAML::PP::Perl - Convenience module for loading and dumping Perl objects
 This is just for convenience. It will create a YAML::PP object using the
 default schema (currently C<Core>) and the L<YAML::PP::Schema::Perl> schema.
 
+See L<YAML::PP::Schema::Perl> for documentation.
+
 =head1 METHODS
 
 =over
