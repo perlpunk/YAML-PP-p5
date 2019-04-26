@@ -895,13 +895,41 @@ sub cb_tag {
         push @$stack, [ properties => {} ];
     }
     my $last = $stack->[-1]->[1];
-    my $tag = YAML::PP::Render::render_tag($token->{value}, $self->tagmap);
+    my $tag = $self->_read_tag($token->{value}, $self->tagmap);
     $last->{inline} ||= [];
     push @{ $last->{inline} }, {
         type => 'tag',
         value => $tag,
         offset => $token->{column},
     };
+}
+
+sub _read_tag {
+    my ($self, $tag, $map) = @_;
+    if ($tag eq '!') {
+        return "!";
+    }
+    elsif ($tag =~ m/^!<(.*)>/) {
+        return $1;
+    }
+    elsif ($tag =~ m/^(![^!]*!|!)(.+)/) {
+        my $alias = $1;
+        my $name = $2;
+        $name =~ s/%([0-9a-fA-F]{2})/chr hex $1/eg;
+        if (exists $map->{ $alias }) {
+            $tag = $map->{ $alias }. $name;
+        }
+        else {
+            if ($alias ne '!' and $alias ne '!!') {
+                die "Found undefined tag handle '$alias'";
+            }
+            $tag = "!$name";
+        }
+    }
+    else {
+        die "Invalid tag";
+    }
+    return $tag;
 }
 
 sub cb_anchor {

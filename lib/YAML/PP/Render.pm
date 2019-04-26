@@ -7,34 +7,6 @@ our $VERSION = '0.000'; # VERSION
 
 use constant TRACE => $ENV{YAML_PP_TRACE} ? 1 : 0;
 
-sub render_tag {
-    my ($tag, $map) = @_;
-    if ($tag eq '!') {
-        return "!";
-    }
-    elsif ($tag =~ m/^!<(.*)>/) {
-        return $1;
-    }
-    elsif ($tag =~ m/^(![^!]*!|!)(.+)/) {
-        my $alias = $1;
-        my $name = $2;
-        $name =~ s/%([0-9a-fA-F]{2})/chr hex $1/eg;
-        if (exists $map->{ $alias }) {
-            $tag = $map->{ $alias }. $name;
-        }
-        else {
-            if ($alias ne '!' and $alias ne '!!') {
-                die "Found undefined tag handle '$alias'";
-            }
-            $tag = "!$name";
-        }
-    }
-    else {
-        die "Invalid tag";
-    }
-    return $tag;
-}
-
 sub render_quoted {
     my ($self, $style, $lines) = @_;
 

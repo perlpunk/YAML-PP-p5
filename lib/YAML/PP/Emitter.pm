@@ -19,6 +19,7 @@ sub new {
         indent => $args{indent} || 2,
         writer => $args{writer},
     }, $class;
+    $self->init;
     return $self;
 }
 
@@ -28,12 +29,17 @@ sub indent { return $_[0]->{indent} }
 sub set_indent { $_[0]->{indent} = $_[1] }
 sub writer { $_[0]->{writer} }
 sub set_writer { $_[0]->{writer} = $_[1] }
+sub tagmap { return $_[0]->{tagmap} }
+sub set_tagmap { $_[0]->{tagmap} = $_[1] }
 
 sub init {
     my ($self) = @_;
     unless ($self->writer) {
         $self->set_writer(YAML::PP::Writer->new);
     }
+    $self->set_tagmap({
+        'tag:yaml.org,2002:' => '!!',
+    });
     $self->writer->init;
 }
 
@@ -660,16 +666,14 @@ sub stream_end_event {
 
 sub emit_tag {
     my ($self, $type, $tag) = @_;
-    if ($type eq 'scalar' and $tag =~ m/^tag:yaml.org,2002:(int|str|null|bool|binary)/) {
-        $tag = "!!$1";
+    my $map = $self->tagmap;
+    for my $key (sort keys %$map) {
+        if ($tag =~ m/^\Q$key\E(.*)/) {
+            $tag = $map->{ $key } . $1;
+            return $tag;
+        }
     }
-    elsif ($type eq 'map' and $tag =~ m/^tag:yaml.org,2002:(map|set)/) {
-        $tag = "!!$1";
-    }
-    elsif ($type eq 'seq' and $tag =~ m/^tag:yaml.org,2002:(omap|seq)/) {
-        $tag = "!!$1";
-    }
-    elsif ($tag =~ m/^(!.*)/) {
+    if ($tag =~ m/^(!.*)/) {
         $tag = "$1";
     }
     else {
