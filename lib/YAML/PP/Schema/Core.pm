@@ -4,6 +4,8 @@ package YAML::PP::Schema::Core;
 
 our $VERSION = '0.000'; # VERSION
 
+use B;
+
 use YAML::PP::Common qw/ YAML_PLAIN_SCALAR_STYLE YAML_QUOTED_SCALAR_STYLE /;
 
 my $RE_INT_CORE = qr{^([+-]?(?:[0-9]+))$};

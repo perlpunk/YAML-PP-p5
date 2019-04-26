@@ -6,7 +6,7 @@ use warnings;
 
 use Test::More;
 
-plan tests => 25 + ($ENV{AUTHOR_TESTING} ? 1 : 0);
+plan tests => 29 + ($ENV{AUTHOR_TESTING} ? 1 : 0);
 
 my @module_files = (
     'YAML/PP.pm',
@@ -25,10 +25,14 @@ my @module_files = (
     'YAML/PP/Render.pm',
     'YAML/PP/Representer.pm',
     'YAML/PP/Schema.pm',
+    'YAML/PP/Schema/Core.pm',
+    'YAML/PP/Schema/Failsafe.pm',
+    'YAML/PP/Schema/JSON.pm',
     'YAML/PP/Schema/Perl.pm',
     'YAML/PP/Schema/Tie/IxHash.pm',
     'YAML/PP/Schema/YAML1_1.pm',
-    'YAML/PP/Writer.pm'
+    'YAML/PP/Writer.pm',
+    'YAML/PP/Writer/File.pm'
 );
 
 my @scripts = (
