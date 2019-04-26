@@ -4,7 +4,8 @@ package YAML::PP::Schema::Binary;
 
 our $VERSION = '0.000'; # VERSION
 
-use MIME::Base64 qw/ decode_base64 /;
+use MIME::Base64 qw/ decode_base64 encode_base64 /;
+use YAML::PP::Common qw/ YAML_ANY_SCALAR_STYLE /;
 
 sub register {
     my ($self, %args) = @_;
@@ -20,6 +21,28 @@ sub register {
         }],
         implicit => 0,
     );
+
+    $schema->add_representer(
+        regex => qr{.*},
+        code => sub {
+            my ($rep, $node) = @_;
+            my $binary = $node->{value};
+            unless ($binary =~ m/[\x{7F}-\x{10FFFF}]/) {
+                # ASCII
+                return;
+            }
+            if (utf8::is_utf8($binary)) {
+                # utf8
+                return;
+            }
+            # everything else must be base64 encoded
+            my $base64 = encode_base64($binary);
+            $node->{style} = YAML_ANY_SCALAR_STYLE;
+            $node->{data} = $base64;
+            $node->{tag} = "tag:yaml.org,2002:binary";
+            return 1;
+        },
+    );
 }
 
 1;
@@ -32,7 +55,7 @@ __END__
 
 =head1 NAME
 
-YAML::PP::Schema::Binary - Schema for loading binary data
+YAML::PP::Schema::Binary - Schema for loading and binary data
 
 =head1 SYNOPSIS
 
@@ -53,6 +76,9 @@ YAML::PP::Schema::Binary - Schema for loading binary data
 
 By prepending a base64 encoded binary string with the C<!!binary> tag, it can
 be automatically decoded when loading.
+
+If you are using this schema, any string containing C<[\x{7F}-\x{10FFFF}]>
+will be dumped as binary. That also includes encoded utf8.
 
 =head1 METHODS
 
