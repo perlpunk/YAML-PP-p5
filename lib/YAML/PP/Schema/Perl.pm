@@ -44,7 +44,7 @@ sub register {
         @perl_tags = qw/ !perl /;
     }
     elsif ($tagtype eq '!!') {
-        $perl_tag = '!!perl';
+        $perl_tag = 'tag:yaml.org,2002:perl';
         $perl_regex = 'tag:yaml\\.org,2002:perl';
         @perl_tags = 'tag:yaml.org,2002:perl';
     }
@@ -54,7 +54,7 @@ sub register {
         @perl_tags = ('!perl', 'tag:yaml.org,2002:perl');
     }
     elsif ($tagtype eq '!!+!') {
-        $perl_tag = '!!perl';
+        $perl_tag = 'tag:yaml.org,2002:perl';
         $perl_regex = '(?:tag:yaml\\.org,2002:|!)perl';
         @perl_tags = ('tag:yaml.org,2002:perl', '!perl');
     }
