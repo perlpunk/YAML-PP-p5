@@ -1,3 +1,10 @@
+0.12_001 2019-04-28 13:32:44+02:00
+
+    - Add option "indent" for dumping
+    - Support both !perl/ and !!perl/ tags
+    - Change default schema from Core to JSON
+    - Add YAML::PP::Schema::Binary for representing binary data
+
 0.012 2019-04-14 14:02:36+02:00
 
     - Fix bug in emitter (strings starting with % must be quoted)
