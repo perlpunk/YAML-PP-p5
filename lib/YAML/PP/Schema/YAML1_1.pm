@@ -2,6 +2,8 @@ use strict;
 use warnings;
 package YAML::PP::Schema::YAML1_1;
 
+our $VERSION = '0.000'; # VERSION
+
 use base 'YAML::PP::Schema';
 
 use YAML::PP::Common qw/ YAML_PLAIN_SCALAR_STYLE YAML_QUOTED_SCALAR_STYLE /;
