@@ -11,28 +11,28 @@ use YAML::PP::Perl;
 my $tests = require "$Bin/../examples/schema-perl.pm";
 
 my $yp_perl = YAML::PP::Perl->new(
-    schema => [qw/ JSON Perl tag=! /],
+    schema => [qw/ JSON Perl tag=!perl /],
 );
 my $yp_loadcode = YAML::PP->new(
     schema => [qw/ JSON Perl +loadcode /],
 );
 my $yp_perl_two = YAML::PP::Perl->new(
-    schema => [qw/ JSON Perl tag=!! /],
+    schema => [qw/ JSON Perl tag=!!perl /],
 );
 my $yp_loadcode_two = YAML::PP->new(
-    schema => [qw/ JSON Perl tag=!! +loadcode /],
+    schema => [qw/ JSON Perl tag=!!perl +loadcode /],
 );
 my $yp_loadcode_one_two = YAML::PP->new(
-    schema => [qw/ JSON Perl tag=!! +loadcode =!+!! /],
+    schema => [qw/ JSON Perl tag=!!perl +loadcode =!+!! /],
 );
 my $yp_loadcode_two_one = YAML::PP->new(
-    schema => [qw/ JSON Perl tag=!! +loadcode =!!+! /],
+    schema => [qw/ JSON Perl tag=!!perl +loadcode =!!+! /],
 );
 my $yp_perl_one_two = YAML::PP::Perl->new(
-    schema => [qw/ JSON Perl tag=!+!! /],
+    schema => [qw/ JSON Perl tag=!perl+!!perl /],
 );
 my $yp_perl_two_one = YAML::PP::Perl->new(
-    schema => [qw/ JSON Perl tag=!!+! /],
+    schema => [qw/ JSON Perl tag=!!perl+!perl /],
 );
 
 my @tests = sort keys %$tests;

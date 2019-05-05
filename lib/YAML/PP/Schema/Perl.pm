@@ -35,28 +35,39 @@ sub register {
         }
     }
 
-    my @perl_tags = qw/ !perl /;
-    my $perl_tag = '!perl';
+    # TODO
+    # check content and deprecate old usage
+    $tagtype =~ s/perl//g;
+    my $perl_tag;
+    my @perl_tags;
+    my @tagtypes = split m/\+/, $tagtype;
+    if ($tagtypes[0] eq '!') {
+        $perl_tag = '!perl';
+    }
+    elsif ($tagtypes[0] eq '!!') {
+        $perl_tag = 'tag:yaml.org,2002:perl';
+    }
+    for my $tagtype (@tagtypes) {
+        if ($tagtype eq '!') {
+            push @perl_tags, '!perl';
+        }
+        elsif ($tagtype eq '!!') {
+            push @perl_tags, 'tag:yaml.org,2002:perl';
+        }
+    }
+
     my $perl_regex = '!perl';
     if ($tagtype eq '!') {
-        $perl_tag = '!perl';
         $perl_regex = '!perl';
-        @perl_tags = qw/ !perl /;
     }
     elsif ($tagtype eq '!!') {
-        $perl_tag = 'tag:yaml.org,2002:perl';
         $perl_regex = 'tag:yaml\\.org,2002:perl';
-        @perl_tags = 'tag:yaml.org,2002:perl';
     }
     elsif ($tagtype eq '!+!!') {
-        $perl_tag = '!perl';
         $perl_regex = '(?:tag:yaml\\.org,2002:|!)perl';
-        @perl_tags = ('!perl', 'tag:yaml.org,2002:perl');
     }
     elsif ($tagtype eq '!!+!') {
-        $perl_tag = 'tag:yaml.org,2002:perl';
         $perl_regex = '(?:tag:yaml\\.org,2002:|!)perl';
-        @perl_tags = ('tag:yaml.org,2002:perl', '!perl');
     }
 
     if (grep { $_ eq '+loadcode' } @$options) {
@@ -408,25 +419,25 @@ that is easily exploitable since it's using string C<eval>).
 You can define the style of tags you want to support:
 
     my $yp_perl_two_one = YAML::PP->new(
-        schema => [qw/ JSON Perl tag=!!+! /],
+        schema => [qw/ JSON Perl tag=!!perl+!perl /],
     );
 
 =over
 
-=item C<!>
+=item C<!perl>
 
 Only C<!perl/type> tags are supported.
 
-=item C<!!>
+=item C<!!perl>
 
 Only C<!!perl/type> tags are supported.
 
-=item C<!+!!>
+=item C<!perl+!!perl>
 
 Both C<!perl/type> and C<!!perl/tag> are supported when loading. When dumping,
 C<!perl/type> is used.
 
-=item C<!!+!>
+=item C<!!perl+!perl>
 
 Both C<!perl/type> and C<!!perl/tag> are supported when loading. When dumping,
 C<!!perl/type> is used.
