@@ -169,7 +169,7 @@ sub register {
         },
         on_data => sub {
             my ($constructor, $ref, $list) = @_;
-            $$ref = $self->construct_ref($list);
+            $$$ref = $self->construct_ref($list);
         },
     ) for @perl_tags;
     $schema->add_mapping_resolver(
@@ -183,7 +183,7 @@ sub register {
         },
         on_data => sub {
             my ($constructor, $ref, $list) = @_;
-            $$ref = $self->construct_ref($list);
+            $$$ref = $self->construct_ref($list);
         },
     );
     $schema->add_mapping_resolver(
@@ -194,7 +194,7 @@ sub register {
         },
         on_data => sub {
             my ($constructor, $ref, $list) = @_;
-            $$ref = $self->construct_scalar($list);
+            $$$ref = $self->construct_scalar($list);
         },
     ) for @perl_tags;
     $schema->add_mapping_resolver(
@@ -208,7 +208,7 @@ sub register {
         },
         on_data => sub {
             my ($constructor, $ref, $list) = @_;
-            $$ref = $self->construct_scalar($list);
+            $$$ref = $self->construct_scalar($list);
         },
     );
 

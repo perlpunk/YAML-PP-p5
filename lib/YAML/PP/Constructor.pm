@@ -103,10 +103,10 @@ sub mapping_end_event {
             if (ref $key) {
                 $key = $self->stringify_complex($key);
             }
-            $hash->{ $key } = $value;
+            $$hash->{ $key } = $value;
         }
     };
-    $on_data->($self, $data, $ref);
+    $on_data->($self, \$data, $ref);
     push @{ $stack->[-1]->{ref} }, $data;
     if (defined(my $anchor = $last->{event}->{anchor})) {
         $self->anchors->{ $anchor }->{finished} = 1;
@@ -141,9 +141,9 @@ sub sequence_end_event {
 
     my $on_data = $last->{on_data} || sub {
         my ($self, $array, $items) = @_;
-        push @$array, @$items;
+        push @$$array, @$items;
     };
-    $on_data->($self, $data, $ref);
+    $on_data->($self, \$data, $ref);
     push @{ $stack->[-1]->{ref} }, $data;
     if (defined(my $anchor = $last->{event}->{anchor})) {
         $self->anchors->{ $anchor }->{finished} = 1;
