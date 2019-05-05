@@ -658,6 +658,69 @@ YAML:
 
 A class method called by L<YAML::PP::Schema>
 
+=item construct_ref, represent_ref
+
+Perl variables of the type C<REF> are represented in yaml like this:
+
+    --- !perl/ref
+    =:
+      a: 1
+
+C<construct_ref> returns the perl data:
+
+    my $data = YAML::PP::Schema::Perl->construct_ref([ '=', { some => 'data' } );
+    my $data = \{ a => 1 };
+
+C<represent_ref> turns a C<REF> variable into a YAML mapping:
+
+    my $data = YAML::PP::Schema::Perl->represent_ref(\{ a => 1 });
+    my $data = { '=' => { a => 1 } };
+
+=item construct_scalar, represent_scalar
+
+Perl variables of the type C<SCALAR> are represented in yaml like this:
+
+    --- !perl/scalar
+    =: string
+
+C<construct_scalar> returns the perl data:
+
+    my $data = YAML::PP::Schema::Perl->construct_ref([ '=', 'string' );
+    my $data = \'string';
+
+C<represent_scalar> turns a C<SCALAR> variable into a YAML mapping:
+
+    my $data = YAML::PP::Schema::Perl->represent_scalar(\'string');
+    my $data = { '=' => 'string' };
+
+=item construct_regex, represent_regex
+
+C<construct_regex> returns a C<qr{}> object from the YAML string:
+
+    my $qr = YAML::PP::Schema::Perl->construct_regex('foo.*');
+
+C<represent_regex> returns a string representing the regex object:
+
+    my $string = YAML::PP::Schema::Perl->represent_regex(qr{...});
+
+=item evaluate_code, represent_code
+
+C<evaluate_code> returns a code reference from a string. The string must
+start with a C<{> and end with a C<}>.
+
+    my $code = YAML::PP::Schema::Perl->evaluate_code('{ return 23 }');
+
+C<represent_code> returns a string representation of the code reference
+with the help of B::Deparse:
+
+    my $string = YAML::PP::Schema::Perl->represent_code(sub { return 23 });
+
+=item object
+
+Does the same as C<bless>:
+
+    my $object = YAML::PP::Schema::Perl->object($data, $class);
+
 =back
 
 =cut
