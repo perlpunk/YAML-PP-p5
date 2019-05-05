@@ -1,3 +1,8 @@
+0.013_001 2019-05-05 23:12:42+02:00
+
+    - Change tagtype option in Perl Schema (e.g. tag=!perl+!!perl)
+    - Change on_data handler to pass a reference
+
 0.013 2019-04-30 16:02:52+02:00
 
     - Add option "indent" for dumping
