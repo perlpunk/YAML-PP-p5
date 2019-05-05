@@ -155,3 +155,36 @@ sub register {
 }
 
 1;
+
+__END__
+
+=pod
+
+=encoding utf-8
+
+=head1 NAME
+
+YAML::PP::Schema::Core - YAML 1.2 Core Schema
+
+=head1 SYNOPSIS
+
+    my $yp = YAML::PP->new( schema => ['Core'] );
+
+=head1 DESCRIPTION
+
+This schema loads additional values to the JSON schema as special types, for
+example C<TRUE> and C<True> additional to C<true>.
+
+L<https://yaml.org/spec/1.2/spec.html#id2804923>
+
+=head1 METHODS
+
+=over
+
+=item register
+
+Called by YAML::PP::Schema
+
+=back
+
+=cut

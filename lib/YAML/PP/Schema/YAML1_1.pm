@@ -266,6 +266,16 @@ YAML::PP::Schema::YAML1_1 - YAML 1.1 Schema for YAML::PP
 
 This schema allows you to load the common YAML Types from YAML 1.1.
 
+=head1 METHODS
+
+=over
+
+=item register
+
+Called by YAML::PP::Schema
+
+=back
+
 =head1 SEE ALSO
 
 =over
