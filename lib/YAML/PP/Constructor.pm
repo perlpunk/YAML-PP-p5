@@ -6,6 +6,7 @@ package YAML::PP::Constructor;
 our $VERSION = '0.000'; # VERSION
 
 use YAML::PP;
+use Scalar::Util qw/ reftype /;
 
 use constant DEBUG => ($ENV{YAML_PP_LOAD_DEBUG} or $ENV{YAML_PP_LOAD_TRACE}) ? 1 : 0;
 use constant TRACE => $ENV{YAML_PP_LOAD_TRACE} ? 1 : 0;
@@ -95,8 +96,35 @@ sub mapping_end_event {
     my ($ref, $data) = @{ $last }{qw/ ref data /};
     $last->{type} eq 'mapping' or die "Expected mapping, but got $last->{type}";
 
+    my @merge_keys;
+    my @ref;
+    for (my $i = 0; $i < @$ref; $i += 2) {
+        my $key = $ref->[ $i ];
+        if (ref $key eq 'YAML::PP::Type::MergeKey') {
+            my $merge = $ref->[ $i + 1 ];
+            if ((reftype($merge) || '') eq 'HASH') {
+                push @merge_keys, $merge;
+            }
+            elsif ((reftype($merge) || '') eq 'ARRAY') {
+                for my $item (@$merge) {
+                    if ((reftype($item) || '') eq 'HASH') {
+                        push @merge_keys, $item;
+                    }
+                    else {
+                        die "Expected hash for merge key";
+                    }
+                }
+            }
+            else {
+                die "Expected hash or array for merge key";
+            }
+        }
+        else {
+            push @ref, $key, $ref->[ $i + 1 ];
+        }
+    }
     my $on_data = $last->{on_data} || sub {
-        my ($self, $hash, $items) = @_;
+        my ($self, $hash, $items, $merge_keys) = @_;
         for (my $i = 0; $i < @$items; $i += 2) {
             my ($key, $value) = @$items[ $i, $i + 1 ];
             $key = '' unless defined $key;
@@ -105,8 +133,19 @@ sub mapping_end_event {
             }
             $$hash->{ $key } = $value;
         }
+        for my $merge (@$merge_keys) {
+            for my $key (keys %$merge) {
+                $key = '' unless defined $key;
+                if (ref $key) {
+                    $key = $self->stringify_complex($key);
+                }
+                unless (exists $$hash->{ $key }) {
+                    $$hash->{ $key } = $merge->{ $key };
+                }
+            }
+        }
     };
-    $on_data->($self, \$data, $ref);
+    $on_data->($self, \$data, \@ref, \@merge_keys);
     push @{ $stack->[-1]->{ref} }, $data;
     if (defined(my $anchor = $last->{event}->{anchor})) {
         $self->anchors->{ $anchor }->{finished} = 1;
