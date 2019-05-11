@@ -16,5 +16,7 @@ my $data_from_file = YAML::PP::LoadFile($file);
 is_deeply($data_from_string, $data, "Load data ok");
 is_deeply($data_from_file, $data, "LoadFile data ok");
 
+my $dump = YAML::PP::Dump($data_from_string);
+cmp_ok($dump, 'eq', $yaml, 'Dump() ok');
 
 done_testing;
