@@ -29,7 +29,7 @@ sub readline {
     unless (length $self->{input}) {
         return;
     }
-    if ( $self->{input} =~ m/\G(.*\n?)/g ) {
+    if ( $self->{input} =~ m/\G([^\r\n]*(?:\n|\r\n|\r|\z))/g ) {
         my $line = $1;
         unless (length $line) {
             $self->{input} = '';
