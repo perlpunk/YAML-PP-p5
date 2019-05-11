@@ -4,6 +4,12 @@ package YAML::PP::Schema::JSON;
 
 our $VERSION = '0.000'; # VERSION
 
+use base 'Exporter';
+our @EXPORT_OK = qw/
+    represent_int represent_float represent_literal represent_bool
+    represent_undef
+/;
+
 use B;
 
 use YAML::PP::Common qw/ YAML_PLAIN_SCALAR_STYLE YAML_QUOTED_SCALAR_STYLE /;
@@ -51,84 +57,94 @@ sub register {
     );
 
     $schema->add_representer(
-        undefined => sub {
-            my ($rep, $node) = @_;
-            $node->{style} = YAML_PLAIN_SCALAR_STYLE;
-            $node->{data} = 'null';
-            return 1;
-        },
+        undefined => \&represent_undef,
     );
 
     my $int_flags = B::SVp_IOK;
     my $float_flags = B::SVp_NOK;
     $schema->add_representer(
         flags => $int_flags,
-        code => sub {
-            my ($rep, $node) = @_;
-            if (int($node->{value}) ne $node->{value}) {
-                return 0;
-            }
-            $node->{style} = YAML_PLAIN_SCALAR_STYLE;
-            $node->{data} = "$node->{value}";
-            return 1;
-        },
+        code => \&represent_int,
     );
     my %special = ( (0+'nan').'' => '.nan', (0+'inf').'' => '.inf', (0-'inf').'' => '-.inf' );
     $schema->add_representer(
         flags => $float_flags,
-        code => sub {
-            my ($rep, $node) = @_;
-            # TODO is inf/nan supported in YAML JSON Schema?
-            if (exists $special{ $node->{value} }) {
-                $node->{style} = YAML_PLAIN_SCALAR_STYLE;
-                $node->{data} = "$node->{value}";
-                return 1;
-            }
-            if (0.0 + $node->{value} ne $node->{value}) {
-                return 0;
-            }
-            if (int($node->{value}) eq $node->{value} and not $node->{value} =~ m/\./) {
-                $node->{value} .= '.0';
-            }
-            $node->{style} = YAML_PLAIN_SCALAR_STYLE;
-            $node->{data} = "$node->{value}";
-            return 1;
-        },
+        code => \&represent_float,
     );
     $schema->add_representer(
         equals => $_,
-        code => sub {
-            my ($rep, $node) = @_;
-            $node->{style} = YAML_QUOTED_SCALAR_STYLE;
-            $node->{data} = "$node->{value}";
-            return 1;
-        },
+        code => \&represent_literal,
     ) for ("", qw/ true false null /);
     $schema->add_representer(
         regex => qr{$RE_INT|$RE_FLOAT},
-        code => sub {
-            my ($rep, $node) = @_;
-            $node->{style} = YAML_QUOTED_SCALAR_STYLE;
-            $node->{data} = "$node->{value}";
-            return 1;
-        },
+        code => \&represent_literal,
     );
 
     if ($schema->bool_class) {
         $schema->add_representer(
             class_equals => $schema->bool_class,
-            code => sub {
-                my ($rep, $node) = @_;
-                my $string = $node->{value} ? 'true' : 'false';
-                $node->{style} = YAML_PLAIN_SCALAR_STYLE;
-                @{ $node->{items} } = $string;
-                $node->{data} = $string;
-                return 1;
-            },
+            code => \&represent_bool,
         );
     }
 
     return;
+}
+
+sub represent_undef {
+    my ($rep, $node) = @_;
+    $node->{style} = YAML_PLAIN_SCALAR_STYLE;
+    $node->{data} = 'null';
+    return 1;
+}
+
+sub represent_literal {
+    my ($rep, $node) = @_;
+    $node->{style} = YAML_QUOTED_SCALAR_STYLE;
+    $node->{data} = "$node->{value}";
+    return 1;
+}
+
+
+sub represent_int {
+    my ($rep, $node) = @_;
+    if (int($node->{value}) ne $node->{value}) {
+        return 0;
+    }
+    $node->{style} = YAML_PLAIN_SCALAR_STYLE;
+    $node->{data} = "$node->{value}";
+    return 1;
+}
+
+my %special = (
+    (0+'nan').'' => '.nan',
+    (0+'inf').'' => '.inf',
+    (0-'inf').'' => '-.inf'
+);
+sub represent_float {
+    my ($rep, $node) = @_;
+    if (exists $special{ $node->{value} }) {
+        $node->{style} = YAML_PLAIN_SCALAR_STYLE;
+        $node->{data} = $special{ $node->{value} };
+        return 1;
+    }
+    if (0.0 + $node->{value} ne $node->{value}) {
+        return 0;
+    }
+    if (int($node->{value}) eq $node->{value} and not $node->{value} =~ m/\./) {
+        $node->{value} .= '.0';
+    }
+    $node->{style} = YAML_PLAIN_SCALAR_STYLE;
+    $node->{data} = "$node->{value}";
+    return 1;
+}
+
+sub represent_bool {
+    my ($rep, $node) = @_;
+    my $string = $node->{value} ? 'true' : 'false';
+    $node->{style} = YAML_PLAIN_SCALAR_STYLE;
+    @{ $node->{items} } = $string;
+    $node->{data} = $string;
+    return 1;
 }
 
 1;
