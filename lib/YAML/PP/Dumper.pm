@@ -22,6 +22,11 @@ use YAML::PP::Common qw/
 sub new {
     my ($class, %args) = @_;
 
+    my $header = delete $args{header};
+    $header = 1 unless defined $header;
+    my $footer = delete $args{footer};
+    $footer = 0 unless defined $footer;
+
     my $schema = delete $args{schema} || YAML::PP->default_schema(
         boolean => 'perl',
     );
@@ -40,6 +45,8 @@ sub new {
         seen => {},
         anchors => {},
         anchor_num => 0,
+        header => $header,
+        footer => $footer,
     }, $class;
     return $self;
 }
@@ -54,6 +61,8 @@ sub init {
 sub emitter { return $_[0]->{emitter} }
 sub representer { return $_[0]->{representer} }
 sub set_representer { $_[0]->{representer} = $_[1] }
+sub header { return $_[0]->{header} }
+sub footer { return $_[0]->{footer} }
 
 sub dump {
     my ($self, @docs) = @_;
@@ -62,11 +71,13 @@ sub dump {
     $self->emitter->stream_start_event({});
 
     for my $i (0 .. $#docs) {
-        $self->emitter->document_start_event({ implicit => 0 });
+        my $header_implicit = ($i == 0 and not $self->header);
+        $self->emitter->document_start_event({ implicit => $header_implicit });
         $self->init;
         $self->check_references($docs[ $i ]);
         $self->dump_node($docs[ $i ]);
-        $self->emitter->document_end_event({ implicit => 1 });
+        my $footer_implicit = (not $self->footer);
+        $self->emitter->document_end_event({ implicit => $footer_implicit });
     }
 
     $self->emitter->stream_end_event({});

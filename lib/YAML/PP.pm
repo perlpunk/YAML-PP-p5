@@ -20,8 +20,10 @@ sub new {
     $bool = 'perl' unless defined $bool;
     my $schemas = delete $args{schema} || ['JSON'];
     my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
-    my $indent = $args{indent};
-    my $writer = $args{writer};
+    my $indent = delete $args{indent};
+    my $writer = delete $args{writer};
+    my $header = delete $args{header};
+    my $footer = delete $args{footer};
     my $parser = delete $args{parser};
     my $emitter = delete $args{emitter} || {
         indent => $indent,
@@ -41,6 +43,8 @@ sub new {
     my $dumper = YAML::PP::Dumper->new(
         schema => $schema,
         emitter => $emitter,
+        header => $header,
+        footer => $footer,
     );
 
     my $self = bless {
@@ -482,6 +486,8 @@ The layout is like libyaml output:
         schema => ['JSON'],
         cyclic_refs => 'fatal',
         indent => 4, # use 4 spaces for dumping indentation
+        header => 1, # default 1; print document header ---
+        footer => 1, # default 0; print document footer ...
     );
 
 =item load_string
