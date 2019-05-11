@@ -135,5 +135,31 @@ for my $schema_names (sort keys %$schema_data) {
     }
 }
 
+subtest int_string => sub {
+    my $x = "25.1";
+    my $y = $x + 0;
+    for my $name (qw/ json core yaml11 /) {
+        my $yp = $loaders{ $name };
+        my $yaml = $yp->dump_string($x);
+        chomp $yaml;
+        cmp_ok($yaml, 'eq', '--- 25.1', "$name: IV and PV");
+    }
+};
+
+subtest float_string => sub {
+    my $x = 19;
+    {
+        no warnings 'numeric';
+        $x .= "x";
+        my $y = $x + 0;
+    };
+    for my $name (qw/ json core yaml11 /) {
+        my $yp = $loaders{ $name };
+        my $yaml = $yp->dump_string($x);
+        chomp $yaml;
+        cmp_ok($yaml, 'eq', '--- 19x', "$name: NV and PV");
+    }
+};
+
 done_testing;
 
