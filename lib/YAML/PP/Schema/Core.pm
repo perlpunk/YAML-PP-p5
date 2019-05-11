@@ -65,13 +65,6 @@ sub register {
         match => [ all => sub { $_[1]->{value} } ],
     );
 
-    $schema->add_representer(
-        reftype => "*",
-        code => sub {
-            die "Dumping references not supported yet";
-        },
-    );
-
     my $int_flags = B::SVp_IOK;
     my $float_flags = B::SVp_NOK;
     $schema->add_representer(
