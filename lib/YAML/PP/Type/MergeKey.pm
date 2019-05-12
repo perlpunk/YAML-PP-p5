@@ -10,3 +10,31 @@ sub new {
 }
 
 1;
+
+
+__END__
+
+=pod
+
+=encoding utf-8
+
+=head1 NAME
+
+YAML::PP::Type::MergeKey - A special node type for merge keys
+
+=head1 DESCRIPTION
+
+See L<YAML::PP::Schema::Merge>
+
+=head1 METHODS
+
+=over
+
+=item new
+
+Constructor
+
+=back
+
+=cut
+

@@ -237,6 +237,47 @@ The YAML backend is implemented in a modular way that allows to add
 custom handling of YAML tags, perl objects and data types. The inner API
 is not yet stable. Suggestions welcome.
 
+=head1 PLUGINS
+
+You can alter the behaviour of YAML::PP by using the following schema
+classes:
+
+=over
+
+=item L<YAML::PP::Schema::Failsafe>
+
+One of the three YAML 1.2 official schemas
+
+=item L<YAML::PP::Schema::JSON>
+
+One of the three YAML 1.2 official schemas. Default
+
+=item L<YAML::PP::Schema::Core>
+
+One of the three YAML 1.2 official schemas
+
+=item L<YAML::PP::Schema::YAML1_1>
+
+Schema implementing the most common YAML 1.1 types
+
+=item L<YAML::PP::Schema::Perl>
+
+Serializing Perl objects and types
+
+=item L<YAML::PP::Schema::Binary>
+
+Serializing binary data
+
+=item L<YAML::PP::Schema::Tie::IxHash>
+
+In progress. Keeping hash key order.
+
+=item L<YAML::PP::Schema::Merge>
+
+YAML 1.1 merge keys for mappings
+
+=back
+
 =head1 IMPLEMENTATION
 
 The process of loading and dumping is split into the following steps:
