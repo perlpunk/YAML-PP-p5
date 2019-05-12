@@ -99,16 +99,13 @@ sub event_to_test_suite {
         elsif ($ev eq 'scalar_event') {
             $string = '=VAL';
             $string .= $properties;
-            if (defined $content) {
-                $content =~ s/\\/\\\\/g;
-                $content =~ s/\t/\\t/g;
-                $content =~ s/\r/\\r/g;
-                $content =~ s/\n/\\n/g;
-                $content =~ s/[\b]/\\b/g;
-            }
-            else {
-                $content = '';
-            }
+
+            $content =~ s/\\/\\\\/g;
+            $content =~ s/\t/\\t/g;
+            $content =~ s/\r/\\r/g;
+            $content =~ s/\n/\\n/g;
+            $content =~ s/[\b]/\\b/g;
+
             $string .= ' '
                 . $scalar_style_to_string{ $event->{style} }
                 . $content;
@@ -229,6 +226,13 @@ YAML::PP::Common - Constants and common functions
 For examples of the returned format look into this distributions's directory
 C<yaml-test-suite> which is a copy of
 L<https://github.com/yaml/yaml-test-suite>.
+
+=item test_suite_to_event
+
+    my $event = YAML::PP::Common::test_suite_to_event($str);
+
+Turns an event string in test suite format into an event hashref. Not complete
+yet.
 
 =back
 

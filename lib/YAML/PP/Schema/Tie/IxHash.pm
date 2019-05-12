@@ -140,3 +140,15 @@ Examples:
 =cut
 
 ### END EXAMPLE
+
+=head1 METHODS
+
+=over
+
+=item register
+
+Called by YAML::PP::Schema
+
+=back
+
+=cut

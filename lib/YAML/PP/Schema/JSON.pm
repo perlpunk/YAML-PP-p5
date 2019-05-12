@@ -179,6 +179,12 @@ L<https://yaml.org/spec/1.2/spec.html#id2803231>
 
 Called by YAML::PP::Schema
 
+=item represent_bool, represent_float, represent_int, represent_literal, represent_undef
+
+Functions to represent the several node types.
+
+    represent_bool($representer, $node);
+
 =back
 
 =cut
