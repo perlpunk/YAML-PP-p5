@@ -13,6 +13,7 @@ use YAML::PP;
         code => sub {
             my ($representer, $node) = @_;
             $node->{ tag } = '!Class1',
+            $node->{ data } = \%{ $node->{ value } };
             return 1;
         }
     );
@@ -35,6 +36,7 @@ use YAML::PP;
             my ($representer, $node) = @_;
             if ($node->{ value }->isa('Class1')) {
                 $node->{ tag } = '!Class1';
+                $node->{ data } = \%{ $node->{ value } };
                 return 1;
             }
             return 0;
@@ -45,6 +47,7 @@ use YAML::PP;
         code => sub {
             my ($representer, $node) = @_;
             $node->{ tag } = '!Class2';
+            $node->{ data } = \%{ $node->{ value } };
             return 1;
         }
     );
@@ -77,6 +80,7 @@ package main;
         code => sub {
             my ($representer, $node) = @_;
             $node->{ tag } = '!Class3';
+            $node->{ data } = \%{ $node->{ value } };
             return 1;
         }
     );
@@ -85,6 +89,7 @@ package main;
         code => sub {
             my ($representer, $node) = @_;
             $node->{ tag } = '!BaseClass';
+            $node->{ data } = \%{ $node->{ value } };
             return 1;
         }
     );

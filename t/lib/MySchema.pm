@@ -19,6 +19,7 @@ package MySchema;
         my ($representer, $node) = @_;
         # $node->{value} contains the object
         $node->{tag} = '!Class1';
+        $node->{ data } = '';
         return 1;
       },
     );
