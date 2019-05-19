@@ -57,7 +57,7 @@ sub load {
     $parser->parse();
 
     my $docs = $constructor->docs;
-    return wantarray ? @$docs : $docs->[0];
+    return wantarray ? @$docs : $docs->[-1];
 }
 
 
