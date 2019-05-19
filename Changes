@@ -1,3 +1,13 @@
+Revision history for Perl module YAML::PP
+
+0.015_001 2019-05-19 18:06:50+02:00
+
+    - Change load methods to return the last document in scalar context for
+      compatibility with other YAML loaders
+    - Fix Lexer/Emitter (allowing/forbidding special characters in plain scalars)
+    - Custom representer must fill $node->{data}
+    - Dump: uptf8::upgrade input value (so it can store binary data)
+
 0.015 2019-05-14 21:00:59+02:00
 
     - Support Mac \r and Win \r\n line endings
