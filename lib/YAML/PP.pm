@@ -551,7 +551,10 @@ UTF-8 decoding will be done automatically
     my $yaml = $ypp->dump_string($doc1, $doc2);
     my $yaml = $ypp->dump_string(@docs);
 
-Output will be UTF-8 decoded
+Input data should be UTF-8 decoded. If not, it will be upgraded with
+C<utf8::upgrade>.
+
+Output will be UTF-8 decoded.
 
 =item dump_file
 
@@ -559,7 +562,10 @@ Output will be UTF-8 decoded
     $ypp->dump_file("file.yaml", $doc1, $doc2);
     $ypp->dump_file("file.yaml", @docs);
 
-File will be written UTF-8 encoded
+Input data should be UTF-8 decoded. If not, it will be upgraded with
+C<utf8::upgrade>.
+
+File will be written UTF-8 encoded.
 
 =item dump
 

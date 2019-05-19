@@ -13,10 +13,10 @@ my $qr_prefix;
 # workaround to avoid growing regexes when repeatedly loading and dumping
 # e.g. (?^:(?^:regex))
 {
-    my $test_qr = qr{TEST_STRINGYFY_REGEX};
-    my $test_qr_string = "$test_qr";
-    $qr_prefix = $test_qr_string;
-    $qr_prefix =~ s/TEST_STRINGYFY_REGEX.*//;
+    $qr_prefix = qr{\(\?-xism\:};
+    if ($] >= 5.014) {
+        $qr_prefix = qr{\(\?\^(?:[uadl])?\:};
+    }
 }
 
 sub register {
@@ -313,7 +313,7 @@ sub evaluate_code {
 
 sub construct_regex {
     my ($self, $regex) = @_;
-    if ($regex =~ m/^\Q$qr_prefix\E(.*)\)\z/s) {
+    if ($regex =~ m/^$qr_prefix(.*)\)\z/s) {
         $regex = $1;
     }
     my $qr = qr{$regex};
@@ -355,7 +355,7 @@ sub represent_code {
 sub represent_regex {
     my ($self, $regex) = @_;
     $regex = "$regex";
-    if ($regex =~ m/^\Q$qr_prefix\E(.*)\)\z/s) {
+    if ($regex =~ m/^$qr_prefix(.*)\)\z/s) {
         $regex = $1;
     }
     return $regex;

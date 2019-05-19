@@ -2,9 +2,6 @@
 use strict;
 use warnings;
 
-my $qr = qr{unblessed};
-my $qr_blessed = qr{blessed}i;
-
 my %tests = (
 
     hash => [
@@ -77,7 +74,9 @@ EOM
 
     regexp => [
         <<'EOM',
-        qr{unblessed}
+        my $string = 'unblessed';
+        utf8::upgrade($string);
+        qr{$string}
 EOM
         <<"EOM",
 ---
@@ -88,7 +87,9 @@ EOM
 
     regexp_blessed => [
         <<'EOM',
-        bless qr{blessed}, "Foo"
+        my $string = 'blessed';
+        utf8::upgrade($string);
+        bless qr{$string}, "Foo"
 EOM
         <<"EOM",
 ---

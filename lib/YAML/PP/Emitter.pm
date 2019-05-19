@@ -341,6 +341,9 @@ sub scalar_event {
     my $last = $stack->[-1];
     my $indent = $last->{indent};
     my $value = $info->{value};
+    unless (utf8::is_utf8($value)) {
+        utf8::upgrade($value);
+    }
 
     my $props = '';
     my $anchor = $info->{anchor};
