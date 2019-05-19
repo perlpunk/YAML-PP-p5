@@ -409,6 +409,10 @@ sub scalar_event {
         elsif ($value =~ m/[: \t]\z/) {
             $style = YAML_SINGLE_QUOTED_SCALAR_STYLE;
         }
+        elsif ($value =~ m/[^\x20-\x3A\x3B-\x7E\x85\xA0-\x{D7FF}\x{E000}-\x{FEFE}\x{FF00}-\x{FFFD}\x{10000}-\x{10FFFF}]/) {
+            # TODO exclude ,[]{} in flow collections
+            $style = YAML_SINGLE_QUOTED_SCALAR_STYLE;
+        }
         else {
             $style = YAML_PLAIN_SCALAR_STYLE;
         }

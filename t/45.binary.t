@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 2;
+use Test::More tests => 3;
 
 use YAML::PP;
 use Encode;
@@ -41,31 +41,61 @@ EOM
 
 };
 
-subtest dump => sub {
-    my $latin1_a_umlaut = encode(latin1 => (decode_utf8 "ä"));
-    my @tests = (
-        [utf8 => "a"],
-        [binary => $latin1_a_umlaut],
-        [binary =>  "\304\244",],
-        [utf8 =>  decode_utf8("\304\244"),],
-        [binary => "a umlaut ä",],
-        [utf8 => decode_utf8("a umlaut ä"),],
-        [binary => "euro €",],
-        [utf8 => decode_utf8("euro €"),],
-        [binary => $gif,],
-    );
+my $latin1_a_umlaut = encode(latin1 => (decode_utf8 "ä"));
+my @tests = (
+    [utf8 => "a"],
+    [binary => $latin1_a_umlaut],
+    [binary =>  "\304\244",],
+    [utf8 =>  decode_utf8("\304\244"),],
+    [binary => "a umlaut ä",],
+    [utf8 => decode_utf8("a umlaut ä"),],
+    [binary => "euro €",],
+    [utf8 => decode_utf8("euro €"),],
+    [binary => "\303\274 \374",],
+    [binary => "\xC0\x80"],
+    [binary => "\xC0\xAF"],
+    [binary => "\xE0\x80\x80"],
+    [binary => "\xF0\x80\x80\x80"],
+    [binary => "\xE0\x83\xBF"],
+    [binary => "\xF0\x80\x83\xBF"],
+    [binary => "\xF0\x80\xA3\x80"],
+    [binary => $gif,],
+);
+
+subtest roundtrip => sub {
+    for my $item (@tests) {
+        select undef, undef, undef, 0.1;
+        my ($type, $string) = @$item;
+        local $Data::Dumper::Useqq = 1;
+        my $label = Data::Dumper->Dump([$string], ['string']);
+        chomp $label;
+        note("\n\n\n=============== $type: $label");
+        my $dump = $yp->dump_string($string);
+        my $reload = $yp->load_string($dump);
+        if ($type eq 'binary') {
+            if (utf8::is_utf8($reload)) {
+                utf8::downgrade($reload);
+            }
+        }
+        cmp_ok($reload, 'eq', $string, "Reload binary ok ($label)");
+    }
+};
+
+subtest roundtrip_binary => sub {
     for my $item (@tests) {
         my ($type, $string) = @$item;
         local $Data::Dumper::Useqq = 1;
         my $label = Data::Dumper->Dump([$string], ['string']);
         note("=============== $type: $label");
-        my $yaml = $yp_binary->dump_string($string);
+        my $dump = $yp_binary->dump_string($string);
         if ($type eq 'binary') {
-            like($yaml, qr{!!binary}, "Output YAML contains !!binary");
+            like($dump, qr{!!binary}, "Output YAML contains !!binary");
         }
         else {
-            unlike($yaml, qr{!!binary}, "Output YAML does not contain !!binary");
+            unlike($dump, qr{!!binary}, "Output YAML does not contain !!binary");
         }
+        my $reload = $yp_binary->load_string($dump);
+        cmp_ok($reload, 'eq', $string, "Reload binary ok ($label)");
     }
 };
 
