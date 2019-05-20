@@ -1,6 +1,6 @@
 Revision history for Perl module YAML::PP
 
-0.015_001 2019-05-19 18:06:50+02:00
+0.016 2019-05-20 12:37:01+02:00
 
     - Change load methods to return the last document in scalar context for
       compatibility with other YAML loaders
