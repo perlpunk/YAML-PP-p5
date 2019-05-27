@@ -8,6 +8,7 @@ our $VERSION = '0.000'; # VERSION
 
 use YAML::PP::Common qw/ YAML_PLAIN_SCALAR_STYLE /;
 
+use Scalar::Util qw/ blessed /;
 
 sub new {
     my ($class, %args) = @_;
@@ -78,6 +79,12 @@ sub load_subschemas {
     while ($i < @schemas) {
         my $item = $schemas[ $i ];
         $i++;
+        if (blessed($item)) {
+            $item->register(
+                schema => $self,
+            );
+            next;
+        }
         my @options;
         while ($i < @schemas
             and (
@@ -105,7 +112,7 @@ sub load_subschemas {
             }
             $LOADED_SCHEMA{ $item } ||= Module::Load::load $class;
         }
-        my $tags = $class->register(
+        $class->register(
             schema => $self,
             options => \@options,
         );
