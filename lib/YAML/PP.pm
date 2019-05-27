@@ -9,6 +9,7 @@ use YAML::PP::Schema;
 use YAML::PP::Schema::JSON;
 use YAML::PP::Loader;
 use YAML::PP::Dumper;
+use Scalar::Util qw/ blessed /;
 
 use base 'Exporter';
 our @EXPORT_OK = qw/ Load LoadFile Dump DumpFile /;
@@ -30,10 +31,16 @@ sub new {
         writer => $writer,
     };
 
-    my $schema = YAML::PP::Schema->new(
-        boolean => $bool,
-    );
-    $schema->load_subschemas(@$schemas);
+    my $schema;
+    if (blessed($schemas) and $schemas->isa('YAML::PP::Schema')) {
+        $schema = $schemas;
+    }
+    else {
+        $schema = YAML::PP::Schema->new(
+            boolean => $bool,
+        );
+        $schema->load_subschemas(@$schemas);
+    }
 
     my $loader = YAML::PP::Loader->new(
         schema => $schema,
