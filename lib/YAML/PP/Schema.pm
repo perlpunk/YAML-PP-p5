@@ -323,6 +323,12 @@ sub create_sequence {
 
     my $resolvers = $self->resolvers->{sequence};
     if ($tag) {
+        if (my $equals = $resolvers->{tag}->{ $tag }) {
+            my $on_create = $equals->{on_create};
+            $on_data = $equals->{on_data};
+            $on_create and $data = $on_create->($constructor, $event);
+            return ($data, $on_data);
+        }
         if (my $matches = $resolvers->{tags}) {
             for my $match (@$matches) {
                 my ($re, $actions) = @$match;
@@ -333,12 +339,6 @@ sub create_sequence {
                     return ($data, $on_data);
                 }
             }
-        }
-        if (my $equals = $resolvers->{tag}->{ $tag }) {
-            my $on_create = $equals->{on_create};
-            $on_data = $equals->{on_data};
-            $on_create and $data = $on_create->($constructor, $event);
-            return ($data, $on_data);
         }
     }
 
@@ -353,6 +353,12 @@ sub create_mapping {
 
     my $resolvers = $self->resolvers->{mapping};
     if ($tag) {
+        if (my $equals = $resolvers->{tag}->{ $tag }) {
+            my $on_create = $equals->{on_create};
+            $on_data = $equals->{on_data};
+            $on_create and $data = $on_create->($constructor, $event);
+            return ($data, $on_data);
+        }
         if (my $matches = $resolvers->{tags}) {
             for my $match (@$matches) {
                 my ($re, $actions) = @$match;
@@ -363,12 +369,6 @@ sub create_mapping {
                     return ($data, $on_data);
                 }
             }
-        }
-        if (my $equals = $resolvers->{tag}->{ $tag }) {
-            my $on_create = $equals->{on_create};
-            $on_data = $equals->{on_data};
-            $on_create and $data = $on_create->($constructor, $event);
-            return ($data, $on_data);
         }
     }
 
