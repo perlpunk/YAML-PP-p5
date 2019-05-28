@@ -87,6 +87,10 @@ handler for processing mappings.
 
 So the inner API of that is not stable at this point.
 
+Note that if you enable this schema, a plain scalar `<<` will be seen as
+special anywhere in your document, so if you want a literal `<<`, you have
+to put it in quotes.
+
 =head1 METHODS
 
 =over
