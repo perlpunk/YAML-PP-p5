@@ -200,7 +200,7 @@ Here are a few examples of the basic load and dump methods:
     my $yaml = $yp->dump_string($data_with_perl_objects);
 
 
-Some utility scripts:
+Some utility scripts, mostly useful for debugging:
 
     # Load YAML into a data structure and dump with Data::Dumper
     yamlpp5-load < file.yaml
@@ -211,23 +211,19 @@ Some utility scripts:
     # Print the events from the parser in yaml-test-suite format
     yamlpp5-events < file.yaml
 
-    # Create ANSI colored YAML
-    yamlpp5-highlight < file.yaml
-
     # Parse and emit events directly without loading
     yamlpp5-parse-emit < file.yaml
+
+    # Create ANSI colored YAML. Can also be useful for invalid YAML, showing
+    # you the exact location of the error
+    yamlpp5-highlight < file.yaml
 
 
 =head1 DESCRIPTION
 
-This is Yet Another YAML Framework. For why this project was started, see
-L<"WHY">.
+YAML::PP is a modern, modular YAML processor.
 
 It aims to support C<YAML 1.2> and C<YAML 1.1>. See L<http://yaml.org/>.
-
-You can check out all current parse and load results from the
-yaml-test-suite here:
-L<https://perlpunk.github.io/YAML-PP-p5/test-suite.html>
 
 YAML is a serialization language. The YAML input is called "YAML Stream".
 A stream consists of one or more "Documents", seperated by a line with a
@@ -243,6 +239,11 @@ the last if called with scalar context.
 The YAML backend is implemented in a modular way that allows to add
 custom handling of YAML tags, perl objects and data types. The inner API
 is not yet stable. Suggestions welcome.
+
+You can check out all current parse and load results from the
+yaml-test-suite here:
+L<https://perlpunk.github.io/YAML-PP-p5/test-suite.html>
+
 
 =head1 PLUGINS
 
@@ -284,6 +285,9 @@ In progress. Keeping hash key order.
 YAML 1.1 merge keys for mappings
 
 =back
+
+To make the parsing process faster, you can plugin the libyaml parser
+with L<YAML::PP::LibYAML>.
 
 =head1 IMPLEMENTATION
 
@@ -354,13 +358,22 @@ Still TODO:
 
 =over 4
 
-=item Flow Style
+=item Implicit collection keys
 
-Flow style is partially implemented.
+    ---
+    [ a, b, c ]: value
 
-Not yet working: Implicit flow collection keys, implicit keys in
-flow sequences, content directly after the colon, empty nodes, explicit
-keys
+=item Implicit mapping in flow syle sequences
+
+    ---
+    [ a, b, c: d ]
+    # equals
+    [ a, b, { c: d } ]
+
+=item Plain mapping keys ending with colons
+
+    ---
+    key ends with two colons::: value
 
 =item Supported Characters
 
@@ -543,14 +556,14 @@ The layout is like libyaml output:
     my $doc = $ypp->load_string("foo: bar");
     my @docs = $ypp->load_string("foo: bar\n---\n- a");
 
-Input should be utf-8 decoded.
+Input should be Unicode characters (decoded).
 
 =item load_file
 
     my $doc = $ypp->load_file("file.yaml");
     my @docs = $ypp->load_file("file.yaml");
 
-UTF-8 decoding will be done automatically
+Strings will be loaded as unicode characters (decoded).
 
 =item dump_string
 
@@ -558,10 +571,10 @@ UTF-8 decoding will be done automatically
     my $yaml = $ypp->dump_string($doc1, $doc2);
     my $yaml = $ypp->dump_string(@docs);
 
-Input data should be UTF-8 decoded. If not, it will be upgraded with
+Input strings should be Unicode characters. If not, they will be upgraded with
 C<utf8::upgrade>.
 
-Output will be UTF-8 decoded.
+Output will return Unicode characters (decoded).
 
 =item dump_file
 
@@ -571,8 +584,6 @@ Output will be UTF-8 decoded.
 
 Input data should be UTF-8 decoded. If not, it will be upgraded with
 C<utf8::upgrade>.
-
-File will be written UTF-8 encoded.
 
 =item dump
 
@@ -617,6 +628,8 @@ No function is exported by default.
     my $doc = Load($yaml);
     my @docs = Load($yaml);
 
+Works like C<load_string>.
+
 =item LoadFile
 
     use YAML::PP qw/ LoadFile /;
@@ -624,11 +637,15 @@ No function is exported by default.
     my @docs = LoadFile($file);
     my @docs = LoadFile($filehandle);
 
+Works like C<load_file>.
+
 =item Dump
 
     use YAML::PP qw/ Dump /;
     my $yaml = Dump($doc);
     my $yaml = Dump(@docs);
+
+Works like C<dump_string>.
 
 =item DumpFile
 
@@ -636,6 +653,8 @@ No function is exported by default.
     DumpFile($file, $doc);
     DumpFile($file, @docs);
     DumpFile($filehandle, @docs);
+
+Works like C<dump_file>.
 
 =back
 
