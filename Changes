@@ -1,5 +1,11 @@
 Revision history for Perl module YAML::PP
 
+0.016_001 2019-05-30 18:55:09+02:00
+
+    - YAML::PP accepts existing schema in constructor
+    - subschema can be an object
+    - Switch the order of 'equals' and regex tag resolvers
+
 0.016 2019-05-20 12:37:01+02:00
 
     - Change load methods to return the last document in scalar context for
