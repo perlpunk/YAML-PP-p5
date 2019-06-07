@@ -435,12 +435,6 @@ dumped correctly by modules like L<JSON::PP> or L<JSON::XS>, for example.
 
 See L<"NUMBERS"> for an example.
 
-=back
-
-TODO:
-
-=over 4
-
 =item Complex Keys
 
 Mapping Keys in YAML can be more than just scalars. Of course, you can't load
@@ -472,6 +466,12 @@ Example:
        }
     }
 
+=back
+
+TODO:
+
+=over 4
+
 =item Parse Tree
 
 I would like to generate a complete parse tree, that allows you to manipulate
@@ -495,10 +495,19 @@ they will be dumped with double quotes.
 It will recognize JSON::PP::Boolean and boolean.pm objects and dump them
 correctly.
 
-TODO: Correctly recognize numbers which also have a string flag, like:
+Numbers which also have a PV flag will be recognized as numbers and not
+as strings:
 
     my $int = 23;
     say "int: $int"; # $int will now also have a PV flag
+
+That means that if you accidentally use a string in numeric context, it will
+also be recognized as a number:
+
+    my $string = "23";
+    my $something = $string + 0;
+    print $yp->dump_string($string);
+    # will be emitted as an integer without quotes!
 
 The layout is like libyaml output:
 
