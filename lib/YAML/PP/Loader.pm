@@ -53,6 +53,15 @@ sub clone {
 sub parser { return $_[0]->{parser} }
 sub constructor { return $_[0]->{constructor} }
 
+sub filename {
+    my ($self) = @_;
+    my $reader = $self->parser->reader;
+    if ($reader->isa('YAML::PP::Reader::File')) {
+        return $reader->input;
+    }
+    die "Reader is not a YAML::PP::Reader::File";
+}
+
 sub load_string {
     my ($self, $yaml) = @_;
     $self->parser->set_reader(YAML::PP::Reader->new( input => $yaml ));
