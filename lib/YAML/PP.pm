@@ -62,6 +62,16 @@ sub new {
     return $self;
 }
 
+sub clone {
+    my ($self) = @_;
+    my $clone = {
+        schema => $self->schema,
+        loader => $self->loader->clone,
+        dumper => $self->dumper->clone,
+    };
+    return bless $clone, ref $self;
+}
+
 sub loader {
     if (@_ > 1) {
         $_[0]->{loader} = $_[1]

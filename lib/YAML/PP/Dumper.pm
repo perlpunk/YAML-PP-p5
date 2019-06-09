@@ -51,6 +51,20 @@ sub new {
     return $self;
 }
 
+sub clone {
+    my ($self) = @_;
+    my $clone = {
+        representer => $self->representer->clone,
+        emitter => $self->emitter->clone,
+        seen => {},
+        anchors => {},
+        anchor_num => 0,
+        header => $self->header,
+        footer => $self->footer,
+    };
+    return bless $clone, ref $self;
+}
+
 sub init {
     my ($self) = @_;
     $self->{seen} = {};

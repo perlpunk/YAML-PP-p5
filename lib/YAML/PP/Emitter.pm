@@ -23,6 +23,14 @@ sub new {
     return $self;
 }
 
+sub clone {
+    my ($self) = @_;
+    my $clone = {
+        indent => $self->indent,
+    };
+    return bless $clone, ref $self;
+}
+
 sub event_stack { return $_[0]->{event_stack} }
 sub set_event_stack { $_[0]->{event_stack} = $_[1] }
 sub indent { return $_[0]->{indent} }

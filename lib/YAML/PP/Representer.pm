@@ -24,6 +24,14 @@ sub new {
     return $self;
 }
 
+sub clone {
+    my ($self) = @_;
+    my $clone = {
+        schema => $self->schema,
+    };
+    return bless $clone, ref $self;
+}
+
 sub schema { return $_[0]->{schema} }
 
 sub represent_node {

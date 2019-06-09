@@ -36,6 +36,16 @@ sub new {
     }
     return $self;
 }
+
+sub clone {
+    my ($self) = @_;
+    my $clone = {
+        lexer => YAML::PP::Lexer->new(
+        ),
+    };
+    return bless $clone, ref $self;
+}
+
 sub receiver { return $_[0]->{receiver} }
 sub set_receiver {
     my ($self, $receiver) = @_;

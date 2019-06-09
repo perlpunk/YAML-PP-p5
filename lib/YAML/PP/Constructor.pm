@@ -31,6 +31,15 @@ sub new {
     }, $class;
 }
 
+sub clone {
+    my ($self) = @_;
+    my $clone = {
+        schema => $self->schema,
+        cyclic_refs => $self->cyclic_refs,
+    };
+    return bless $clone, ref $self;
+}
+
 sub init {
     my ($self) = @_;
     $self->set_docs([]);

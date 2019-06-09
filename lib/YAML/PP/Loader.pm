@@ -39,6 +39,17 @@ sub new {
     return $self;
 }
 
+sub clone {
+    my ($self) = @_;
+    my $clone = {
+        parser => $self->parser->clone,
+        constructor => $self->constructor->clone,
+    };
+    bless $clone, ref $self;
+    $clone->parser->set_receiver($clone->constructor);
+    return $clone;
+}
+
 sub parser { return $_[0]->{parser} }
 sub constructor { return $_[0]->{constructor} }
 
