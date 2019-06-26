@@ -17,11 +17,18 @@ sub new {
         boolean => 'perl',
     );
 
-    my $parser = delete $args{parser} || YAML::PP::Parser->new;
     my $constructor = delete $args{constructor} || YAML::PP::Constructor->new(
         schema => $schema,
         cyclic_refs => $cyclic_refs,
     );
+    my $parser = delete $args{parser};
+    unless ($parser) {
+        $parser = YAML::PP::Parser->new;
+    }
+    unless ($parser->receiver) {
+        $parser->set_receiver($constructor);
+    }
+
     if (keys %args) {
         die "Unexpected arguments: " . join ', ', sort keys %args;
     }
@@ -29,7 +36,6 @@ sub new {
         parser => $parser,
         constructor => $constructor,
     }, $class;
-    $parser->set_receiver($constructor);
     return $self;
 }
 
