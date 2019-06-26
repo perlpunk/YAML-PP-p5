@@ -21,12 +21,14 @@ sub new {
         $paths = [];
     }
     my $allow_absolute = $args{allow_absolute} || 0;
+    my $loader = $args{loader} || \&default_loader;
 
     my $self = bless {
         paths => $paths,
         allow_absolute => $allow_absolute,
         last_includes => [],
         cached => {},
+        loader => $loader,
     }, $class;
     return $self;
 }
@@ -114,7 +116,7 @@ sub include {
     # We need a new object because we are still in the parsing and
     # constructing process
     my $clone = $yp->clone;
-    my ($data) = $clone->load_file($fullpath);
+    my ($data) = $self->loader->($clone, $fullpath);
 
     if ($relative) {
         pop @{ $self->{last_includes} };
@@ -123,6 +125,19 @@ sub include {
         delete $self->{cached}->{ $fullpath };
     }
     return $data;
+}
+
+sub loader {
+    my ($self, $code) = @_;
+    if (@_ == 2) {
+        $self->{loader} = $code;
+        return $code;
+    }
+    return $self->{loader};
+}
+sub default_loader {
+    my ($yp, $filename) = @_;
+    $yp->load_file($filename);
 }
 
 1;
@@ -189,6 +204,7 @@ Specify paths to search for includes:
 =head1 DESCRIPTION
 
 This plugin allows you to split a large YAML file into smaller ones.
+You can then include these files with the C<!include> tag.
 
 It will search for the specified filename relative to the currently processed
 filename.
@@ -217,5 +233,27 @@ You can even reuse the same include via an alias:
         billing address: *address
 
 Circular includes will be detected, and will be fatal.
+
+It's possible to specify what to do with the included file:
+
+    my $include = YAML::PP::Schema::Include->new(
+        loader => sub {
+            my ($yp, $filename);
+            if ($filename =~ m/\.txt$/) {
+                # open file and just return text
+            }
+            else {
+                # default behaviour
+                return $yp->load_file($filename);
+            }
+        },
+    );
+
+For example, RAML defines an C<!include> tag which depends on the file
+content. If it contains a special RAML directive, it will be loaded as
+YAML, otherwise the content of the file will be included as a string.
+
+So with this plugin you are able to read RAML specifications.
+
 
 =cut
