@@ -30,6 +30,7 @@ my %WriteMakefileArgs = (
     "Data::Dumper" => 0,
     "Encode" => 0,
     "Exporter" => 0,
+    "File::Basename" => 0,
     "MIME::Base64" => 0,
     "Module::Load" => 0,
     "Scalar::Util" => "1.07",
@@ -40,7 +41,6 @@ my %WriteMakefileArgs = (
     "warnings" => 0
   },
   "TEST_REQUIRES" => {
-    "File::Basename" => 0,
     "File::Spec" => 0,
     "FindBin" => 0,
     "IO::Handle" => 0,
@@ -51,7 +51,7 @@ my %WriteMakefileArgs = (
     "blib" => "1.01",
     "lib" => 0
   },
-  "VERSION" => "0.016_001",
+  "VERSION" => "0.016_002",
   "test" => {
     "TESTS" => "t/*.t"
   }

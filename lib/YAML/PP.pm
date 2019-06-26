@@ -294,6 +294,10 @@ In progress. Keeping hash key order.
 
 YAML 1.1 merge keys for mappings
 
+=item L<YAML::PP::Schema::Include>
+
+Include other YAML files via C<!include> tags
+
 =back
 
 To make the parsing process faster, you can plugin the libyaml parser
