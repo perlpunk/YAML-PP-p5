@@ -1,0 +1,4 @@
+---
+- !include include1.yaml
+- !include include2.yaml
+- item3
