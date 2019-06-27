@@ -4,10 +4,7 @@ package YAML::PP::Schema::Perl;
 
 our $VERSION = '0.000'; # VERSION
 
-use base 'YAML::PP::Schema';
-
 use Scalar::Util qw/ blessed reftype /;
-use YAML::PP::Common qw/ YAML_QUOTED_SCALAR_STYLE /;
 
 my $qr_prefix;
 # workaround to avoid growing regexes when repeatedly loading and dumping
@@ -19,198 +16,279 @@ my $qr_prefix;
     }
 }
 
+sub new {
+    my ($class, %args) = @_;
+    my $tags = $args{tags} || [];
+    my $loadcode = $args{loadcode};
+    $loadcode ||= 0;
+    my $classes = $args{classes};
+
+    my $self = bless {
+        tags => $tags,
+        loadcode => $loadcode,
+        classes => $classes,
+    }, $class;
+}
+
 sub register {
     my ($self, %args) = @_;
     my $schema = $args{schema};
-    my $options = $args{options};
 
-    $schema->add_resolver(
-        match => [ equals => '' => '' ],
-    );
-
-    my $tagtype = '!';
-    for my $option (@$options) {
-        if ($option =~ m/^tag=(.*)$/) {
-            $tagtype = $1;
+    my $tags;
+    my $loadcode = 0;
+    my $classes;
+    if (blessed($self)) {
+        $tags = $self->{tags};
+        $loadcode = $self->{loadcode};
+        $classes = $self->{classes};
+    }
+    else {
+        my $options = $args{options};
+        my $tagtype = '!perl';
+        for my $option (@$options) {
+            if ($option =~ m/^tags?=(.+)$/) {
+                $tagtype = $1;
+            }
+            elsif ($option eq '+loadcode') {
+                $loadcode = 1;
+            }
         }
+        $tags = [split m/\+/, $tagtype];
     }
 
-    # TODO
-    # check content and deprecate old usage
-    $tagtype =~ s/perl//g;
+
     my $perl_tag;
+    my %tagtypes;
     my @perl_tags;
-    my @tagtypes = split m/\+/, $tagtype;
-    if ($tagtypes[0] eq '!') {
-        $perl_tag = '!perl';
-    }
-    elsif ($tagtypes[0] eq '!!') {
-        $perl_tag = 'tag:yaml.org,2002:perl';
-    }
-    for my $tagtype (@tagtypes) {
-        if ($tagtype eq '!') {
+    for my $type (@$tags) {
+        if ($type eq '!perl') {
+            $perl_tag ||= $type;
             push @perl_tags, '!perl';
         }
-        elsif ($tagtype eq '!!') {
+        elsif ($type eq '!!perl') {
+            $perl_tag ||= 'tag:yaml.org,2002:perl';
             push @perl_tags, 'tag:yaml.org,2002:perl';
         }
+        else {
+            die "Invalid tagtype '$type'";
+        }
+        $tagtypes{ $type } = 1;
     }
 
     my $perl_regex = '!perl';
-    if ($tagtype eq '!') {
+    if ($tagtypes{'!perl'} and $tagtypes{'!!perl'}) {
+        $perl_regex = '(?:tag:yaml\\.org,2002:|!)perl';
+    }
+    elsif ($tagtypes{'!perl'}) {
         $perl_regex = '!perl';
     }
-    elsif ($tagtype eq '!!') {
+    elsif ($tagtypes{'!!perl'}) {
         $perl_regex = 'tag:yaml\\.org,2002:perl';
     }
-    elsif ($tagtype eq '!+!!') {
-        $perl_regex = '(?:tag:yaml\\.org,2002:|!)perl';
-    }
-    elsif ($tagtype eq '!!+!') {
-        $perl_regex = '(?:tag:yaml\\.org,2002:|!)perl';
+
+    my $class_regex = qr{.+};
+    my $no_objects = 0;
+    if ($classes) {
+        if (@$classes) {
+            $class_regex = '(' . join( '|', map "\Q$_\E", @$classes ) . ')';
+        }
+        else {
+            $no_objects = 1;
+            $class_regex = '';
+        }
     }
 
-    if (grep { $_ eq '+loadcode' } @$options) {
+    if ($loadcode) {
+        my $load_code = sub {
+            my ($constructor, $event) = @_;
+            return $self->evaluate_code($event->{value});
+        };
+        my $load_code_blessed = sub {
+            my ($constructor, $event) = @_;
+            my $class = $event->{tag};
+            $class =~ s{^$perl_regex/code:}{};
+            my $sub = $self->evaluate_code($event->{value});
+            return $self->object($sub, $class);
+        };
         $schema->add_resolver(
             tag => "$_/code",
-            match => [ all => sub {
-                my ($constructor, $event) = @_;
-                return $self->evaluate_code($event->{value});
-            }],
+            match => [ all => $load_code],
             implicit => 0,
         ) for @perl_tags;
         $schema->add_resolver(
-            tag => qr{^$perl_regex/code:.*},
-            match => [ all => sub {
-                my ($constructor, $event) = @_;
-                my $class = $event->{tag};
-                $class =~ s{^$perl_regex/code:}{};
-                my $sub = $self->evaluate_code($event->{value});
-                return $self->object($sub, $class);
-            }],
+            tag => qr{^$perl_regex/code:$class_regex$},
+            match => [ all => $load_code_blessed ],
             implicit => 0,
         );
+        $schema->add_resolver(
+            tag => qr{^$perl_regex/code:.+},
+            match => [ all => $load_code ],
+            implicit => 0,
+        ) if $no_objects;
     }
     else {
+        my $loadcode_dummy = sub { return sub {} };
+        my $loadcode_blessed_dummy = sub {
+            my ($constructor, $event) = @_;
+            my $class = $event->{tag};
+            $class =~ s{^$perl_regex/code:}{};
+            return $self->object(sub {}, $class);
+        };
         $schema->add_resolver(
             tag => "$_/code",
-            match => [ all => sub {
-                return sub {};
-            }],
+            match => [ all => $loadcode_dummy ],
             implicit => 0,
         ) for @perl_tags;
         $schema->add_resolver(
-            tag => qr{^$perl_regex/code:.*},
-            match => [ all => sub {
-                my ($constructor, $event) = @_;
-                my $class = $event->{tag};
-                $class =~ s{^$perl_regex/code:}{};
-                return $self->object(sub {}, $class);
-            }],
+            tag => qr{^$perl_regex/code:$class_regex$},
+            match => [ all => $loadcode_blessed_dummy ],
             implicit => 0,
         );
+        $schema->add_resolver(
+            tag => qr{^$perl_regex/code:.+},
+            match => [ all => $loadcode_dummy ],
+            implicit => 0,
+        ) if $no_objects;
     }
 
+    my $load_regex = sub {
+        my ($constructor, $event) = @_;
+        return $self->construct_regex($event->{value});
+    };
+    my $load_regex_blessed = sub {
+        my ($constructor, $event) = @_;
+        my $class = $event->{tag};
+        $class =~ s{^$perl_regex/regexp:}{};
+        my $qr = $self->construct_regex($event->{value});
+        return $self->object($qr, $class);
+    };
     $schema->add_resolver(
         tag => "$_/regexp",
-        match => [ all => sub {
-            my ($constructor, $event) = @_;
-            return $self->construct_regex($event->{value});
-        }],
+        match => [ all => $load_regex ],
         implicit => 0,
     ) for @perl_tags;
     $schema->add_resolver(
-        tag => qr{^$perl_regex/regexp:.*},
-        match => [ all => sub {
-            my ($constructor, $event) = @_;
-            my $class = $event->{tag};
-            $class =~ s{^$perl_regex/regexp:}{};
-            my $qr = $self->construct_regex($event->{value});
-            return $self->object($qr, $class);
-        }],
+        tag => qr{^$perl_regex/regexp:$class_regex$},
+        match => [ all => $load_regex_blessed ],
         implicit => 0,
     );
+    $schema->add_resolver(
+        tag => qr{^$perl_regex/regexp:$class_regex$},
+        match => [ all => $load_regex ],
+        implicit => 0,
+    ) if $no_objects;
 
+    my $load_sequence = sub { return [] };
+    my $load_sequence_blessed = sub {
+        my ($constructor, $event) = @_;
+        my $class = $event->{tag};
+        $class =~ s{^$perl_regex/array:}{};
+        return $self->object([], $class);
+    };
     $schema->add_sequence_resolver(
         tag => "$_/array",
-        on_create => sub {
-            return [];
-        },
+        on_create => $load_sequence,
     ) for @perl_tags;
     $schema->add_sequence_resolver(
-        tag => qr{^$perl_regex/array:.*},
-        on_create => sub {
-            my ($constructor, $event) = @_;
-            my $class = $event->{tag};
-            $class =~ s{^$perl_regex/array:}{};
-            return $self->object([], $class);
-        },
+        tag => qr{^$perl_regex/array:$class_regex$},
+        on_create => $load_sequence_blessed,
     );
+    $schema->add_sequence_resolver(
+        tag => qr{^$perl_regex/array:.+$},
+        on_create => $load_sequence,
+    ) if $no_objects;
+
+    my $load_mapping = sub { return {} };
+    my $load_mapping_blessed = sub {
+        my ($constructor, $event) = @_;
+        my $class = $event->{tag};
+        $class =~ s{^$perl_regex/hash:}{};
+        return $self->object({}, $class);
+    };
     $schema->add_mapping_resolver(
         tag => "$_/hash",
-        on_create => sub {
-            return {};
-        },
+        on_create => $load_mapping,
     ) for @perl_tags;
     $schema->add_mapping_resolver(
-        tag => qr{^$perl_regex/hash:.*},
-        on_create => sub {
-            my ($constructor, $event) = @_;
-            my $class = $event->{tag};
-            $class =~ s{^$perl_regex/hash:}{};
-            return $self->object({}, $class);
-        },
+        tag => qr{^$perl_regex/hash:$class_regex$},
+        on_create => $load_mapping_blessed,
     );
+    $schema->add_mapping_resolver(
+        tag => qr{^$perl_regex/hash:.+$},
+        on_create => $load_mapping,
+    ) if $no_objects;
+
+    my $load_ref = sub {
+        my $value = undef;
+        return \$value;
+    };
+    my $load_ref_blessed = sub {
+        my ($constructor, $event) = @_;
+        my $class = $event->{tag};
+        $class =~ s{^$perl_regex/ref:}{};
+        my $value = undef;
+        return $self->object(\$value, $class);
+    };
     $schema->add_mapping_resolver(
         tag => "$_/ref",
-        on_create => sub {
-            my $value = undef;
-            return \$value;
-        },
+        on_create => $load_ref,
         on_data => sub {
             my ($constructor, $ref, $list) = @_;
             $$$ref = $self->construct_ref($list);
         },
     ) for @perl_tags;
     $schema->add_mapping_resolver(
-        tag => qr{^$perl_regex/ref:.*},
-        on_create => sub {
-            my ($constructor, $event) = @_;
-            my $class = $event->{tag};
-            $class =~ s{^$perl_regex/ref:}{};
-            my $value = undef;
-            return $self->object(\$value, $class);
-        },
+        tag => qr{^$perl_regex/ref:$class_regex$},
+        on_create => $load_ref_blessed,
         on_data => sub {
             my ($constructor, $ref, $list) = @_;
             $$$ref = $self->construct_ref($list);
         },
     );
+    $schema->add_mapping_resolver(
+        tag => qr{^$perl_regex/ref:.+$},
+        on_create => $load_ref,
+        on_data => sub {
+            my ($constructor, $ref, $list) = @_;
+            $$$ref = $self->construct_ref($list);
+        },
+    ) if $no_objects;
+
+    my $load_scalar_ref = sub {
+        my $value = undef;
+        return \$value;
+    };
+    my $load_scalar_ref_blessed = sub {
+        my ($constructor, $event) = @_;
+        my $class = $event->{tag};
+        $class =~ s{^$perl_regex/scalar:}{};
+        my $value = undef;
+        return $self->object(\$value, $class);
+    };
     $schema->add_mapping_resolver(
         tag => "$_/scalar",
-        on_create => sub {
-            my $value = undef;
-            return \$value;
-        },
+        on_create => $load_scalar_ref,
         on_data => sub {
             my ($constructor, $ref, $list) = @_;
             $$$ref = $self->construct_scalar($list);
         },
     ) for @perl_tags;
     $schema->add_mapping_resolver(
-        tag => qr{^$perl_regex/scalar:.*},
-        on_create => sub {
-            my ($constructor, $event) = @_;
-            my $class = $event->{tag};
-            $class =~ s{^$perl_regex/scalar:}{};
-            my $value = undef;
-            return $self->object(\$value, $class);
-        },
+        tag => qr{^$perl_regex/scalar:$class_regex$},
+        on_create => $load_scalar_ref_blessed,
         on_data => sub {
             my ($constructor, $ref, $list) = @_;
             $$$ref = $self->construct_scalar($list);
         },
     );
+    $schema->add_mapping_resolver(
+        tag => qr{^$perl_regex/scalar:.+$},
+        on_create => $load_scalar_ref,
+        on_data => sub {
+            my ($constructor, $ref, $list) = @_;
+            $$$ref = $self->construct_scalar($list);
+        },
+    ) if $no_objects;
 
     $schema->add_representer(
         scalarref => 1,
@@ -242,8 +320,12 @@ sub register {
         code => sub {
             my ($rep, $node) = @_;
             my $blessed = blessed $node->{value};
-            $node->{tag} = sprintf "$perl_tag/%s:%s",
-                lc($node->{reftype}), $blessed;
+            my $tag_blessed = ":$blessed";
+            if ($blessed !~ m/^$class_regex$/) {
+                $tag_blessed = '';
+            }
+            $node->{tag} = sprintf "$perl_tag/%s%s",
+                lc($node->{reftype}), $tag_blessed;
             if ($node->{reftype} eq 'HASH') {
                 $node->{data} = $node->{value};
             }
@@ -273,7 +355,7 @@ sub register {
                     and not defined ${ $node->{value} }
                     and $node->{value} =~ m/^\(\?/
                 ) {
-                    $node->{tag} = $perl_tag . '/regexp:' . $blessed;
+                    $node->{tag} = $perl_tag . '/regexp' . $tag_blessed;
                     $node->{data} = $self->represent_regex($node->{value});
                 }
                 else {
@@ -410,16 +492,16 @@ is loaded and an object is created, its C<DESTROY> method will be called
 when the object falls out of scope. L<File::Temp> is an example that can
 be exploitable and might remove arbitrary files.
 
-This code is pretty new and experimental. Typeglobs are not implemented
-yet. Dumping code references is on by default, but not loading (because
-that is easily exploitable since it's using string C<eval>).
+Typeglobs are not implemented yet. Dumping code references is on by default, but
+not loading (because that is easily exploitable since it's using string
+C<eval>).
 
-=head1 TAG STYLES
+=head2 Tag Styles
 
 You can define the style of tags you want to support:
 
     my $yp_perl_two_one = YAML::PP->new(
-        schema => [qw/ JSON Perl tag=!!perl+!perl /],
+        schema => [qw/ JSON Perl tags=!!perl+!perl /],
     );
 
 =over
@@ -449,9 +531,31 @@ L<YAML>.pm, L<YAML::Syck> and L<YAML::XS> are using C<!!perl/type> when dumping.
 L<YAML>.pm and L<YAML::Syck> are supporting both C<!perl/type> and
 C<!!perl/type> when loading. L<YAML::XS> currently only supports the latter.
 
+=head2 Allow only certain classes
+
+Since v0.017
+
+Blessing arbitrary objects can be dangerous.  Maybe you want to allow blessing
+only specific classes and ignore others.  For this you have to instantiate
+a Perl Schema object first and use the C<classes> option.
+
+Currently it only allows a list of strings:
+
+    my $perl = YAML::PP::Schema::Perl->new(
+        classes => ['Foo', 'Bar'],
+    );
+    my $yp = YAML::PP::Perl->new(
+        schema => [qw/ JSON /, $perl],
+    );
+
+Allowed classes will be loaded and dumped as usual. The others will be ignored.
+
+If you want to allow no objects at all, pass an empty array ref.
+
+
 =cut
 
-=head1 EXAMPLES
+=head2 EXAMPLES
 
 This is a list of the currently supported types and how they are dumped into
 YAML:
@@ -610,7 +714,9 @@ YAML:
 =item regexp
 
         # Code
-        qr{unblessed}
+        my $string = 'unblessed';
+        utf8::upgrade($string);
+        qr{$string}
 
 
         # YAML
@@ -620,7 +726,9 @@ YAML:
 =item regexp_blessed
 
         # Code
-        bless qr{blessed}, "Foo"
+        my $string = 'blessed';
+        utf8::upgrade($string);
+        bless qr{$string}, "Foo"
 
 
         # YAML
@@ -661,9 +769,42 @@ YAML:
 
 ### END EXAMPLE
 
-=head1 METHODS
+=head2 METHODS
 
 =over
+
+=item new
+
+    my $perl = YAML::PP::Schema::Perl->new(
+        tags => "!perl",
+        classes => ['MyClass'],
+        objects => 1,
+        loadcode => 1,
+    );
+
+The constructor recognizes the following options:
+
+=over
+
+=item tags
+
+Default: 'C<!perl>'
+
+See L<"Tag Styles">
+
+=item classes
+
+Default: C<undef>
+
+Since: v0.017
+
+Accepts an array ref of class names
+
+=item loadcode
+
+Default: 0
+
+=back
 
 =item register
 

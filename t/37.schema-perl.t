@@ -11,28 +11,34 @@ use YAML::PP::Perl;
 my $tests = require "$Bin/../examples/schema-perl.pm";
 
 my $yp_perl = YAML::PP::Perl->new(
-    schema => [qw/ JSON Perl tag=!perl /],
+    schema => [qw/ JSON Perl tags=!perl /],
+);
+my $yp_perl_no_objects = YAML::PP::Perl->new(
+    schema => [qw/ JSON Perl tags=!perl -objects /],
 );
 my $yp_loadcode = YAML::PP->new(
     schema => [qw/ JSON Perl +loadcode /],
 );
+my $yp_loadcode_no_objects = YAML::PP->new(
+    schema => [qw/ JSON Perl +loadcode -objects /],
+);
 my $yp_perl_two = YAML::PP::Perl->new(
-    schema => [qw/ JSON Perl tag=!!perl /],
+    schema => [qw/ JSON Perl tags=!!perl /],
 );
 my $yp_loadcode_two = YAML::PP->new(
-    schema => [qw/ JSON Perl tag=!!perl +loadcode /],
+    schema => [qw/ JSON Perl tags=!!perl +loadcode /],
 );
 my $yp_loadcode_one_two = YAML::PP->new(
-    schema => [qw/ JSON Perl tag=!!perl +loadcode =!+!! /],
+    schema => [qw/ JSON Perl tags=!perl+!!perl +loadcode /],
 );
 my $yp_loadcode_two_one = YAML::PP->new(
-    schema => [qw/ JSON Perl tag=!!perl +loadcode =!!+! /],
+    schema => [qw/ JSON Perl tags=!!perl+!perl +loadcode /],
 );
 my $yp_perl_one_two = YAML::PP::Perl->new(
-    schema => [qw/ JSON Perl tag=!perl+!!perl /],
+    schema => [qw/ JSON Perl tags=!perl+!!perl /],
 );
 my $yp_perl_two_one = YAML::PP::Perl->new(
-    schema => [qw/ JSON Perl tag=!!perl+!perl /],
+    schema => [qw/ JSON Perl tags=!!perl+!perl /],
 );
 
 my @tests = sort keys %$tests;
@@ -57,12 +63,14 @@ my @tests = sort keys %$tests;
 
 my %loaders_perl = (
     one => $yp_perl,
+    one_no_objects => $yp_perl_no_objects,
     two => $yp_perl_two,
     onetwo => $yp_perl_one_two,
     twoone => $yp_perl_two_one,
 );
 my %loaders_perl_code = (
     one => $yp_loadcode,
+    one_no_objects => $yp_loadcode_no_objects,
     two => $yp_loadcode_two,
     onetwo => $yp_loadcode_one_two,
     twoone => $yp_loadcode_two_one,
@@ -223,7 +231,7 @@ subtest invalid_ref => sub {
     }
 };
 
-{
+subtest array => sub {
     my $object = bless [qw/ a b /], "Foo";
     my $yaml_one_two = $yp_perl_one_two->dump_string($object);
     my $yaml_one_two_expected = <<'EOM';
@@ -247,6 +255,77 @@ EOM
     cmp_deeply($reload2, $object, "Reload 2");
     cmp_deeply($reload3, $object, "Reload 3");
     cmp_deeply($reload4, $object, "Reload 4");
-}
+};
+
+subtest no_objects => sub {
+    my $yaml = <<'EOM';
+---
+- !perl/array:Foo [a]
+- !perl/hash:Foo { a: 1 }
+- !perl/code:Foo "sub { return 23 }"
+- !perl/ref:Foo { = : { a: 1 } }
+- !perl/scalar:Foo { = : foo }
+- !perl/regexp:Foo foo
+EOM
+
+    my $perl = YAML::PP::Schema::Perl->new(
+        classes => [],
+    );
+    my $yp = YAML::PP::Perl->new(
+        schema => [qw/ JSON /, $perl],
+    );
+    my $data = $yp->load_string($yaml);
+    for my $i (0 .. $#$data) {
+        my $item = $data->[ $i ];
+        my $blessed = Scalar::Util::blessed($item) || '';
+        if ($blessed eq 'Regexp') {
+            ok(1, "Data $i not blessed");
+        }
+        else {
+            cmp_ok($blessed, 'eq', '', "Data $i not blessed");
+        }
+    }
+};
+
+subtest some_objects => sub {
+    my $yaml = <<'EOM';
+---
+- !perl/array:Foo [a]
+- !perl/hash:Foo { a: 1 }
+- !perl/code:Foo "sub { return 23 }"
+- !perl/ref:Foo { = : { a: 1 } }
+- !perl/scalar:Foo { = : foo }
+- !perl/regexp:Foo foo
+
+- !perl/array:Bar [a]
+- !perl/hash:Bar { a: 1 }
+- !perl/code:Bar "sub { return 23 }"
+- !perl/ref:Bar { = : { a: 1 } }
+- !perl/scalar:Bar { = : foo }
+- !perl/regexp:Bar foo
+EOM
+
+    my $perl = YAML::PP::Schema::Perl->new(
+        classes => ['Bar'],
+    );
+    my $yp = YAML::PP::Perl->new(
+        schema => [qw/ JSON /, $perl],
+    );
+    my $data = $yp->load_string($yaml);
+
+    for my $i (0 .. $#$data) {
+        my $item = $data->[ $i ];
+        my $blessed = Scalar::Util::blessed($item) || '';
+        if ($blessed eq 'Regexp') {
+            ok(1, "Data $i not blessed");
+        }
+        elsif ($i > 5) {
+            cmp_ok($blessed, 'eq', 'Bar', "Data $i blessed");
+        }
+        else {
+            cmp_ok($blessed, 'eq', '', "Data $i not blessed");
+        }
+    }
+};
 
 done_testing;
