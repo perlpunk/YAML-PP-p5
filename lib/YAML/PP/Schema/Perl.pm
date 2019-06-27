@@ -506,7 +506,7 @@ You can define the style of tags you want to support:
 
 =over
 
-=item C<!perl>
+=item C<!perl> (default)
 
 Only C<!perl/type> tags are supported.
 
@@ -778,7 +778,6 @@ YAML:
     my $perl = YAML::PP::Schema::Perl->new(
         tags => "!perl",
         classes => ['MyClass'],
-        objects => 1,
         loadcode => 1,
     );
 
