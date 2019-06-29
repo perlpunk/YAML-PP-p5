@@ -1,15 +1,9 @@
 Revision history for Perl module YAML::PP
 
-0.016_003 2019-06-27 19:19:57+02:00
-
-    - Allow to only bless specific classes for Perl Schema
-
-0.016_002 2019-06-26 19:01:59+02:00
+0.017 2019-06-29 14:34:17+02:00
 
     - Add Include plugin
-
-0.016_001 2019-05-30 18:55:09+02:00
-
+    - Allow to only bless specific classes for Perl Schema
     - YAML::PP accepts existing schema in constructor
     - subschema can be an object
     - Switch the order of 'equals' and regex tag resolvers
