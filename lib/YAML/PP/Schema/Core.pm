@@ -11,7 +11,7 @@ use YAML::PP::Schema::JSON qw/
 
 use B;
 
-use YAML::PP::Common qw/ YAML_PLAIN_SCALAR_STYLE YAML_QUOTED_SCALAR_STYLE /;
+use YAML::PP::Common qw/ YAML_PLAIN_SCALAR_STYLE /;
 
 my $RE_INT_CORE = qr{^([+-]?(?:[0-9]+))$};
 my $RE_FLOAT_CORE = qr{^([+-]?(?:\.[0-9]+|[0-9]+(?:\.[0-9]*)?)(?:[eE][+-]?[0-9]+)?)$};

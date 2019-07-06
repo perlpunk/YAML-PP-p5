@@ -8,7 +8,7 @@ use Scalar::Util qw/ reftype blessed refaddr /;
 
 use YAML::PP::Common qw/
     YAML_PLAIN_SCALAR_STYLE YAML_SINGLE_QUOTED_SCALAR_STYLE
-    YAML_DOUBLE_QUOTED_SCALAR_STYLE YAML_QUOTED_SCALAR_STYLE
+    YAML_DOUBLE_QUOTED_SCALAR_STYLE
     YAML_ANY_SCALAR_STYLE
     YAML_LITERAL_SCALAR_STYLE YAML_FOLDED_SCALAR_STYLE
     YAML_FLOW_SEQUENCE_STYLE YAML_FLOW_MAPPING_STYLE
@@ -92,7 +92,7 @@ sub represent_node_nonref {
             return 1 if $undef->($self, $node);
         }
         else {
-            $node->{style} = YAML_QUOTED_SCALAR_STYLE;
+            $node->{style} = YAML_SINGLE_QUOTED_SCALAR_STYLE;
             $node->{data} = '';
             return 1;
         }

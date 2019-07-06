@@ -12,7 +12,7 @@ our @EXPORT_OK = qw/
 
 use B;
 
-use YAML::PP::Common qw/ YAML_PLAIN_SCALAR_STYLE YAML_QUOTED_SCALAR_STYLE /;
+use YAML::PP::Common qw/ YAML_PLAIN_SCALAR_STYLE YAML_SINGLE_QUOTED_SCALAR_STYLE /;
 
 my $RE_INT = qr{^(-?(?:0|[1-9][0-9]*))$};
 my $RE_FLOAT = qr{^(-?(?:0|[1-9][0-9]*)(?:\.[0-9]*)?(?:[eE][+-]?[0-9]+)?)$};
@@ -99,7 +99,7 @@ sub represent_undef {
 
 sub represent_literal {
     my ($rep, $node) = @_;
-    $node->{style} = YAML_QUOTED_SCALAR_STYLE;
+    $node->{style} = YAML_SINGLE_QUOTED_SCALAR_STYLE;
     $node->{data} = "$node->{value}";
     return 1;
 }

@@ -9,7 +9,7 @@ use YAML::PP::Schema::JSON qw/
     represent_undef
 /;
 
-use YAML::PP::Common qw/ YAML_PLAIN_SCALAR_STYLE YAML_QUOTED_SCALAR_STYLE /;
+use YAML::PP::Common qw/ YAML_PLAIN_SCALAR_STYLE /;
 
 #https://yaml.org/type/bool.html
 # y|Y|yes|Yes|YES|n|N|no|No|NO
