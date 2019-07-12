@@ -1,0 +1,10 @@
+--- # Document 1
+doc one:
+  a: b
+--- # Document 2
+doc two:
+  c: d
+--- # Document 3
+doc three:
+  e: f
+

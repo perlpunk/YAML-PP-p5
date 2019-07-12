@@ -22,6 +22,7 @@ sub new {
     }
     my $allow_absolute = $args{allow_absolute} || 0;
     my $loader = $args{loader} || \&default_loader;
+    my $find_include = $args{find_include};
 
     my $self = bless {
         paths => $paths,
@@ -29,6 +30,7 @@ sub new {
         last_includes => [],
         cached => {},
         loader => $loader,
+        find_include => $find_include,
     }, $class;
     return $self;
 }
@@ -41,6 +43,7 @@ sub init {
 
 sub paths { $_[0]->{paths} }
 sub allow_absolute { $_[0]->{allow_absolute} }
+sub find_include { $_[0]->{find_include} }
 sub yp {
     my ($self, $yp) = @_;
     if (@_ == 2) {
@@ -66,10 +69,18 @@ sub include {
     my ($self, $constructor, $event) = @_;
     my $yp = $self->yp;
     my $search_paths = $self->paths;
-    my $allow_absolute = $self->allow_absolute;
+    my $find_include = $self->find_include;
 
-    my $relative = not @$search_paths;
-    if ($relative) {
+    my $relative = (not @$search_paths and not $find_include);
+
+    my $filename = $event->{value};
+
+    my $fullpath;
+    my @args;
+    if ($find_include) {
+        ($fullpath, @args) = $find_include->($self, $filename, $search_paths);
+    }
+    elsif ($relative) {
         my $last_includes = $self->{last_includes};
         if (@$last_includes) {
             $search_paths = [ $last_includes->[-1] ];
@@ -80,8 +91,36 @@ sub include {
             my $filename = $yp->loader->filename;
             $search_paths = [dirname $filename];
         }
+        $fullpath = $self->default_find_include($filename, $search_paths);
     }
-    my $filename = $event->{value};
+    else {
+        $fullpath = $self->default_find_include($filename, $search_paths);
+    }
+
+    if ($self->{cached}->{ $fullpath }++) {
+        croak "Circular include '$fullpath'";
+    }
+    if ($relative) {
+        push @{ $self->{last_includes} }, dirname $fullpath;
+    }
+
+    # We need a new object because we are still in the parsing and
+    # constructing process
+    my $clone = $yp->clone;
+    my ($data) = $self->loader->($clone, $fullpath, @args);
+
+    if ($relative) {
+        pop @{ $self->{last_includes} };
+    }
+    unless (--$self->{cached}->{ $fullpath }) {
+        delete $self->{cached}->{ $fullpath };
+    }
+    return $data;
+}
+
+sub default_find_include {
+    my ($self, $filename, $search_paths) = @_;
+    my $allow_absolute = $self->allow_absolute;
 
     my $fullpath;
     if (File::Spec->file_name_is_absolute($filename)) {
@@ -106,25 +145,7 @@ sub include {
         croak "File '$filename' not found" unless defined $fullpath;
     }
 
-    if ($self->{cached}->{ $fullpath }++) {
-        croak "Circular include '$fullpath'";
-    }
-    if ($relative) {
-        push @{ $self->{last_includes} }, dirname $fullpath;
-    }
-
-    # We need a new object because we are still in the parsing and
-    # constructing process
-    my $clone = $yp->clone;
-    my ($data) = $self->loader->($clone, $fullpath);
-
-    if ($relative) {
-        pop @{ $self->{last_includes} };
-    }
-    unless (--$self->{cached}->{ $fullpath }) {
-        delete $self->{cached}->{ $fullpath };
-    }
-    return $data;
+    return $fullpath;
 }
 
 sub loader {
@@ -238,7 +259,7 @@ It's possible to specify what to do with the included file:
 
     my $include = YAML::PP::Schema::Include->new(
         loader => sub {
-            my ($yp, $filename);
+            my ($yp, $filename) = @_;
             if ($filename =~ m/\.txt$/) {
                 # open file and just return text
             }
