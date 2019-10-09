@@ -22,6 +22,7 @@ sub new {
             boolean => 'perl',
         )
     };
+    my $limit = delete $args{limit};
 
     my $constructor = delete $args{constructor} || YAML::PP::Constructor->new(
         schemas => $schemas,
@@ -29,6 +30,7 @@ sub new {
         default_yaml_version => $default_yaml_version,
         preserve => $preserve,
         duplicate_keys => $duplicate_keys,
+        limit => $limit,
     );
     my $parser = delete $args{parser};
     unless ($parser) {
