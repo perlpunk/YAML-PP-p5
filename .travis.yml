@@ -15,6 +15,20 @@ perl:
 
 sudo: false             # faster builds as long as you don't need sudo access
 
+
+script:
+  - |
+    export PERL5LIB=$HOME/local/lib/perl5
+    PATH=$HOME/local/bin:$PATH
+    perl -v | grep 'v5.30'
+    if [[ $? -eq 0 ]]; then
+        echo "Testing with Devel::Cover"
+        PERL5OPT="-MDevel::Cover=-db,cover_db,-select,^lib,-ignore,^t/|bin/prove|^examples" prove -lr t
+        cover -report codecov
+    else
+      prove -lr t
+    fi
+
 before_install:
 
 # Travis branch-specific clone problem workaround:
@@ -22,3 +36,10 @@ before_install:
 - git fetch
 - git branch test-suite --track origin/test-suite
 - git worktree add test-suite test-suite
+
+- >
+  cpanm --quiet --notest --skip-satisfied -l $HOME/local
+  Devel::Cover::Report::Codecov
+  Test::Deep
+  Test::Warn
+
