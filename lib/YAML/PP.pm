@@ -236,17 +236,17 @@ YAML::PP is a modern, modular YAML processor.
 It aims to support C<YAML 1.2> and C<YAML 1.1>. See L<http://yaml.org/>.
 
 YAML is a serialization language. The YAML input is called "YAML Stream".
-A stream consists of one or more "Documents", seperated by a line with a
+A stream consists of one or more "Documents", separated by a line with a
 document start marker C<--->. A document optionally ends with the document
 end marker C<...>.
 
-This allows to process continuous streams additionally to a fixed input
+This allows one to process continuous streams additionally to a fixed input
 file or string.
 
 The YAML::PP frontend will currently load all documents, and return only
 the last if called with scalar context.
 
-The YAML backend is implemented in a modular way that allows to add
+The YAML backend is implemented in a modular way that allows one to add
 custom handling of YAML tags, perl objects and data types. The inner API
 is not yet stable. Suggestions welcome.
 
@@ -377,7 +377,7 @@ Still TODO:
     ---
     [ a, b, c ]: value
 
-=item Implicit mapping in flow syle sequences
+=item Implicit mapping in flow style sequences
 
     ---
     [ a, b, c: d ]
@@ -784,7 +784,7 @@ These projects are a big help for any developer. So I got the idea
 to write my own parser and started on New Year's Day 2017.
 Without the test suite and the editor I would have never started this.
 
-I also started another YAML Test project which allows to get a quick
+I also started another YAML Test project which allows one to get a quick
 overview of which frameworks support which YAML features:
 
 =over 4
@@ -798,13 +798,13 @@ overview of which frameworks support which YAML features:
 L<https://github.com/yaml/yaml-test-suite>
 
 It contains about 230 test cases and expected parsing events and more.
-There will be more tests coming. This test suite allows to write parsers
+There will be more tests coming. This test suite allows you to write parsers
 without turning the examples from the Specification into tests yourself.
 Also the examples aren't completely covering all cases - the test suite
 aims to do that.
 
-The suite contains .tml files, and in a seperate 'data' branch you will
-find the content in seperate files, if you can't or don't want to
+The suite contains .tml files, and in a separate 'data' branch you will
+find the content in separate files, if you can't or don't want to
 use TestML.
 
 Thanks also to Felix Krause, who is writing a YAML parser in Nim.
