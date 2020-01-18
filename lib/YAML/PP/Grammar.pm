@@ -1102,7 +1102,7 @@ __END__
 
 =head1 NAME
 
-YAML::PP::Grammar
+YAML::PP::Grammar - YAML grammar
 
 =head1 GRAMMAR
 
