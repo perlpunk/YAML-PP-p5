@@ -82,7 +82,7 @@ order in the sequence. Keys in mapping nodes earlier in the sequence override
 keys specified in later mapping nodes."
 
 The implementation of this in a generic way is not trivial, because we also
-have to handle duplicate keys, and YAML::PP allows to write your own
+have to handle duplicate keys, and YAML::PP allows you to write your own
 handler for processing mappings.
 
 So the inner API of that is not stable at this point.
