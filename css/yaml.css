@@ -1,0 +1,105 @@
+body {
+    font-family: Arial;
+}
+table.schema {
+    border: 1px solid #aaa;
+    border-collapse: collapse;
+    box-shadow: 2px 2px 4px 1px grey;
+}
+table.schema tr th, table.schema tr td, table.tag-resolution tr th, table.tag-resolution tr td {
+    border: 1px solid #aaa;
+    background-color: white;
+    padding: 2px 3px 2px 3px;
+}
+table.schema, table.tag-resolution {
+    border: 1px solid #aaa;
+    border-collapse: collapse;
+    box-shadow: 2px 2px 4px 1px grey;
+    margin: 5px;
+}
+table.tag-resolution tr td {
+    font-family: monospace;
+}
+table.schema tr th, table.tag-resolution tr th {
+    background-color: #ddd;
+}
+table.tag-resolution tr th.sub {
+    background-color: #ddddff;
+}
+table.schema tr:target th {
+    background-color: yellow;
+}
+table.schema tr th.code, table.schema tr td.code {
+    font-family: monospace;
+}
+table.schema tr:target td.input , table.schema tr:hover td.input {
+    background-color: yellow;
+}
+table.schema tr td.input a {
+    text-decoration: none;
+    color: black;
+}
+table.schema tr td.type-str {
+    color: #333;
+}
+table.schema tr:target td.type-str , table.schema tr:hover td.type-str {
+    background-color: yellow;
+}
+table.schema tr td.type-null {
+    background-color: #999;
+}
+table.schema tr:target td.type-null , table.schema tr:hover td.type-null {
+    background-color: #555;
+    color: white;
+}
+table.schema tr td.type-bool {
+    background-color: #ff77cc;
+}
+table.schema tr:target td.type-bool , table.schema tr:hover td.type-bool {
+    background-color: #ff55aa;
+}
+table.schema tr td.type-float {
+    background-color: #55eeff;
+    text-align: right;
+}
+table.schema tr:target td.type-float , table.schema tr:hover td.type-float {
+    background-color: #33ccff;
+}
+table.schema tr td.type-inf {
+    background-color: #99eeff;
+}
+table.schema tr:target td.type-inf , table.schema tr:hover td.type-inf {
+    background-color: #77ccff;
+}
+table.schema tr td.type-nan {
+    background-color: #cceeff;
+}
+table.schema tr:target td.type-nan , table.schema tr:hover td.type-nan {
+    background-color: #aaccff;
+}
+table.schema tr td.type-int {
+    background-color: #ff9900;
+    text-align: right;
+}
+table.schema tr:target td.type-int , table.schema tr:hover td.type-int {
+    background-color: #ff6600;
+}
+table.schema tr td.type-todo {
+    color: #4444ff;
+}
+table.schema tr:target td.type-todo , table.schema tr:hover td.type-todo {
+    background-color: yellow;
+}
+table.schema tr td.type-error {
+    color: red;
+}
+table.schema tr:target td.type-error , table.schema tr:hover td.type-error {
+    background-color: yellow;
+}
+table.schema tr td.input {
+    font-weight: bold;
+}
+table.schema tr td.border-left {
+    border-left: 3px solid #aaa;
+}
+

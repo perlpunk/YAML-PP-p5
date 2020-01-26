@@ -1,0 +1,88 @@
+<html>
+<head>
+<title>YAML Schemas in YAML::PP</title>
+<link rel="stylesheet" type="text/css" href="css/yaml.css">
+</head>
+<body>
+
+<a href="test-suite.html">YAML Test Suite Test Cases</a>
+| <a href="schema-examples.html">Schema examples</a>
+| <a href="schemas.html">Schema comparison</a>
+<hr>
+This is a comparison of the different YAML Schemas and how the Perl module
+YAML::PP implements them.
+
+
+<h3><a href="https://yaml.org/spec/1.2/spec.html#id2802346">YAML 1.2 Failsafe Schema</a></h3>
+
+<table class="tag-resolution">
+<tr><th>Regular expression</th><th>Resolved to tag</th></tr>
+<tr><td>/* Empty */</td><td>tag:yaml.org,2002:str</td></tr>
+<tr><td>.*</td><td>tag:yaml.org,2002:str (Default)</td></tr>
+</table>
+
+<h3><a href="https://yaml.org/spec/1.2/spec.html#id2803231">YAML 1.2 JSON Schema</a></h3>
+
+<table class="tag-resolution">
+<tr><th>Regular expression</th><th>Resolved to tag</th></tr>
+<tr><td>true | false</td><td>tag:yaml.org,2002:bool</td></tr>
+<tr><td>-? ( 0 | [1-9] [0-9]* )</td><td>tag:yaml.org,2002:int</td></tr>
+<tr><td>-? ( 0 | [1-9] [0-9]* ) ( \. [0-9]* )? ( [eE] [-+]? [0-9]+ )?</td><td>tag:yaml.org,2002:float</td></tr>
+<tr><td>null</td><td>tag:yaml.org,2002:null</td></tr>
+
+<tr><th colspan="2" class="sub">Official</th></tr>
+<tr><td>/* Empty */</td><td>Error</td></tr>
+<tr><td>.*</td><td>Error</td></tr>
+
+<tr><th colspan="2" class="sub">YAML::PP (option empty=str (default))</th></tr>
+<tr><td>/* Empty */</td><td>tag:yaml.org,2002:str</td></tr>
+<tr><td>.*</td><td>tag:yaml.org,2002:str (Default)</td></tr>
+
+<tr><th colspan="2" class="sub">YAML::PP (option empty=null)</th></tr>
+<tr><td>/* Empty */</td><td>tag:yaml.org,2002:null</td></tr>
+<tr><td>.*</td><td>tag:yaml.org,2002:str (Default)</td></tr>
+</table>
+
+<h3><a href="https://yaml.org/spec/1.2/spec.html#id2804923">YAML 1.2 Core Schema</a></h3>
+
+<table class="tag-resolution">
+<tr><th>Regular expression</th><th>Resolved to tag</th></tr>
+<tr><td>true | True | TRUE | false | False | FALSE</td><td>tag:yaml.org,2002:bool</td></tr>
+
+<tr><td>0o [0-7]+</td><td>tag:yaml.org,2002:int (Base 8)</td></tr>
+<tr><td>[-+]? [0-9]+</td><td>tag:yaml.org,2002:int (Base 10)</td></tr>
+<tr><td>0x [0-9a-fA-F]+</td><td>tag:yaml.org,2002:int (Base 16)</td></tr>
+<tr><td>[-+]? ( \. [0-9]+ | [0-9]+ ( \. [0-9]* )? ) ( [eE] [-+]? [0-9]+ )?</td><td>tag:yaml.org,2002:float (Number)</td></tr>
+
+<tr><td>[-+]? \. ( inf | Inf | INF )</td><td>tag:yaml.org,2002:float (Infinity)</td></tr>
+<tr><td>\. ( nan | NaN |NAN )</td><td>tag:yaml.org,2002:float (Not a number)</td></tr>
+<tr><td>null | Null | NULL | ~</td><td>tag:yaml.org,2002:null</td></tr>
+<tr><td>/* Empty */</td><td>tag:yaml.org,2002:null</td></tr>
+<tr><td>.*</td><td>tag:yaml.org,2002:str (Default)</td></tr>
+</table>
+
+<h3><a href="https://yaml.org/type/">YAML 1.1 Types</a></h3>
+
+<table class="tag-resolution">
+<tr><th>Regular expression</th><th>Resolved to tag</th></tr>
+<tr><td>y|Y|yes|Yes|YES|n|N|no|No|NO|true|True|TRUE|false|False|FALSE|on|On|ON|off|Off|OFF</td><td>tag:yaml.org,2002:bool</td></tr>
+
+<tr><td>[-+]? 0b [0-1_]+</td><td>tag:yaml.org,2002:int (Base 2)</td></tr>
+<tr><td>[-+]? 0 [0-7_]+</td><td>tag:yaml.org,2002:int (Base 8)</td></tr>
+<tr><td>[-+]? ( 0 | [1-9] [0-9_]* )</td><td>tag:yaml.org,2002:int (Base 10)</td></tr>
+<tr><td>[-+]? 0x [0-9a-fA-F_]+</td><td>tag:yaml.org,2002:int (Base 16)</td></tr>
+<tr><td>[-+]? [1-9] [0-9_]* ( : [0-5]? [0-9] )+</td><td>tag:yaml.org,2002:int (Base 60)</td></tr>
+
+<tr><td>[-+]? ( [0-9] [0-9_]* )? \. [0-9.]* ( [eE] [-+] [0-9]+ )?</td><td>tag:yaml.org,2002:float (Base 10)</td></tr>
+<tr><td>[-+]? [0-9] [0-9_]* ( : [0-5]? [0-9] )+ \. [0-9_ ]*</td><td>tag:yaml.org,2002:float (Base 60)</td></tr>
+<tr><td>[-+]? \. ( inf | Inf | INF )</td><td>tag:yaml.org,2002:float (Infinity)</td></tr>
+<tr><td>\. ( nan | NaN |NAN )</td><td>tag:yaml.org,2002:float (Not a number)</td></tr>
+
+<tr><td>null | Null | NULL | ~</td><td>tag:yaml.org,2002:null</td></tr>
+<tr><td>/* Empty */</td><td>tag:yaml.org,2002:null</td></tr>
+<tr><td>.*</td><td>tag:yaml.org,2002:str (Default)</td></tr>
+</table>
+
+There are more types not listed here for YAML 1.1 (like '!!timestamp', '!!binary', '!!merge').
+
+</body></html>
