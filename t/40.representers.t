@@ -25,7 +25,7 @@ use YAML::PP;
 
     my $yaml = $parser->dump_string($data);
     like($yaml, qr/o1: !Class1/, 'o1s\' class has a representer that converts it to a tag');
-    like($yaml, qr/o2:\n  \{\}/, 'o2s\' class doesn\'t have a representer. It gets converted to an empty hash');
+    like($yaml, qr/o2: \{\}/, 'o2s\' class doesn\'t have a representer. It gets converted to an empty hash');
 }
 
 {

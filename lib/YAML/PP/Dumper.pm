@@ -138,6 +138,10 @@ sub emit_node {
     }
     if ($type eq 'mapping') {
         my $style = YAML_BLOCK_MAPPING_STYLE;
+        # TODO
+        if ($node->{items} and @{ $node->{items} } == 0) {
+#            $style = YAML_FLOW_MAPPING_STYLE;
+        }
         $self->emitter->mapping_start_event({
             anchor => $node->{anchor},
             style => $style,
@@ -151,6 +155,9 @@ sub emit_node {
     }
     if ($type eq 'sequence') {
         my $style = YAML_BLOCK_SEQUENCE_STYLE;
+        if (@{ $node->{items} } == 0) {
+#            $style = YAML_FLOW_SEQUENCE_STYLE;
+        }
         $self->emitter->sequence_start_event({
             anchor => $node->{anchor},
             style => $style,

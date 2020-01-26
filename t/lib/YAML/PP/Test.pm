@@ -698,6 +698,9 @@ sub compare_emit_yaml {
                 push @{ $stats->{SAME_YAML} }, $id;
             }
             else {
+                local $Data::Dumper::Useqq = 1;
+                diag('    ' . Data::Dumper->Dump([$emit_yaml], ['emit_yaml']));
+                diag(Data::Dumper->Dump([$exp_emit_yaml], ['exp_emit_yaml']));
                 push @{ $stats->{DIFF_YAML} }, $id;
             }
         }

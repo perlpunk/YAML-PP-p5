@@ -48,7 +48,7 @@ for my $event (@events) {
     my $type = $event->{name};
     my $str = YAML::PP::Common::event_to_test_suite($event);
     print "$str\n" if $verbose;
-    if ($type eq 'sequence_start_event' or $type eq 'mapping_end_event') {
+    if ($type eq 'sequence_start_event' or $type eq 'mapping_start_event') {
         delete $event->{style};
     }
     $emitter->$type($event);

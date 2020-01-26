@@ -68,11 +68,9 @@ my $exp = <<'EOM';
   - *map
 - *map : foo
   *map : foo
-- ? !!seq
-    []
+- ? !!seq []
   : *map
-- ? !!map
-    {}
+- ? !!map {}
   : *map
 EOM
 cmp_ok($yaml, 'eq', $exp, "alias_event correct");

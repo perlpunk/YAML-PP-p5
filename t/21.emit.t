@@ -56,6 +56,7 @@ push @skip, qw/
 
 R4YG
 /;
+
 # test
 push @skip, qw/
 XLQ9
@@ -68,6 +69,10 @@ MJS9
 
 
 /;
+# TODO fix testsuite
+# EXG3
+# 4QFQ
+
 # unicode
 push @skip, qw/
 H3Z8
@@ -82,20 +87,20 @@ my $testsuite = YAML::PP::Test->new(
 );
 
 my %skip_yaml_equal = (
-    '4MUZ' => 1,
-    '7ZZ5' => 1,
+
     'K858' => 1,
     'X38W' => 1,
-    'Q5MG' => 1,
     'G4RS' => 1,
-    '9DXL' => 1,
-    '6ZKB' => 1,
-    '6SLA' => 1,
     '6CK3' => 1,
     '5TYM' => 1,
     '565N' => 1,
+    # fix testsuite
+    '4MUZ' => 1,
     '8KB6' => 1,
     '9BXH' => 1,
+    '6ZKB' => 1,
+    '6SLA' => 1,
+    '9DXL' => 1,
 );
 
 my ($testcases) = $testsuite->read_tests(
