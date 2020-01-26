@@ -16,7 +16,7 @@ use JSON::XS ();
 use Encode;
 
 chomp(my $version = qx{git describe --dirty});
-my $yaml_test_suite = 'yaml-test-suite';
+my $yaml_test_suite = 'test-suite/yaml-test-suite-data/';
 my @dirs = grep { m{/[0-9A-Z]{4}$} } map { "$_" } io->dir($yaml_test_suite)->all;
 my @valid = grep { not -f "$_/error" } @dirs;
 my @invalid = grep { -f "$_/error" } @dirs;
@@ -217,7 +217,7 @@ sub highlight_test {
         "Doc " . ($_+1) . ': ' . $coder->encode( $docs[ $_ ] );
     } 0 .. $#docs;
 
-    my $yppd = YAML::PP::Dumper->new( bool => 'JSON::PP' );
+    my $yppd = YAML::PP->new( boolean => 'JSON::PP' );
     my $yaml_dump = $yppd->dump_string(@docs);
 
     my @reload_docs = $ypp->load_string($yaml_dump);

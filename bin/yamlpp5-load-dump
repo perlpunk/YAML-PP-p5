@@ -15,8 +15,7 @@ unless ($file) {
 }
 
 my $ypp = YAML::PP->new(boolean => 'JSON::PP');
-my $yppd = YAML::PP::Dumper->new;
 my @docs = $file ? $ypp->load_file($file) : $ypp->load_string($yaml);
-my $out_yaml = $yppd->dump_string(@docs);
+my $out_yaml = $ypp->dump_string(@docs);
 
 print encode_utf8 $out_yaml;

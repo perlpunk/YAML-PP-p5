@@ -609,6 +609,12 @@ sub fetch_quoted {
 
         unless ($start) {
             $next_line = $self->fetch_next_line or do {
+                    for (my $i = 0; $i < @tokens; $i+= 3) {
+                        my $token = $tokens[ $i + 1 ];
+                        if (ref $token) {
+                            $tokens[ $i + 1 ] = $token->{orig};
+                        }
+                    }
                     $self->push_tokens(\@tokens);
                     $self->exception("Missing closing quote <$context> at EOF");
                 };
@@ -623,10 +629,22 @@ sub fetch_quoted {
                 next;
             }
             elsif (not $spaces and $$yaml =~ m/\A(---|\.\.\.)(?=$RE_WS|\z)/) {
+                    for (my $i = 0; $i < @tokens; $i+= 3) {
+                        my $token = $tokens[ $i + 1 ];
+                        if (ref $token) {
+                            $tokens[ $i + 1 ] = $token->{orig};
+                        }
+                    }
                 $self->push_tokens(\@tokens);
                 $self->exception("Missing closing quote <$context> or invalid document marker");
             }
             elsif ((length $spaces) < $indent) {
+                for (my $i = 0; $i < @tokens; $i+= 3) {
+                    my $token = $tokens[ $i + 1 ];
+                    if (ref $token) {
+                        $tokens[ $i + 1 ] = $token->{orig};
+                    }
+                }
                 $self->push_tokens(\@tokens);
                 $self->exception("Wrong indendation or missing closing quote <$context>");
             }
@@ -709,7 +727,7 @@ sub _read_quoted_tokens {
         return $value;
     }
     if (length $$yaml) {
-        push @$tokens, ( $token_name . 'D' => $value, $self->line );
+        push @$tokens, ( $token_name . 'D' => $value->{orig}, $self->line );
         $self->push_tokens($tokens);
         $self->exception("Invalid quoted <$first> string");
     }
