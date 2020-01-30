@@ -96,7 +96,7 @@ sub default_schema {
     my $schema = YAML::PP::Schema->new(
         boolean => $args{boolean},
     );
-    $schema->load_subschemas(qw/ JSON /);
+    $schema->load_subschemas(qw/ Core /);
     return $schema;
 }
 
@@ -268,11 +268,11 @@ One of the three YAML 1.2 official schemas
 
 =item L<YAML::PP::Schema::JSON>
 
-One of the three YAML 1.2 official schemas. Default
+One of the three YAML 1.2 official schemas.
 
 =item L<YAML::PP::Schema::Core>
 
-One of the three YAML 1.2 official schemas
+One of the three YAML 1.2 official schemas. Default
 
 =item L<YAML::PP::Schema::YAML1_1>
 
@@ -422,7 +422,7 @@ C<t/31.schema.t>.
 You can choose the Schema, however, the API for that is not yet fixed.
 Currently it looks like this:
 
-    my $ypp = YAML::PP->new(schema => ['Core']); # default is 'JSON'
+    my $ypp = YAML::PP->new(schema => ['JSON']); # default is 'Core'
 
 The Tags C<!!seq> and C<!!map> are still ignored for now.
 

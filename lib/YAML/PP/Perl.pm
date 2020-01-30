@@ -13,7 +13,7 @@ use YAML::PP::Schema::Perl;
 
 sub new {
     my ($class, %args) = @_;
-    $args{schema} ||= [qw/ JSON Perl /];
+    $args{schema} ||= [qw/ Core Perl /];
     $class->SUPER::new(%args);
 }
 
@@ -57,13 +57,13 @@ YAML::PP::Perl - Convenience module for loading and dumping Perl objects
 
     # same as
     use YAML::PP;
-    my $yp = YAML::PP->new( schema => [qw/ JSON Perl /] );
+    my $yp = YAML::PP->new( schema => [qw/ Core Perl /] );
     my @docs = $yp->load_string($yaml);
 
 =head1 DESCRIPTION
 
 This is just for convenience. It will create a YAML::PP object using the
-default schema (C<JSON>) and the L<YAML::PP::Schema::Perl> schema.
+default schema (C<Core>) and the L<YAML::PP::Schema::Perl> schema.
 
 See L<YAML::PP::Schema::Perl> for documentation.
 
