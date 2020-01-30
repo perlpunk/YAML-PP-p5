@@ -584,6 +584,10 @@ Input should be Unicode characters.
 So if you read from a file, you should decode it, for example with
 C<Encode::decode_utf8($bytes)>.
 
+Note that in scalar context, C<load_string> and C<load_file> return the first
+document (like L<YAML::Syck>), while L<YAML> and L<YAML::XS> return the
+last.
+
 =item load_file
 
     my $doc = $ypp->load_file("file.yaml");
@@ -647,6 +651,10 @@ Creates and returns the default schema
 The functions C<Load>, C<LoadFile>, C<Dump> and C<DumpFile> are provided
 as a drop-in replacement for other existing YAML processors.
 No function is exported by default.
+
+Note that in scalar context, C<Load> and C<LoadFile> return the first
+document (like L<YAML::Syck>), while L<YAML> and L<YAML::XS> return the
+last.
 
 =over
 
