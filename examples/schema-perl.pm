@@ -75,7 +75,6 @@ EOM
     regexp => [
         <<'EOM',
         my $string = 'unblessed';
-        utf8::upgrade($string);
         qr{$string}
 EOM
         <<"EOM",
@@ -88,7 +87,6 @@ EOM
     regexp_blessed => [
         <<'EOM',
         my $string = 'blessed';
-        utf8::upgrade($string);
         bless qr{$string}, "Foo"
 EOM
         <<"EOM",

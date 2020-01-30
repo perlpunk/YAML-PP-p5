@@ -335,13 +335,45 @@ my %control = (
     "\x1d" => '\x1d',
     "\x1e" => '\x1e',
     "\x1f" => '\x1f',
+    "\x7f" => '\x7f',
+    "\x80" => '\x80',
+    "\x81" => '\x81',
+    "\x82" => '\x82',
+    "\x83" => '\x83',
+    "\x84" => '\x84',
+    "\x86" => '\x86',
+    "\x87" => '\x87',
+    "\x88" => '\x88',
+    "\x89" => '\x89',
+    "\x8a" => '\x8a',
+    "\x8b" => '\x8b',
+    "\x8c" => '\x8c',
+    "\x8d" => '\x8d',
+    "\x8e" => '\x8e',
+    "\x8f" => '\x8f',
+    "\x90" => '\x90',
+    "\x91" => '\x91',
+    "\x92" => '\x92',
+    "\x93" => '\x93',
+    "\x94" => '\x94',
+    "\x95" => '\x95',
+    "\x96" => '\x96',
+    "\x97" => '\x97',
+    "\x98" => '\x98',
+    "\x99" => '\x99',
+    "\x9a" => '\x9a',
+    "\x9b" => '\x9b',
+    "\x9c" => '\x9c',
+    "\x9d" => '\x9d',
+    "\x9e" => '\x9e',
+    "\x9f" => '\x9f',
     "\x{2029}" => '\P',
     "\x{2028}" => '\L',
     "\x85" => '\N',
     "\xa0" => '\_',
 );
 
-my $control_re = '\x00-\x08\x0b\x0c\x0e-\x1f\x{2029}\x{2028}\x85\xa0';
+my $control_re = '\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x84\x86-\x9f\x{d800}-\x{dfff}\x{fffe}\x{ffff}\x{2028}\x{2029}\x85\xa0';
 my %to_escape = (
     "\n" => '\n',
     "\t" => '\t',
@@ -361,9 +393,6 @@ sub scalar_event {
     my $last = $stack->[-1];
     my $indent = $last->{indent};
     my $value = $info->{value};
-    unless (utf8::is_utf8($value)) {
-        utf8::upgrade($value);
-    }
 
     my $props = '';
     my $anchor = $info->{anchor};
@@ -506,7 +535,7 @@ sub scalar_event {
         }
     }
     else {
-        $value =~ s/([$escape_re"\\])/$to_escape{ $1 }/g;
+        $value =~ s/([$escape_re"\\])/$to_escape{ $1 } || sprintf '\\u%04x', ord($1)/eg;
         $value = '"' . $value . '"';
     }
 

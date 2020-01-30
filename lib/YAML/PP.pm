@@ -579,14 +579,17 @@ The layout is like libyaml output:
     my $doc = $ypp->load_string("foo: bar");
     my @docs = $ypp->load_string("foo: bar\n---\n- a");
 
-Input should be Unicode characters (decoded).
+Input should be Unicode characters.
+
+So if you read from a file, you should decode it, for example with
+C<Encode::decode_utf8($bytes)>.
 
 =item load_file
 
     my $doc = $ypp->load_file("file.yaml");
     my @docs = $ypp->load_file("file.yaml");
 
-Strings will be loaded as unicode characters (decoded).
+Strings will be loaded as unicode characters.
 
 =item dump_string
 
@@ -594,10 +597,13 @@ Strings will be loaded as unicode characters (decoded).
     my $yaml = $ypp->dump_string($doc1, $doc2);
     my $yaml = $ypp->dump_string(@docs);
 
-Input strings should be Unicode characters. If not, they will be upgraded with
+Input strings should be Unicode characters.
 C<utf8::upgrade>.
 
-Output will return Unicode characters (decoded).
+Output will return Unicode characters.
+
+So if you want to write that to a file (or pass to YAML::XS, for example),
+you typically encode it via C<Encode::encode_utf8($yaml)>.
 
 =item dump_file
 
@@ -605,8 +611,7 @@ Output will return Unicode characters (decoded).
     $ypp->dump_file("file.yaml", $doc1, $doc2);
     $ypp->dump_file("file.yaml", @docs);
 
-Input data should be UTF-8 decoded. If not, it will be upgraded with
-C<utf8::upgrade>.
+Input data should be Unicode characters.
 
 =item dump
 

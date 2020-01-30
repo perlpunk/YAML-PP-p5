@@ -59,35 +59,38 @@ my @tests = (
     [binary => "\xE0\x83\xBF"],
     [binary => "\xF0\x80\x83\xBF"],
     [binary => "\xF0\x80\xA3\x80"],
-    [binary => $gif,],
+    [binary => [$gif, decode_utf8("ä")],],
+    [binary => [$gif, 'foo'],],
 );
 
 subtest roundtrip => sub {
     for my $item (@tests) {
         select undef, undef, undef, 0.1;
-        my ($type, $string) = @$item;
+        my ($type, $data) = @$item;
         local $Data::Dumper::Useqq = 1;
-        my $label = Data::Dumper->Dump([$string], ['string']);
+        my $label = Data::Dumper->Dump([$data], ['data']);
         chomp $label;
         note("\n\n\n=============== $type: $label");
-        my $dump = $yp->dump_string($string);
+        my $dump = $yp->dump_string($data);
+        #note("========= YAML:\n$dump");
         my $reload = $yp->load_string($dump);
-        if ($type eq 'binary') {
-            if (utf8::is_utf8($reload)) {
-                utf8::downgrade($reload);
-            }
+        if (ref $reload eq 'ARRAY') {
+            cmp_ok($reload->[0], 'eq', $data->[0], "Reload binary->[0] ok ($label)");
+            cmp_ok($reload->[1], 'eq', $data->[1], "Reload binary->[1] ok ($label)");
         }
-        cmp_ok($reload, 'eq', $string, "Reload binary ok ($label)");
+        else {
+            cmp_ok($reload, 'eq', $data, "Reload binary ok ($label)");
+        }
     }
 };
 
 subtest roundtrip_binary => sub {
     for my $item (@tests) {
-        my ($type, $string) = @$item;
+        my ($type, $data) = @$item;
         local $Data::Dumper::Useqq = 1;
-        my $label = Data::Dumper->Dump([$string], ['string']);
+        my $label = Data::Dumper->Dump([$data], ['data']);
         note("=============== $type: $label");
-        my $dump = $yp_binary->dump_string($string);
+        my $dump = $yp_binary->dump_string($data);
         if ($type eq 'binary') {
             like($dump, qr{!!binary}, "Output YAML contains !!binary");
         }
@@ -95,7 +98,13 @@ subtest roundtrip_binary => sub {
             unlike($dump, qr{!!binary}, "Output YAML does not contain !!binary");
         }
         my $reload = $yp_binary->load_string($dump);
-        cmp_ok($reload, 'eq', $string, "Reload binary ok ($label)");
+        if (ref $reload eq 'ARRAY') {
+            cmp_ok($reload->[0], 'eq', $data->[0], "Reload binary->[0] ok ($label)");
+            cmp_ok($reload->[1], 'eq', $data->[1], "Reload binary->[1] ok ($label)");
+        }
+        else {
+            cmp_ok($reload, 'eq', $data, "Reload binary ok ($label)");
+        }
     }
 };
 

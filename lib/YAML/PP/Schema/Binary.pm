@@ -63,22 +63,31 @@ YAML::PP::Schema::Binary - Schema for loading and binary data
     my $yp = YAML::PP->new( schema => [qw/ JSON Binary /] );
     # or
 
-    my $binary = $yp->load_string(<<'EOM');
-    # The binary value a tiny arrow encoded as a gif image.
+    my ($binary, $same_binary) = $yp->load_string(<<'EOM');
     --- !!binary "\
       R0lGODlhDAAMAIQAAP//9/X17unp5WZmZgAAAOfn515eXvPz7Y6OjuDg4J+fn5\
       OTk6enp56enmlpaWNjY6Ojo4SEhP/++f/++f/++f/++f/++f/++f/++f/++f/+\
       +f/++f/++f/++f/++f/++SH+Dk1hZGUgd2l0aCBHSU1QACwAAAAADAAMAAAFLC\
       AgjoEwnuNAFOhpEMTRiggcz4BNJHrv/zCFcLiwMWYNG84BwwEeECcgggoBADs="
+    --- !!binary |
+      R0lGODlhDAAMAIQAAP//9/X17unp5WZmZgAAAOfn515eXvPz7Y6OjuDg4J+fn5
+      OTk6enp56enmlpaWNjY6Ojo4SEhP/++f/++f/++f/++f/++f/++f/++f/++f/+
+      +f/++f/++f/++f/++f/++SH+Dk1hZGUgd2l0aCBHSU1QACwAAAAADAAMAAAFLC
+      AgjoEwnuNAFOhpEMTRiggcz4BNJHrv/zCFcLiwMWYNG84BwwEeECcgggoBADs=
+    # The binary value above is a tiny arrow encoded as a gif image.
     EOM
 
 =head1 DESCRIPTION
 
+See <https://yaml.org/type/binary.html>
+
 By prepending a base64 encoded binary string with the C<!!binary> tag, it can
 be automatically decoded when loading.
 
-If you are using this schema, any string containing C<[\x{7F}-\x{10FFFF}]>
-will be dumped as binary. That also includes encoded utf8.
+Note that the logic for dumping is probably broken, see
+L<https://github.com/perlpunk/YAML-PP-p5/issues/28>.
+
+Suggestions welcome.
 
 =head1 METHODS
 

@@ -715,7 +715,6 @@ YAML:
 
         # Code
         my $string = 'unblessed';
-        utf8::upgrade($string);
         qr{$string}
 
 
@@ -727,7 +726,6 @@ YAML:
 
         # Code
         my $string = 'blessed';
-        utf8::upgrade($string);
         bless qr{$string}, "Foo"
 
 
