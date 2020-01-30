@@ -15,7 +15,7 @@ failsafe:
 - ['str', '!!str #empty', '', "''"]
 
 json:
-- ['str', '#empty', '', "''"]
+- ['null', '#empty', 'null()', "null"]
 - ['str', '!!str #empty', '', "''"]
 
 

@@ -33,7 +33,7 @@ sub register {
     $schema->add_resolver(
         tag => 'tag:yaml.org,2002:null',
         match => [ equals => '' => undef ],
-        implicit => 0,
+        implicit => 1,
     );
     $schema->add_resolver(
         tag => 'tag:yaml.org,2002:bool',
