@@ -244,7 +244,7 @@ This allows one to process continuous streams additionally to a fixed input
 file or string.
 
 The YAML::PP frontend will currently load all documents, and return only
-the last if called with scalar context.
+the first if called with scalar context.
 
 The YAML backend is implemented in a modular way that allows one to add
 custom handling of YAML tags, perl objects and data types. The inner API

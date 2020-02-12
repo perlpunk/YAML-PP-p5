@@ -123,10 +123,15 @@ YAML::PP::Schema::Core - YAML 1.2 Core Schema
 
 =head1 DESCRIPTION
 
-This schema loads additional values to the JSON schema as special types, for
+This schema is the official recommended Core Schema for YAML 1.2.
+It loads additional values to the JSON schema as special types, for
 example C<TRUE> and C<True> additional to C<true>.
 
+Official Schwma:
 L<https://yaml.org/spec/1.2/spec.html#id2804923>
+
+Here you can see all Schemas and examples implemented by YAML::PP:
+L<https://perlpunk.github.io/YAML-PP-p5/schemas.html>
 
 =head1 METHODS
 

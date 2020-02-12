@@ -184,6 +184,8 @@ YAML::PP::Schema::JSON - YAML 1.2 JSON Schema
 =head1 SYNOPSIS
 
     my $yp = YAML::PP->new( schema => ['JSON'] );
+    my $yp = YAML::PP->new( schema => [qw/ JSON empty=str /] );
+    my $yp = YAML::PP->new( schema => [qw/ JSON empty=null /] );
 
 =head1 DESCRIPTION
 
@@ -191,7 +193,43 @@ With this schema, the resolution of plain values will work like in JSON.
 Everything that matches a special value will be loaded as such, other plain
 scalars will be loaded as strings.
 
-L<https://yaml.org/spec/1.2/spec.html#id2803231>
+Note that this is different from the official YAML 1.2 JSON Schema, where all
+strings have to be quoted.
+
+Here you can see all Schemas and examples implemented by YAML::PP:
+L<https://perlpunk.github.io/YAML-PP-p5/schemas.html>
+
+Official Schwma: L<https://yaml.org/spec/1.2/spec.html#id2803231>
+
+=head1 CONFIGURATION
+
+The official YAML 1.2 JSON Schema wants all strings to be quoted.
+YAML::PP currently does not require that (it might do this optionally in
+the future).
+
+That means, there are no empty nodes allowed in the official schema. Example:
+
+    ---
+    key:
+
+The default behaviour of YAML::PP::Schema::JSON is to return an empty string,
+so it would be equivalent to:
+
+    ---
+    key: ''
+
+You can configure it to resolve this as C<undef>:
+
+    my $yp = YAML::PP->new( schema => [qw/ JSON empty=null /] );
+
+This way it is equivalent to:
+
+    ---
+    key: null
+
+The default is:
+
+    my $yp = YAML::PP->new( schema => [qw/ JSON empty=str /] );
 
 =head1 METHODS
 
