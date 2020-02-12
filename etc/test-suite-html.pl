@@ -100,6 +100,9 @@ pre.diff {
 </style>
 </head>
 <body>
+<a href="test-suite.html">YAML Test Suite Test Cases</a>
+| <a href="schema-examples.html">Schema examples</a>
+| <a href="schemas.html">Schema comparison</a><hr>
 Generated with YAML::PP $version<br>
 <a href="#valid">Valid (@{[ scalar @valid ]})</a><br>
 <a href="#invalid">Invalid (@{[ scalar @invalid ]})</a><br>
@@ -107,6 +110,7 @@ EOM
 
 my $ypp = YAML::PP->new(
     boolean => 'JSON::PP',
+    schema => [qw/ Core /],
 );
 my $table;
 for my $dir (sort @valid) {

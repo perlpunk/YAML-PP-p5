@@ -115,7 +115,7 @@ for my $schema_names (sort keys %$schema_data) {
                 }
 
                 unless ($func) {
-                    cmp_ok($data, 'eq', $def{data}, "$label eq '$def{data}'");
+                    cmp_ok($data, '==', $def{data}, "$label eq '$def{data}'");
                 }
             }
             elsif ($type eq 'bool' or $type eq 'null') {
