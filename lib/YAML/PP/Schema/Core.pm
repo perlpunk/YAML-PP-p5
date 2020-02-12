@@ -56,7 +56,7 @@ sub register {
     $schema->add_resolver(
         tag => 'tag:yaml.org,2002:float',
         match => [ equals => $_ => 0 + "inf" ],
-    ) for (qw/ .inf .Inf .INF /);
+    ) for (qw/ .inf .Inf .INF +.inf +.Inf +.INF /);
     $schema->add_resolver(
         tag => 'tag:yaml.org,2002:float',
         match => [ equals => $_ => 0 - "inf" ],
@@ -88,7 +88,7 @@ sub register {
         code => \&represent_literal,
     ) for ("", qw/
         true TRUE True false FALSE False null NULL Null ~
-        .inf .Inf .INF -.inf -.Inf -.INF .nan .NaN .NAN
+        .inf .Inf .INF +.inf +.Inf +.INF -.inf -.Inf -.INF .nan .NaN .NAN
     /);
     $schema->add_representer(
         regex => qr{$RE_INT_CORE|$RE_FLOAT_CORE|$RE_INT_OCTAL|$RE_INT_HEX},
