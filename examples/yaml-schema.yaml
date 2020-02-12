@@ -20,6 +20,10 @@ failsafe:
 - ['str', '3.3e+3', '3.3e+3', '3.3e+3']
 
 json:
+- ['str', '#empty', '', "''"]
+- ['str', '!!str #empty', '', "''"]
+
+json_empty_null:
 - ['null', '#empty', 'null()', "null"]
 - ['str', '!!str #empty', '', "''"]
 
@@ -173,7 +177,6 @@ failsafe, json, yaml11:
 - ['float', '3.3e+3', '3300', '3300.0']
 
 - ['null', 'null', 'null()', "null"]
-- ['null', '!!null', 'null()', 'null']
 - ['null', '!!null null', 'null()', 'null']
 - ['str', '!!str null', 'null', "'null'"]
 
@@ -200,6 +203,7 @@ failsafe, json, yaml11:
 - ['str', '!!str NULL', 'NULL', "'NULL'"]
 - ['str', '!!str ~', '~', "'~'"]
 - ['str', '!!str #empty', '', "''"]
+- ['null', '!!null', 'null()', 'null']
 
 - ['bool', 'True', 'true()', 'true']
 - ['bool', 'TRUE', 'true()', 'true']

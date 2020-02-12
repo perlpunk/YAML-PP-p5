@@ -15,15 +15,27 @@ my $schema_file = "$Bin/../examples/yaml-schema.yaml";
 my $schema_data = do { YAML::PP->new->load_file($schema_file) };
 
 my $boolean = $jsonpp ? 'JSON::PP' : 'perl';
-my $failsafe = YAML::PP->new( boolean => $boolean, schema => [qw/ Failsafe /] );
-my $json     = YAML::PP->new( boolean => $boolean, schema => [qw/ JSON /] );
-my $core     = YAML::PP->new( boolean => $boolean, schema => [qw/ Core /] );
-my $yaml11   = YAML::PP->new( boolean => $boolean, schema => [qw/ YAML1_1 /] );
+my $failsafe        = YAML::PP->new( boolean => $boolean, schema => [qw/ Failsafe /] );
+my $json            = YAML::PP->new( boolean => $boolean, schema => [qw/ JSON /] );
+my $json_empty_null = YAML::PP->new( boolean => $boolean, schema => [qw/ JSON empty=null /] );
+my $core            = YAML::PP->new( boolean => $boolean, schema => [qw/ Core /] );
+my $yaml11          = YAML::PP->new( boolean => $boolean, schema => [qw/ YAML1_1 /] );
+
+
+subtest 'invalid-option' => sub {
+    eval {
+        YAML::PP->new( boolean => $boolean, schema => [qw/ JSON empty=lala /] );
+    };
+    my $err = $@;
+    like($err, qr{Invalid option}, 'Invalid option is fatal');
+};
+
 my %loaders = (
     failsafe => $failsafe,
     json => $json,
     core => $core,
     yaml11 => $yaml11,
+    json_empty_null => $json_empty_null,
 );
 my $inf = 0 + 'inf';
 my $inf_negative = 0 - 'inf';
@@ -62,6 +74,7 @@ if ($jsonpp) {
 }
 
 for my $schema_names (sort keys %$schema_data) {
+    note($schema_names);
     my @names = split m/ *, */, $schema_names;
     my $tests = $schema_data->{ $schema_names };
     for my $name (@names) {

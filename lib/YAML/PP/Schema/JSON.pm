@@ -11,6 +11,7 @@ our @EXPORT_OK = qw/
 /;
 
 use B;
+use Carp qw/ croak /;
 
 use YAML::PP::Common qw/ YAML_PLAIN_SCALAR_STYLE YAML_SINGLE_QUOTED_SCALAR_STYLE /;
 
@@ -25,16 +26,37 @@ sub _to_float { unpack F => pack F => $_[2]->[0] }
 sub register {
     my ($self, %args) = @_;
     my $schema = $args{schema};
+    my $options = $args{options};
+    my $empty_null = 0;
+    for my $opt (@$options) {
+        if ($opt eq 'empty=str') {
+        }
+        elsif ($opt eq 'empty=null') {
+            $empty_null = 1;
+        }
+        else {
+            croak "Invalid option for JSON Schema: '$opt'";
+        }
+    }
 
     $schema->add_resolver(
         tag => 'tag:yaml.org,2002:null',
         match => [ equals => null => undef ],
     );
-    $schema->add_resolver(
-        tag => 'tag:yaml.org,2002:null',
-        match => [ equals => '' => undef ],
-        implicit => 1,
-    );
+    if ($empty_null) {
+        $schema->add_resolver(
+            tag => 'tag:yaml.org,2002:null',
+            match => [ equals => '' => undef ],
+            implicit => 1,
+        );
+    }
+    else {
+        $schema->add_resolver(
+            tag => 'tag:yaml.org,2002:str',
+            match => [ equals => '' => '' ],
+            implicit => 1,
+        );
+    }
     $schema->add_resolver(
         tag => 'tag:yaml.org,2002:bool',
         match => [ equals => true => $schema->true ],
