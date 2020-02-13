@@ -582,7 +582,7 @@ The layout is like libyaml output:
 Input should be Unicode characters.
 
 So if you read from a file, you should decode it, for example with
-C<Encode::decode_utf8($bytes)>.
+C<Encode::decode()>.
 
 Note that in scalar context, C<load_string> and C<load_file> return the first
 document (like L<YAML::Syck>), while L<YAML> and L<YAML::XS> return the
@@ -602,7 +602,6 @@ Strings will be loaded as unicode characters.
     my $yaml = $ypp->dump_string(@docs);
 
 Input strings should be Unicode characters.
-C<utf8::upgrade>.
 
 Output will return Unicode characters.
 
