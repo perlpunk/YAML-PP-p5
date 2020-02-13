@@ -19,6 +19,8 @@ my @skip = qw/
     9KBC
     P2EQ
     62EZ
+    S98Z
+    T833
 /;
 
 # in case of error events might not be exactly matching
