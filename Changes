@@ -1,6 +1,6 @@
 Revision history for Perl module YAML::PP
 
-0.018_001 2020-02-13 12:14:24+01:00
+0.019 2020-02-13 16:06:56+01:00
 
     - Important (and possibly breaking) changes:
       - Change default schema from JSON to Core.
@@ -11,7 +11,7 @@ Revision history for Perl module YAML::PP
         will continue to work the same if you later add documents to a file.
       - Empty nodes in YAML 1.2 JSON Schema resolve to '' by default like
         before, but now it can be configured
-      - Fix some control character escaping and encoding issues (issue#16)
+      - Fix some control character escaping and encoding issues (issue#16, issue#17)
         YAML::PP will now just assume all input data are unicode characters
         and won't do an explicit utf8::upgrade
       - Fix Core schema resolver for inf: add +.inf, +.Inf, +.INF
