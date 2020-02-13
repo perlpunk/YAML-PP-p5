@@ -5,8 +5,8 @@
 ;
 [subrepo]
 	remote = git@github.com:yaml/yaml-test-suite
-	branch = data
-	commit = 3e224fcb3b48308bf0018f6f0007362b2185e21d
-	parent = 12c3352648771f5271093cc44395d2c86c33226c
+	branch = data-2020-02-11
+	commit = a12ee724ceb4ca16d592f674b07a5e77364fb6fe
+	parent = 02c9e979f794bacbad209134ab387b77ca5da808
 	method = merge
 	cmdver = 0.4.0
