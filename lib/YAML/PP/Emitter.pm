@@ -49,6 +49,7 @@ sub init {
     $self->set_tagmap({
         'tag:yaml.org,2002:' => '!!',
     });
+    $self->{need_footer} = 0;
     $self->writer->init;
 }
 
@@ -143,6 +144,7 @@ sub mapping_start_event {
     }
     push @{ $stack }, $new_info;
     $last->{index}++;
+    $self->{need_footer} = 0;
 }
 
 sub mapping_end_event {
@@ -260,6 +262,7 @@ sub sequence_start_event {
         $new_info->{type} = 'SEQ';
     }
     push @{ $stack }, $new_info;
+    $self->{need_footer} = 0;
 }
 
 sub sequence_end_event {
@@ -466,6 +469,7 @@ sub scalar_event {
         }
     }
 
+    my $need_footer = 0;
     if ($style eq YAML_PLAIN_SCALAR_STYLE) {
         if ($forbidden_first_plus_space{ $first }) {
             if (length ($value) == 1 or substr($value, 1, 1) =~ m/^\s/) {
@@ -506,6 +510,7 @@ sub scalar_event {
         }
         elsif ($value =~ m/(\n|\A)\n\z/) {
             $indicators .= '+';
+            $need_footer = 1;
         }
         $value =~ s/^(?=.)/$indent  /gm;
         $value = "|$indicators\n$value";
@@ -621,6 +626,7 @@ sub scalar_event {
     }
     $last->{column} = $column;
     $self->writer->write($yaml);
+    $self->{need_footer} = $need_footer;
 }
 
 sub alias_event {
@@ -678,6 +684,7 @@ sub alias_event {
         $column = substr($yaml, -1) eq "\n" ? 0 : 1;
     }
     $last->{column} = $column;
+    $self->{need_footer} = 0;
 }
 
 sub document_start_event {
@@ -685,6 +692,10 @@ sub document_start_event {
     my ($self, $info) = @_;
     my $newline = 0;
     my $column = 0;
+    if ($self->{need_footer}) {
+        $self->writer->write("...\n");
+        $self->{need_footer} = 0;
+    }
     if ($info->{implicit}) {
     }
     else {
@@ -704,9 +715,10 @@ sub document_end_event {
     DEBUG and warn __PACKAGE__.':'.__LINE__.": +++ document_end_event\n";
     my ($self, $info) = @_;
     $self->set_event_stack([]);
-    unless ($info->{implicit}) {
+    if ($self->{need_footer} or not $info->{implicit}) {
         $self->writer->write("...\n");
     }
+    $self->{need_footer} = 0;
 }
 
 sub stream_start_event {
