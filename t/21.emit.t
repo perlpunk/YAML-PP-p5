@@ -38,7 +38,6 @@ push @skip, qw/
 # quoting
 push @skip, qw/
 36F6
-82AN
 9YRD
 HS5T
 EX5H
@@ -63,14 +62,12 @@ XLQ9
 K54U
 PUW8
 3MYT
-EXG3
 JDH8
 MJS9
 
 
 /;
 # TODO fix testsuite
-# EXG3
 # 4QFQ
 
 # unicode
