@@ -1084,7 +1084,8 @@ $GRAMMAR = {
       },
       'WS' => {
         'new' => 'DIRECTIVE'
-      }
+      },
+      'match' => 'cb_set_yaml_version_directive'
     }
   }
 };
@@ -1681,6 +1682,7 @@ This is the Grammar in YAML
         EOL: { new: FULLNODE }
         WS: { new: FULLNODE }
       YAML_DIRECTIVE:
+        match: cb_set_yaml_version_directive
         EOL: { new: DIRECTIVE }
         WS: { new: DIRECTIVE }
       RESERVED_DIRECTIVE:

@@ -6,6 +6,7 @@ Revision history for Perl module YAML::PP
     - Improve emitter (quote strings starting with `---` to reduce ambiguity
       for the reader)
     - Add option emit_version_directive
+    - Add version_directive to document_start_event
 
 0.019 2020-02-13 16:06:56+01:00
 
