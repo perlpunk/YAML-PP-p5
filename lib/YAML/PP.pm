@@ -25,10 +25,12 @@ sub new {
     my $writer = delete $args{writer};
     my $header = delete $args{header};
     my $footer = delete $args{footer};
+    my $emit_version_directive = delete $args{emit_version_directive};
     my $parser = delete $args{parser};
     my $emitter = delete $args{emitter} || {
         indent => $indent,
         writer => $writer,
+        version_directive => $emit_version_directive,
     };
 
     my $schema;
@@ -52,6 +54,7 @@ sub new {
         emitter => $emitter,
         header => $header,
         footer => $footer,
+        version_directive => $emit_version_directive,
     );
 
     my $self = bless {
@@ -560,19 +563,76 @@ The layout is like libyaml output:
     
     # Die when detecting cyclic references
     my $ypp = YAML::PP->new( cyclic_refs => 'fatal' );
-    # Other values:
-    # warn   - Just warn about them and replace with undef
-    # ignore - replace with undef
-    # allow  - Default
     
     my $ypp = YAML::PP->new(
         boolean => 'JSON::PP',
-        schema => ['JSON'],
+        schema => ['Core'],
         cyclic_refs => 'fatal',
-        indent => 4, # use 4 spaces for dumping indentation
-        header => 1, # default 1; print document header ---
-        footer => 1, # default 0; print document footer ...
+        indent => 4,
+        header => 1,
+        footer => 1,
+        emit_version_directive => 1,
     );
+
+Options:
+
+=over
+
+=item boolean
+
+Values: C<perl> (currently default), C<JSON::PP>, C<boolean>
+
+=item schema
+
+Default: C<['Core']>
+
+Array reference. Here you can define what schema to use.
+Supported standard Schemas are: C<Failsafe>, C<JSON>, C<Core>, C<YAML1_1>.
+
+To get an overview how the different Schemas behave, see
+L<https://perlpunk.github.io/YAML-PP-p5/schemas.html>
+
+Additionally you can add further schemas, for example C<Merge>.
+
+=item cyclic_refs
+
+Default: 'allow' but will be switched to fatal in the future for safety!
+
+Defines what to do when a cyclic reference is detected when loading.
+
+    # fatal  - die
+    # warn   - Just warn about them and replace with undef
+    # ignore - replace with undef
+    # allow  - Default
+
+=item indent
+
+Default: 2
+
+Use that many spaces for indenting
+
+=item header
+
+Default: 1
+
+Print documwnt heaader C<--->
+
+=item footer
+
+Default: 0
+
+Print documwnt footer C<...>
+
+=item emit_version_directive
+
+Default: 0
+
+Print Version Directive C<%YAML 1.2>
+
+Currently the YAML version is hardcoded. In the future you can also define
+the version to use.
+
+=back
 
 =item load_string
 

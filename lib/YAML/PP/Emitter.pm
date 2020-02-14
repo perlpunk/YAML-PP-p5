@@ -19,6 +19,7 @@ sub new {
     my $self = bless {
         indent => $args{indent} || 2,
         writer => $args{writer},
+        version_directive => $args{version_directive} || 0,
     }, $class;
     $self->init;
     return $self;
@@ -49,7 +50,7 @@ sub init {
     $self->set_tagmap({
         'tag:yaml.org,2002:' => '!!',
     });
-    $self->{need_footer} = 0;
+    $self->{open_ended} = 0;
     $self->writer->init;
 }
 
@@ -144,7 +145,7 @@ sub mapping_start_event {
     }
     push @{ $stack }, $new_info;
     $last->{index}++;
-    $self->{need_footer} = 0;
+    $self->{open_ended} = 0;
 }
 
 sub mapping_end_event {
@@ -262,7 +263,7 @@ sub sequence_start_event {
         $new_info->{type} = 'SEQ';
     }
     push @{ $stack }, $new_info;
-    $self->{need_footer} = 0;
+    $self->{open_ended} = 0;
 }
 
 sub sequence_end_event {
@@ -469,7 +470,7 @@ sub scalar_event {
         }
     }
 
-    my $need_footer = 0;
+    my $open_ended = 0;
     if ($style eq YAML_PLAIN_SCALAR_STYLE) {
         if ($forbidden_first_plus_space{ $first }) {
             if (length ($value) == 1 or substr($value, 1, 1) =~ m/^\s/) {
@@ -510,7 +511,7 @@ sub scalar_event {
         }
         elsif ($value =~ m/(\n|\A)\n\z/) {
             $indicators .= '+';
-            $need_footer = 1;
+            $open_ended = 1;
         }
         $value =~ s/^(?=.)/$indent  /gm;
         $value = "|$indicators\n$value";
@@ -626,7 +627,7 @@ sub scalar_event {
     }
     $last->{column} = $column;
     $self->writer->write($yaml);
-    $self->{need_footer} = $need_footer;
+    $self->{open_ended} = $open_ended;
 }
 
 sub alias_event {
@@ -684,7 +685,7 @@ sub alias_event {
         $column = substr($yaml, -1) eq "\n" ? 0 : 1;
     }
     $last->{column} = $column;
-    $self->{need_footer} = 0;
+    $self->{open_ended} = 0;
 }
 
 sub document_start_event {
@@ -692,13 +693,16 @@ sub document_start_event {
     my ($self, $info) = @_;
     my $newline = 0;
     my $column = 0;
-    if ($self->{need_footer}) {
-        $self->writer->write("...\n");
-        $self->{need_footer} = 0;
+    my $implicit = $info->{implicit};
+    if ($self->{version_directive}) {
+        if ($self->{open_ended}) {
+            $self->writer->write("...\n");
+        }
+        $self->writer->write("%YAML 1.2\n");
+        $self->{open_ended} = 0;
+        $implicit = 0; # we need ---
     }
-    if ($info->{implicit}) {
-    }
-    else {
+    unless ($implicit) {
         $newline = 1;
         $self->writer->write("---");
         $column = 1;
@@ -715,10 +719,13 @@ sub document_end_event {
     DEBUG and warn __PACKAGE__.':'.__LINE__.": +++ document_end_event\n";
     my ($self, $info) = @_;
     $self->set_event_stack([]);
-    if ($self->{need_footer} or not $info->{implicit}) {
+    if ($self->{open_ended} or not $info->{implicit}) {
         $self->writer->write("...\n");
+        $self->{open_ended} = 0;
     }
-    $self->{need_footer} = 0;
+    else {
+        $self->{open_ended} = 1;
+    }
 }
 
 sub stream_start_event {
