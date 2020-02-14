@@ -13,17 +13,24 @@ sub new {
     my ($class, %args) = @_;
 
     my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
-    my $schema = delete $args{schema} || YAML::PP->default_schema(
-        boolean => 'perl',
-    );
+    my $default_yaml_version = delete $args{default_yaml_version} || '1.2';
+    my $schemas = delete $args{schemas};
+    $schemas ||= {
+        '1.2' => YAML::PP->default_schema(
+            boolean => 'perl',
+        )
+    };
 
     my $constructor = delete $args{constructor} || YAML::PP::Constructor->new(
-        schema => $schema,
+        schemas => $schemas,
         cyclic_refs => $cyclic_refs,
+        default_yaml_version => $default_yaml_version,
     );
     my $parser = delete $args{parser};
     unless ($parser) {
-        $parser = YAML::PP::Parser->new;
+        $parser = YAML::PP::Parser->new(
+            default_yaml_version => $default_yaml_version,
+        );
     }
     unless ($parser->receiver) {
         $parser->set_receiver($constructor);

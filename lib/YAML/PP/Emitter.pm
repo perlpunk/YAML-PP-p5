@@ -19,7 +19,6 @@ sub new {
     my $self = bless {
         indent => $args{indent} || 2,
         writer => $args{writer},
-        version_directive => $args{version_directive} || 0,
     }, $class;
     $self->init;
     return $self;
@@ -694,11 +693,11 @@ sub document_start_event {
     my $newline = 0;
     my $column = 0;
     my $implicit = $info->{implicit};
-    if ($self->{version_directive}) {
+    if ($info->{version_directive}) {
         if ($self->{open_ended}) {
             $self->writer->write("...\n");
         }
-        $self->writer->write("%YAML 1.2\n");
+        $self->writer->write("%YAML $info->{version_directive}\n");
         $self->{open_ended} = 0;
         $implicit = 0; # we need ---
     }

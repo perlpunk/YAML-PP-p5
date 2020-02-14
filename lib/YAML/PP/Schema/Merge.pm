@@ -31,7 +31,8 @@ YAML::PP::Schema::Merge - Enabling YAML merge keys for mappings
 =head1 SYNOPSIS
 
     use YAML::PP;
-    my $yp = YAML::PP->new( schema => [qw/ JSON Merge /] );
+    my $yp = YAML::PP->new( schema => [qw/ + Merge /] );
+
     my $yaml = <<'EOM';
     ---
     - &CENTER { x: 1, y: 2 }

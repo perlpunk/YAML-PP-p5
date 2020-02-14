@@ -13,6 +13,7 @@ use Scalar::Util qw/ blessed /;
 sub new {
     my ($class, %args) = @_;
 
+    my $yaml_version = delete $args{yaml_version};
     my $bool = delete $args{boolean};
     $bool = 'perl' unless defined $bool;
     if (keys %args) {
@@ -41,21 +42,23 @@ sub new {
         die "Invalid value for 'boolean': '$bool'. Allowed: ('perl', 'boolean', 'JSON::PP')";
     }
 
+    my %representers = (
+        'undef' => undef,
+        flags => [],
+        equals => {},
+        regex => [],
+        class_equals => {},
+        class_matches => [],
+        class_isa => [],
+        scalarref => undef,
+        refref => undef,
+        coderef => undef,
+        tied_equals => {},
+    );
     my $self = bless {
+        yaml_version => $yaml_version,
         resolvers => {},
-        representers => {
-            'undef' => undef,
-            flags => [],
-            equals => {},
-            regex => [],
-            class_equals => {},
-            class_matches => [],
-            class_isa => [],
-            scalarref => undef,
-            refref => undef,
-            coderef => undef,
-            tied_equals => {},
-        },
+        representers => \%representers,
         true => $true,
         false => $false,
         bool_class => $bool_class,
@@ -65,19 +68,29 @@ sub new {
 
 sub resolvers { return $_[0]->{resolvers} }
 sub representers { return $_[0]->{representers} }
+
 sub true { return $_[0]->{true} }
 sub false { return $_[0]->{false} }
 sub bool_class { return $_[0]->{bool_class} }
+sub yaml_version { return $_[0]->{yaml_version} }
 
 my %LOADED_SCHEMA = (
     JSON => 1,
 );
+my %DEFAULT_SCHEMA = (
+    '1.2' => 'Core',
+    '1.1' => 'YAML1_1',
+);
 
 sub load_subschemas {
     my ($self, @schemas) = @_;
+    my $yaml_version = $self->yaml_version;
     my $i = 0;
     while ($i < @schemas) {
         my $item = $schemas[ $i ];
+        if ($item eq '+') {
+            $item = $DEFAULT_SCHEMA{ $yaml_version };
+        }
         $i++;
         if (blessed($item)) {
             $item->register(

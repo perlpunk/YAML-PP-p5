@@ -25,7 +25,9 @@ use Carp qw/ croak /;
 sub new {
     my ($class, %args) = @_;
     my $reader = delete $args{reader} || YAML::PP::Reader->new;
+    my $default_yaml_version = delete $args{default_yaml_version};
     my $self = bless {
+        default_yaml_version => $default_yaml_version || '1.2',
         lexer => YAML::PP::Lexer->new(
             reader => $reader,
         ),
@@ -40,8 +42,8 @@ sub new {
 sub clone {
     my ($self) = @_;
     my $clone = {
-        lexer => YAML::PP::Lexer->new(
-        ),
+        default_yaml_version => $self->default_yaml_version,
+        lexer => YAML::PP::Lexer->new(),
     };
     return bless $clone, ref $self;
 }
@@ -83,6 +85,7 @@ sub tokens { return $_[0]->{tokens} }
 sub set_tokens { $_[0]->{tokens} = $_[1] }
 sub event_stack { return $_[0]->{event_stack} }
 sub set_event_stack { $_[0]->{event_stack} = $_[1] }
+sub default_yaml_version { return $_[0]->{default_yaml_version} }
 sub yaml_version { return $_[0]->{yaml_version} }
 sub set_yaml_version { $_[0]->{yaml_version} = $_[1] }
 sub yaml_version_directive { return $_[0]->{yaml_version_directive} }
@@ -107,7 +110,7 @@ sub init {
     $self->set_tokens([]);
     $self->set_rule(undef);
     $self->set_event_stack([]);
-    $self->set_yaml_version('1.2');
+    $self->set_yaml_version($self->default_yaml_version);
     $self->set_yaml_version_directive(undef);
     $self->lexer->init;
 }
@@ -480,11 +483,11 @@ sub start_document {
     my ($self, $implicit) = @_;
     push @{ $self->events }, 'DOC';
     push @{ $self->offset }, -1;
-    my $version = $self->yaml_version_directive;
+    my $directive = $self->yaml_version_directive;
     $self->callback->($self, 'document_start_event', {
         name => 'document_start_event',
         implicit => $implicit,
-        $version ? (version_directive => $version) : (),
+        $directive ? (version_directive => $self->yaml_version) : (),
     });
     $self->set_yaml_version_directive(undef);
     $self->set_rule( 'FULLNODE' );
@@ -1365,7 +1368,7 @@ sub cb_set_yaml_version_directive {
     my ($self, $token) = @_;
     my ($version) = $token->{value} =~ m/^%YAML (1\.[12])/;
     $self->set_yaml_version($version);
-    $self->set_yaml_version_directive($version);
+    $self->set_yaml_version_directive(1);
 }
 
 1;

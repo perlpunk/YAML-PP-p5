@@ -1,4 +1,4 @@
-# ABSTRACT: YAML Framework
+# ABSTRACT: YAML 1.2 Processor
 use strict;
 use warnings;
 package YAML::PP;
@@ -10,9 +10,13 @@ use YAML::PP::Schema::JSON;
 use YAML::PP::Loader;
 use YAML::PP::Dumper;
 use Scalar::Util qw/ blessed /;
+use Carp qw/ croak /;
 
 use base 'Exporter';
 our @EXPORT_OK = qw/ Load LoadFile Dump DumpFile /;
+
+my %YAML_VERSIONS = ('1.1' => 1, '1.2' => 1);
+
 
 sub new {
     my ($class, %args) = @_;
@@ -25,40 +29,48 @@ sub new {
     my $writer = delete $args{writer};
     my $header = delete $args{header};
     my $footer = delete $args{footer};
-    my $emit_version_directive = delete $args{emit_version_directive};
+    my $yaml_version = $class->_arg_yaml_version(delete $args{yaml_version});
+    my $default_yaml_version = $yaml_version->[0];
+    my $version_directive = delete $args{version_directive};
     my $parser = delete $args{parser};
     my $emitter = delete $args{emitter} || {
         indent => $indent,
         writer => $writer,
-        version_directive => $emit_version_directive,
     };
 
-    my $schema;
-    if (blessed($schemas) and $schemas->isa('YAML::PP::Schema')) {
-        $schema = $schemas;
+    my %schemas;
+    for my $v (@$yaml_version) {
+        my $schema;
+        if (blessed($schemas) and $schemas->isa('YAML::PP::Schema')) {
+            $schema = $schemas;
+        }
+        else {
+            $schema = YAML::PP::Schema->new(
+                boolean => $bool,
+                yaml_version => $v,
+            );
+            $schema->load_subschemas(@$schemas);
+        }
+        $schemas{ $v } = $schema;
     }
-    else {
-        $schema = YAML::PP::Schema->new(
-            boolean => $bool,
-        );
-        $schema->load_subschemas(@$schemas);
-    }
+    my $default_schema = $schemas{ $default_yaml_version };
 
     my $loader = YAML::PP::Loader->new(
-        schema => $schema,
+        schemas => \%schemas,
         cyclic_refs => $cyclic_refs,
         parser => $parser,
+        default_yaml_version => $default_yaml_version,
     );
     my $dumper = YAML::PP::Dumper->new(
-        schema => $schema,
+        schema => $default_schema,
         emitter => $emitter,
         header => $header,
         footer => $footer,
-        version_directive => $emit_version_directive,
+        version_directive => $version_directive,
     );
 
     my $self = bless {
-        schema => $schema,
+        schema => \%schemas,
         loader => $loader,
         dumper => $dumper,
     }, $class;
@@ -75,6 +87,25 @@ sub clone {
     return bless $clone, ref $self;
 }
 
+sub _arg_yaml_version {
+    my ($class, $version) = @_;
+    my @versions = ('1.2');
+    if (defined $version) {
+        @versions = ();
+        if (not ref $version) {
+            $version = [$version];
+        }
+        for my $v (@$version) {
+            unless ($YAML_VERSIONS{ $v }) {
+                croak "YAML Version '$v' not supported";
+            }
+            push @versions, $v;
+        }
+    }
+    return \@versions;
+}
+
+
 sub loader {
     if (@_ > 1) {
         $_[0]->{loader} = $_[1]
@@ -90,8 +121,8 @@ sub dumper {
 }
 
 sub schema {
-    if (@_ > 1) { $_[0]->{schema} = $_[1] }
-    return $_[0]->{schema};
+    if (@_ > 1) { $_[0]->{schema}->{'1.2'} = $_[1] }
+    return $_[0]->{schema}->{'1.2'};
 }
 
 sub default_schema {
@@ -163,7 +194,7 @@ YAML::PP - YAML 1.2 processor
 
 =head1 SYNOPSIS
 
-WARNING: This is not yet stable.
+WARNING: Most of the inner API is not stable yet.
 
 Here are a few examples of the basic load and dump methods:
 
@@ -209,7 +240,7 @@ Here are a few examples of the basic load and dump methods:
     DumpFile($filename, @documents);
     DumpFile($filenhandle @documents);
 
-    my $ypp = YAML::PP->new(schema => [qw/ JSON Perl /]);
+    my $ypp = YAML::PP->new(schema => [qw/ + Perl /]);
     my $yaml = $yp->dump_string($data_with_perl_objects);
 
 
@@ -234,9 +265,10 @@ Some utility scripts, mostly useful for debugging:
 
 =head1 DESCRIPTION
 
-YAML::PP is a modern, modular YAML processor.
+YAML::PP is a modular YAML processor.
 
 It aims to support C<YAML 1.2> and C<YAML 1.1>. See L<http://yaml.org/>.
+Some (rare) syntax elements are not yet supported and documented below.
 
 YAML is a serialization language. The YAML input is called "YAML Stream".
 A stream consists of one or more "Documents", separated by a line with a
@@ -571,7 +603,7 @@ The layout is like libyaml output:
         indent => 4,
         header => 1,
         footer => 1,
-        emit_version_directive => 1,
+        version_directive => 1,
     );
 
 Options:
@@ -623,14 +655,56 @@ Default: 0
 
 Print documwnt footer C<...>
 
-=item emit_version_directive
+=item yaml_version
+
+Default: C<1.2>
+
+Note that in this case, a directive C<%YAML 1.1> will basically be ignored
+and everything loaded with the C<1.2 Core> Schema.
+
+If you want to support both YAML 1.1 and 1.2, you have to specify that, and the
+schema (C<Core> or C<YAML1_1>) will be chosen automatically.
+
+    my $yp = YAML::PP->new(
+        yaml_version => ['1.2', '1.1'],
+    );
+
+This is the same as
+
+    my $yp = YAML::PP->new(
+        schema => ['+'],
+        yaml_version => ['1.2', '1.1'],
+    );
+
+because the C<+> stands for the default schema per version.
+
+When loading, and there is no C<%YAML> directive, C<1.2> will be considered
+as default, and the C<Core> schema will be used.
+
+If there is a C<%YAML 1.1> directive, the C<YAML1_1> schema will be used.
+
+Of course, you can also make C<1.1> the default:
+
+    my $yp = YAML::PP->new(
+        yaml_version => ['1.1', '1.2'],
+    );
+
+
+You can also specify C<1.1> only:
+
+    my $yp = YAML::PP->new(
+        yaml_version => ['1.1'],
+    );
+
+In this case also documents with C<%YAML 1.2> will be loaded with the C<YAML1_1>
+schema.
+
+=item version_directive
 
 Default: 0
 
-Print Version Directive C<%YAML 1.2>
-
-Currently the YAML version is hardcoded. In the future you can also define
-the version to use.
+Print Version Directive C<%YAML 1.2> (or C<%YAML 1.1>) on top of each YAML
+document. It will use the first version specified in the C<yaml_version> option.
 
 =back
 

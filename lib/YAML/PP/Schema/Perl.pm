@@ -464,14 +464,14 @@ YAML::PP::Schema::Perl - Schema for serializing perl objects and special types
 
     use YAML::PP;
     # This can be dangerous when loading untrusted YAML!
-    my $yp = YAML::PP->new( schema => [qw/ JSON Perl /] );
+    my $yp = YAML::PP->new( schema => [qw/ + Perl /] );
     # or
     my $yp = YAML::PP->new( schema => [qw/ Core Perl /] );
     my $yaml = $yp->dump_string(sub { return 23 });
 
     # loading code references
     # This is very dangerous when loading untrusted YAML!!
-    my $yp = YAML::PP->new( schema => [qw/ JSON Perl +loadcode /] );
+    my $yp = YAML::PP->new( schema => [qw/ + Perl +loadcode /] );
     my $code = $yp->load_string(<<'EOM');
     --- !perl/code |
         {
@@ -501,7 +501,7 @@ C<eval>).
 You can define the style of tags you want to support:
 
     my $yp_perl_two_one = YAML::PP->new(
-        schema => [qw/ JSON Perl tags=!!perl+!perl /],
+        schema => [qw/ + Perl tags=!!perl+!perl /],
     );
 
 =over
@@ -545,7 +545,7 @@ Currently it only allows a list of strings:
         classes => ['Foo', 'Bar'],
     );
     my $yp = YAML::PP::Perl->new(
-        schema => [qw/ JSON /, $perl],
+        schema => [qw/ + /, $perl],
     );
 
 Allowed classes will be loaded and dumped as usual. The others will be ignored.

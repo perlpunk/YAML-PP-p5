@@ -661,6 +661,7 @@ sub _emit_events {
     $emitter->init;
     for my $event (@$events) {
         my ($type, $info) = @$event;
+        delete $info->{version_directive};
         if ($type eq 'sequence_start_event' or $type eq 'mapping_start_event') {
             delete $info->{style};
         }

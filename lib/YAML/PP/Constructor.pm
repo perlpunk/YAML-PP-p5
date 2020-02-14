@@ -16,25 +16,31 @@ my %cyclic_refs = qw/ allow 1 ignore 1 warn 1 fatal 1 /;
 sub new {
     my ($class, %args) = @_;
 
+    my $default_yaml_version = delete $args{default_yaml_version};
     my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
     die "Invalid value for cyclic_refs: $cyclic_refs"
         unless $cyclic_refs{ $cyclic_refs };
-    my $schema = delete $args{schema};
+    my $schemas = delete $args{schemas};
 
     if (keys %args) {
         die "Unexpected arguments: " . join ', ', sort keys %args;
     }
 
     my $self = bless {
-        schema => $schema,
+        default_yaml_version => $default_yaml_version,
+        schemas => $schemas,
         cyclic_refs => $cyclic_refs,
     }, $class;
+    $self->init;
+    return $self;
 }
 
 sub clone {
     my ($self) = @_;
     my $clone = {
-        schema => $self->schema,
+        schemas => $self->{schemas},
+        schema => $self->{schema},
+        default_yaml_version => $self->{default_yaml_version},
         cyclic_refs => $self->cyclic_refs,
     };
     return bless $clone, ref $self;
@@ -45,6 +51,8 @@ sub init {
     $self->set_docs([]);
     $self->set_stack([]);
     $self->set_anchors({});
+    $self->set_yaml_version($self->default_yaml_version);
+    $self->set_schema($self->schemas->{ $self->yaml_version } );
 }
 
 sub docs { return $_[0]->{docs} }
@@ -53,14 +61,29 @@ sub anchors { return $_[0]->{anchors} }
 sub set_docs { $_[0]->{docs} = $_[1] }
 sub set_stack { $_[0]->{stack} = $_[1] }
 sub set_anchors { $_[0]->{anchors} = $_[1] }
+sub schemas { return $_[0]->{schemas} }
 sub schema { return $_[0]->{schema} }
 sub set_schema { $_[0]->{schema} = $_[1] }
 sub cyclic_refs { return $_[0]->{cyclic_refs} }
 sub set_cyclic_refs { $_[0]->{cyclic_refs} = $_[1] }
+sub yaml_version { return $_[0]->{yaml_version} }
+sub set_yaml_version { $_[0]->{yaml_version} = $_[1] }
+sub default_yaml_version { return $_[0]->{default_yaml_version} }
 
 sub document_start_event {
     my ($self, $event) = @_;
     my $stack = $self->stack;
+    if ($event->{version_directive}) {
+        my $version = $event->{version_directive};
+        if ($self->{schemas}->{ $version }) {
+            $self->set_yaml_version($version);
+            $self->set_schema($self->schemas->{ $version });
+        }
+        else {
+            $self->set_yaml_version($self->default_yaml_version);
+            $self->set_schema($self->schemas->{ $self->default_yaml_version });
+        }
+    }
     my $ref = [];
     push @$stack, { type => 'document', ref => $ref, data => $ref, event => $event };
 }

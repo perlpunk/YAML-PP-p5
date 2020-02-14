@@ -26,6 +26,7 @@ sub new {
     $header = 1 unless defined $header;
     my $footer = delete $args{footer};
     $footer = 0 unless defined $footer;
+    my $version_directive = delete $args{version_directive};
 
     my $schema = delete $args{schema} || YAML::PP->default_schema(
         boolean => 'perl',
@@ -37,10 +38,15 @@ sub new {
             %$emitter
         );
     }
+
+    if (keys %args) {
+        die "Unexpected arguments: " . join ', ', sort keys %args;
+    }
     my $self = bless {
         representer => YAML::PP::Representer->new(
             schema => $schema,
         ),
+        version_directive => $version_directive,
         emitter => $emitter,
         seen => {},
         anchors => {},
@@ -56,6 +62,7 @@ sub clone {
     my $clone = {
         representer => $self->representer->clone,
         emitter => $self->emitter->clone,
+        version_directive => $self->version_directive,
         seen => {},
         anchors => {},
         anchor_num => 0,
@@ -77,6 +84,7 @@ sub representer { return $_[0]->{representer} }
 sub set_representer { $_[0]->{representer} = $_[1] }
 sub header { return $_[0]->{header} }
 sub footer { return $_[0]->{footer} }
+sub version_directive { return $_[0]->{version_directive} }
 
 sub dump {
     my ($self, @docs) = @_;
@@ -86,7 +94,13 @@ sub dump {
 
     for my $i (0 .. $#docs) {
         my $header_implicit = ($i == 0 and not $self->header);
-        $self->emitter->document_start_event({ implicit => $header_implicit });
+        my %args = (
+            implicit => $header_implicit,
+        );
+        if ($self->version_directive) {
+            $args{version_directive} = $self->representer->schema->yaml_version;
+        }
+        $self->emitter->document_start_event( \%args );
         $self->init;
         $self->check_references($docs[ $i ]);
         $self->dump_node($docs[ $i ]);

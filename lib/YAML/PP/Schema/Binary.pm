@@ -60,7 +60,7 @@ YAML::PP::Schema::Binary - Schema for loading and binary data
 =head1 SYNOPSIS
 
     use YAML::PP;
-    my $yp = YAML::PP->new( schema => [qw/ JSON Binary /] );
+    my $yp = YAML::PP->new( schema => [qw/ + Binary /] );
     # or
 
     my ($binary, $same_binary) = $yp->load_string(<<'EOM');
