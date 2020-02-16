@@ -275,4 +275,25 @@ EOM
 };
 
 
+subtest 'yaml-and-tag' => sub {
+    my $yaml = <<'EOM';
+%YAML 1.2
+%TAG !x! tag:foo-
+---
+- !x!x
+EOM
+    my @events;
+    my $receiver = sub {
+        my ($p, $name, $event) = @_;
+        if ($event->{name} eq 'scalar_event') {
+            push @events, $event;
+        }
+    };
+    my $parser = YAML::PP::Parser->new(
+        receiver => $receiver,
+    );
+    $parser->parse_string($yaml);
+    is($events[0]->{tag}, 'tag:foo-x', '%YAML and %TAG directive');
+};
+
 done_testing;

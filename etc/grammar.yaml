@@ -585,12 +585,24 @@ STREAM:
     match: cb_doc_start_implicit
     new: FULLNODE
 
-# TODO support %TAG and %YAML directive
 DIRECTIVE:
   DOC_START:
     match: cb_doc_start_explicit
     EOL: { new: FULLNODE }
     WS: { new: FULLNODE }
+
+  YAML_DIRECTIVE:
+    match: cb_set_yaml_version_directive
+    EOL: { new: DIRECTIVE }
+    WS: { new: DIRECTIVE }
+  RESERVED_DIRECTIVE:
+    match: cb_reserved_directive
+    EOL: { new: DIRECTIVE }
+    WS: { new: DIRECTIVE }
+  TAG_DIRECTIVE:
+    match: cb_tag_directive
+    EOL: { new: DIRECTIVE }
+    WS: { new: DIRECTIVE }
 
   EOL:
     new: DIRECTIVE

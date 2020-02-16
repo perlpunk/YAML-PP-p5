@@ -6,6 +6,7 @@ Revision history for Perl module YAML::PP
     - Add option yaml_version
     - Add support for detecting the right schema depending on the
       YAML version directive
+    - Support both %YAML and %TAG directive for a document
     - Improve emitter (output footer ... after open-ended block scalars)
     - Improve emitter (quote strings starting with `---` to reduce ambiguity
       for the reader)
