@@ -23,7 +23,7 @@ sub new {
 
     my $bool = delete $args{boolean};
     $bool = 'perl' unless defined $bool;
-    my $schemas = delete $args{schema} || ['JSON'];
+    my $schemas = delete $args{schema} || ['+'];
     my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
     my $indent = delete $args{indent};
     my $writer = delete $args{writer};
@@ -647,13 +647,13 @@ Use that many spaces for indenting
 
 Default: 1
 
-Print documwnt heaader C<--->
+Print document heaader C<--->
 
 =item footer
 
 Default: 0
 
-Print documwnt footer C<...>
+Print document footer C<...>
 
 =item yaml_version
 
