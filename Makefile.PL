@@ -7,7 +7,7 @@ use 5.008000;
 use ExtUtils::MakeMaker;
 
 my %WriteMakefileArgs = (
-  "ABSTRACT" => "YAML Framework",
+  "ABSTRACT" => "YAML 1.2 Processor",
   "AUTHOR" => "Tina M\x{fc}ller <tinita\@cpan.org>",
   "CONFIGURE_REQUIRES" => {
     "ExtUtils::MakeMaker" => 0
@@ -51,7 +51,7 @@ my %WriteMakefileArgs = (
     "blib" => "1.01",
     "lib" => 0
   },
-  "VERSION" => "0.019",
+  "VERSION" => "0.019_001",
   "test" => {
     "TESTS" => "t/*.t"
   }

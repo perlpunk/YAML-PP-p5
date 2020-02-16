@@ -1,6 +1,6 @@
 Revision history for Perl module YAML::PP
 
-0.019_001
+0.019_001 2020-02-16 20:11:25+01:00
 
     - Add option version_directive (print %YAML 1.2)
     - Add option yaml_version
