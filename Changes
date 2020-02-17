@@ -1,7 +1,9 @@
 Revision history for Perl module YAML::PP
 
-0.019_001 2020-02-16 20:11:25+01:00
+0.020 2020-02-17 15:35:44+01:00
 
+    - Change default schema from JSON to Core (this change was supposed
+      to go in 0.019 but wasn't completely done)
     - Add option version_directive (print %YAML 1.2)
     - Add option yaml_version
     - Add support for detecting the right schema depending on the

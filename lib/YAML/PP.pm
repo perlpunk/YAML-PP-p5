@@ -740,7 +740,7 @@ Input strings should be Unicode characters.
 Output will return Unicode characters.
 
 So if you want to write that to a file (or pass to YAML::XS, for example),
-you typically encode it via C<Encode::encode_utf8($yaml)>.
+you typically encode it via C<Encode::encode()>.
 
 =item dump_file
 
