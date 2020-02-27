@@ -283,7 +283,7 @@ sub alias_event {
 
 sub stringify_complex {
     my ($self, $data) = @_;
-    return $data if ref $data eq 'YAML::PP::Preserve::Scalar' and $self->preserve_scalar_style;
+    return $data if (ref $data eq 'YAML::PP::Preserve::Scalar' and $self->preserve_scalar_style);
     require Data::Dumper;
     local $Data::Dumper::Quotekeys = 0;
     local $Data::Dumper::Terse = 1;

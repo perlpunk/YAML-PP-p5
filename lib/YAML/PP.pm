@@ -202,10 +202,9 @@ sub TIEHASH {
 sub STORE {
     my ($self, $key, $val) = @_;
     my $keys = $self->{keys};
-    if (exists $self->{data}->{ $key }) {
-        @$keys = grep { $_ ne $key } @$keys;
+    unless (exists $self->{data}->{ $key }) {
+        push @$keys, $key;
     }
-    push @$keys, "$key";
     $self->{data}->{ $key } = $val;
 }
 
@@ -218,7 +217,7 @@ sub NEXTKEY {
     my ($self, $last) = @_;
     my $keys = $self->{keys};
     for my $i (0 .. $#$keys) {
-        if ($keys->[ $i ] eq $last) {
+        if ("$keys->[ $i ]" eq "$last") {
             return $keys->[ $i + 1 ];
         }
     }
@@ -232,7 +231,7 @@ sub FETCH {
 
 sub DELETE {
     my ($self, $key) = @_;
-    @{ $self->{keys} } = grep { $_ ne $key } @{ $self->{keys} };
+    @{ $self->{keys} } = grep { "$_" ne "$key" } @{ $self->{keys} };
     delete $self->{data}->{ $key };
 }
 
@@ -258,7 +257,6 @@ use overload
     '+' => \&value,
     '""' => \&value,
     'bool' => \&value,
-    'eq' => \&value,
     ;
 sub new {
     my ($class, %args) = @_;
