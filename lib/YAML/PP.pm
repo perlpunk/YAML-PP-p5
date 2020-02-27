@@ -32,11 +32,15 @@ sub new {
     my $yaml_version = $class->_arg_yaml_version(delete $args{yaml_version});
     my $default_yaml_version = $yaml_version->[0];
     my $version_directive = delete $args{version_directive};
+    my $preserve = delete $args{preserve};
     my $parser = delete $args{parser};
     my $emitter = delete $args{emitter} || {
         indent => $indent,
         writer => $writer,
     };
+    if (keys %args) {
+        die "Unexpected arguments: " . join ', ', sort keys %args;
+    }
 
     my %schemas;
     for my $v (@$yaml_version) {
@@ -60,6 +64,7 @@ sub new {
         cyclic_refs => $cyclic_refs,
         parser => $parser,
         default_yaml_version => $default_yaml_version,
+        preserve => $preserve,
     );
     my $dumper = YAML::PP::Dumper->new(
         schema => $default_schema,
@@ -67,6 +72,7 @@ sub new {
         header => $header,
         footer => $footer,
         version_directive => $version_directive,
+        preserve => $preserve,
     );
 
     my $self = bless {
@@ -179,6 +185,91 @@ sub DumpFile {
     my ($file, @data) = @_;
     YAML::PP->new->dump_file($file, @data);
 }
+
+package YAML::PP::Preserve::Hash;
+# experimental
+use Tie::Hash;
+use base qw/ Tie::StdHash /;
+
+sub TIEHASH {
+    my ($class) = @_;
+    my $self = bless {
+        keys => [],
+        data => {},
+    }, $class;
+}
+
+sub STORE {
+    my ($self, $key, $val) = @_;
+    my $keys = $self->{keys};
+    if (exists $self->{data}->{ $key }) {
+        @$keys = grep { $_ ne $key } @$keys;
+    }
+    push @$keys, "$key";
+    $self->{data}->{ $key } = $val;
+}
+
+sub FIRSTKEY {
+    my ($self) = @_;
+    return $self->{keys}->[0];
+}
+
+sub NEXTKEY {
+    my ($self, $last) = @_;
+    my $keys = $self->{keys};
+    for my $i (0 .. $#$keys) {
+        if ($keys->[ $i ] eq $last) {
+            return $keys->[ $i + 1 ];
+        }
+    }
+    return;
+}
+
+sub FETCH {
+    my ($self, $key) = @_;
+    my $val = $self->{data}->{ $key };
+}
+
+sub DELETE {
+    my ($self, $key) = @_;
+    @{ $self->{keys} } = grep { $_ ne $key } @{ $self->{keys} };
+    delete $self->{data}->{ $key };
+}
+
+sub EXISTS {
+    my ($self, $key) = @_;
+    return exists $self->{data}->{ $key };
+}
+
+sub CLEAR {
+    my ($self) = @_;
+    $self->{keys} = [];
+    $self->{data} = {};
+}
+
+sub SCALAR {
+    my ($self) = @_;
+    return scalar %{ $self->{data} };
+}
+
+package YAML::PP::Preserve::Scalar;
+
+use overload
+    '+' => \&value,
+    '""' => \&value,
+    'bool' => \&value,
+    'eq' => \&value,
+    ;
+sub new {
+    my ($class, %args) = @_;
+    my $self = {
+        %args,
+    };
+    bless $self, $class;
+}
+sub value { $_[0]->{value} }
+sub tag { $_[0]->{tag} }
+sub style { $_[0]->{style} }
 
 1;
 
@@ -323,7 +414,7 @@ Serializing binary data
 
 =item L<YAML::PP::Schema::Tie::IxHash>
 
-In progress. Keeping hash key order.
+Deprecated. See option C<preserve>
 
 =item L<YAML::PP::Schema::Merge>
 
@@ -359,9 +450,6 @@ The process of loading and dumping is split into the following steps:
 You can dump basic perl types like hashes, arrays, scalars (strings, numbers).
 For dumping blessed objects and things like coderefs have a look at
 L<YAML::PP::Perl>/L<YAML::PP::Schema::Perl>.
-
-For keeping your ordered L<Tie::IxHash> hashes, try out
-L<YAML::PP::Schema::Tie::IxHash>.
 
 =over
 
@@ -705,6 +793,48 @@ Default: 0
 
 Print Version Directive C<%YAML 1.2> (or C<%YAML 1.1>) on top of each YAML
 document. It will use the first version specified in the C<yaml_version> option.
+
+=item preserve (since 0.021)
+
+Experimental. Default: false
+
+    use YAML::PP::Common qw/ PRESERVE_ORDER PRESERVE_SCALAR_STYLE /;
+    # Preserve the order of hash keys
+    my $yp = YAML::PP->new( preserve => PRESERVE_ORDER );
+    # Preserve the quoting style of scalars
+    my $yp = YAML::PP->new( preserve => PRESERVE_SCALAR_STYLE );
+    # Preserve order and scalar style
+    my $yp = YAML::PP->new( preserve => PRESERVE_ORDER | PRESERVE_SCALAR_STYLE );
+
+Do NOT rely on the internal implementation of it.
+
+If you load the following input:
+
+    ---
+    z: 1
+    a: 2
+    ---
+    - plain
+    - 'single'
+    - "double"
+    - |
+      literal
+
+    my $yp = YAML::PP->new( preserve => PRESERVE_ORDER | PRESERVE_SCALAR_STYLE );
+    my ($hash, $styles) = $yp->load_file($file);
+
+Then dumping it will return the same output.
+Only folded block scalars '>' cannot preserve the style yet.
+
+When loading, hashes will be tied to an internal class
+(C<YAML::PP::Preserve::Hash>) that keeps the key order.
+
+Scalars will be returned as objects of an internal class
+(C<YAML::PP::Preserve::Scalar>) with overloading. If you assign to such
+a scalar, the object will be replaced by a simple scalar.
+
+    # assignment, style gets lost
+    $styles->[1] .= ' append';
 
 =back
 

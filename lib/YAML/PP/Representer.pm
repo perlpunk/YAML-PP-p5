@@ -13,14 +13,23 @@ use YAML::PP::Common qw/
     YAML_LITERAL_SCALAR_STYLE YAML_FOLDED_SCALAR_STYLE
     YAML_FLOW_SEQUENCE_STYLE YAML_FLOW_MAPPING_STYLE
     YAML_BLOCK_MAPPING_STYLE YAML_BLOCK_SEQUENCE_STYLE
+    PRESERVE_ALL PRESERVE_ORDER PRESERVE_SCALAR_STYLE
 /;
 use B;
 
 sub new {
     my ($class, %args) = @_;
+    my $preserve = delete $args{preserve} || 0;
+    if ($preserve == PRESERVE_ALL) {
+        $preserve = PRESERVE_ORDER | PRESERVE_SCALAR_STYLE;
+    }
     my $self = bless {
-        schema => $args{schema},
+        schema => delete $args{schema},
+        preserve => $preserve,
     }, $class;
+    if (keys %args) {
+        die "Unexpected arguments: " . join ', ', sort keys %args;
+    }
     return $self;
 }
 
@@ -28,15 +37,28 @@ sub clone {
     my ($self) = @_;
     my $clone = {
         schema => $self->schema,
+        preserve => $self->{preserve},
     };
     return bless $clone, ref $self;
 }
 
 sub schema { return $_[0]->{schema} }
+sub preserve_order { return $_[0]->{preserve} & PRESERVE_ORDER }
+sub preserve_scalar_style { return $_[0]->{preserve} & PRESERVE_SCALAR_STYLE }
 
 sub represent_node {
     my ($self, $node) = @_;
 
+    if ($self->preserve_scalar_style) {
+        if (ref $node->{value} eq 'YAML::PP::Preserve::Scalar') {
+            my $value = $node->{value}->value;
+            if ($node->{value}->style != YAML_FOLDED_SCALAR_STYLE) {
+                $node->{style} = $node->{value}->style;
+            }
+#            $node->{tag} = $node->{value}->tag;
+            $node->{value} = $value;
+        }
+    }
     $node->{reftype} = reftype($node->{value});
 
     if (ref $node->{value}) {
@@ -59,7 +81,14 @@ sub represent_node {
     if ($node->{reftype} eq 'HASH') {
         unless (defined $node->{items}) {
             # by default we sort hash keys
-            for my $key (sort keys %{ $node->{data} }) {
+            my @keys;
+            if ($self->preserve_order) {
+                @keys = keys %{ $node->{data} };
+            }
+            else {
+                @keys = sort keys %{ $node->{data} };
+            }
+            for my $key (@keys) {
                 push @{ $node->{items} }, $key, $node->{data}->{ $key };
             }
         }

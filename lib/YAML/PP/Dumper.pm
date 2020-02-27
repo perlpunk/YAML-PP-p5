@@ -27,6 +27,7 @@ sub new {
     my $footer = delete $args{footer};
     $footer = 0 unless defined $footer;
     my $version_directive = delete $args{version_directive};
+    my $preserve = delete $args{preserve};
 
     my $schema = delete $args{schema} || YAML::PP->default_schema(
         boolean => 'perl',
@@ -45,6 +46,7 @@ sub new {
     my $self = bless {
         representer => YAML::PP::Representer->new(
             schema => $schema,
+            preserve => $preserve,
         ),
         version_directive => $version_directive,
         emitter => $emitter,

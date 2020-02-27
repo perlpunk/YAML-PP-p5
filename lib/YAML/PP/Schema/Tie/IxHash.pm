@@ -37,7 +37,7 @@ __END__
 
 =head1 NAME
 
-YAML::PP::Schema::Tie::IxHash - Schema for serializing ordered hashes
+YAML::PP::Schema::Tie::IxHash - (Deprecated) Schema for serializing ordered hashes
 
 =head1 SYNOPSIS
 
@@ -60,6 +60,8 @@ YAML::PP::Schema::Tie::IxHash - Schema for serializing ordered hashes
     B: 52
 
 =head1 DESCRIPTION
+
+This is deprecated. See the new option C<preserve> in L<YAML::PP>.
 
 This schema allows you to dump ordered hashes which are tied to
 L<Tie::IxHash>.

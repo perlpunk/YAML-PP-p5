@@ -17,6 +17,8 @@ our @EXPORT_OK = qw/
 
     YAML_ANY_MAPPING_STYLE
     YAML_BLOCK_MAPPING_STYLE YAML_FLOW_MAPPING_STYLE
+
+    PRESERVE_ALL PRESERVE_ORDER PRESERVE_SCALAR_STYLE
 /;
 
 use constant {
@@ -35,6 +37,10 @@ use constant {
     YAML_ANY_MAPPING_STYLE   => 'any',
     YAML_BLOCK_MAPPING_STYLE => 'block',
     YAML_FLOW_MAPPING_STYLE  => 'flow',
+
+    PRESERVE_ALL          => 1,
+    PRESERVE_ORDER        => 2,
+    PRESERVE_SCALAR_STYLE => 4,
 };
 
 my %scalar_style_to_string = (

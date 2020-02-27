@@ -14,7 +14,7 @@ unless ($file) {
     $yaml = decode_utf8($yaml);
 }
 
-my $ypp = YAML::PP->new;
+my $ypp = YAML::PP->new( preserve => 1 );
 my @docs = $file ? $ypp->load_file($file) : $ypp->load_string($yaml);
 
 local $Data::Dumper::Useqq = 1;

@@ -121,7 +121,7 @@ sub represent_undef {
 
 sub represent_literal {
     my ($rep, $node) = @_;
-    $node->{style} = YAML_SINGLE_QUOTED_SCALAR_STYLE;
+    $node->{style} ||= YAML_SINGLE_QUOTED_SCALAR_STYLE;
     $node->{data} = "$node->{value}";
     return 1;
 }
