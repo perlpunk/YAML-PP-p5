@@ -1,5 +1,10 @@
 Revision history for Perl module YAML::PP
 
+0.020_001 2020-02-27 17:29:02+01:00
+
+    - Add option 'preserve' for preserving hash key order and quoting
+      style when loading and dumping
+
 0.020 2020-02-17 15:35:44+01:00
 
     - Change default schema from JSON to Core (this change was supposed

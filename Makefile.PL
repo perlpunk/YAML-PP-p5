@@ -34,6 +34,8 @@ my %WriteMakefileArgs = (
     "MIME::Base64" => 0,
     "Module::Load" => 0,
     "Scalar::Util" => "1.07",
+    "Tie::Hash" => 0,
+    "Tie::StdHash" => 0,
     "base" => 0,
     "constant" => 0,
     "overload" => 0,
@@ -51,7 +53,7 @@ my %WriteMakefileArgs = (
     "blib" => "1.01",
     "lib" => 0
   },
-  "VERSION" => "0.020",
+  "VERSION" => "0.020_001",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -76,6 +78,8 @@ my %FallbackPrereqs = (
   "Test::Deep" => 0,
   "Test::More" => "0.98",
   "Test::Warn" => 0,
+  "Tie::Hash" => 0,
+  "Tie::StdHash" => 0,
   "base" => 0,
   "blib" => "1.01",
   "constant" => 0,
