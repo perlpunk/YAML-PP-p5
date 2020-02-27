@@ -4,6 +4,7 @@ use warnings;
 
 use Data::Dumper;
 use YAML::PP;
+use YAML::PP::Common qw/ PRESERVE_ORDER /;
 use Encode;
 
 my ($file) = @ARGV;
@@ -14,7 +15,7 @@ unless ($file) {
     $yaml = decode_utf8($yaml);
 }
 
-my $ypp = YAML::PP->new( preserve => 1 );
+my $ypp = YAML::PP->new( preserve => PRESERVE_ORDER );
 my @docs = $file ? $ypp->load_file($file) : $ypp->load_string($yaml);
 
 local $Data::Dumper::Useqq = 1;
