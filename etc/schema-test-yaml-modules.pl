@@ -32,28 +32,23 @@ my %special = (
     (0-'inf').'' => 'inf'
 );
 
-for my $key (sort keys %$data) {
-    my @schemas = split m/ *, */, $key;
-    my $examples = $data->{ $key };
-    for my $example (@$examples) {
-        my ($type, $in) = @$example;
-        for my $mod (qw/ YAML YAML::XS YAML::Syck /) {
-            my $out = $output{ $in }->{ $mod } ||= {};
-            my $output;
-            my $load = $mod->can("Load");
-            my $dump = $mod->can("Dump");
-            my $data = eval { $load->("--- $in") };
-            if ($@) {
-                $out->{error} = 1;
-                $out->{type} = 'error';
-            }
-            else {
-                $out->{type} = get_type($data);
-                $output = $dump->($data);
-                chomp $output;
-                $output =~ s/^--- //;
-                $out->{dump} = $output;
-            }
+for my $input (sort keys %$data) {
+    for my $mod (qw/ YAML YAML::XS YAML::Syck /) {
+        my $out = $output{ $input }->{ $mod } ||= {};
+        my $output;
+        my $load = $mod->can("Load");
+        my $dump = $mod->can("Dump");
+        my $data = eval { $load->("--- $input") };
+        if ($@) {
+            $out->{error} = 1;
+            $out->{type} = 'error';
+        }
+        else {
+            $out->{type} = get_type($data);
+            $output = $dump->($data);
+            chomp $output;
+            $output =~ s/^--- //;
+            $out->{dump} = $output;
         }
     }
 }

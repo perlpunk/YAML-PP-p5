@@ -19,20 +19,19 @@ my @mods = qw/ YAML YAML::Syck YAML::XS /;
 
 my %examples;
 
-for my $key (sort keys %$data) {
-    my @schemas = split m/ *, */, $key;
-    my $examples = $data->{ $key };
-    for my $example (@$examples) {
-        my ($type, $in, $perl, $out) = @$example;
+for my $input (sort keys %$data) {
+    my $schemas = $data->{ $input };
+    my @keys = keys %$schemas;
+    for my $key (@keys) {
+        my $def = $schemas->{ $key };
+        my @schemas = split m/ *, */, $key;
         for my $schema (@schemas) {
-            $type =~ s/^float-//;
-            my $perlcode = format_perl($type, $perl);
-            $examples{ $in }->{ $schema } = [ $type, $perl, $out, $perlcode ];
+            $examples{ $input }->{ $schema } = $def;
         }
     }
 }
 my @keys = qw/ failsafe json core yaml11 /;
-for my $input (keys %examples) {
+for my $input (sort keys %examples) {
     my $schemas = $examples{ $input };
     my $str = 0;
     for my $schema (@keys) {
@@ -129,36 +128,36 @@ sub schema_table {
     return $html;
 }
 
-sub format_perl {
-    my ($type, $perl) = @_;
-    my $perlcode;
-    local $Data::Dumper::Terse = 1;
-    local $Data::Dumper::Useqq = 1;
-    if ($type eq 'null') {
-        $perlcode = 'undef';
-    }
-    elsif ($type eq 'float' or $type eq 'int') {
-        $perlcode = $perl;
-    }
-    elsif ($type eq 'inf') {
-        if ($perl eq 'inf-neg()') {
-            $perlcode = '- "inf" + 0';
-        }
-        else {
-            $perlcode = '"inf" + 0';
-        }
-    }
-    elsif ($type eq 'nan') {
-        $perlcode = '"nan" + 0';
-    }
-    elsif ($type eq 'bool') {
-        $perlcode = $perl;
-    }
-    else {
-        $perlcode = Data::Dumper->Dump([$perl], ['perl']);
-    }
-    return $perlcode;
-}
+#sub format_perl {
+#    my ($type, $perl) = @_;
+#    my $perlcode;
+#    local $Data::Dumper::Terse = 1;
+#    local $Data::Dumper::Useqq = 1;
+#    if ($type eq 'null') {
+#        $perlcode = 'undef';
+#    }
+#    elsif ($type eq 'float' or $type eq 'int') {
+#        $perlcode = $perl;
+#    }
+#    elsif ($type eq 'inf') {
+#        if ($perl eq 'inf-neg()') {
+#            $perlcode = '- "inf" + 0';
+#        }
+#        else {
+#            $perlcode = '"inf" + 0';
+#        }
+#    }
+#    elsif ($type eq 'nan') {
+#        $perlcode = '"nan" + 0';
+#    }
+#    elsif ($type eq 'bool') {
+#        $perlcode = $perl;
+#    }
+#    else {
+#        $perlcode = Data::Dumper->Dump([$perl], ['perl']);
+#    }
+#    return $perlcode;
+#}
 
 sub generate_html {
     my ($content) = @_;

@@ -12,7 +12,15 @@ my $jsonpp = eval { require JSON::PP };
 
 
 my $schema_file = "$Bin/../examples/yaml-schema.yaml";
+my $strings_file = "$Bin/../examples/strings.yaml";
 my $schema_data = do { YAML::PP->new->load_file($schema_file) };
+my $strings_data = do { YAML::PP->new->load_file($strings_file) };
+
+$schema_data->{'#empty'}->{json_empty_null} = ['null', 'null()', "null"];
+$schema_data->{'!!str #empty'}->{json_empty_null} = ['str', '', "''"];
+%$schema_data = (
+    %$schema_data, %$strings_data,
+);
 
 my $boolean = $jsonpp ? 'JSON::PP' : 'perl';
 my $failsafe        = YAML::PP->new( boolean => $boolean, schema => [qw/ Failsafe /] );
@@ -73,18 +81,22 @@ if ($jsonpp) {
     );
 }
 
-for my $schema_names (sort keys %$schema_data) {
-    note($schema_names);
-    my @names = split m/ *, */, $schema_names;
-    my $tests = $schema_data->{ $schema_names };
-    for my $name (@names) {
-        my $yp = $loaders{ $name };
-        for my $test (@$tests) {
+my $i = 0;
+for my $input (sort keys %$schema_data) {
+    my $test_data = $schema_data->{ $input };
+#    note("Input: $input");
+
+    for my $schema_names (sort keys %$test_data) {
+        note("[$input] Schemas: " . $schema_names);
+        my @names = split m/ *, */, $schema_names;
+        my $test = $test_data->{ $schema_names };
+        for my $name (@names) {
+            my $yp = $loaders{ $name };
             my %def;
-            @def{ qw/ type yaml data dump /} = @$test;
+            @def{ qw/ type data dump /} = @$test;
             next if ($def{type} eq 'bool' and not $jsonpp);
             my $func;
-            my $data = $yp->load_string('--- ' . $def{yaml});
+            my $data = $yp->load_string('--- ' . $input);
             my $data_orig = $data; # avoid stringifying original data
 
             my $flags = B::svref_2object(\$data)->FLAGS;
@@ -93,11 +105,7 @@ for my $schema_names (sort keys %$schema_data) {
             my $is_float = $flags & B::SVp_NOK;
 
             my $type = $def{type};
-            my $subtype = '';
-            if ($type =~ s/-(\w+)//) {
-                $subtype = $1;
-            }
-            my $label = sprintf "(%s) type %s: load(%s)", $name, $def{type}, $def{yaml};
+            my $label = sprintf "(%s) type %s: load(%s)", $name, $def{type}, $input;
             if ($def{data} =~ m/^([\w-]+)\(\)$/) {
                 my $func_name = $1;
                 $func = $check{ $func_name };
@@ -121,7 +129,7 @@ for my $schema_names (sort keys %$schema_data) {
                     cmp_ok($data, 'eq', $def{data}, "$label eq '$def{data}'");
                 }
             }
-            elsif ($type eq 'float') {
+            elsif ($type eq 'float' or $type eq 'inf' or $type eq 'nan') {
                 unless ($inf_broken) {
                     ok($is_float, "$label is float");
                     ok(!$is_str, "$label is not str");
@@ -146,6 +154,7 @@ for my $schema_names (sort keys %$schema_data) {
 
         }
     }
+#    last if ++$i > 10;
 }
 
 subtest int_string => sub {

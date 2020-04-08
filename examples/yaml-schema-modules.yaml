@@ -1,7 +1,7 @@
 ---
 '!!bool FALSE':
   YAML:
-    dump: FALSE
+    dump: 'FALSE'
     type: str
   YAML::Syck:
     dump: '''FALSE'''
@@ -11,7 +11,7 @@
     type: error
 '!!bool False':
   YAML:
-    dump: False
+    dump: 'False'
     type: str
   YAML::Syck:
     dump: '''False'''
@@ -81,7 +81,7 @@
     type: error
 '!!bool TRUE':
   YAML:
-    dump: TRUE
+    dump: 'TRUE'
     type: str
   YAML::Syck:
     dump: '''TRUE'''
@@ -91,7 +91,7 @@
     type: error
 '!!bool True':
   YAML:
-    dump: True
+    dump: 'True'
     type: str
   YAML::Syck:
     dump: '''True'''
@@ -211,7 +211,7 @@
     type: error
 '!!float +.INF':
   YAML:
-    dump: +.INF
+    dump: '+.INF'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -221,7 +221,7 @@
     type: error
 '!!float +.Inf':
   YAML:
-    dump: +.Inf
+    dump: '+.Inf'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -231,7 +231,7 @@
     type: error
 '!!float +.inf':
   YAML:
-    dump: +.inf
+    dump: '+.inf'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -241,27 +241,27 @@
     type: error
 '!!float +0.3e+3':
   YAML:
-    dump: +0.3e+3
+    dump: '+0.3e+3'
     type: str
   YAML::Syck:
     dump: '''300'''
     type: float
   YAML::XS:
-    dump: +0.3e+3
+    dump: '+0.3e+3'
     type: float
 '!!float +0.3e3':
   YAML:
-    dump: +0.3e3
+    dump: '+0.3e3'
     type: str
   YAML::Syck:
     dump: '''300'''
     type: float
   YAML::XS:
-    dump: +0.3e3
+    dump: '+0.3e3'
     type: float
 '!!float -.INF':
   YAML:
-    dump: -.INF
+    dump: '-.INF'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -271,7 +271,7 @@
     type: error
 '!!float -.Inf':
   YAML:
-    dump: -.Inf
+    dump: '-.Inf'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -281,7 +281,7 @@
     type: error
 '!!float -.inf':
   YAML:
-    dump: -.inf
+    dump: '-.inf'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -307,7 +307,7 @@
     dump: '''0'''
     type: float
   YAML::XS:
-    dump: .0
+    dump: '.0'
     type: float
 '!!float .3E-1':
   YAML:
@@ -317,7 +317,7 @@
     dump: '''0.03'''
     type: float
   YAML::XS:
-    dump: .3E-1
+    dump: '.3E-1'
     type: float
 '!!float .3e+3':
   YAML:
@@ -327,7 +327,7 @@
     dump: '''300'''
     type: float
   YAML::XS:
-    dump: .3e+3
+    dump: '.3e+3'
     type: float
 '!!float .3e3':
   YAML:
@@ -337,11 +337,11 @@
     dump: '''300'''
     type: float
   YAML::XS:
-    dump: .3e3
+    dump: '.3e3'
     type: float
 '!!float .INF':
   YAML:
-    dump: .INF
+    dump: '.INF'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -351,7 +351,7 @@
     type: error
 '!!float .Inf':
   YAML:
-    dump: .Inf
+    dump: '.Inf'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -361,7 +361,7 @@
     type: error
 '!!float .NAN':
   YAML:
-    dump: .NAN
+    dump: '.NAN'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -371,7 +371,7 @@
     type: error
 '!!float .NaN':
   YAML:
-    dump: .NaN
+    dump: '.NaN'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -381,7 +381,7 @@
     type: error
 '!!float .inf':
   YAML:
-    dump: .inf
+    dump: '.inf'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -391,7 +391,7 @@
     type: error
 '!!float .nan':
   YAML:
-    dump: .nan
+    dump: '.nan'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -421,13 +421,13 @@
     type: float
 '!!float 001.23':
   YAML:
-    dump: 001.23
+    dump: '001.23'
     type: str
   YAML::Syck:
     dump: '''1.23'''
     type: float
   YAML::XS:
-    dump: 001.23
+    dump: '001.23'
     type: float
 '!!float 190:20:30.15':
   YAML:
@@ -481,13 +481,13 @@
     type: error
 '!!int +0':
   YAML:
-    dump: +0
+    dump: '+0'
     type: str
   YAML::Syck:
     dump: '0'
     type: int
   YAML::XS:
-    dump: +0
+    dump: '+0'
     type: int
 '!!int +0100_200':
   YAML:
@@ -521,13 +521,13 @@
     type: error
 '!!int +23':
   YAML:
-    dump: +23
+    dump: '+23'
     type: str
   YAML::Syck:
     dump: '23'
     type: int
   YAML::XS:
-    dump: +23
+    dump: '+23'
     type: int
 '!!int -0':
   YAML:
@@ -601,33 +601,33 @@
     type: int
 '!!int 00':
   YAML:
-    dump: 00
+    dump: '00'
     type: str
   YAML::Syck:
     dump: '0'
     type: int
   YAML::XS:
-    dump: 00
+    dump: '00'
     type: int
 '!!int 0011':
   YAML:
-    dump: 0011
+    dump: '0011'
     type: str
   YAML::Syck:
     dump: '11'
     type: int
   YAML::XS:
-    dump: 0011
+    dump: '0011'
     type: int
 '!!int 010':
   YAML:
-    dump: 010
+    dump: '010'
     type: str
   YAML::Syck:
     dump: '10'
     type: int
   YAML::XS:
-    dump: 010
+    dump: '010'
     type: int
 '!!int 02_0':
   YAML:
@@ -641,13 +641,13 @@
     type: error
 '!!int 07':
   YAML:
-    dump: 07
+    dump: '07'
     type: str
   YAML::Syck:
     dump: '7'
     type: int
   YAML::XS:
-    dump: 07
+    dump: '07'
     type: int
 '!!int 0b0':
   YAML:
@@ -671,7 +671,7 @@
     type: error
 '!!int 0o0':
   YAML:
-    dump: 0o0
+    dump: '0o0'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -681,7 +681,7 @@
     type: error
 '!!int 0o10':
   YAML:
-    dump: 0o10
+    dump: '0o10'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -691,7 +691,7 @@
     type: error
 '!!int 0o7':
   YAML:
-    dump: 0o7
+    dump: '0o7'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -701,7 +701,7 @@
     type: error
 '!!int 0x0':
   YAML:
-    dump: 0x0
+    dump: '0x0'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -711,7 +711,7 @@
     type: error
 '!!int 0x10':
   YAML:
-    dump: 0x10
+    dump: '0x10'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -731,7 +731,7 @@
     type: error
 '!!int 0x42':
   YAML:
-    dump: 0x42
+    dump: '0x42'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -741,7 +741,7 @@
     type: error
 '!!int 0xa':
   YAML:
-    dump: 0xa
+    dump: '0xa'
     type: str
   YAML::Syck:
     dump: '''0'''
@@ -779,42 +779,32 @@
   YAML::XS:
     dump: '23'
     type: int
-'!!null':
-  YAML:
-    dump: ~
-    type: 'null'
-  YAML::Syck:
-    dump: ~
-    type: 'null'
-  YAML::XS:
-    dump: ~
-    type: 'null'
 '!!null #empty':
   YAML:
     dump: '''#empty'''
     type: str
   YAML::Syck:
-    dump: ~
+    dump: '~'
     type: 'null'
   YAML::XS:
-    dump: ~
+    dump: '~'
     type: 'null'
 '!!null NULL':
   YAML:
-    dump: NULL
+    dump: 'NULL'
     type: str
   YAML::Syck:
-    dump: ~
+    dump: '~'
     type: 'null'
   YAML::XS:
     error: 1
     type: error
 '!!null Null':
   YAML:
-    dump: Null
+    dump: 'Null'
     type: str
   YAML::Syck:
-    dump: ~
+    dump: '~'
     type: 'null'
   YAML::XS:
     error: 1
@@ -824,20 +814,20 @@
     dump: 'null'
     type: str
   YAML::Syck:
-    dump: ~
+    dump: '~'
     type: 'null'
   YAML::XS:
-    dump: ~
+    dump: '~'
     type: 'null'
 '!!null ~':
   YAML:
     dump: '''~'''
     type: str
   YAML::Syck:
-    dump: ~
+    dump: '~'
     type: 'null'
   YAML::XS:
-    dump: ~
+    dump: '~'
     type: 'null'
 '!!str #empty':
   YAML:
@@ -851,47 +841,47 @@
     type: str
 '!!str +.INF':
   YAML:
-    dump: +.INF
+    dump: '+.INF'
     type: str
   YAML::Syck:
-    dump: +.INF
+    dump: '+.INF'
     type: str
   YAML::XS:
-    dump: +.INF
+    dump: '+.INF'
     type: str
 '!!str +.Inf':
   YAML:
-    dump: +.Inf
+    dump: '+.Inf'
     type: str
   YAML::Syck:
-    dump: +.Inf
+    dump: '+.Inf'
     type: str
   YAML::XS:
-    dump: +.Inf
+    dump: '+.Inf'
     type: str
 '!!str +.inf':
   YAML:
-    dump: +.inf
+    dump: '+.inf'
     type: str
   YAML::Syck:
-    dump: +.inf
+    dump: '+.inf'
     type: str
   YAML::XS:
-    dump: +.inf
+    dump: '+.inf'
     type: str
 '!!str +0':
   YAML:
-    dump: +0
+    dump: '+0'
     type: str
   YAML::Syck:
-    dump: +0
+    dump: '+0'
     type: str
   YAML::XS:
     dump: '''+0'''
     type: str
 '!!str +0.3e+3':
   YAML:
-    dump: +0.3e+3
+    dump: '+0.3e+3'
     type: str
   YAML::Syck:
     dump: '''+0.3e+3'''
@@ -901,7 +891,7 @@
     type: str
 '!!str +0.3e3':
   YAML:
-    dump: +0.3e3
+    dump: '+0.3e3'
     type: str
   YAML::Syck:
     dump: '''+0.3e3'''
@@ -941,43 +931,43 @@
     type: str
 '!!str +23':
   YAML:
-    dump: +23
+    dump: '+23'
     type: str
   YAML::Syck:
-    dump: +23
+    dump: '+23'
     type: str
   YAML::XS:
     dump: '''+23'''
     type: str
 '!!str -.INF':
   YAML:
-    dump: -.INF
+    dump: '-.INF'
     type: str
   YAML::Syck:
-    dump: -.INF
+    dump: '-.INF'
     type: str
   YAML::XS:
-    dump: -.INF
+    dump: '-.INF'
     type: str
 '!!str -.Inf':
   YAML:
-    dump: -.Inf
+    dump: '-.Inf'
     type: str
   YAML::Syck:
-    dump: -.Inf
+    dump: '-.Inf'
     type: str
   YAML::XS:
-    dump: -.Inf
+    dump: '-.Inf'
     type: str
 '!!str -.inf':
   YAML:
-    dump: -.inf
+    dump: '-.inf'
     type: str
   YAML::Syck:
-    dump: -.inf
+    dump: '-.inf'
     type: str
   YAML::XS:
-    dump: -.inf
+    dump: '-.inf'
     type: str
 '!!str -0':
   YAML:
@@ -1054,7 +1044,7 @@
     dump: '0'
     type: float
   YAML::Syck:
-    dump: .0
+    dump: '.0'
     type: str
   YAML::XS:
     dump: '''.0'''
@@ -1091,63 +1081,63 @@
     type: str
 '!!str .INF':
   YAML:
-    dump: .INF
+    dump: '.INF'
     type: str
   YAML::Syck:
-    dump: .INF
+    dump: '.INF'
     type: str
   YAML::XS:
-    dump: .INF
+    dump: '.INF'
     type: str
 '!!str .Inf':
   YAML:
-    dump: .Inf
+    dump: '.Inf'
     type: str
   YAML::Syck:
-    dump: .Inf
+    dump: '.Inf'
     type: str
   YAML::XS:
-    dump: .Inf
+    dump: '.Inf'
     type: str
 '!!str .NAN':
   YAML:
-    dump: .NAN
+    dump: '.NAN'
     type: str
   YAML::Syck:
-    dump: .NAN
+    dump: '.NAN'
     type: str
   YAML::XS:
-    dump: .NAN
+    dump: '.NAN'
     type: str
 '!!str .NaN':
   YAML:
-    dump: .NaN
+    dump: '.NaN'
     type: str
   YAML::Syck:
-    dump: .NaN
+    dump: '.NaN'
     type: str
   YAML::XS:
-    dump: .NaN
+    dump: '.NaN'
     type: str
 '!!str .inf':
   YAML:
-    dump: .inf
+    dump: '.inf'
     type: str
   YAML::Syck:
-    dump: .inf
+    dump: '.inf'
     type: str
   YAML::XS:
-    dump: .inf
+    dump: '.inf'
     type: str
 '!!str .nan':
   YAML:
-    dump: .nan
+    dump: '.nan'
     type: str
   YAML::Syck:
-    dump: .nan
+    dump: '.nan'
     type: str
   YAML::XS:
-    dump: .nan
+    dump: '.nan'
     type: str
 '!!str 0':
   YAML:
@@ -1181,7 +1171,7 @@
     type: str
 '!!str 00':
   YAML:
-    dump: 00
+    dump: '00'
     type: str
   YAML::Syck:
     dump: '''00'''
@@ -1191,7 +1181,7 @@
     type: str
 '!!str 001.23':
   YAML:
-    dump: 001.23
+    dump: '001.23'
     type: str
   YAML::Syck:
     dump: '''001.23'''
@@ -1201,7 +1191,7 @@
     type: str
 '!!str 0011':
   YAML:
-    dump: 0011
+    dump: '0011'
     type: str
   YAML::Syck:
     dump: '''0011'''
@@ -1211,7 +1201,7 @@
     type: str
 '!!str 010':
   YAML:
-    dump: 010
+    dump: '010'
     type: str
   YAML::Syck:
     dump: '''010'''
@@ -1231,7 +1221,7 @@
     type: str
 '!!str 07':
   YAML:
-    dump: 07
+    dump: '07'
     type: str
   YAML::Syck:
     dump: '''07'''
@@ -1261,43 +1251,43 @@
     type: str
 '!!str 0o0':
   YAML:
-    dump: 0o0
+    dump: '0o0'
     type: str
   YAML::Syck:
-    dump: 0o0
+    dump: '0o0'
     type: str
   YAML::XS:
-    dump: 0o0
+    dump: '0o0'
     type: str
 '!!str 0o10':
   YAML:
-    dump: 0o10
+    dump: '0o10'
     type: str
   YAML::Syck:
-    dump: 0o10
+    dump: '0o10'
     type: str
   YAML::XS:
-    dump: 0o10
+    dump: '0o10'
     type: str
 '!!str 0o7':
   YAML:
-    dump: 0o7
+    dump: '0o7'
     type: str
   YAML::Syck:
-    dump: 0o7
+    dump: '0o7'
     type: str
   YAML::XS:
-    dump: 0o7
+    dump: '0o7'
     type: str
 '!!str 0x0':
   YAML:
-    dump: 0x0
+    dump: '0x0'
     type: str
   YAML::Syck:
-    dump: 0x0
+    dump: '0x0'
     type: str
   YAML::XS:
-    dump: 0x0
+    dump: '0x0'
     type: str
 '!!str 0x2_0':
   YAML:
@@ -1311,13 +1301,13 @@
     type: str
 '!!str 0xa':
   YAML:
-    dump: 0xa
+    dump: '0xa'
     type: str
   YAML::Syck:
-    dump: 0xa
+    dump: '0xa'
     type: str
   YAML::XS:
-    dump: 0xa
+    dump: '0xa'
     type: str
 '!!str 100_000':
   YAML:
@@ -1401,23 +1391,23 @@
     type: str
 '!!str FALSE':
   YAML:
-    dump: FALSE
+    dump: 'FALSE'
     type: str
   YAML::Syck:
     dump: '''FALSE'''
     type: str
   YAML::XS:
-    dump: FALSE
+    dump: 'FALSE'
     type: str
 '!!str False':
   YAML:
-    dump: False
+    dump: 'False'
     type: str
   YAML::Syck:
     dump: '''False'''
     type: str
   YAML::XS:
-    dump: False
+    dump: 'False'
     type: str
 '!!str N':
   YAML:
@@ -1441,23 +1431,23 @@
     type: str
 '!!str NULL':
   YAML:
-    dump: NULL
+    dump: 'NULL'
     type: str
   YAML::Syck:
     dump: '''NULL'''
     type: str
   YAML::XS:
-    dump: NULL
+    dump: 'NULL'
     type: str
 '!!str Null':
   YAML:
-    dump: Null
+    dump: 'Null'
     type: str
   YAML::Syck:
     dump: '''Null'''
     type: str
   YAML::XS:
-    dump: Null
+    dump: 'Null'
     type: str
 '!!str OFF':
   YAML:
@@ -1501,23 +1491,23 @@
     type: str
 '!!str TRUE':
   YAML:
-    dump: TRUE
+    dump: 'TRUE'
     type: str
   YAML::Syck:
     dump: '''TRUE'''
     type: str
   YAML::XS:
-    dump: TRUE
+    dump: 'TRUE'
     type: str
 '!!str True':
   YAML:
-    dump: True
+    dump: 'True'
     type: str
   YAML::Syck:
     dump: '''True'''
     type: str
   YAML::XS:
-    dump: True
+    dump: 'True'
     type: str
 '!!str Y':
   YAML:
@@ -2017,70 +2007,70 @@
     dump: ''''''
     type: str
   YAML::Syck:
-    dump: ~
+    dump: '~'
     type: 'null'
   YAML::XS:
-    dump: ~
+    dump: '~'
     type: 'null'
-+.INF:
+'+.INF':
   YAML:
-    dump: +.INF
+    dump: '+.INF'
     type: str
   YAML::Syck:
     dump: '''Inf'''
     type: inf
   YAML::XS:
-    dump: +.INF
+    dump: '+.INF'
     type: str
-+.Inf:
+'+.Inf':
   YAML:
-    dump: +.Inf
+    dump: '+.Inf'
     type: str
   YAML::Syck:
     dump: '''Inf'''
     type: inf
   YAML::XS:
-    dump: +.Inf
+    dump: '+.Inf'
     type: str
-+.inf:
+'+.inf':
   YAML:
-    dump: +.inf
+    dump: '+.inf'
     type: str
   YAML::Syck:
     dump: '''Inf'''
     type: inf
   YAML::XS:
-    dump: +.inf
+    dump: '+.inf'
     type: str
-+0:
+'+0':
   YAML:
-    dump: +0
+    dump: '+0'
     type: str
   YAML::Syck:
     dump: '0'
     type: int
   YAML::XS:
-    dump: +0
+    dump: '+0'
     type: int
-+0.3e+3:
+'+0.3e+3':
   YAML:
-    dump: +0.3e+3
+    dump: '+0.3e+3'
     type: str
   YAML::Syck:
     dump: '''300'''
     type: float
   YAML::XS:
-    dump: +0.3e+3
+    dump: '+0.3e+3'
     type: float
-+0.3e3:
+'+0.3e3':
   YAML:
-    dump: +0.3e3
+    dump: '+0.3e3'
     type: str
   YAML::Syck:
     dump: '''+0.3e3'''
     type: str
   YAML::XS:
-    dump: +0.3e3
+    dump: '+0.3e3'
     type: float
 +0100_200:
   YAML:
@@ -2112,55 +2102,55 @@
   YAML::XS:
     dump: +190:20:30
     type: str
-+23:
+'+23':
   YAML:
-    dump: +23
+    dump: '+23'
     type: str
   YAML::Syck:
     dump: '23'
     type: int
   YAML::XS:
-    dump: +23
+    dump: '+23'
     type: int
-+3.14:
+'+3.14':
   YAML:
-    dump: +3.14
+    dump: '+3.14'
     type: str
   YAML::Syck:
     dump: '''3.14'''
     type: float
   YAML::XS:
-    dump: +3.14
+    dump: '+3.14'
     type: float
--.INF:
+'-.INF':
   YAML:
-    dump: -.INF
+    dump: '-.INF'
     type: str
   YAML::Syck:
     dump: '''-Inf'''
     type: inf
   YAML::XS:
-    dump: -.INF
+    dump: '-.INF'
     type: str
--.Inf:
+'-.Inf':
   YAML:
-    dump: -.Inf
+    dump: '-.Inf'
     type: str
   YAML::Syck:
     dump: '''-Inf'''
     type: inf
   YAML::XS:
-    dump: -.Inf
+    dump: '-.Inf'
     type: str
--.inf:
+'-.inf':
   YAML:
-    dump: -.inf
+    dump: '-.inf'
     type: str
   YAML::Syck:
     dump: '''-Inf'''
     type: inf
   YAML::XS:
-    dump: -.inf
+    dump: '-.inf'
     type: str
 '-0':
   YAML:
@@ -2232,27 +2222,27 @@
   YAML::XS:
     dump: '-3.14'
     type: float
-.0:
+'.0':
   YAML:
     dump: '0'
     type: float
   YAML::Syck:
-    dump: .0
+    dump: '.0'
     type: str
   YAML::XS:
-    dump: .0
+    dump: '.0'
     type: float
-.14:
+'.14':
   YAML:
     dump: '0.14'
     type: float
   YAML::Syck:
-    dump: .14
+    dump: '.14'
     type: str
   YAML::XS:
-    dump: .14
+    dump: '.14'
     type: float
-.3E-1:
+'.3E-1':
   YAML:
     dump: '0.03'
     type: float
@@ -2260,9 +2250,9 @@
     dump: '''.3E-1'''
     type: str
   YAML::XS:
-    dump: .3E-1
+    dump: '.3E-1'
     type: float
-.3e+3:
+'.3e+3':
   YAML:
     dump: '300'
     type: int
@@ -2270,9 +2260,9 @@
     dump: '''.3e+3'''
     type: str
   YAML::XS:
-    dump: .3e+3
+    dump: '.3e+3'
     type: float
-.3e3:
+'.3e3':
   YAML:
     dump: '300'
     type: int
@@ -2280,67 +2270,67 @@
     dump: '''.3e3'''
     type: str
   YAML::XS:
-    dump: .3e3
+    dump: '.3e3'
     type: float
-.INF:
+'.INF':
   YAML:
-    dump: .INF
+    dump: '.INF'
     type: str
   YAML::Syck:
     dump: '''Inf'''
     type: inf
   YAML::XS:
-    dump: .INF
+    dump: '.INF'
     type: str
-.Inf:
+'.Inf':
   YAML:
-    dump: .Inf
+    dump: '.Inf'
     type: str
   YAML::Syck:
     dump: '''Inf'''
     type: inf
   YAML::XS:
-    dump: .Inf
+    dump: '.Inf'
     type: str
-.NAN:
+'.NAN':
   YAML:
-    dump: .NAN
+    dump: '.NAN'
     type: str
   YAML::Syck:
     dump: '''NaN'''
     type: nan
   YAML::XS:
-    dump: .NAN
+    dump: '.NAN'
     type: str
-.NaN:
+'.NaN':
   YAML:
-    dump: .NaN
+    dump: '.NaN'
     type: str
   YAML::Syck:
     dump: '''NaN'''
     type: nan
   YAML::XS:
-    dump: .NaN
+    dump: '.NaN'
     type: str
-.inf:
+'.inf':
   YAML:
-    dump: .inf
+    dump: '.inf'
     type: str
   YAML::Syck:
     dump: '''Inf'''
     type: inf
   YAML::XS:
-    dump: .inf
+    dump: '.inf'
     type: str
-.nan:
+'.nan':
   YAML:
-    dump: .nan
+    dump: '.nan'
     type: str
   YAML::Syck:
     dump: '''NaN'''
     type: nan
   YAML::XS:
-    dump: .nan
+    dump: '.nan'
     type: str
 '0':
   YAML:
@@ -2372,45 +2362,45 @@
   YAML::XS:
     dump: '0.3e3'
     type: float
-00:
+'00':
   YAML:
-    dump: 00
+    dump: '00'
     type: str
   YAML::Syck:
     dump: '0'
     type: int
   YAML::XS:
-    dump: 00
+    dump: '00'
     type: int
-001.23:
+'001.23':
   YAML:
-    dump: 001.23
+    dump: '001.23'
     type: str
   YAML::Syck:
     dump: '''1.23'''
     type: float
   YAML::XS:
-    dump: 001.23
+    dump: '001.23'
     type: float
-0011:
+'0011':
   YAML:
-    dump: 0011
+    dump: '0011'
     type: str
   YAML::Syck:
     dump: '9'
     type: int
   YAML::XS:
-    dump: 0011
+    dump: '0011'
     type: int
-010:
+'010':
   YAML:
-    dump: 010
+    dump: '010'
     type: str
   YAML::Syck:
     dump: '8'
     type: int
   YAML::XS:
-    dump: 010
+    dump: '010'
     type: int
 02_0:
   YAML:
@@ -2422,15 +2412,25 @@
   YAML::XS:
     dump: 02_0
     type: str
-07:
+'07':
   YAML:
-    dump: 07
+    dump: '07'
     type: str
   YAML::Syck:
     dump: '7'
     type: int
   YAML::XS:
-    dump: 07
+    dump: '07'
+    type: int
+'08':
+  YAML:
+    dump: '08'
+    type: str
+  YAML::Syck:
+    dump: '''08'''
+    type: str
+  YAML::XS:
+    dump: '08'
     type: int
 0b0:
   YAML:
@@ -2452,55 +2452,55 @@
   YAML::XS:
     dump: 0b100_101
     type: str
-0o0:
+'0o0':
   YAML:
-    dump: 0o0
+    dump: '0o0'
     type: str
   YAML::Syck:
-    dump: 0o0
+    dump: '0o0'
     type: str
   YAML::XS:
-    dump: 0o0
+    dump: '0o0'
     type: str
-0o10:
+'0o10':
   YAML:
-    dump: 0o10
+    dump: '0o10'
     type: str
   YAML::Syck:
-    dump: 0o10
+    dump: '0o10'
     type: str
   YAML::XS:
-    dump: 0o10
+    dump: '0o10'
     type: str
-0o7:
+'0o7':
   YAML:
-    dump: 0o7
+    dump: '0o7'
     type: str
   YAML::Syck:
-    dump: 0o7
+    dump: '0o7'
     type: str
   YAML::XS:
-    dump: 0o7
+    dump: '0o7'
     type: str
-0x0:
+'0x0':
   YAML:
-    dump: 0x0
+    dump: '0x0'
     type: str
   YAML::Syck:
     dump: '0'
     type: int
   YAML::XS:
-    dump: 0x0
+    dump: '0x0'
     type: str
-0x10:
+'0x10':
   YAML:
-    dump: 0x10
+    dump: '0x10'
     type: str
   YAML::Syck:
     dump: '16'
     type: int
   YAML::XS:
-    dump: 0x10
+    dump: '0x10'
     type: str
 0x2_0:
   YAML:
@@ -2512,25 +2512,25 @@
   YAML::XS:
     dump: 0x2_0
     type: str
-0x42:
+'0x42':
   YAML:
-    dump: 0x42
+    dump: '0x42'
     type: str
   YAML::Syck:
     dump: '66'
     type: int
   YAML::XS:
-    dump: 0x42
+    dump: '0x42'
     type: str
-0xa:
+'0xa':
   YAML:
-    dump: 0xa
+    dump: '0xa'
     type: str
   YAML::Syck:
     dump: '10'
     type: int
   YAML::XS:
-    dump: 0xa
+    dump: '0xa'
     type: str
 100_000:
   YAML:
@@ -2592,6 +2592,16 @@
   YAML::XS:
     dump: '3.3e+3'
     type: float
+'3e3':
+  YAML:
+    dump: '3000'
+    type: int
+  YAML::Syck:
+    dump: '''3e3'''
+    type: str
+  YAML::XS:
+    dump: '3e3'
+    type: float
 85.230_15e+03:
   YAML:
     dump: 85.230_15e+03
@@ -2612,25 +2622,25 @@
   YAML::XS:
     dump: 85_230.15
     type: str
-FALSE:
+'FALSE':
   YAML:
-    dump: FALSE
+    dump: 'FALSE'
     type: str
   YAML::Syck:
     dump: ''''''
     type: float
   YAML::XS:
-    dump: FALSE
+    dump: 'FALSE'
     type: str
-False:
+'False':
   YAML:
-    dump: False
+    dump: 'False'
     type: str
   YAML::Syck:
     dump: ''''''
     type: float
   YAML::XS:
-    dump: False
+    dump: 'False'
     type: str
 N:
   YAML:
@@ -2652,25 +2662,25 @@ NO:
   YAML::XS:
     dump: NO
     type: str
-NULL:
+'NULL':
   YAML:
-    dump: NULL
+    dump: 'NULL'
     type: str
   YAML::Syck:
-    dump: ~
+    dump: '~'
     type: 'null'
   YAML::XS:
-    dump: NULL
+    dump: 'NULL'
     type: str
-Null:
+'Null':
   YAML:
-    dump: Null
+    dump: 'Null'
     type: str
   YAML::Syck:
-    dump: ~
+    dump: '~'
     type: 'null'
   YAML::XS:
-    dump: Null
+    dump: 'Null'
     type: str
 OFF:
   YAML:
@@ -2712,25 +2722,25 @@ On:
   YAML::XS:
     dump: On
     type: str
-TRUE:
+'TRUE':
   YAML:
-    dump: TRUE
+    dump: 'TRUE'
     type: str
   YAML::Syck:
     dump: '1'
     type: float
   YAML::XS:
-    dump: TRUE
+    dump: 'TRUE'
     type: str
-True:
+'True':
   YAML:
-    dump: True
+    dump: 'True'
     type: str
   YAML::Syck:
     dump: '1'
     type: float
   YAML::XS:
-    dump: True
+    dump: 'True'
     type: str
 Y:
   YAML:
@@ -2817,10 +2827,10 @@ no:
     dump: 'null'
     type: str
   YAML::Syck:
-    dump: ~
+    dump: '~'
     type: 'null'
   YAML::XS:
-    dump: ~
+    dump: '~'
     type: 'null'
 off:
   YAML:
@@ -2882,13 +2892,13 @@ yes:
   YAML::XS:
     dump: yes
     type: str
-~:
+'~':
   YAML:
-    dump: ~
+    dump: '~'
     type: 'null'
   YAML::Syck:
-    dump: ~
+    dump: '~'
     type: 'null'
   YAML::XS:
-    dump: ~
+    dump: '~'
     type: 'null'
