@@ -34,7 +34,7 @@ use YAML::PP::Common qw/ YAML_PLAIN_SCALAR_STYLE /;
 # |null|Null|NULL # (English)
 # | # (Empty)
 
-my $RE_INT_1_1 = qr{^([+-]?(?:[0-9_]+))$};
+my $RE_INT_1_1 = qr{^([+-]?(?:0|[1-9][0-9_]*))$};
 #my $RE_FLOAT_1_1 = qr{^([+-]?([0-9][0-9_]*)?\.[0-9.]*([eE][+-][0-9]+)?)$};
 # https://yaml.org/type/float.html has a bug. The regex says \.[0-9.], but
 # probably means \.[0-9_]
