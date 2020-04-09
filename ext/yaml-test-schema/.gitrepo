@@ -1,0 +1,12 @@
+; DO NOT EDIT (unless you know what you are doing)
+;
+; This subdirectory is a git "subrepo", and this file is maintained by the
+; git-subrepo command. See https://github.com/git-commands/git-subrepo#readme
+;
+[subrepo]
+	remote = git@github.com:perlpunk/yaml-test-schema
+	branch = master
+	commit = f4f0f0307f6f2a0542a5e9e9b9993c7262963554
+	parent = 44295b0e0936f33bc42ebc3fa9ecb11c2bf994dc
+	method = merge
+	cmdver = 0.4.0
