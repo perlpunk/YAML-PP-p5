@@ -11,7 +11,7 @@ use YAML::PP;
 my $jsonpp = eval { require JSON::PP };
 
 
-my $schema_file = "$Bin/../examples/yaml-schema.yaml";
+my $schema_file = "$Bin/../ext/yaml-test-schema/yaml-schema.yaml";
 my $strings_file = "$Bin/../examples/strings.yaml";
 my $schema_data = do { YAML::PP->new->load_file($schema_file) };
 my $strings_data = do { YAML::PP->new->load_file($strings_file) };

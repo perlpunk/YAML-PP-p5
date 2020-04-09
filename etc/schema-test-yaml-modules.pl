@@ -19,7 +19,7 @@ my $int_flags = B::SVp_IOK;
 my $float_flags = B::SVp_NOK;
 
 #my $yp = YAML::PP->new( schema => 
-my $file = "$Bin/../examples/yaml-schema.yaml";
+my $file = "$Bin/../ext/yaml-test-schema/yaml-schema.yaml";
 my $outputfile = "$Bin/../examples/yaml-schema-modules.yaml";
 
 my $data = YAML::PP::LoadFile($file);

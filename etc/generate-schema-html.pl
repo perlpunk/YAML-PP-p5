@@ -9,7 +9,7 @@ use lib "$Bin/../lib";
 use YAML::PP;
 use URI::Escape qw/ uri_escape /;
 
-my $file = "$Bin/../examples/yaml-schema.yaml";
+my $file = "$Bin/../ext/yaml-test-schema/yaml-schema.yaml";
 my $modulesfile = "$Bin/../examples/yaml-schema-modules.yaml";
 my $htmlfile = "$Bin/../gh-pages/schema-examples.html";
 
