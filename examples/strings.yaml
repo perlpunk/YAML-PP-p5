@@ -1,0 +1,84 @@
+###############################################
+# Various strings
+###############################################
+
+
+'" "':
+  failsafe, json, core, yaml11: ['str', ' ', "' '"]
+'"@array"':
+  failsafe, json, core, yaml11: ['str', '@array', "'@array'"]
+'"%percent"':
+  failsafe, json, core, yaml11: ['str', '%percent', "'%percent'"]
+'"`cmd`"':
+  failsafe, json, core, yaml11: ['str', '`cmd`', "'`cmd`'"]
+'"!string"':
+  failsafe, json, core, yaml11: ['str', '!string', "'!string'"]
+'"*string"':
+  failsafe, json, core, yaml11: ['str', '*string', "'*string'"]
+'"string:"':
+  failsafe, json, core, yaml11: ['str', 'string:', "'string:'"]
+'"string "':
+  failsafe, json, core, yaml11: ['str', 'string ', "'string '"]
+'"string\t"':
+  failsafe, json, core, yaml11: ['str', "string\t", '"string\t"']
+'"string\r"':
+  failsafe, json, core, yaml11: ['str', "string\r", '"string\r"']
+'"key: val"':
+  failsafe, json, core, yaml11: ['str', 'key: val', "'key: val'"]
+'"-"':
+  failsafe, json, core, yaml11: ['str', '-', "'-'"]
+'"- "':
+  failsafe, json, core, yaml11: ['str', '- ', "'- '"]
+'"-\n"':
+  failsafe, json, core, yaml11: ['str', "-\n", "|\n  -"]
+'"-\t"':
+  failsafe, json, core, yaml11: ['str', "-\t", '"-\t"']
+'"- a"':
+  failsafe, json, core, yaml11: ['str', '- a', "'- a'"]
+'":"':
+  failsafe, json, core, yaml11: ['str', ':', "':'"]
+'"{"':
+  failsafe, json, core, yaml11: ['str', '{', "'{'"]
+'"}"':
+  failsafe, json, core, yaml11: ['str', '}', "'}'"]
+'"["':
+  failsafe, json, core, yaml11: ['str', '[', "'['"]
+'"]"':
+  failsafe, json, core, yaml11: ['str', ']', "']'"]
+'","':
+  failsafe, json, core, yaml11: ['str', ',', "','"]
+'"?"':
+  failsafe, json, core, yaml11: ['str', '?', "'?'"]
+'"? "':
+  failsafe, json, core, yaml11: ['str', '? ', "'? '"]
+'"? a"':
+  failsafe, json, core, yaml11: ['str', '? a', "'? a'"]
+'"#"':
+  failsafe, json, core, yaml11: ['str', '#', "'#'"]
+'"no comment #"':
+  failsafe, json, core, yaml11: ['str', 'no comment #', "'no comment #'"]
+'"# "':
+  failsafe, json, core, yaml11: ['str', '# ', "'# '"]
+'"no #comment"':
+  failsafe, json, core, yaml11: ['str', 'no #comment', "'no #comment'"]
+'"|"':
+  failsafe, json, core, yaml11: ['str', '|', "'|'"]
+'">"':
+  failsafe, json, core, yaml11: ['str', '>', "'>'"]
+'"''"':
+  failsafe, json, core, yaml11: ['str', '''', "''''"]
+'"\""':
+  failsafe, json, core, yaml11: ['str', '"', "'\"'"]
+'"foo\nbar"':
+  failsafe, json, core, yaml11: ['str', "foo\nbar", "|-\n  foo\n  bar"]
+'"x\n\"y\\z"':
+  failsafe, json, core, yaml11: ['str', "x\n\"y\\z", "|-\n  x\n  \"y\\z"]
+
+'"no comment#"':
+  failsafe, json, core, yaml11: ['str', 'no comment#', "no comment#"]
+'foo\bar':
+  failsafe, json, core, yaml11: ['str', 'foo\bar', 'foo\bar']
+'^string':
+  failsafe, json, core, yaml11: ['str', '^string', '^string']
+'str"ing':
+  failsafe, json, core, yaml11: ['str', 'str"ing', 'str"ing']
