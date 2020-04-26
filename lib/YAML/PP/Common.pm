@@ -53,7 +53,7 @@ my %scalar_style_to_string = (
 
 
 sub event_to_test_suite {
-    my ($event) = @_;
+    my ($event, $args) = @_;
     my $ev = $event->{name};
         my $string;
         my $content = $event->{value};
@@ -78,22 +78,22 @@ sub event_to_test_suite {
         }
         elsif ($ev eq 'mapping_start_event') {
             $string = "+MAP";
+            if ($event->{style} and $event->{style} eq YAML_FLOW_MAPPING_STYLE) {
+                $string .= ' {}' if $args->{flow};
+            }
             $string .= $properties;
             if (0) {
                 # doesn't match yaml-test-suite format
-                if ($event->{style} and $event->{style} eq YAML_FLOW_MAPPING_STYLE) {
-                    $string .= " {}";
-                }
             }
         }
         elsif ($ev eq 'sequence_start_event') {
             $string = "+SEQ";
+            if ($event->{style} and $event->{style} eq YAML_FLOW_SEQUENCE_STYLE) {
+                $string .= ' []' if $args->{flow};
+            }
             $string .= $properties;
             if (0) {
                 # doesn't match yaml-test-suite format
-                if ($event->{style} and $event->{style} eq YAML_FLOW_SEQUENCE_STYLE) {
-                    $string .= " []";
-                }
             }
         }
         elsif ($ev eq 'mapping_end_event') {
