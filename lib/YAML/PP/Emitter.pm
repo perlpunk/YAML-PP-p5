@@ -445,7 +445,7 @@ sub scalar_event {
         elsif ($forbidden_first{ $first }) {
             $style = YAML_SINGLE_QUOTED_SCALAR_STYLE;
         }
-        elsif (substr($value, 0, 3) =~ m/^---/) {
+        elsif (substr($value, 0, 3) =~ m/^(?:---|\.\.\.)/) {
             $style = YAML_SINGLE_QUOTED_SCALAR_STYLE;
         }
         elsif (substr($value, 0, 2) =~ m/^(?:[:?-] )/) {
