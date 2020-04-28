@@ -18,6 +18,7 @@ sub new {
     my ($class, %args) = @_;
 
     my $default_yaml_version = delete $args{default_yaml_version};
+    my $resolve_alias = delete $args{resolve_alias} || 0;
     my $preserve = delete $args{preserve} || 0;
     if ($preserve == PRESERVE_ALL) {
         $preserve = PRESERVE_ORDER | PRESERVE_SCALAR_STYLE;
@@ -36,6 +37,7 @@ sub new {
         schemas => $schemas,
         cyclic_refs => $cyclic_refs,
         preserve => $preserve,
+        resolve_alias => $resolve_alias,
     }, $class;
     $self->init;
     return $self;
@@ -78,6 +80,7 @@ sub set_yaml_version { $_[0]->{yaml_version} = $_[1] }
 sub default_yaml_version { return $_[0]->{default_yaml_version} }
 sub preserve_order { return $_[0]->{preserve} & PRESERVE_ORDER }
 sub preserve_scalar_style { return $_[0]->{preserve} & PRESERVE_SCALAR_STYLE }
+sub resolve_alias { return $_[0]->{resolve_alias} }
 
 sub document_start_event {
     my ($self, $event) = @_;
@@ -262,6 +265,10 @@ sub alias_event {
         # been constructed completely yet
         unless ($anchor->{finished} ) {
             my $cyclic_refs = $self->cyclic_refs;
+            if ($self->resolve_alias and $cyclic_refs eq 'allow') {
+                # Prevent endless loop
+                $cyclic_refs = 'warn';
+            }
             if ($cyclic_refs ne 'allow') {
                 if ($cyclic_refs eq 'fatal') {
                     die "Found cyclic ref";
@@ -276,6 +283,10 @@ sub alias_event {
             }
         }
         $value = $anchor->{data};
+    }
+    if ($self->resolve_alias) {
+        require Storable;
+        $value = Storable::dclone($value) if ref $value;
     }
     my $last = $self->stack->[-1];
     push @{ $last->{ref} }, $value;

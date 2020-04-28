@@ -5,6 +5,7 @@ use warnings;
 use YAML::PP;
 use YAML::PP::Dumper;
 use Encode;
+use Getopt::Long qw/ GetOptions /;
 
 my ($file) = @ARGV;
 my $yaml;
@@ -14,7 +15,13 @@ unless ($file) {
     $yaml = decode_utf8($yaml);
 }
 
-my $ypp = YAML::PP->new(boolean => 'JSON::PP', preserve => 1);
+my $ypp = YAML::PP->new(
+    schema => [qw/ + Merge /],
+    boolean => 'JSON::PP',
+    preserve => 1,
+    resolve_alias_load => 0,
+    resolve_alias_dump => 0,
+);
 my @docs = $file ? $ypp->load_file($file) : $ypp->load_string($yaml);
 my $out_yaml = $ypp->dump_string(@docs);
 

@@ -15,7 +15,11 @@ unless ($file) {
     $yaml = decode_utf8($yaml);
 }
 
-my $ypp = YAML::PP->new( preserve => PRESERVE_ORDER );
+my $ypp = YAML::PP->new(
+    schema => [qw/ + Merge /],
+    preserve => PRESERVE_ORDER,
+    resolve_alias_load => 0,
+);
 my @docs = $file ? $ypp->load_file($file) : $ypp->load_string($yaml);
 
 local $Data::Dumper::Useqq = 1;

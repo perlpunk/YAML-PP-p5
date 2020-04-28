@@ -13,6 +13,7 @@ sub new {
     my ($class, %args) = @_;
 
     my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
+    my $resolve_alias = delete $args{resolve_alias};
     my $default_yaml_version = delete $args{default_yaml_version} || '1.2';
     my $preserve = delete $args{preserve};
     my $schemas = delete $args{schemas};
@@ -27,6 +28,7 @@ sub new {
         cyclic_refs => $cyclic_refs,
         default_yaml_version => $default_yaml_version,
         preserve => $preserve,
+        resolve_alias => $resolve_alias,
     );
     my $parser = delete $args{parser};
     unless ($parser) {

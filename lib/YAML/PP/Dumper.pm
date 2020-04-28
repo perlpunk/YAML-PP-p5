@@ -28,6 +28,7 @@ sub new {
     $footer = 0 unless defined $footer;
     my $version_directive = delete $args{version_directive};
     my $preserve = delete $args{preserve};
+    my $resolve_alias = delete $args{resolve_alias};
 
     my $schema = delete $args{schema} || YAML::PP->default_schema(
         boolean => 'perl',
@@ -55,6 +56,7 @@ sub new {
         anchor_num => 0,
         header => $header,
         footer => $footer,
+        resolve_alias => $resolve_alias,
     }, $class;
     return $self;
 }
@@ -87,6 +89,7 @@ sub set_representer { $_[0]->{representer} = $_[1] }
 sub header { return $_[0]->{header} }
 sub footer { return $_[0]->{footer} }
 sub version_directive { return $_[0]->{version_directive} }
+sub resolve_alias { return $_[0]->{resolve_alias} }
 
 sub dump {
     my ($self, @docs) = @_;
@@ -122,6 +125,7 @@ sub dump_node {
     my $node = {
         value => $value,
     };
+    my $emitted = $self->{emitted} ||= {};
     if (ref $value) {
 
         my $seen = $self->{seen};
@@ -134,15 +138,31 @@ sub dump_node {
                 $node->{anchor} = $num;
             }
             else {
-                $node->{value} = $anchor;
-                $self->emit_node([ alias => $node ]);
-                return;
+                if ($self->{resolve_alias} and not $emitted->{ $anchor }) {
+                    $self->emit_node([ scalar => { items => ["cyclic alias $anchor"] } ]);
+                    return;
+                }
+                if ($self->{resolve_alias}) {
+                    warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$node], ['node']);
+                }
+                else {
+                    $node->{value} = $anchor;
+                    $self->emit_node([ alias => $node ]);
+                    return;
+                }
             }
 
         }
     }
+    my $anchor = $node->{anchor};
+    if ($self->resolve_alias) {
+        delete $node->{anchor};
+    }
     $node = $self->representer->represent_node($node);
     $self->emit_node($node);
+    if ($anchor) {
+        $emitted->{ $anchor } = 1;
+    }
 }
 
 sub emit_node {

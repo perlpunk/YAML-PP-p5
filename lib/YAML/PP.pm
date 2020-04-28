@@ -29,6 +29,8 @@ sub new {
     my $writer = delete $args{writer};
     my $header = delete $args{header};
     my $footer = delete $args{footer};
+    my $resolve_alias_load = delete $args{resolve_alias_load};
+    my $resolve_alias_dump = delete $args{resolve_alias_dump};
     my $yaml_version = $class->_arg_yaml_version(delete $args{yaml_version});
     my $default_yaml_version = $yaml_version->[0];
     my $version_directive = delete $args{version_directive};
@@ -65,6 +67,7 @@ sub new {
         parser => $parser,
         default_yaml_version => $default_yaml_version,
         preserve => $preserve,
+        resolve_alias => $resolve_alias_load,
     );
     my $dumper = YAML::PP::Dumper->new(
         schema => $default_schema,
@@ -73,6 +76,7 @@ sub new {
         footer => $footer,
         version_directive => $version_directive,
         preserve => $preserve,
+        resolve_alias => $resolve_alias_dump,
     );
 
     my $self = bless {
