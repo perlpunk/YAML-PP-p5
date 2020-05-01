@@ -118,8 +118,8 @@ sub mapping_start_event {
                 $last->{type} = 'COMPLEXVALUE';
             }
             elsif ($last->{type} eq 'COMPLEXVALUE') {
-                $new_indent .= ' ' x $self->indent;
                 $yaml .= ":";
+                $last->{type} = 'MAP';
             }
             else {
                 die "Unexpected";
