@@ -117,6 +117,10 @@ sub mapping_start_event {
                 $yaml .= ":";
                 $last->{type} = 'COMPLEXVALUE';
             }
+            elsif ($last->{type} eq 'COMPLEXVALUE') {
+                $new_indent .= ' ' x $self->indent;
+                $yaml .= ":";
+            }
             else {
                 die "Unexpected";
             }
@@ -173,9 +177,14 @@ sub mapping_end_event {
     if ($last->{type} eq 'SEQ') {
     }
     elsif ($last->{type} eq 'MAP') {
-        $last->{type} = 'MAPVALUE';
     }
     elsif ($last->{type} eq 'MAPVALUE') {
+        $last->{type} = 'MAP';
+    }
+    elsif ($last->{type} eq 'COMPLEX') {
+        $last->{type} = 'COMPLEXVALUE';
+    }
+    elsif ($last->{type} eq 'COMPLEXVALUE') {
         $last->{type} = 'MAP';
     }
 }
@@ -285,8 +294,9 @@ sub sequence_end_event {
     }
     $last = $stack->[-1];
     $last->{column} = $column;
-    if ($last->{type} eq 'MAP') {
-        $last->{type} = 'MAPVALUE';
+    if ($last->{type} eq 'SEQ') {
+    }
+    elsif ($last->{type} eq 'MAP') {
     }
     elsif ($last->{type} eq 'MAPVALUE') {
         $last->{type} = 'MAP';
@@ -296,8 +306,6 @@ sub sequence_end_event {
     }
     elsif ($last->{type} eq 'COMPLEXVALUE') {
         $last->{type} = 'MAP';
-    }
-    elsif ($last->{type} eq 'SEQ') {
     }
 }
 
