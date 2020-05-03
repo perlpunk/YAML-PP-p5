@@ -1,0 +1,84 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use YAML::PP;
+use YAML::PP::Dumper;
+use YAML::PP::Common qw/ PRESERVE_ORDER PRESERVE_SCALAR_STYLE /;
+use Encode;
+use Getopt::Long;
+
+GetOptions(
+    'help|h' => \my $help,
+    'indent=i' => \my $indent,
+    'header!' => \my $header,
+    'footer!' => \my $footer,
+    'boolean=s' => \my $boolean,
+    'preserve=s' => \my $preserve,
+    'yaml-version=s' => \my $yaml_version,
+    'version-directive' => \my $version_directive,
+) or usage(1);
+
+usage(0) if $help;
+
+$boolean ||= 'JSON::PP';
+$footer ||= 0;
+$indent ||= 2;
+$yaml_version ||= 1.2;
+my @yaml_versions = split m/,/, $yaml_version;
+
+if (defined $preserve) {
+    my @split = split m/,/, $preserve;
+    $preserve = 0;
+    for my $split (@split) {
+        $preserve |= PRESERVE_ORDER if $split eq 'order';
+        $preserve |= PRESERVE_SCALAR_STYLE if $split eq 'scalar';
+    }
+}
+else {
+    $preserve = 1;
+}
+$header = 1 unless defined $header;
+
+my ($file) = @ARGV;
+my $yaml;
+
+unless ($file) {
+    $yaml = do { local $/; <STDIN> };
+    $yaml = decode_utf8($yaml);
+}
+
+my $ypp = YAML::PP->new(
+    boolean => $boolean,
+    preserve => $preserve,
+    indent => $indent,
+    header => $header ? 1 : 0,
+    footer => $footer ? 1 : 0,
+    yaml_version => \@yaml_versions,
+    version_directive => $version_directive || 0,
+);
+my @docs = $file ? $ypp->load_file($file) : $ypp->load_string($yaml);
+my $out_yaml = $ypp->dump_string(@docs);
+
+print encode_utf8 $out_yaml;
+
+sub usage {
+    my ($rc) = @_;
+    print <<"EOM";
+Usage:
+
+    $0 [options] < file
+    $0 [options] file
+
+Options:
+    --boolean=            'perl', 'JSON::PP', 'boolean'
+    --indent=             Number of spaces for indentation
+    --[no-]header         Print '---' (default)
+    --[no-]footer         Print '...'
+    --preserve            Comma separeted: 'order', 'scalar'. By default all
+                          things are preserved
+    --yaml-version=       '1.2' (default), '1.1', '1.2,1.1', '1.1,1.2'
+    --version-directive   Print '%YAML <version>'
+EOM
+    exit $rc;
+}

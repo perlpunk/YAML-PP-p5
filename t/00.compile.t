@@ -6,7 +6,7 @@ use warnings;
 
 use Test::More;
 
-plan tests => 33 + ($ENV{AUTHOR_TESTING} ? 1 : 0);
+plan tests => 38 + ($ENV{AUTHOR_TESTING} ? 1 : 0);
 
 my @module_files = (
     'YAML/PP.pm',
@@ -40,6 +40,11 @@ my @module_files = (
 );
 
 my @scripts = (
+    'bin/yamlpp-events',
+    'bin/yamlpp-highlight',
+    'bin/yamlpp-load',
+    'bin/yamlpp-load-dump',
+    'bin/yamlpp-parse-emit',
     'bin/yamlpp5-events',
     'bin/yamlpp5-highlight',
     'bin/yamlpp5-load',

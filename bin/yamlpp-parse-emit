@@ -1,0 +1,57 @@
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+use YAML::PP;
+use YAML::PP::Common;
+use YAML::PP::Parser;
+use YAML::PP::Emitter;
+use YAML::PP::Writer;
+use Data::Dumper;
+use Encode;
+
+my $verbose = 0;
+if (grep $_ eq '-v', @ARGV) {
+    $verbose = 1;
+}
+my ($file) = @ARGV;
+my $yaml;
+
+if ($file) {
+    open my $fh, '<', $file or die $!;
+    $yaml = do { local $/; <$fh> };
+    close $fh;
+}
+else {
+    $yaml = do { local $/; <STDIN> };
+}
+$yaml = decode_utf8($yaml);
+
+my @events;
+my $parser = YAML::PP::Parser->new(
+    receiver => sub {
+        my ($self, undef, $event) = @_;
+        push @events, $event;
+    },
+);
+eval {
+    $parser->parse_string($yaml);
+};
+if ($@) {
+    warn "Error parsing: $@";
+    exit 1;
+}
+my $writer = YAML::PP::Writer->new;
+my $emitter = YAML::PP::Emitter->new();
+$emitter->set_writer($writer);
+for my $event (@events) {
+    my $type = $event->{name};
+    my $str = YAML::PP::Common::event_to_test_suite($event);
+    print "$str\n" if $verbose;
+    if ($type eq 'sequence_start_event' or $type eq 'mapping_start_event') {
+        delete $event->{style};
+    }
+    $emitter->$type($event);
+}
+my $out_yaml = $emitter->writer->output;
+print encode_utf8 $out_yaml;

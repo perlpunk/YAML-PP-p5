@@ -338,20 +338,20 @@ Here are a few examples of the basic load and dump methods:
 Some utility scripts, mostly useful for debugging:
 
     # Load YAML into a data structure and dump with Data::Dumper
-    yamlpp5-load < file.yaml
+    yamlpp-load < file.yaml
 
     # Load and Dump
-    yamlpp5-load-dump < file.yaml
+    yamlpp-load-dump < file.yaml
 
     # Print the events from the parser in yaml-test-suite format
-    yamlpp5-events < file.yaml
+    yamlpp-events < file.yaml
 
     # Parse and emit events directly without loading
-    yamlpp5-parse-emit < file.yaml
+    yamlpp-parse-emit < file.yaml
 
     # Create ANSI colored YAML. Can also be useful for invalid YAML, showing
     # you the exact location of the error
-    yamlpp5-highlight < file.yaml
+    yamlpp-highlight < file.yaml
 
 
 =head1 DESCRIPTION
