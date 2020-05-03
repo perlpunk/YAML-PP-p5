@@ -1,5 +1,18 @@
 Revision history for Perl module YAML::PP
 
+0.021_001 2020-05-03 14:19:59+02:00
+
+    - Emitter: Also quote if string starts with '...'
+    - Emitter: Fix bug when emitting complex keys
+    - Preserve also quoting style of hash keys
+    - Schema: Fix YAML 1.1 integers (no keading zeros)
+    - Scripts: Rename yamlpp5- to yamlpp- and symlink
+    - Scripts: Add options to yamlpp-load-dump
+    - Tests: Support reporting flow style in testsuite event output
+    - Tests: Restructure schema tests and outsource test data
+    - Events: Make version_directive compatible to libyaml
+    - Docs: Restructure
+
 0.021 2020-02-27 19:04:58+01:00
 
     - Add option 'preserve' for preserving hash key order and quoting
