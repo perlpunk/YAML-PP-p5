@@ -705,7 +705,7 @@ sub document_start_event {
         if ($self->{open_ended}) {
             $self->writer->write("...\n");
         }
-        $self->writer->write("%YAML $info->{version_directive}\n");
+        $self->writer->write("%YAML $info->{version_directive}->{major}.$info->{version_directive}->{minor}\n");
         $self->{open_ended} = 0;
         $implicit = 0; # we need ---
     }

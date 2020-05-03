@@ -88,10 +88,11 @@ EOM
         default_yaml_version => '1.1',
     );
     $parser->parse_string($yaml);
-    is($events[0]->{version_directive}, '1.2', 'YAML 1.2 detected');
+    is($events[0]->{version_directive}->{major}, '1', 'YAML 1.2 detected');
+    is($events[0]->{version_directive}->{minor}, '2', 'YAML 1.2 detected');
     ok(! exists $events[1]->{version_directive}, 'No version directive');
-    is($events[2]->{version_directive}, '1.1', 'YAML 1.1 detected');
-    ok(! exists $events[1]->{version_directive}, 'No version directive');
+    is($events[2]->{version_directive}->{major}, '1', 'YAML 1.1 detected');
+    is($events[2]->{version_directive}->{minor}, '1', 'YAML 1.1 detected');
     @events = ();
 
     $receiver = sub {

@@ -484,10 +484,15 @@ sub start_document {
     push @{ $self->events }, 'DOC';
     push @{ $self->offset }, -1;
     my $directive = $self->yaml_version_directive;
+    my %directive;
+    if ($directive) {
+        my ($major, $minor) = split m/\./, $self->yaml_version;
+        %directive = ( version_directive => { major => $major, minor => $minor } );
+    }
     $self->callback->($self, 'document_start_event', {
         name => 'document_start_event',
         implicit => $implicit,
-        $directive ? (version_directive => $self->yaml_version) : (),
+        %directive,
     });
     $self->set_yaml_version_directive(undef);
     $self->set_rule( 'FULLNODE' );

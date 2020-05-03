@@ -84,6 +84,7 @@ sub document_start_event {
     my $stack = $self->stack;
     if ($event->{version_directive}) {
         my $version = $event->{version_directive};
+        $version = "$version->{major}.$version->{minor}";
         if ($self->{schemas}->{ $version }) {
             $self->set_yaml_version($version);
             $self->set_schema($self->schemas->{ $version });
