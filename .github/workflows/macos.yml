@@ -1,0 +1,38 @@
+name: macos
+
+on:
+  push:
+    branches: [ '*' ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  perl:
+    runs-on: macOS-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Perl
+      run: brew install perl
+    - name: perl -V
+      run: perl -V
+
+    - name: Add testsuite worktree
+      run: |
+        # .git/ doesn't seem to exist for all containers
+        if [ -d .git ]; then
+            git fetch --depth=1 origin refs/heads/test-suite
+            git branch test-suite --track origin/test-suite
+            git worktree add test-suite test-suite
+        else
+          echo "Running without yaml-test-suite data"
+        fi
+
+    - name: Install deps
+      run: >
+        curl -L https://cpanmin.us >cpanm && chmod +x cpanm
+
+        ./cpanm --quiet --notest
+        Module::Load Test::Deep Test::Warn Test::More
+    - name: Run Tests
+      run: prove -lr t

@@ -1,0 +1,38 @@
+name: windows
+
+on:
+  push:
+    branches: [ '*' ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  perl:
+    runs-on: windows-latest
+    steps:
+    - name: Set git to use LF
+      run: |
+        git config --global core.autocrlf false
+        git config --global core.eol lf
+    - uses: actions/checkout@v2
+    - name: Set up Perl
+      run: |
+        choco install strawberryperl
+        echo "##[add-path]C:\strawberry\c\bin;C:\strawberry\perl\site\bin;C:\strawberry\perl\bin"
+
+    - name: Add testsuite worktree
+      run: |
+        git fetch --depth=1 origin refs/heads/test-suite
+        git branch test-suite --track origin/test-suite
+        git worktree add test-suite test-suite
+
+    - name: perl -V
+      run: perl -V
+    - name: Install deps
+      run: >
+        cpanm --quiet --notest
+        Module::Load Test::Deep Test::Warn Test::More
+    - name: Run Tests
+      run: prove -lr t
+

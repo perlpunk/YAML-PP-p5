@@ -1,15 +1,17 @@
 language: perl
 perl:
-  - "5.8"
-  - "5.10"
-  - "5.12"
-  - "5.14"
-  - "5.16"
-  - "5.18"
-  - "5.20"
-  - "5.22"
-  - "5.24"
-  - "5.26"
+# 5.8 - 5.12 not working anymore on travis ci
+#  - "5.8"
+#  - "5.10"
+#  - "5.12"
+
+#  - "5.14"
+#  - "5.16"
+#  - "5.18"
+#  - "5.20"
+#  - "5.22"
+#  - "5.24"
+#  - "5.26"
   - "5.28"
   - "5.30"
 
@@ -31,9 +33,9 @@ script:
 
 before_install:
 
-# Travis branch-specific clone problem workaround:
+- perl -v
 - git config remote.origin.fetch +refs/heads/*:refs/remotes/origin/*
-- git fetch
+- git fetch --depth=1 origin refs/heads/test-suite
 - git branch test-suite --track origin/test-suite
 - git worktree add test-suite test-suite
 

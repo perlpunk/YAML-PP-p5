@@ -1,0 +1,74 @@
+name: linux
+
+on:
+  push:
+    branches: [ '*' ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+
+  perl:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        perl-version:
+        - '5.8'
+        - '5.10'
+        - '5.12'
+        - '5.14'
+        - '5.16'
+        - '5.18'
+        - '5.20'
+        - '5.22'
+        - '5.24'
+        - '5.26'
+        - '5.28'
+        - '5.30'
+
+    container:
+      image: perl:${{ matrix.perl-version }}
+
+    steps:
+    - uses: actions/checkout@v2
+    - run: perl -V
+    - name: Add testsuite worktree
+      run: |
+        # .git/ doesn't seem to exist for all containers
+        if [ -d .git ]; then
+            git fetch --depth=1 origin refs/heads/test-suite
+            git branch test-suite --track origin/test-suite
+            git worktree add test-suite test-suite
+        else
+          echo "Running without yaml-test-suite data"
+        fi
+    - name: Install deps
+      run: >
+        cpanm --quiet --notest
+        Module::Load Test::Deep Test::Warn Test::More
+    - name: Run Tests
+      run: prove -lr t
+
+# GitHub actions doesn't support YAML aliases :(
+#  codecov:
+#    runs-on: *runner
+#    strategy:
+#      matrix:
+#        perl-version:
+#        - '5.30'
+#    container: *container
+#
+#    steps:
+#    - uses: actions/checkout@v2
+#    - *checkouttestsuite
+#    - *installdeps
+#    - name: Install codecov deps
+#      run: >
+#        cpanm --quiet --notest --skip-satisfied Devel::Cover::Report::Codecov
+#    - name: Run Tests
+#      run: >
+#        PERL5OPT="-MDevel::Cover=-db,cover_db,-select,^lib,-ignore,^t/|bin/prove|^examples"
+#        prove -lr t
+#    - name: Codecov
+#      run: >
+#        cover -report codecov
