@@ -118,7 +118,7 @@ sub mapping_start_event {
     my $ref = {
         type => 'mapping',
         ref => [],
-        data => $data,
+        data => \$data,
         event => $event,
         on_data => $on_data,
     };
@@ -171,8 +171,8 @@ sub mapping_end_event {
     }
     for my $merge (@merge_keys) {
         for my $key (keys %$merge) {
-            unless (exists $data->{ $key }) {
-                $data->{ $key } = $merge->{ $key };
+            unless (exists $$data->{ $key }) {
+                $$data->{ $key } = $merge->{ $key };
             }
         }
     }
@@ -187,8 +187,8 @@ sub mapping_end_event {
             $$hash->{ $key } = $value;
         }
     };
-    $on_data->($self, \$data, \@ref);
-    push @{ $stack->[-1]->{ref} }, $data;
+    $on_data->($self, $data, \@ref);
+    push @{ $stack->[-1]->{ref} }, $$data;
     if (defined(my $anchor = $last->{event}->{anchor})) {
         $self->anchors->{ $anchor }->{finished} = 1;
     }
@@ -201,7 +201,7 @@ sub sequence_start_event {
     my $ref = {
         type => 'sequence',
         ref => [],
-        data => $data,
+        data => \$data,
         event => $event,
         on_data => $on_data,
     };
@@ -224,9 +224,10 @@ sub sequence_end_event {
         my ($self, $array, $items) = @_;
         push @$$array, @$items;
     };
-    $on_data->($self, \$data, $ref);
-    push @{ $stack->[-1]->{ref} }, $data;
+    $on_data->($self, $data, $ref);
+    push @{ $stack->[-1]->{ref} }, $$data;
     if (defined(my $anchor = $last->{event}->{anchor})) {
+        my $test = $self->anchors->{ $anchor };
         $self->anchors->{ $anchor }->{finished} = 1;
     }
     return;
@@ -241,7 +242,7 @@ sub scalar_event {
     DEBUG and warn "CONTENT $event->{value} ($event->{style})\n";
     my $value = $self->schema->load_scalar($self, $event);
     if (defined (my $name = $event->{anchor})) {
-        $self->anchors->{ $name } = { data => $value, finished => 1 };
+        $self->anchors->{ $name } = { data => \$value, finished => 1 };
     }
     my $last = $self->stack->[-1];
     if ($self->preserve_scalar_style and not ref $value) {
@@ -268,18 +269,18 @@ sub alias_event {
                     die "Found cyclic ref";
                 }
                 if ($cyclic_refs eq 'warn') {
-                    $anchor = { data => undef };
+                    $anchor = { data => \undef };
                     warn "Found cyclic ref";
                 }
                 elsif ($cyclic_refs eq 'ignore') {
-                    $anchor = { data => undef };
+                    $anchor = { data => \undef };
                 }
             }
         }
         $value = $anchor->{data};
     }
     my $last = $self->stack->[-1];
-    push @{ $last->{ref} }, $value;
+    push @{ $last->{ref} }, $$value;
 }
 
 sub stringify_complex {

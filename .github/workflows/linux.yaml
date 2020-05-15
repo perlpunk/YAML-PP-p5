@@ -31,6 +31,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - run: env
     - run: perl -V
     - name: Add testsuite worktree
       run: |
