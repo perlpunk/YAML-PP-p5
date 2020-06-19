@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 use strict;
 use warnings;
+use 5.010;
 
 use YAML::PP;
 use YAML::PP::Common;
@@ -38,6 +39,9 @@ eval {
     $parser->parse_string($yaml);
 };
 if ($@) {
+    for (@events) {
+        say YAML::PP::Common::event_to_test_suite($_);
+    }
     warn "Error parsing: $@";
     exit 1;
 }
