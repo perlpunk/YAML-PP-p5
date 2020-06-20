@@ -55,6 +55,7 @@ my %ansicolors = (
     FLOWMAP_START => [qw/ bold magenta /],
     FLOWMAP_END => [qw/ bold magenta /],
     FLOW_COMMA => [qw/ bold magenta /],
+    PLAINKEY => [qw/ bright_blue /],
 );
 
 sub ansicolored {
@@ -79,7 +80,7 @@ sub ansicolored {
         $highlighted .= $str;
     }
 
-    $ansi .= "$highlighted\n";
+    $ansi .= $highlighted;
     return $ansi;
 }
 
@@ -114,6 +115,7 @@ my %htmlcolors = (
     FLOWMAP_START => 'flowmap_start',
     FLOWMAP_END => 'flowmap_end',
     FLOW_COMMA => 'flow_comma',
+    PLAINKEY => 'plainkey',
 );
 sub htmlcolored {
     require HTML::Entities;
@@ -163,6 +165,16 @@ sub transform {
             }
         }
         elsif ($i < $#list) {
+            if ($name eq 'PLAIN') {
+                for my $n ($i+1 .. $#list) {
+                    my $next = $list[ $n ];
+                    last if $next->{name} eq 'EOL';
+                    next if $next->{name} =~ m/^(WS|SPACE)$/;
+                    if ($next->{name} eq 'COLON') {
+                        $token->{name} = 'PLAINKEY';
+                    }
+                }
+            }
             my $next = $list[ $i + 1];
             if ($next->{name} eq 'EOL') {
                 if ($str =~ m/ \z/ and $name =~ m/^(BLOCK_SCALAR_CONTENT|WS)$/) {

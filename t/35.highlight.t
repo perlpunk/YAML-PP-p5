@@ -48,8 +48,8 @@ cmp_ok($transformed[6]->{name}, 'eq', 'TRAILING_SPACE', "trailing spaces detecte
 my $color = eval "use Term::ANSIColor 4.02; 1";
 # older versions of Term::ANSIColor didn't have grey12
 if ($color) {
-    my $highlighted = YAML::PP::Highlight::Dump("foo: bar\n");
-    my $exp_highlighted = "\e[1m---\e[0m \e[1;33m|\e[0m\n\e[37;48;5;235m  \e[0m\e[33mfoo: bar\e[0m\n\n";
+    my $highlighted = YAML::PP::Highlight::Dump({ foo => 'bar' });
+    my $exp_highlighted = "\e[1m---\e[0m\n\e[94mfoo\e[0m\e[1;35m:\e[0m bar\n";
     cmp_ok($highlighted, 'eq', $exp_highlighted, "YAML::PP::Highlight::Dump()");
 }
 
