@@ -46,7 +46,7 @@ jobs:
     - name: Install deps
       run: >
         cpanm --quiet --notest
-        Module::Load Test::Deep Test::Warn Test::More
+        Module::Load Test::Deep Test::Warn Test::More JSON::PP boolean
     - name: Run Tests
       run: prove -lr t
 

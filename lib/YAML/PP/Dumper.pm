@@ -226,6 +226,13 @@ sub check_references {
     my $reftype = reftype $doc or return;
     my $seen = $self->{seen};
     # check which references are used more than once
+    if ($reftype eq 'SCALAR' and ref $doc eq $self->representer->schema->bool_class) {
+        # JSON::PP and boolean.pm always return the same reference for booleans
+        # Avoid printing *aliases in those case
+        if (ref $doc eq 'boolean' or ref $doc eq 'JSON::PP::Boolean') {
+            return;
+        }
+    }
     if (++$seen->{ refaddr $doc } > 1) {
         # seen already
         return;

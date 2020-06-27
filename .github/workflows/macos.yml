@@ -33,6 +33,6 @@ jobs:
         curl -L https://cpanmin.us >cpanm && chmod +x cpanm
 
         ./cpanm --quiet --notest
-        Module::Load Test::Deep Test::Warn Test::More
+        Module::Load Test::Deep Test::Warn Test::More JSON::PP boolean
     - name: Run Tests
       run: prove -lr t
