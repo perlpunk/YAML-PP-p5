@@ -23,11 +23,15 @@ $schema_data->{'!!str #empty'}->{json_empty_null} = ['str', '', "''"];
 );
 
 my $boolean = $jsonpp ? 'JSON::PP' : 'perl';
-my $failsafe        = YAML::PP->new( boolean => $boolean, schema => [qw/ Failsafe /] );
-my $json            = YAML::PP->new( boolean => $boolean, schema => [qw/ JSON /] );
-my $json_empty_null = YAML::PP->new( boolean => $boolean, schema => [qw/ JSON empty=null /] );
-my $core            = YAML::PP->new( boolean => $boolean, schema => [qw/ Core /] );
-my $yaml11          = YAML::PP->new( boolean => $boolean, schema => [qw/ YAML1_1 /] );
+my %args = (
+    boolean => $boolean,
+    header => 0,
+);
+my $failsafe        = YAML::PP->new( %args, schema => [qw/ Failsafe /] );
+my $json            = YAML::PP->new( %args, schema => [qw/ JSON /] );
+my $json_empty_null = YAML::PP->new( %args, schema => [qw/ JSON empty=null /] );
+my $core            = YAML::PP->new( %args, schema => [qw/ Core /] );
+my $yaml11          = YAML::PP->new( %args, schema => [qw/ YAML1_1 /] );
 
 
 subtest 'invalid-option' => sub {
@@ -126,7 +130,7 @@ for my $input (sort keys %$schema_data) {
                 ok(!$is_str, "$label is not str");
 
                 unless ($func) {
-                    cmp_ok($data, 'eq', $def{data}, "$label eq '$def{data}'");
+                    cmp_ok($data, '==', $def{data}, "$label == '$def{data}'");
                 }
             }
             elsif ($type eq 'float' or $type eq 'inf' or $type eq 'nan') {
@@ -136,7 +140,7 @@ for my $input (sort keys %$schema_data) {
                 }
 
                 unless ($func) {
-                    cmp_ok($data, '==', $def{data}, "$label eq '$def{data}'");
+                    cmp_ok(sprintf("%.2f", $data), '==', $def{data}, "$label == '$def{data}'");
                 }
             }
             elsif ($type eq 'bool' or $type eq 'null') {
@@ -147,7 +151,6 @@ for my $input (sort keys %$schema_data) {
 
             unless ($inf_broken) {
                 my $yaml_dump = $yp->dump_string($data_orig);
-                $yaml_dump =~ s/^--- //;
                 $yaml_dump =~ s/\n\z//;
                 cmp_ok($yaml_dump, 'eq', $def{dump}, "$label-dump as expected");
             }
@@ -164,7 +167,7 @@ subtest int_string => sub {
         my $yp = $loaders{ $name };
         my $yaml = $yp->dump_string($x);
         chomp $yaml;
-        cmp_ok($yaml, 'eq', '--- 25.1', "$name: IV and PV");
+        cmp_ok($yaml, 'eq', '25.1', "$name: IV and PV");
     }
 };
 
@@ -179,7 +182,7 @@ subtest float_string => sub {
         my $yp = $loaders{ $name };
         my $yaml = $yp->dump_string($x);
         chomp $yaml;
-        cmp_ok($yaml, 'eq', '--- 19x', "$name: NV and PV");
+        cmp_ok($yaml, 'eq', '19x', "$name: NV and PV");
     }
 };
 
