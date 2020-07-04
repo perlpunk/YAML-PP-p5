@@ -219,6 +219,7 @@ my %_reftypes = (
     CODE => 1,
     SCALAR => 1,
     REF => 1,
+    GLOB => 1,
 );
 
 sub check_references {

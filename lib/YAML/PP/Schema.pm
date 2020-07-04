@@ -53,6 +53,7 @@ sub new {
         scalarref => undef,
         refref => undef,
         coderef => undef,
+        glob => undef,
         tied_equals => {},
     );
     my $self = bless {
@@ -265,6 +266,12 @@ sub add_representer {
     }
     if (defined(my $coderef = $args{coderef})) {
         $representers->{coderef} = {
+            code => $args{code},
+        };
+        return;
+    }
+    if (defined(my $glob = $args{glob})) {
+        $representers->{glob} = {
             code => $args{code},
         };
         return;

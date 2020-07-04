@@ -60,8 +60,11 @@ sub represent_node {
         }
     }
     $node->{reftype} = reftype($node->{value});
+    if (not $node->{reftype} and reftype(\$node->{value}) eq 'GLOB') {
+        $node->{reftype} = 'GLOB';
+    }
 
-    if (ref $node->{value}) {
+    if ($node->{reftype}) {
         $self->represent_noderef($node);
     }
     else {
@@ -183,6 +186,10 @@ sub represent_noderef {
     }
     if ($node->{reftype} eq 'CODE' and my $coderef = $representers->{coderef}) {
         my $code = $coderef->{code};
+        return 1 if $code->($self, $node);
+    }
+    if ($node->{reftype} eq 'GLOB' and my $glob = $representers->{glob}) {
+        my $code = $glob->{code};
         return 1 if $code->($self, $node);
     }
     $node->{data} = $node->{value};

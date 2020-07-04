@@ -98,6 +98,7 @@ sub register {
         }
     }
 
+    # Code
     if ($loadcode) {
         my $load_code = sub {
             my ($constructor, $event) = @_;
@@ -151,6 +152,45 @@ sub register {
         ) if $no_objects;
     }
 
+    # Glob
+    my $load_glob = sub {
+        my $value = undef;
+        return \$value;
+    };
+    my $load_glob_blessed = sub {
+        my ($constructor, $event) = @_;
+        my $class = $event->{tag};
+        $class =~ s{^$perl_regex/glob:}{};
+        my $value = undef;
+        return $self->object(\$value, $class);
+    };
+
+    $schema->add_mapping_resolver(
+        tag => "$_/glob",
+        on_create => $load_glob,
+        on_data => sub {
+            my ($constructor, $ref, $list) = @_;
+            $$ref = $self->construct_glob($list);
+        },
+    ) for @perl_tags;
+    $schema->add_mapping_resolver(
+        tag => qr{^$perl_regex/glob:$class_regex$},
+        on_create => $load_glob_blessed,
+        on_data => sub {
+            my ($constructor, $ref, $list) = @_;
+            $$$ref = $self->construct_glob($list);
+        },
+    );
+    $schema->add_mapping_resolver(
+        tag => qr{^$perl_regex/glob:.+$},
+        on_create => $load_glob,
+        on_data => sub {
+            my ($constructor, $ref, $list) = @_;
+            $$ref = $self->construct_glob($list);
+        },
+    ) if $no_objects;
+
+    # Regex
     my $load_regex = sub {
         my ($constructor, $event) = @_;
         return $self->construct_regex($event->{value});
@@ -218,6 +258,7 @@ sub register {
         on_create => $load_mapping,
     ) if $no_objects;
 
+    # Ref
     my $load_ref = sub {
         my $value = undef;
         return \$value;
@@ -254,6 +295,7 @@ sub register {
         },
     ) if $no_objects;
 
+    # Scalar ref
     my $load_scalar_ref = sub {
         my $value = undef;
         return \$value;
@@ -314,6 +356,14 @@ sub register {
             $node->{data} = $self->represent_code($node->{value});
         },
     );
+    $schema->add_representer(
+        glob => 1,
+        code => sub {
+            my ($rep, $node) = @_;
+            $node->{tag} = $perl_tag . "/glob";
+            $node->{data} = $self->represent_glob($node->{value});
+        },
+    );
 
     $schema->add_representer(
         class_matches => 1,
@@ -370,6 +420,9 @@ sub register {
             elsif ($node->{reftype} eq 'CODE') {
                 $node->{data} = $self->represent_code($node->{value});
             }
+            elsif ($node->{reftype} eq 'GLOB') {
+                $node->{data} = $self->represent_glob($node->{value});
+            }
             else {
                 die "Reftype '$node->{reftype}' not implemented";
             }
@@ -402,6 +455,24 @@ sub construct_regex {
     return $qr;
 }
 
+sub construct_glob {
+    my ($self, $list) = @_;
+    if (@$list % 2) {
+        die "Unexpected data in perl/glob construction";
+    }
+    my %globdata = @$list;
+    my $name = delete $globdata{NAME} or die "Missing NAME in perl/glob";
+    my $pkg = delete $globdata{PACKAGE};
+    $pkg = 'main' unless defined $pkg;
+    my @allowed = qw(SCALAR ARRAY HASH CODE IO);
+    delete @globdata{ @allowed };
+    if (my @keys = keys %globdata) {
+        die "Unexpected keys in perl/glob: @keys";
+    }
+    no strict 'refs';
+    return *{"${pkg}::$name"};
+}
+
 sub construct_scalar {
     my ($self, $list) = @_;
     if (@$list != 2) {
@@ -432,6 +503,32 @@ sub represent_code {
     require B::Deparse;
     my $deparse = B::Deparse->new("-p", "-sC");
     return $deparse->coderef2text($code);
+}
+
+
+my @stats = qw/ device inode mode links uid gid rdev size
+    atime mtime ctime blksize blocks /;
+sub represent_glob {
+    my ($self, $glob) = @_;
+    my %glob;
+    for my $type (qw/ PACKAGE NAME SCALAR ARRAY HASH CODE IO /) {
+        my $value = *{ $glob }{ $type };
+        if ($type eq 'SCALAR') {
+            $value = $$value;
+        }
+        elsif ($type eq 'IO') {
+            if (defined $value) {
+                undef $value;
+                $value->{stat} = {};
+                if ($value->{fileno} = fileno(*{ $glob })) {
+                    @{ $value->{stat} }{ @stats } = stat(*{ $glob });
+                    $value->{tell} = tell *{ $glob };
+                }
+            }
+        }
+        $glob{ $type } = $value if defined $value;
+    }
+    return \%glob;
 }
 
 sub represent_regex {
@@ -492,9 +589,8 @@ is loaded and an object is created, its C<DESTROY> method will be called
 when the object falls out of scope. L<File::Temp> is an example that can
 be exploitable and might remove arbitrary files.
 
-Typeglobs are not implemented yet. Dumping code references is on by default, but
-not loading (because that is easily exploitable since it's using string
-C<eval>).
+Dumping code references is on by default, but not loading (because that is
+easily exploitable since it's using string C<eval>).
 
 =head2 Tag Styles
 
