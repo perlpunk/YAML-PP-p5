@@ -136,7 +136,7 @@ subtest valid => sub {
         my $dump = $yp->dump_string($data);
         if ($key =~ m/io/) {
             $dump =~ s/^    [a-z]+: \S+\n//mg;
-            $dump =~ s/^  tell: [0-9]+\n//m;
+            $dump =~ s/^  tell: \S+\n//m;
             $dump =~ s/stat:$/stat: \{\}/m;
         }
         is($dump, $input, "$key - $name - Dump equals input");
