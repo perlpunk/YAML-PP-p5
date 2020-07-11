@@ -26,34 +26,44 @@
   failsafe: ['str', 'true', 'true']
 'True':
   core, yaml11: ['bool', 'true()', 'true']
-  failsafe, json: ['str', 'True', 'True']
+  failsafe: ['str', 'True', 'True']
+  json: ['err', 'True', 'True']
 'TRUE':
   core, yaml11: ['bool', 'true()', 'true']
-  failsafe, json: ['str', 'TRUE', 'TRUE']
+  failsafe: ['str', 'TRUE', 'TRUE']
+  json: ['err', 'TRUE', 'TRUE']
 'y':
   yaml11: ['bool', 'true()', "true"]
-  failsafe, json, core: ['str', 'y', "y"]
+  failsafe, core: ['str', 'y', "y"]
+  json: ['err', 'y', "y"]
 'Y':
   yaml11: ['bool', 'true()', "true"]
-  failsafe, json, core: ['str', 'Y', "Y"]
+  failsafe, core: ['str', 'Y', "Y"]
+  json: ['err', 'Y', "Y"]
 'yes':
   yaml11: ['bool', 'true()', "true"]
-  failsafe, json, core: ['str', 'yes', "yes"]
+  failsafe, core: ['str', 'yes', "yes"]
+  json: ['err', 'yes', "yes"]
 'Yes':
   yaml11: ['bool', 'true()', "true"]
-  failsafe, json, core: ['str', 'Yes', "Yes"]
+  failsafe, core: ['str', 'Yes', "Yes"]
+  json: ['err', 'Yes', "Yes"]
 'YES':
   yaml11: ['bool', 'true()', "true"]
-  failsafe, json, core: ['str', 'YES', "YES"]
+  failsafe, core: ['str', 'YES', "YES"]
+  json: ['err', 'YES', "YES"]
 'on':
   yaml11: ['bool', 'true()', "true"]
-  failsafe, json, core: ['str', 'on', "on"]
+  failsafe, core: ['str', 'on', "on"]
+  json: ['err', 'on', "on"]
 'On':
   yaml11: ['bool', 'true()', "true"]
-  failsafe, json, core: ['str', 'On', "On"]
+  failsafe, core: ['str', 'On', "On"]
+  json: ['err', 'On', "On"]
 'ON':
   yaml11: ['bool', 'true()', "true"]
-  failsafe, json, core: ['str', 'ON', "ON"]
+  failsafe, core: ['str', 'ON', "ON"]
+  json: ['err', 'ON', "ON"]
 '!!bool true':
   json, core, yaml11: ['bool', 'true()', 'true']
 '!!bool True':
@@ -80,35 +90,35 @@
   failsafe: ['str', 'true', 'true']
   json, core, yaml11: ['str', 'true', "'true'"]
 '!!str True':
-  failsafe, json: ['str', 'True', 'True']
   core, yaml11: ['str', 'True', "'True'"]
+  json, failsafe: ['str', 'True', 'True']
 '!!str TRUE':
-  failsafe, json: ['str', 'TRUE', 'TRUE']
   core, yaml11: ['str', 'TRUE', "'TRUE'"]
+  json, failsafe: ['str', 'TRUE', 'TRUE']
 '!!str yes':
-  failsafe, json, core: ['str', 'yes', "yes" ]
   yaml11: ['str', 'yes', "'yes'" ]
+  failsafe, json, core: ['str', 'yes', "yes" ]
 '!!str Yes':
-  failsafe, json, core: ['str', 'Yes', "Yes" ]
   yaml11: ['str', 'Yes', "'Yes'" ]
+  failsafe, json, core: ['str', 'Yes', "Yes" ]
 '!!str YES':
-  failsafe, json, core: ['str', 'YES', "YES" ]
   yaml11: ['str', 'YES', "'YES'" ]
+  failsafe, json, core: ['str', 'YES', "YES" ]
 '!!str y':
-  failsafe, json, core: ['str', 'y', "y" ]
   yaml11: ['str', 'y', "'y'" ]
+  failsafe, json, core: ['str', 'y', "y" ]
 '!!str Y':
-  failsafe, json, core: ['str', 'Y', "Y" ]
   yaml11: ['str', 'Y', "'Y'" ]
+  failsafe, json, core: ['str', 'Y', "Y" ]
 '!!str on':
-  failsafe, json, core: ['str', 'on', "on" ]
   yaml11: ['str', 'on', "'on'" ]
+  failsafe, json, core: ['str', 'on', "on" ]
 '!!str On':
-  failsafe, json, core: ['str', 'On', "On" ]
   yaml11: ['str', 'On', "'On'" ]
+  failsafe, json, core: ['str', 'On', "On" ]
 '!!str ON':
-  failsafe, json, core: ['str', 'ON', "ON" ]
   yaml11: ['str', 'ON', "'ON'" ]
+  failsafe, json, core: ['str', 'ON', "ON" ]
 
 
 ###############################################
@@ -119,32 +129,41 @@
   failsafe: ['str', 'false', 'false']
   json, core, yaml11: ['bool', 'false()', 'false']
 'False':
-  failsafe, json: ['str', 'False', 'False']
   core, yaml11: ['bool', 'false()', 'false']
+  failsafe: ['str', 'False', 'False']
+  json: ['err', 'False', 'False']
 'FALSE':
-  failsafe, json: ['str', 'FALSE', 'FALSE']
   core, yaml11: ['bool', 'false()', 'false']
+  failsafe: ['str', 'FALSE', 'FALSE']
+  json: ['err', 'FALSE', 'FALSE']
 'n':
   yaml11: ['bool', 'false()', "false"]
-  failsafe, json, core: ['str', 'n', "n"]
+  failsafe, core: ['str', 'n', "n"]
+  json: ['err', 'n', "n"]
 'N':
   yaml11: ['bool', 'false()', "false"]
-  failsafe, json, core: ['str', 'N', "N"]
+  failsafe, core: ['str', 'N', "N"]
+  json: ['err', 'N', "N"]
 'no':
   yaml11: ['bool', 'false()', "false"]
-  failsafe, json, core: ['str', 'no', "no"]
+  failsafe, core: ['str', 'no', "no"]
+  json: ['err', 'no', "no"]
 'NO':
   yaml11: ['bool', 'false()', "false"]
-  failsafe, json, core: ['str', 'NO', "NO"]
+  failsafe, core: ['str', 'NO', "NO"]
+  json: ['err', 'NO', "NO"]
 'off':
   yaml11: ['bool', 'false()', "false"]
-  failsafe, json, core: ['str', 'off', "off"]
+  failsafe, core: ['str', 'off', "off"]
+  json: ['err', 'off', "off"]
 'Off':
   yaml11: ['bool', 'false()', "false"]
-  failsafe, json, core: ['str', 'Off', "Off"]
+  failsafe, core: ['str', 'Off', "Off"]
+  json: ['err', 'Off', "Off"]
 'OFF':
   yaml11: ['bool', 'false()', "false"]
-  failsafe, json, core: ['str', 'OFF', "OFF"]
+  failsafe, core: ['str', 'OFF', "OFF"]
+  json: ['err', 'OFF', "OFF"]
 '!!bool false':
   json, core, yaml11: ['bool', 'false()', 'false']
 '!!bool False':
@@ -206,13 +225,16 @@
   failsafe: ['str', 'null', 'null']
   json, core, yaml11: ['null', 'null()', "null"]
 'Null':
-  failsafe, json: ['str', 'Null', 'Null']
+  failsafe: ['str', 'Null', 'Null']
+  json: ['err', 'Null', 'Null']
   core, yaml11: ['null', 'null()', "null"]
 'NULL':
-  failsafe, json: ['str', 'NULL', 'NULL']
+  failsafe: ['str', 'NULL', 'NULL']
+  json: ['err', 'NULL', 'NULL']
   core, yaml11: ['null', 'null()', "null"]
 '~':
-  failsafe, json: ['str', '~', '~']
+  failsafe: ['str', '~', '~']
+  json: ['err', '~', '~']
   core, yaml11: ['null', 'null()', "null"]
 
 '!!null null':
@@ -239,7 +261,8 @@
 
 '#empty':
   core, yaml11: ['null', 'null()', "null"]
-  failsafe, json: ['str', '', "''"]
+  failsafe: ['str', '', "''"]
+  json: ['err', '', "''"]
 '!!null #empty':
   core, yaml11: ['null', 'null()', "null"]
 '!!str #empty':
@@ -250,13 +273,16 @@
 ###############################################
 
 '.inf':
-  failsafe, json: ['str', '.inf', '.inf']
+  failsafe: ['str', '.inf', '.inf']
+  json: ['err', '.inf', '.inf']
   core, yaml11: ['inf', 'inf()', '.inf']
 '.Inf':
-  failsafe, json: ['str', '.Inf', '.Inf']
+  failsafe: ['str', '.Inf', '.Inf']
+  json: ['err', '.Inf', '.Inf']
   core, yaml11: ['inf', 'inf()', '.inf']
 '.INF':
-  failsafe, json: ['str', '.INF', '.INF']
+  failsafe: ['str', '.INF', '.INF']
+  json: ['err', '.INF', '.INF']
   core, yaml11: ['inf', 'inf()', '.inf']
 '!!float .inf':
   core, yaml11: ['inf', 'inf()', '.inf']
@@ -276,13 +302,16 @@
 
 '+.inf':
   core, yaml11: ['inf', 'inf()', '.inf']
-  failsafe, json: ['str', '+.inf', '+.inf']
+  failsafe: ['str', '+.inf', '+.inf']
+  json: ['err', '+.inf', '+.inf']
 '+.Inf':
   core, yaml11: ['inf', 'inf()', '.inf']
-  failsafe, json: ['str', '+.Inf', '+.Inf']
+  failsafe: ['str', '+.Inf', '+.Inf']
+  json: ['err', '+.Inf', '+.Inf']
 '+.INF':
   core, yaml11: ['inf', 'inf()', '.inf']
-  failsafe, json: ['str', '+.INF', '+.INF']
+  failsafe: ['str', '+.INF', '+.INF']
+  json: ['err', '+.INF', '+.INF']
 '!!float +.inf':
   core, yaml11: ['inf', 'inf()', '.inf']
 '!!float +.Inf':
@@ -300,13 +329,16 @@
   core, yaml11: ['str', '+.INF', "'+.INF'"]
 
 '-.inf':
-  failsafe, json: ['str', '-.inf', '-.inf']
+  failsafe: ['str', '-.inf', '-.inf']
+  json: ['err', '-.inf', '-.inf']
   core, yaml11: ['inf', 'inf-neg()', '-.inf']
 '-.Inf':
-  failsafe, json: ['str', '-.Inf', '-.Inf']
+  failsafe: ['str', '-.Inf', '-.Inf']
+  json: ['err', '-.Inf', '-.Inf']
   core, yaml11: ['inf', 'inf-neg()', '-.inf']
 '-.INF':
-  failsafe, json: ['str', '-.INF', '-.INF']
+  failsafe: ['str', '-.INF', '-.INF']
+  json: ['err', '-.INF', '-.INF']
   core, yaml11: ['inf', 'inf-neg()', '-.inf']
 '!!float -.inf':
   core, yaml11: ['inf', 'inf-neg()', '-.inf']
@@ -329,13 +361,16 @@
 ###############################################
 
 '.nan':
-  failsafe, json: ['str', '.nan', '.nan']
+  failsafe: ['str', '.nan', '.nan']
+  json: ['err', '.nan', '.nan']
   core, yaml11: ['nan', 'nan()', '.nan']
 '.NaN':
   core, yaml11: ['nan', 'nan()', '.nan']
-  failsafe, json: ['str', '.NaN', '.NaN']
+  failsafe: ['str', '.NaN', '.NaN']
+  json: ['err', '.NaN', '.NaN']
 '.NAN':
-  failsafe, json: ['str', '.NAN', '.NAN']
+  failsafe: ['str', '.NAN', '.NAN']
+  json: ['err', '.NAN', '.NAN']
   core, yaml11: ['nan', 'nan()', '.nan']
 '!!float .nan':
   core, yaml11: ['nan', 'nan()', '.nan']
@@ -363,34 +398,41 @@
   failsafe: ['str', '0', '0']
   json, core, yaml11: ['int', '0', '0']
 '00':
-  failsafe, json: ['str', '00', '00']
+  failsafe: ['str', '00', '00']
+  json: ['err', '00', '00']
   core: ['int', '0', '0']
   yaml11: ['int', '0', '0']
 '0011':
   core: ['int', '11', '11']
-  failsafe, json: ['str', '0011', '0011']
+  failsafe: ['str', '0011', '0011']
+  json: ['err', '0011', '0011']
   yaml11: ['int', '9', '9']
 '010':
-  failsafe, json: ['str', '010', '010']
+  failsafe: ['str', '010', '010']
+  json: ['err', '010', '010']
   core: ['int', '10', '10']
   yaml11: ['int', '8', '8']
 '07':
-  failsafe, json: ['str', '07', '07']
+  failsafe: ['str', '07', '07']
+  json: ['err', '07', '07']
   yaml11: ['int', '7', '7']
   core: ['int', '7', '7']
 '08':
-  failsafe, json: ['str', '08', '08']
+  failsafe: ['str', '08', '08']
+  json: ['err', '08', '08']
   yaml11: ['str', '08', '08']
   core: ['int', '8', '8']
 '02_0':
-  failsafe, json, core: ['str', '02_0', '02_0']
+  failsafe, core: ['str', '02_0', '02_0']
+  json: ['err', '02_0', '02_0']
   yaml11: ['int', '16', '16']
 '23':
   failsafe: ['str', '23', '23']
   json, core, yaml11: ['int', '23', '23']
 '100_000':
   yaml11: ['int', '100000', '100000']
-  failsafe, json, core: ['str', '100_000', '100_000']
+  failsafe, core: ['str', '100_000', '100_000']
+  json: ['err', '100_000', '100_000']
 
 '!!int 0':
   json, core, yaml11: ['int', '0', '0']
@@ -419,7 +461,8 @@
   json, core, yaml11: ['int', '-23', '-23']
   failsafe: ['str', '-23', '-23']
 '-0100_200':
-  failsafe, json, core: ['str', '-0100_200', '-0100_200']
+  failsafe, core: ['str', '-0100_200', '-0100_200']
+  json: ['err', '-0100_200', '-0100_200']
   yaml11: ['int', '-32896', '-32896']
 '!!int -0':
   json, core, yaml11: ['int', '0', '0']
@@ -430,13 +473,16 @@
 
 '+0':
   core, yaml11: ['int', '0', '0']
-  failsafe, json: ['str', '+0', '+0']
+  failsafe: ['str', '+0', '+0']
+  json: ['err', '+0', '+0']
 '+23':
   core, yaml11: ['int', '23', '23']
-  failsafe, json: ['str', '+23', '+23']
+  failsafe: ['str', '+23', '+23']
+  json: ['err', '+23', '+23']
 '+0100_200':
   yaml11: ['int', '32896', '32896']
-  failsafe, json, core: ['str', '+0100_200', '+0100_200']
+  failsafe, core: ['str', '+0100_200', '+0100_200']
+  json: ['err', '+0100_200', '+0100_200']
 '!!int +0':
   core, yaml11: ['int', '0', '0']
 '!!int +23':
@@ -495,13 +541,16 @@
 ###############################################
 '0o0':
   core: ['int', '0', '0']
-  failsafe, json, yaml11: ['str', '0o0', '0o0']
+  failsafe, yaml11: ['str', '0o0', '0o0']
+  json: ['err', '0o0', '0o0']
 '0o7':
   core: ['int', '7', '7']
-  failsafe, json, yaml11: ['str', '0o7', '0o7']
+  failsafe, yaml11: ['str', '0o7', '0o7']
+  json: ['err', '0o7', '0o7']
 '0o10':
   core: ['int', '8', '8']
-  failsafe, json, yaml11: ['str', '0o10', '0o10']
+  failsafe, yaml11: ['str', '0o10', '0o10']
+  json: ['err', '0o10', '0o10']
 '!!int 0o0':
   core: ['int', '0', '0']
 '!!int 0o7':
@@ -524,22 +573,28 @@
 ###############################################
 
 '0x0':
-  failsafe, json: ['str', '0x0', '0x0']
+  failsafe: ['str', '0x0', '0x0']
+  json: ['err', '0x0', '0x0']
   core, yaml11: ['int', '0', '0']
 '0x10':
-  failsafe, json: ['str', '0x10', '0x10']
+  failsafe: ['str', '0x10', '0x10']
+  json: ['err', '0x10', '0x10']
   core, yaml11: ['int', '16', '16']
 '0x42':
-  failsafe, json: ['str', '0x42', '0x42']
+  failsafe: ['str', '0x42', '0x42']
+  json: ['err', '0x42', '0x42']
   core, yaml11: ['int', '66', '66']
 '0xa':
-  failsafe, json: ['str', '0xa', '0xa']
+  failsafe: ['str', '0xa', '0xa']
+  json: ['err', '0xa', '0xa']
   core, yaml11: ['int', '10', '10']
 '-0x30':
-  failsafe, json, core: ['str', '-0x30', '-0x30']
+  failsafe, core: ['str', '-0x30', '-0x30']
+  json: ['err', '-0x30', '-0x30']
   yaml11: ['int', '-48', '-48']
 '0x2_0':
-  failsafe, json, core: ['str', '0x2_0', '0x2_0']
+  failsafe, core: ['str', '0x2_0', '0x2_0']
+  json: ['err', '0x2_0', '0x2_0']
   yaml11: ['int', '32', '32']
 '!!int 0x10':
   core, yaml11: ['int', '16', '16']
@@ -573,16 +628,20 @@
 ###############################################
 
 '0b0':
-  failsafe, json, core: ['str', '0b0', '0b0']
+  failsafe, core: ['str', '0b0', '0b0']
+  json: ['err', '0b0', '0b0']
   yaml11: ['int', '0', '0']
 '+0b100':
-  failsafe, json, core: ['str', '+0b100', '+0b100']
+  failsafe, core: ['str', '+0b100', '+0b100']
+  json: ['err', '+0b100', '+0b100']
   yaml11: ['int', '4', '4']
 '-0b101':
-  failsafe, json, core: ['str', '-0b101', '-0b101']
+  failsafe, core: ['str', '-0b101', '-0b101']
+  json: ['err', '-0b101', '-0b101']
   yaml11: ['int', '-5', '-5']
 '0b100_101':
-  failsafe, json, core: ['str', '0b100_101', '0b100_101']
+  failsafe, core: ['str', '0b100_101', '0b100_101']
+  json: ['err', '0b100_101', '0b100_101']
   yaml11: ['int', '37', '37']
 
 '!!int 0b0':
@@ -613,13 +672,16 @@
 ###############################################
 
 '190:20:30':
-  failsafe, json, core: ['str', '190:20:30', '190:20:30']
+  failsafe, core: ['str', '190:20:30', '190:20:30']
+  json: ['err', '190:20:30', '190:20:30']
   yaml11: ['int', '685230', '685230']
 '-190:20:30':
-  failsafe, json, core: ['str', '-190:20:30', '-190:20:30']
+  failsafe, core: ['str', '-190:20:30', '-190:20:30']
+  json: ['err', '-190:20:30', '-190:20:30']
   yaml11: ['int', '-685230', '-685230']
 '+190:20:30':
-  failsafe, json, core: ['str', '+190:20:30', '+190:20:30']
+  failsafe, core: ['str', '+190:20:30', '+190:20:30']
+  json: ['err', '+190:20:30', '+190:20:30']
   yaml11: ['int', '685230', '685230']
 
 '!!int 190:20:30':
@@ -646,10 +708,12 @@
 ###############################################
 
 '.0':
-  failsafe, json: ['str', '.0', '.0']
+  failsafe: ['str', '.0', '.0']
+  json: ['err', '.0', '.0']
   core, yaml11: ['float', '0.0', '0.0']
 '.14':
-  failsafe, json: ['str', '.14', '.14']
+  failsafe: ['str', '.14', '.14']
+  json: ['err', '.14', '.14']
   core, yaml11: ['float', '0.14', '0.14']
 
 '0.0':
@@ -659,17 +723,20 @@
   failsafe: ['str', '3.14', '3.14']
   json, core, yaml11: ['float', '3.14', '3.14']
 '001.23':
-  failsafe, json: ['str', '001.23', '001.23']
+  failsafe: ['str', '001.23', '001.23']
+  json: ['err', '001.23', '001.23']
   core, yaml11: ['float', '1.23', '1.23']
 '85_230.15':
-  failsafe, json, core: ['str', '85_230.15', '85_230.15']
+  failsafe, core: ['str', '85_230.15', '85_230.15']
+  json: ['err', '85_230.15', '85_230.15']
   yaml11: ['float', '85230.15', '85230.15']
 '-3.14':
   failsafe: ['str', '-3.14', '-3.14']
   json, core, yaml11: ['float', '-3.14', '-3.14']
 
 '+3.14':
-  failsafe, json: ['str', '+3.14', '+3.14']
+  failsafe: ['str', '+3.14', '+3.14']
+  json: ['err', '+3.14', '+3.14']
   core, yaml11: ['float', '3.14', '3.14']
 
 '!!float .0':
@@ -711,13 +778,16 @@
 ###############################################
 
 '.3e3':
-  failsafe, json, yaml11: ['str', '.3e3', '.3e3']
+  failsafe, yaml11: ['str', '.3e3', '.3e3']
+  json: ['err', '.3e3', '.3e3']
   core: ['float', '300.0', '300.0']
 '.3e+3':
-  failsafe, json: ['str', '.3e+3', '.3e+3']
+  failsafe: ['str', '.3e+3', '.3e+3']
+  json: ['err', '.3e+3', '.3e+3']
   core, yaml11: ['float', '300.0', '300.0']
 '.3E-1':
-  failsafe, json: ['str', '.3E-1', '.3E-1']
+  failsafe: ['str', '.3E-1', '.3E-1']
+  json: ['err', '.3E-1', '.3E-1']
   core, yaml11: ['float', '0.03', '0.03']
 '0.3e3':
   json, core: ['float', '300.0', '300.0']
@@ -729,14 +799,17 @@
   json, core: ['float', '3000', '3000.0']
   failsafe, yaml11: ['str', '3e3', '3e3']
 '85.230_15e+03':
-  failsafe, json, core: ['str', '85.230_15e+03', '85.230_15e+03']
+  failsafe, core: ['str', '85.230_15e+03', '85.230_15e+03']
+  json: ['err', '85.230_15e+03', '85.230_15e+03']
   yaml11: ['float', '85230.15', '85230.15']
 
 '+0.3e+3':
-  failsafe, json: ['str', '+0.3e+3', '+0.3e+3']
+  failsafe: ['str', '+0.3e+3', '+0.3e+3']
+  json: ['err', '+0.3e+3', '+0.3e+3']
   core, yaml11: ['float', '300.0', '300.0']
 '+0.3e3':
-  failsafe, json: ['str', '+0.3e3', '+0.3e3']
+  failsafe: ['str', '+0.3e3', '+0.3e3']
+  json: ['err', '+0.3e3', '+0.3e3']
   core: ['float', '300.0', '300.0']
   yaml11: ['str', '+0.3e3', '+0.3e3']
 
@@ -788,7 +861,8 @@
 ###############################################
 
 '190:20:30.15':
-  failsafe, json, core: ['str', '190:20:30.15', '190:20:30.15']
+  failsafe, core: ['str', '190:20:30.15', '190:20:30.15']
+  json: ['err', '190:20:30.15', '190:20:30.15']
   yaml11: ['float', '685230.15', '685230.15']
 '!!float 190:20:30.15':
   yaml11: ['float', '685230.15', '685230.15']

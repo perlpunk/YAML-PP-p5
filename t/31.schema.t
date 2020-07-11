@@ -18,9 +18,9 @@ my $strings_data = do { YAML::PP->new->load_file($strings_file) };
 
 $schema_data->{'#empty'}->{json_empty_null} = ['null', 'null()', "null"];
 $schema_data->{'!!str #empty'}->{json_empty_null} = ['str', '', "''"];
-%$schema_data = (
-    %$schema_data, %$strings_data,
-);
+#%$schema_data = (
+#    %$schema_data, %$strings_data,
+#);
 
 my $boolean = $jsonpp ? 'JSON::PP' : 'perl';
 my %args = (
@@ -30,6 +30,7 @@ my %args = (
 my $failsafe        = YAML::PP->new( %args, schema => [qw/ Failsafe /] );
 my $json            = YAML::PP->new( %args, schema => [qw/ JSON /] );
 my $json_empty_null = YAML::PP->new( %args, schema => [qw/ JSON empty=null /] );
+my $json_strict     = YAML::PP->new( %args, schema => [qw/ JSON +strict /] );
 my $core            = YAML::PP->new( %args, schema => [qw/ Core /] );
 my $yaml11          = YAML::PP->new( %args, schema => [qw/ YAML1_1 /] );
 
@@ -48,6 +49,7 @@ my %loaders = (
     core => $core,
     yaml11 => $yaml11,
     json_empty_null => $json_empty_null,
+    json_strict => $json_strict,
 );
 my $inf = 0 + 'inf';
 my $inf_negative = 0 - 'inf';
@@ -93,14 +95,34 @@ for my $input (sort keys %$schema_data) {
     for my $schema_names (sort keys %$test_data) {
         note("[$input] Schemas: " . $schema_names);
         my @names = split m/ *, */, $schema_names;
+        if (grep { $_ eq 'json' } @names) {
+            push @names, 'json_strict';
+        }
         my $test = $test_data->{ $schema_names };
         for my $name (@names) {
             my $yp = $loaders{ $name };
             my %def;
+            local $@;
             @def{ qw/ type data dump /} = @$test;
-            next if ($def{type} eq 'bool' and not $jsonpp);
+            my $type = $def{type};
+            next if ($type eq 'bool' and not $jsonpp);
+            my $label = sprintf "(%s) type %s: load(%s)", $name, $def{type}, $input;
+
             my $func;
-            my $data = $yp->load_string('--- ' . $input);
+            my $data = eval { $yp->load_string('--- ' . $input) };
+            my $err = $@;
+            if ($type eq 'err' and @$test > 1) {
+#                diag "?????? err: $@";
+                if ($name eq 'json_strict') {
+                    like $err, qr{Invalid plain scalar}, "$label correctly recognized as invalid";
+                    next;
+                }
+                if ($name eq 'json') {
+                    $type = 'str';
+                }
+            }
+
+            is("$@", '', "$label No error") or next;
             my $data_orig = $data; # avoid stringifying original data
 
             my $flags = B::svref_2object(\$data)->FLAGS;
@@ -108,8 +130,7 @@ for my $input (sort keys %$schema_data) {
             my $is_int = $flags & B::SVp_IOK;
             my $is_float = $flags & B::SVp_NOK;
 
-            my $type = $def{type};
-            my $label = sprintf "(%s) type %s: load(%s)", $name, $def{type}, $input;
+
             if ($def{data} =~ m/^([\w-]+)\(\)$/) {
                 my $func_name = $1;
                 $func = $check{ $func_name };

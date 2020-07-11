@@ -28,22 +28,40 @@ sub register {
     my $schema = $args{schema};
     my $options = $args{options};
     my $empty_null = 0;
+    my $strict = 0;
     for my $opt (@$options) {
         if ($opt eq 'empty=str') {
         }
         elsif ($opt eq 'empty=null') {
             $empty_null = 1;
         }
+        elsif ($opt eq '+strict') {
+            $strict = 1;
+        }
         else {
             croak "Invalid option for JSON Schema: '$opt'";
         }
     }
 
+    my $strict_sub = sub {
+        croak "Invalid plain scalar '$_[1]->{value}'";
+    };
+    my $nostrict_sub = sub {
+        $_[1]->{value}
+    };
+
     $schema->add_resolver(
         tag => 'tag:yaml.org,2002:null',
         match => [ equals => null => undef ],
     );
-    if ($empty_null) {
+    if ($strict) {
+        $schema->add_resolver(
+#            tag => 'tag:yaml.org,2002:null',
+            match => [ equals => '' => $strict_sub ],
+            implicit => 1,
+        );
+    }
+    elsif ($empty_null) {
         $schema->add_resolver(
             tag => 'tag:yaml.org,2002:null',
             match => [ equals => '' => undef ],
@@ -75,7 +93,13 @@ sub register {
     );
     $schema->add_resolver(
         tag => 'tag:yaml.org,2002:str',
-        match => [ all => sub { $_[1]->{value} } ],
+        match => [ all => $strict ? $strict_sub : $nostrict_sub ],
+        implicit => 1,
+    );
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:str',
+        match => [ all => $nostrict_sub ],
+        implicit => 0,
     );
 
     $schema->add_representer(
