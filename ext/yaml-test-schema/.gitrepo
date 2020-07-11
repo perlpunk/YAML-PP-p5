@@ -6,7 +6,7 @@
 [subrepo]
 	remote = git@github.com:perlpunk/yaml-test-schema
 	branch = master
-	commit = f4f0f0307f6f2a0542a5e9e9b9993c7262963554
-	parent = 44295b0e0936f33bc42ebc3fa9ecb11c2bf994dc
+	commit = 63558dd730d378362a09a0358bf7ff4a9d29045c
+	parent = 755f4cadcc587323d5f56669ea53e9e8823820a1
 	method = merge
-	cmdver = 0.4.0
+	cmdver = 0.4.1

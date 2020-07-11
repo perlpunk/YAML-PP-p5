@@ -157,7 +157,7 @@
   yaml11: ['bool', 'false()', "false"]
 '!!bool no':
   yaml11: ['bool', 'false()', "false"]
-'!!bool N':
+'!!bool No':
   yaml11: ['bool', 'false()', "false"]
 '!!bool NO':
   yaml11: ['bool', 'false()', "false"]
