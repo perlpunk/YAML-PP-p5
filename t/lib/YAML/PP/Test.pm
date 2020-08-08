@@ -5,6 +5,7 @@ use warnings;
 use File::Basename qw/ dirname basename /;
 use Encode;
 use Test::More;
+use YAML::PP::Common qw/ YAML_FLOW_SEQUENCE_STYLE YAML_FLOW_MAPPING_STYLE YAML_PLAIN_SCALAR_STYLE /;
 
 sub new {
     my ($class, %args) = @_;
@@ -12,13 +13,15 @@ sub new {
         stats => {},
         %args,
     }, $class;
+    my $id2tags = $self->get_tags;
+    $self->{id2tags} = $id2tags;
     return $self;
 }
 
 sub get_tags {
-    my ($class, %args) = @_;
+    my ($self, %args) = @_;
     my %id_tags;
-    my $dir = $args{test_suite_dir} . "/tags";
+    my $dir = $self->{test_suite_dir} . "/tags";
 
     return unless -d $dir;
     opendir my $dh, $dir or die $!;
@@ -30,13 +33,15 @@ sub get_tags {
         closedir $dh;
     }
     closedir $dh;
-    return %id_tags;
+    return \%id_tags;
 }
 
 sub get_tests {
     my ($self) = @_;
     my $test_suite_dir = $self->{test_suite_dir};
     my $dir = $self->{dir};
+    my $tag = $self->{tag};
+    my $id2tags = $self->{id2tags};
     my $valid = $self->{valid};
     my $json = $self->{in_json};
 
@@ -53,6 +58,11 @@ sub get_tests {
         if ($json) {
             @ids = grep {
                 -f "$test_suite_dir/$_/in.json"
+            } @ids;
+        }
+        if ($tag) {
+            @ids = grep {
+                $id2tags->{ $_ }->{ $tag };
             } @ids;
         }
         push @dirs, map { "$test_suite_dir/$_" } @ids;
@@ -598,7 +608,8 @@ sub compare_dump_yaml {
 }
 
 sub emit_yaml {
-    my ($self, $testcase) = @_;
+    my ($self, $testcase, $args) = @_;
+    my $flow = $args->{flow} ||= 'no';
     my $id = $testcase->{id};
     my $exp_yaml = $testcase->{emit_yaml};
 
@@ -613,48 +624,83 @@ sub emit_yaml {
         $parser->parse_string($testcase->{in_yaml});
     };
 
-    my $result = {};
     my $err = $@;
+    my $result = {};
     if ($err) {
-        diag "ERROR parsing $id";
+        diag "ERROR parsing $id\n$err";
         $result->{err} = $err;
         return $result;
     }
 
-    my $emit_yaml = $self->_emit_events(\@events);
+    my $emit_yaml = $self->_emit_events(\@events, $args);
 
     my @reparse_events;
     my @expected_reparse_events;
     my @ev;
+    my @emit_events;
     $parser = YAML::PP::Parser->new(
         receiver => sub {
             my ($self, @args) = @_;
             my ($type, $info) = @args;
-            if ($type eq 'sequence_start_event' or $type eq 'mapping_start_event') {
-                delete $info->{style};
-            }
-            push @ev, YAML::PP::Parser->event_to_test_suite(\@args);
+            push @emit_events, $info;
+            push @ev, YAML::PP::Common::event_to_test_suite($info, { flow => $flow eq 'keep' });
         },
     );
     eval {
         $parser->parse_string($emit_yaml);
     };
+    $err = $@;
+    if ($err) {
+        diag "ERROR parsing $id\n$err";
+        diag $emit_yaml;
+        $result->{err} = $err;
+        return $result;
+    }
     @reparse_events = @ev;
-    @ev = ();
-    eval {
-        $parser->parse_string($exp_yaml);
-    };
-    @expected_reparse_events = @ev;
+
+    if ($flow eq 'keep') {
+        @expected_reparse_events = map {
+            YAML::PP::Common::event_to_test_suite($_->[1], { flow => 1 })
+        } @events;
+    }
+    elsif ($flow eq 'no') {
+        @ev = ();
+        eval {
+            $parser->parse_string($exp_yaml);
+        };
+        @expected_reparse_events = @ev;
+    }
+    else {
+        @expected_reparse_events = map {
+            if ($_->[1]->{name} eq 'sequence_start_event') {
+                $_->[1]->{style} = YAML_FLOW_SEQUENCE_STYLE;
+            }
+            elsif ($_->[1]->{name} eq 'mapping_start_event') {
+                $_->[1]->{style} = YAML_FLOW_MAPPING_STYLE;
+            }
+            elsif ($_->[1]->{name} eq 'scalar_event') {
+                $_->[1]->{style} = YAML_PLAIN_SCALAR_STYLE;
+            }
+            YAML::PP::Common::event_to_test_suite($_->[1], { flow => 1 });
+        } @events;
+        @reparse_events = map {
+            if ($_->{name} eq 'scalar_event') {
+                $_->{style} = YAML_PLAIN_SCALAR_STYLE;
+            }
+            YAML::PP::Common::event_to_test_suite($_, { flow => 1 });
+        } @emit_events;
+    }
     $result = {
         expected_events => \@expected_reparse_events,
         reparse_events => \@reparse_events,
-        emit_yaml => $emit_yaml,
     };
+#    note "========= EMIT:\n$emit_yaml";
+    $result->{emit_yaml} = $emit_yaml if $flow eq 'no';
     return $result;
 }
 
 sub _emit_events {
-    my ($testsuite, $events) = @_;
+    my ($testsuite, $events, $args) = @_;
     my $writer = YAML::PP::Writer->new;
     my $emitter = YAML::PP::Emitter->new();
     $emitter->set_writer($writer);
@@ -663,7 +709,20 @@ sub _emit_events {
         my ($type, $info) = @$event;
         delete $info->{version_directive};
         if ($type eq 'sequence_start_event' or $type eq 'mapping_start_event') {
-            delete $info->{style};
+            if ($args->{flow} eq 'no') {
+                delete $info->{style};
+            }
+            elsif ($args->{flow} eq 'keep') {
+                delete $info->{style} if $args->{flow} eq 'no';
+            }
+            elsif ($args->{flow} eq 'yes') {
+                if ($type eq 'sequence_start_event') {
+                    $info->{style} = YAML_FLOW_SEQUENCE_STYLE;
+                }
+                else {
+                    $info->{style} = YAML_FLOW_MAPPING_STYLE;
+                }
+            }
         }
         $emitter->$type($info);
     }

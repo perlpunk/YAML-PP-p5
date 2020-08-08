@@ -3,17 +3,27 @@ use strict;
 use warnings;
 
 use YAML::PP;
-use YAML::PP::Common;
+use YAML::PP::Common qw/ YAML_FLOW_SEQUENCE_STYLE YAML_FLOW_MAPPING_STYLE /;
 use YAML::PP::Parser;
 use YAML::PP::Emitter;
 use YAML::PP::Writer;
 use Data::Dumper;
 use Encode;
+use Getopt::Long;
+GetOptions(
+    'help|h' => \my $help,
+    'indent=i' => \my $indent,
+    'module|M=s' => \my $module,
+    'verbose' => \my $verbose,
+    'flow=s' => \my $flow,
+) or usage(1);
 
-my $verbose = 0;
-if (grep $_ eq '-v', @ARGV) {
-    $verbose = 1;
-}
+usage(0) if $help;
+
+$module ||= 'YAML::PP';
+
+$flow ||= 'no';
+
 my ($file) = @ARGV;
 my $yaml;
 
@@ -28,7 +38,14 @@ else {
 $yaml = decode_utf8($yaml);
 
 my @events;
-my $parser = YAML::PP::Parser->new(
+my $parserclass = 'YAML::PP::Parser';
+my $emitterclass = 'YAML::PP::Emitter';
+if ($module eq 'YAML::PP::LibYAML') {
+    eval { require YAML::PP::LibYAML } or die "Module $module not supported: $@";
+    $parserclass = 'YAML::PP::LibYAML::Parser';
+    $emitterclass = 'YAML::PP::LibYAML::Emitter';
+}
+my $parser = $parserclass->new(
     receiver => sub {
         my ($self, undef, $event) = @_;
         push @events, $event;
@@ -45,16 +62,44 @@ if ($@) {
     exit 1;
 }
 my $writer = YAML::PP::Writer->new;
-my $emitter = YAML::PP::Emitter->new();
+my $emitter = $emitterclass->new( indent => $indent );
 $emitter->set_writer($writer);
 for my $event (@events) {
     my $type = $event->{name};
     my $str = YAML::PP::Common::event_to_test_suite($event);
     print "$str\n" if $verbose;
     if ($type eq 'sequence_start_event' or $type eq 'mapping_start_event') {
-        delete $event->{style};
+        if ($flow eq 'no') {
+            delete $event->{style};
+        }
+        elsif ($flow eq 'yes') {
+            if ($type eq 'sequence_start_event') {
+                $event->{style} = YAML_FLOW_SEQUENCE_STYLE;
+            }
+            else {
+                $event->{style} = YAML_FLOW_MAPPING_STYLE;
+            }
+        }
     }
     $emitter->$type($event);
 }
 my $out_yaml = $emitter->writer->output;
 print encode_utf8 $out_yaml;
+
+sub usage {
+    my ($rc) = @_;
+    print <<"EOM";
+Usage:
+
+    $0 [options] < file
+    $0 [options] file
+
+Options:
+    --indent=             Number of spaces for indentation
+    --module, -M          YAML::PP or YAML::PP::LibYAML
+    --flow                'no' (default, always output block style), 'yes'
+                          (always output flow style), 'keep' (output flow
+                          style like in the original input)
+EOM
+    exit $rc;
+}
