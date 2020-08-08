@@ -512,6 +512,7 @@ sub scalar_event {
         if ($value =~ m/\A\n* +/) {
             $indicators .= $self->indent;
         }
+        my $indent = $indent . ' ' x $self->indent;
         if ($value !~ m/\n\z/) {
             $indicators .= '-';
             $value .= "\n";
@@ -520,7 +521,7 @@ sub scalar_event {
             $indicators .= '+';
             $open_ended = 1;
         }
-        $value =~ s/^(?=.)/$indent  /gm;
+        $value =~ s/^(?=.)/$indent/gm;
         $value = "|$indicators\n$value";
     }
     elsif ($style eq YAML_FOLDED_SCALAR_STYLE) {
@@ -532,6 +533,7 @@ sub scalar_event {
         if ($value =~ m/\A\n* +/) {
             $indicators .= $self->indent;
         }
+        my $indent = $indent . ' ' x $self->indent;
         if ($lines[-1] eq '') {
             pop @lines;
             $eol = 1;
@@ -543,7 +545,7 @@ sub scalar_event {
         for my $i (0 .. $#lines) {
             my $line = $lines[ $i ];
             if (length $line) {
-                $value .= "$indent  $line\n";
+                $value .= "$indent$line\n";
             }
             if ($i != $#lines) {
                 $value .= "\n";
