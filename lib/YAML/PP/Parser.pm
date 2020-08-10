@@ -603,7 +603,8 @@ sub start_mapping {
 sub end_document {
     my ($self, $implicit) = @_;
 
-    if ($self->lexer->flowcontext) {
+    my $event_types = $self->events;
+    if ($event_types->[-1] =~ m/FLOW/) {
         die "Unexpected end of flow context";
     }
     if ($self->new_node) {
@@ -611,7 +612,6 @@ sub end_document {
     }
     $self->remove_nodes(-1);
 
-    my $event_types = $self->events;
     if ($event_types->[-1] eq 'STR') {
         return;
     }
