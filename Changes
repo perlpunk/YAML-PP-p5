@@ -1,5 +1,12 @@
 Revision history for Perl module YAML::PP
 
+0.023_001 2020-08-10 20:44:05+02:00
+
+    - Improve utility tools yamlpp-load(-dump) (add new options --merge
+      and --module)
+    - Emitter supports flow style now (not yet configurable in Dumper)
+    - Minor improvements to emitter scalar style output
+
 0.023 2020-07-09 22:09:50+02:00
 
     - Support loading and dumping typeglobs. Issue #15
