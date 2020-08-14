@@ -15,6 +15,7 @@ GetOptions(
     'footer!' => \my $footer,
     'boolean=s' => \my $boolean,
     'merge' => \my $merge,
+    'perl' => \my $perl,
     'preserve=s' => \my $preserve,
     'module|M=s' => \my $module,
     'yaml-version=s' => \my $yaml_version,
@@ -32,6 +33,9 @@ my @yaml_versions = split m/,/, $yaml_version;
 my @schema = ('+');
 if ($merge) {
     push @schema, 'Merge';
+}
+if ($perl) {
+    push @schema, 'Perl';
 }
 
 if (defined $preserve) {
@@ -105,6 +109,7 @@ sub yamlxs {
     eval { require YAML::XS };
     my ($yaml) = @_;
     no warnings 'once';
+    local $YAML::XS::LoadBlessed = $perl;
     local $YAML::XS::Indent = $indent;
     my $data = YAML::XS::Load($yaml);
     return YAML::XS::Dump($data);
@@ -114,6 +119,7 @@ sub yamlsyck {
     my ($yaml) = @_;
     no warnings 'once';
     local $YAML::Syck::Headless = 1 unless $header;
+    local $YAML::Syck::LoadBlessed = $perl;
     local $YAML::Syck::ImplicitTyping = 1;
     local $YAML::Syck::ImplicitUnicode = 1;
     my $data = YAML::Syck::Load($yaml);
@@ -122,6 +128,7 @@ sub yamlsyck {
 sub yaml {
     eval { require YAML };
     no warnings 'once';
+    local $YAML::LoadBlessed = $perl;
     local $YAML::UseHeader = $header ? 1 : 0;
     local $YAML::Indent = $indent;
     my ($yaml) = @_;
@@ -156,6 +163,8 @@ Options:
     --[no-]header         Print '---' (default)
     --[no-]footer         Print '...'
     --merge               Enable loading merge keys '<<'
+    --perl                Enable loading perl types and objects (use only
+                          on trusted input!)
     --preserve            Comma separated: 'order', 'scalar', 'flow'. By
                           default all things are preserved
     --module -M           YAML::PP (default), YAML, YAML::PP::LibYAML,

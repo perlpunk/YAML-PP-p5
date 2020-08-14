@@ -12,6 +12,7 @@ GetOptions(
     'help|h' => \my $help,
     'boolean=s' => \my $boolean,
     'merge' => \my $merge,
+    'perl' => \my $perl,
     'module|M=s' => \my $module,
     'yaml-version=s' => \my $yaml_version,
     'version-directive' => \my $version_directive,
@@ -27,7 +28,9 @@ my @schema = ('+');
 if ($merge) {
     push @schema, 'Merge';
 }
-
+if ($perl) {
+    push @schema, 'Perl';
+}
 
 my ($file) = @ARGV;
 my $yaml;
@@ -82,12 +85,15 @@ sub yamlpplibyaml {
 sub yamlxs {
     eval { require YAML::XS };
     my ($yaml) = @_;
+    no warnings 'once';
+    local $YAML::XS::LoadBlessed = $perl;
     return YAML::XS::Load($yaml);
 }
 sub yamlsyck {
     eval { require YAML::Syck };
     my ($yaml) = @_;
     no warnings 'once';
+    local $YAML::Syck::LoadBlessed = $perl;
     local $YAML::Syck::ImplicitTyping = 1;
     local $YAML::Syck::ImplicitUnicode = 1;
     return YAML::Syck::Load($yaml);
@@ -95,6 +101,8 @@ sub yamlsyck {
 sub yaml {
     eval { require YAML };
     my ($yaml) = @_;
+    no warnings 'once';
+    local $YAML::LoadBlessed = $perl;
     return YAML::Load($yaml);
 }
 sub yamltiny {
@@ -119,6 +127,8 @@ Usage:
 Options:
     --boolean=            'perl', 'JSON::PP', 'boolean'
     --merge               Enable loading merge keys '<<'
+    --perl                Enable loading perl types and objects (use only
+                          on trusted input!)
     --module -M           YAML::PP (default), YAML, YAML::PP::LibYAML,
                           YAML::Syck, YAML::Tiny, YAML::XS
     --yaml-version=       '1.2' (default), '1.1', '1.2,1.1', '1.1,1.2'
