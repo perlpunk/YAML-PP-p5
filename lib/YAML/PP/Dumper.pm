@@ -148,13 +148,13 @@ sub dump_node {
 
 sub emit_node {
     my ($self, $item) = @_;
-    my ($type, $node) = @$item;
+    my ($type, $node, %args) = @$item;
     if ($type eq 'alias') {
         $self->emitter->alias_event({ value => $node->{value} });
         return;
     }
     if ($type eq 'mapping') {
-        my $style = YAML_BLOCK_MAPPING_STYLE;
+        my $style = $args{style} || YAML_BLOCK_MAPPING_STYLE;
         # TODO
         if ($node->{items} and @{ $node->{items} } == 0) {
 #            $style = YAML_FLOW_MAPPING_STYLE;
@@ -171,7 +171,7 @@ sub emit_node {
         return;
     }
     if ($type eq 'sequence') {
-        my $style = YAML_BLOCK_SEQUENCE_STYLE;
+        my $style = $args{style} || YAML_BLOCK_SEQUENCE_STYLE;
         if (@{ $node->{items} } == 0) {
 #            $style = YAML_FLOW_SEQUENCE_STYLE;
         }

@@ -5,7 +5,7 @@ use Test::More;
 use Test::Deep;
 use FindBin '$Bin';
 use YAML::PP;
-use YAML::PP::Common qw/ PRESERVE_ORDER PRESERVE_SCALAR_STYLE /;
+use YAML::PP::Common qw/ PRESERVE_ORDER PRESERVE_SCALAR_STYLE PRESERVE_FLOW_STYLE /;
 
 
 subtest 'preserve-scalar-style' => sub {
@@ -140,6 +140,45 @@ EOM
     my $data = $yp->load_string($yaml);
     my $dump = $yp->dump_string($data);
     is($dump, $yaml, 'load-dump object with preserved hash key order');
+};
+
+subtest 'preserve-flow' => sub {
+    my $yp = YAML::PP->new(
+        preserve => PRESERVE_FLOW_STYLE,
+    );
+    my $yaml = <<'EOM';
+---
+map: {z: 1, a: 2, y: 3, b: 4}
+seq: [c, b, {y: z}]
+EOM
+    my $exp_sorted = <<'EOM';
+---
+map: {a: 2, b: 4, y: 3, z: 1}
+seq: [c, b, {y: z}]
+EOM
+    my $data = $yp->load_string($yaml);
+    my $dump = $yp->dump_string($data);
+    is($dump, $exp_sorted, 'load-dump with preserve flow');
+
+    $yp = YAML::PP->new(
+        preserve => PRESERVE_FLOW_STYLE | PRESERVE_ORDER
+    );
+    $data = $yp->load_string($yaml);
+    $dump = $yp->dump_string($data);
+    is($dump, $yaml, 'load-dump with preserve flow && order');
+
+    $yp = YAML::PP->new(
+        schema => [qw/ + Perl /],
+        preserve => PRESERVE_FLOW_STYLE | PRESERVE_ORDER,
+    );
+    $yaml = <<'EOM';
+--- !perl/hash:Foo
+map: {z: 1, a: 2, y: 3, b: 4}
+seq: [c, b, {y: z}]
+EOM
+    $data = $yp->load_string($yaml);
+    $dump = $yp->dump_string($data);
+    is($dump, $yaml, 'load-dump object with preserved flow && order');
 };
 
 done_testing;

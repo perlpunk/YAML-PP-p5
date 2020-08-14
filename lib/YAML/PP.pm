@@ -251,6 +251,50 @@ sub SCALAR {
     return scalar %{ $self->{data} };
 }
 
+package YAML::PP::Preserve::Array;
+# experimental
+use Tie::Array;
+use base qw/ Tie::StdArray /;
+
+sub TIEARRAY {
+    my ($class) = @_;
+    my $self = bless {
+        data => [],
+    }, $class;
+    return $self;
+}
+
+sub FETCH {
+    my ($self, $i) = @_;
+    return $self->{data}->[ $i ];
+}
+sub FETCHSIZE {
+    my ($self) = @_;
+    return $#{ $self->{data} } + 1;
+}
+
+sub STORE {
+    my ($self, $i, $val) = @_;
+    $self->{data}->[ $i ] = $val;
+}
+sub PUSH {
+    my ($self, @args) = @_;
+    push @{ $self->{data} }, @args;
+}
+sub STORESIZE {
+    my ($self, $i) = @_;
+    $#{ $self->{data} } = $i - 1;
+}
+sub DELETE {
+    my ($self, $i) = @_;
+    delete $self->{data}->[ $i ];
+}
+sub EXISTS {
+    my ($self, $i) = @_;
+    return exists $self->{data}->[ $i ];
+}
+
+
 package YAML::PP::Preserve::Scalar;
 
 use overload

@@ -13,7 +13,7 @@ use YAML::PP::Common qw/
     YAML_LITERAL_SCALAR_STYLE YAML_FOLDED_SCALAR_STYLE
     YAML_FLOW_SEQUENCE_STYLE YAML_FLOW_MAPPING_STYLE
     YAML_BLOCK_MAPPING_STYLE YAML_BLOCK_SEQUENCE_STYLE
-    PRESERVE_ALL PRESERVE_ORDER PRESERVE_SCALAR_STYLE
+    PRESERVE_ALL PRESERVE_ORDER PRESERVE_SCALAR_STYLE PRESERVE_FLOW_STYLE
 /;
 use B;
 
@@ -21,7 +21,7 @@ sub new {
     my ($class, %args) = @_;
     my $preserve = delete $args{preserve} || 0;
     if ($preserve == PRESERVE_ALL) {
-        $preserve = PRESERVE_ORDER | PRESERVE_SCALAR_STYLE;
+        $preserve = PRESERVE_ORDER | PRESERVE_SCALAR_STYLE | PRESERVE_FLOW_STYLE;
     }
     my $self = bless {
         schema => delete $args{schema},
@@ -45,6 +45,7 @@ sub clone {
 sub schema { return $_[0]->{schema} }
 sub preserve_order { return $_[0]->{preserve} & PRESERVE_ORDER }
 sub preserve_scalar_style { return $_[0]->{preserve} & PRESERVE_SCALAR_STYLE }
+sub preserve_flow_style { return $_[0]->{preserve} & PRESERVE_FLOW_STYLE }
 
 sub represent_node {
     my ($self, $node) = @_;
@@ -95,13 +96,25 @@ sub represent_node {
                 push @{ $node->{items} }, $key, $node->{data}->{ $key };
             }
         }
-        return [ mapping => $node ];
+        my %args;
+        if ($self->preserve_flow_style and reftype $node->{value} eq 'HASH') {
+            if (my $tied = tied %{ $node->{value} } ) {
+                $args{style} = $tied->{style};
+            }
+        }
+        return [ mapping => $node, %args ];
     }
     elsif ($node->{reftype} eq 'ARRAY') {
         unless (defined $node->{items}) {
             @{ $node->{items} } = @{ $node->{data} };
         }
-        return [ sequence => $node ];
+        my %args;
+        if ($self->preserve_flow_style and reftype $node->{value} eq 'ARRAY') {
+            if (my $tied = tied @{ $node->{value} } ) {
+                $args{style} = $tied->{style};
+            }
+        }
+        return [ sequence => $node, %args ];
     }
     elsif ($node->{reftype}) {
         die "Reftype $node->{reftype} not implemented";

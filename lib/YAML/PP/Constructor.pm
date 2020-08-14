@@ -6,7 +6,7 @@ package YAML::PP::Constructor;
 our $VERSION = '0.000'; # VERSION
 
 use YAML::PP;
-use YAML::PP::Common qw/ PRESERVE_ALL PRESERVE_ORDER PRESERVE_SCALAR_STYLE /;
+use YAML::PP::Common qw/ PRESERVE_ALL PRESERVE_ORDER PRESERVE_SCALAR_STYLE PRESERVE_FLOW_STYLE /;
 use Scalar::Util qw/ reftype /;
 
 use constant DEBUG => ($ENV{YAML_PP_LOAD_DEBUG} or $ENV{YAML_PP_LOAD_TRACE}) ? 1 : 0;
@@ -20,7 +20,7 @@ sub new {
     my $default_yaml_version = delete $args{default_yaml_version};
     my $preserve = delete $args{preserve} || 0;
     if ($preserve == PRESERVE_ALL) {
-        $preserve = PRESERVE_ORDER | PRESERVE_SCALAR_STYLE;
+        $preserve = PRESERVE_ORDER | PRESERVE_SCALAR_STYLE | PRESERVE_FLOW_STYLE;
     }
     my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
     die "Invalid value for cyclic_refs: $cyclic_refs"
@@ -78,6 +78,7 @@ sub set_yaml_version { $_[0]->{yaml_version} = $_[1] }
 sub default_yaml_version { return $_[0]->{default_yaml_version} }
 sub preserve_order { return $_[0]->{preserve} & PRESERVE_ORDER }
 sub preserve_scalar_style { return $_[0]->{preserve} & PRESERVE_SCALAR_STYLE }
+sub preserve_flow_style { return $_[0]->{preserve} & PRESERVE_FLOW_STYLE }
 
 sub document_start_event {
     my ($self, $event) = @_;
@@ -124,8 +125,14 @@ sub mapping_start_event {
     };
     my $stack = $self->stack;
 
-    if ($self->preserve_order and not tied(%$data)) {
+    my $preserve_order = $self->preserve_order;
+    my $preserve_style = $self->preserve_flow_style;
+    if (($preserve_order or $preserve_style) and not tied(%$data)) {
         tie %$data, 'YAML::PP::Preserve::Hash';
+    }
+    if ($preserve_style) {
+        my $t = tied %$data;
+        $t->{style} = $event->{style};
     }
 
     push @$stack, $ref;
@@ -206,6 +213,13 @@ sub sequence_start_event {
         on_data => $on_data,
     };
     my $stack = $self->stack;
+
+    my $preserve_style = $self->preserve_flow_style;
+    if ($preserve_style and not tied(@$data)) {
+        tie @$data, 'YAML::PP::Preserve::Array', @$data;
+        my $t = tied @$data;
+        $t->{style} = $event->{style};
+    }
 
     push @$stack, $ref;
     if (defined(my $anchor = $event->{anchor})) {
