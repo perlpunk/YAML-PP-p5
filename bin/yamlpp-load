@@ -15,7 +15,6 @@ GetOptions(
     'perl' => \my $perl,
     'module|M=s' => \my $module,
     'yaml-version=s' => \my $yaml_version,
-    'version-directive' => \my $version_directive,
 ) or usage(1);
 
 usage(0) if $help;
@@ -69,7 +68,6 @@ sub _yamlpp {
         boolean => $boolean,
         preserve => PRESERVE_ORDER,
         yaml_version => \@yaml_versions,
-        version_directive => $version_directive || 0,
     );
     my @docs = $ypp->load_string($yaml);
     return @docs;
@@ -132,7 +130,6 @@ Options:
     --module -M           YAML::PP (default), YAML, YAML::PP::LibYAML,
                           YAML::Syck, YAML::Tiny, YAML::XS
     --yaml-version=       '1.2' (default), '1.1', '1.2,1.1', '1.1,1.2'
-    --version-directive   Print '%YAML <version>'
 EOM
     exit $rc;
 }

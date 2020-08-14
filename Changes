@@ -1,11 +1,18 @@
 Revision history for Perl module YAML::PP
 
+0.023_002 2020-08-15 18:23:07+02:00
+
+    - Support for preserving flow style in Loader/Dumper
+    - Create preserved nodes from scratch with preserved_* methods
+    - Add option --perl to yamlpp-load(-dump)
+
 0.023_001 2020-08-10 20:44:05+02:00
 
     - Improve utility tools yamlpp-load(-dump) (add new options --merge
-      and --module)
+      and --module) #35
     - Emitter supports flow style now (not yet configurable in Dumper)
     - Minor improvements to emitter scalar style output
+    - Parser: fix flow mappings on one line
 
 0.023 2020-07-09 22:09:50+02:00
 
