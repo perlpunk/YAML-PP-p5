@@ -186,6 +186,35 @@ sub DumpFile {
     YAML::PP->new->dump_file($file, @data);
 }
 
+sub preserved_scalar {
+    my ($self, $value, %args) = @_;
+    my $scalar = YAML::PP::Preserve::Scalar->new(
+        value => $value,
+        %args,
+    );
+    return $scalar;
+}
+
+sub preserved_mapping {
+    my ($self, $hash, %args) = @_;
+    my $data = {};
+    tie %$data, 'YAML::PP::Preserve::Hash';
+    %$data = %$hash;
+    my $t = tied %$data;
+    $t->{style} = $args{style};
+    return $data;
+}
+
+sub preserved_sequence {
+    my ($self, $array, %args) = @_;
+    my $data = [];
+    tie @$data, 'YAML::PP::Preserve::Array';
+    push @$data, @$array;
+    my $t = tied @$data;
+    $t->{style} = $args{style};
+    return $data;
+}
+
 package YAML::PP::Preserve::Hash;
 # experimental
 use Tie::Hash;

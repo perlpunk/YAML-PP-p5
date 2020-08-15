@@ -5,7 +5,10 @@ use Test::More;
 use Test::Deep;
 use FindBin '$Bin';
 use YAML::PP;
-use YAML::PP::Common qw/ PRESERVE_ORDER PRESERVE_SCALAR_STYLE PRESERVE_FLOW_STYLE /;
+use YAML::PP::Common qw/
+    PRESERVE_ORDER PRESERVE_SCALAR_STYLE PRESERVE_FLOW_STYLE
+    YAML_LITERAL_SCALAR_STYLE YAML_FLOW_MAPPING_STYLE YAML_FLOW_SEQUENCE_STYLE
+/;
 
 
 subtest 'preserve-scalar-style' => sub {
@@ -159,6 +162,8 @@ EOM
     my $data = $yp->load_string($yaml);
     my $dump = $yp->dump_string($data);
     is($dump, $exp_sorted, 'load-dump with preserve flow');
+    is(exists($data->{seq}->[0]), 1, 'load sequence');
+    is(exists($data->{seq}->[3]), !1, 'load sequence');
 
     $yp = YAML::PP->new(
         preserve => PRESERVE_FLOW_STYLE | PRESERVE_ORDER
@@ -179,6 +184,35 @@ EOM
     $data = $yp->load_string($yaml);
     $dump = $yp->dump_string($data);
     is($dump, $yaml, 'load-dump object with preserved flow && order');
+};
+
+subtest 'create-preserve' => sub {
+    my $yp = YAML::PP->new(
+        preserve => PRESERVE_SCALAR_STYLE | PRESERVE_FLOW_STYLE | PRESERVE_ORDER
+    );
+    my $scalar = $yp->preserved_scalar("\n", style => YAML_LITERAL_SCALAR_STYLE );
+    my $data = { literal => $scalar };
+    my $dump = $yp->dump_string($data);
+    my $yaml = <<'EOM';
+---
+literal: |+
+
+...
+EOM
+    is($dump, $yaml, 'dump with preserved scalar');
+
+    my $hash = $yp->preserved_mapping({}, style => YAML_FLOW_MAPPING_STYLE);
+    %$hash = (z => 1, a => 2, y => 3, b => 4);
+    my $array = $yp->preserved_sequence([23, 24], style => YAML_FLOW_SEQUENCE_STYLE);
+    $data = $yp->preserved_mapping({});
+    %$data = ( map => $hash, seq => $array );
+    $dump = $yp->dump_string($data);
+    $yaml = <<'EOM';
+---
+map: {z: 1, a: 2, y: 3, b: 4}
+seq: [23, 24]
+EOM
+    is($dump, $yaml, 'dump with preserved flow && order');
 };
 
 done_testing;
