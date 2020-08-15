@@ -604,7 +604,10 @@ Preserving scalar styles is still experimental.
     # Preserve the quoting style of scalars
     my $yp = YAML::PP->new( preserve => PRESERVE_SCALAR_STYLE );
 
-    # Preserve order and scalar style
+    # Preserve block/flow style
+    my $yp = YAML::PP->new( preserve => PRESERVE_FLOW_STYLE );
+
+    # Combine, e.g. preserve order and scalar style
     my $yp = YAML::PP->new( preserve => PRESERVE_ORDER | PRESERVE_SCALAR_STYLE );
 
 Do NOT rely on the internal implementation of it.
@@ -620,9 +623,18 @@ If you load the following input:
     - "double"
     - |
       literal
+    ---
+    block mapping:
+      flow sequence: [a, b]
+    flow mapping: {a: b}
 
-    my $yp = YAML::PP->new( preserve => PRESERVE_ORDER | PRESERVE_SCALAR_STYLE );
-    my ($hash, $styles) = $yp->load_file($file);
+with this code:
+
+    my $yp = YAML::PP->new(
+        preserve => PRESERVE_ORDER | PRESERVE_SCALAR_STYLE | PRESERVE_FLOW_STYLE
+    );
+    my ($hash, $styles, $flow) = $yp->load_file($file);
+    $yp->dump_file($hash, $styles, $flow);
 
 Then dumping it will return the same output.
 Only folded block scalars '>' cannot preserve the style yet.
@@ -639,6 +651,9 @@ a scalar, the object will be replaced by a simple scalar.
 
 You can also pass C<1> as a value. In this case all preserving options will be
 enabled, also if there are new options added in the future.
+
+There are also methods to craete preserved nodes from scratch. See the
+C<preserved_(scalar|mapping|sequence> L<"METHODS"> below.
 
 =back
 
@@ -694,6 +709,61 @@ L<YAML::PP::Writer> and output a string.
         writer => $writer,
     );
     $yp->dump($data);
+
+=head2 preserved_scalar
+
+Experimental. Please report bugs or let me know this is useful and works.
+
+You can define a certain scalar style when dumping data.
+Figuring out the best style is a hard task and practically impossible to get
+it right for all cases. It's also a matter of taste.
+
+    use YAML::PP::Common qw/ PRESERVE_SCALAR_STYLE /;
+    my $yp = YAML::PP->new(
+        preserve => PRESERVE_SCALAR_STYLE,
+    );
+    # a single linebreak would normally be dumped with double quotes: "\n"
+    my $scalar = $yp->preserved_scalar("\n", style => YAML_LITERAL_SCALAR_STYLE );
+
+    my $data = { literal => $scalar };
+    my $dump = $yp->dump_string($data);
+    # output
+    ---
+    literal: |+
+
+    ...
+
+
+=head2 preserved_mapping, preserved_sequence
+
+Experimental. Please report bugs or let me know this is useful and works.
+
+With this you can define which nodes are dumped with the more compact flow
+style instead of block style.
+
+If you add C<PRESERVE_ORDER> to the C<preserve> option, it will also keep the
+order of the keys in a hash.
+
+    use YAML::PP::Common qw/ PRESERVE_ORDER PRESERVE_FLOW_STYLE /;
+    my $yp = YAML::PP->new(
+        preserve => PRESERVE_FLOW_STYLE | PRESERVE_ORDER
+    );
+
+    my $hash = $yp->preserved_mapping({}, style => YAML_FLOW_MAPPING_STYLE);
+    # Add values after initialization to preserve order
+    %$hash = (z => 1, a => 2, y => 3, b => 4);
+
+    my $array = $yp->preserved_sequence([23, 24], style => YAML_FLOW_SEQUENCE_STYLE);
+
+    my $data = $yp->preserved_mapping({});
+    %$data = ( map => $hash, seq => $array );
+
+    my $dump = $yp->dump_string($data);
+    # output
+    ---
+    map: {z: 1, a: 2, y: 3, b: 4}
+    seq: [23, 24]
+
 
 =head2 loader
 
