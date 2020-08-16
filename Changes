@@ -1,5 +1,11 @@
 Revision history for Perl module YAML::PP
 
+0.023_003 2020-08-16 15:58:07+02:00
+
+    - Minor fixes for preserved nodes
+    - Minor fixes for the Perl schema and globs
+    - Update testsuite to data-2020-08-01
+
 0.023_002 2020-08-15 18:23:07+02:00
 
     - Support for preserving flow style in Loader/Dumper
