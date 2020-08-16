@@ -7,6 +7,7 @@ use Data::Dumper;
 use Test::Deep qw/ cmp_deeply /;
 use IO::File;
 use YAML::PP;
+use YAML::PP::Schema::Perl;
 use Scalar::Util qw/ blessed reftype /;
 
 our $var = "Hola";
@@ -15,8 +16,16 @@ our %var = (pi => '3.1415');
 my $stdin = \*DATA,
 my $fileno = fileno DATA;
 
+my $perl_objects = YAML::PP::Schema::Perl->new(
+);
+my $perl_no_objects = YAML::PP::Schema::Perl->new(
+    classes => [],
+);
 my $yp = YAML::PP->new(
-    schema => [qw/ + Perl /],
+    schema => ['+', $perl_objects],
+);
+my $yp_no_objects = YAML::PP->new(
+    schema => ['+', $perl_no_objects],
 );
 
 my %tests = (
@@ -95,51 +104,72 @@ EOM
 );
 
 subtest valid => sub {
-    for my $key (sort keys %tests) {
-        my $test = $tests{ $key };
-        my $name = $test->{name};
-        my $class = $test->{class} || '';
-        note "============ $key $name";
-        my $input = $test->{in};
-        my $data = $yp->load_string($input);
-        my $glob = *{$data};
-        if ($class) {
-            my $reftype = reftype($data);
-            is($reftype, 'GLOB', "$key - $name - ($class) reftype is glob");
-            is(ref $data, $class, "$key - $name - Class equals '$class'");
-        }
-        else {
-            my $reftype = reftype(\$data);
-            is($reftype, 'GLOB', "$key - $name - reftype is glob");
-        }
-        is("$glob", $name, "$key - $name - Glob name");
-        my $types = $test->{types};
-        for my $type (sort keys %$types) {
-            my $exp = $types->{ $type };
-            my $value;
-            my $glob = *{$data}{ $type };
-            if ($type eq 'SCALAR') {
-                $value = $$glob;
+    my @tests = (
+        [objects => $yp],
+        [no_objects => $yp_no_objects],
+    );
+    for my $type (@tests) {
+        my ($test_type, $yp) = @$type;
+        for my $key (sort keys %tests) {
+            my $test = $tests{ $key };
+            my $name = $test->{name};
+            my $label = "$test_type - $key - $name";
+            my $class = $test->{class} || '';
+            note "============ $key $name";
+            my $input = $test->{in};
+            my $data = $yp->load_string($input);
+            my $glob = *{$data};
+            if ($class) {
+                my $ref = ref $data;
+                if ($test_type eq 'no_objects') {
+                    my $reftype = reftype(\$data);
+                    is($reftype, 'GLOB', "$label - ($class) reftype is glob");
+                    isnt(ref $data, $class, "$label - Class not equals '$class'");
+                }
+                else {
+                    my $reftype = reftype($data);
+                    is($reftype, 'GLOB', "$label - ($class) reftype is glob");
+                    is(ref $data, $class, "$label - Class equals '$class'");
+                }
             }
-            elsif ($type eq 'ARRAY') {
-                $value = [ @$glob ];
+            else {
+                my $reftype = reftype(\$data);
+                is($reftype, 'GLOB', "$label - reftype is glob");
             }
-            elsif ($type eq 'HASH') {
-                $value = { %$glob };
+            is("$glob", $name, "$label - Glob name");
+            my $types = $test->{types};
+            for my $type (sort keys %$types) {
+                my $exp = $types->{ $type };
+                my $value;
+                my $glob = *{$data}{ $type };
+                if ($type eq 'SCALAR') {
+                    $value = $$glob;
+                }
+                elsif ($type eq 'ARRAY') {
+                    $value = [ @$glob ];
+                }
+                elsif ($type eq 'HASH') {
+                    $value = { %$glob };
+                }
+                elsif ($type eq 'IO') {
+                    $value = fileno $glob;
+                }
+                cmp_deeply($value, $exp, "$label - $type - Data equal");
             }
-            elsif ($type eq 'IO') {
-                $value = fileno $glob;
-            }
-            cmp_deeply($value, $exp, "$key - $name - $type - Data equal");
-        }
 
-        my $dump = $yp->dump_string($data);
-        if ($key =~ m/io/) {
-            $dump =~ s/^    [a-z]+: \S+\n//mg;
-            $dump =~ s/^  tell: \S+\n//m;
-            $dump =~ s/stat:$/stat: \{\}/m;
+            my $dump = $yp->dump_string($data);
+            if ($key =~ m/io/) {
+                $dump =~ s/^    [a-z]+: \S+\n//mg;
+                $dump =~ s/^  tell: \S+\n//m;
+                $dump =~ s/stat:$/stat: \{\}/m;
+            }
+            if ($class and $test_type eq 'no_objects') {
+                isnt($dump, $input, "$label - Dump not equals input");
+            }
+            else {
+                is($dump, $input, "$label - Dump equals input");
+            }
         }
-        is($dump, $input, "$key - $name - Dump equals input");
     }
 };
 

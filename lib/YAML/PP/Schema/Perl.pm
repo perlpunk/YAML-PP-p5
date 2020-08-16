@@ -39,6 +39,7 @@ sub register {
     my $classes;
     if (blessed($self)) {
         $tags = $self->{tags};
+        @$tags = ('!perl') unless @$tags;
         $loadcode = $self->{loadcode};
         $classes = $self->{classes};
     }
@@ -173,22 +174,26 @@ sub register {
             $$ref = $self->construct_glob($list);
         },
     ) for @perl_tags;
-    $schema->add_mapping_resolver(
-        tag => qr{^$perl_regex/glob:$class_regex$},
-        on_create => $load_glob_blessed,
-        on_data => sub {
-            my ($constructor, $ref, $list) = @_;
-            $$$ref = $self->construct_glob($list);
-        },
-    );
-    $schema->add_mapping_resolver(
-        tag => qr{^$perl_regex/glob:.+$},
-        on_create => $load_glob,
-        on_data => sub {
-            my ($constructor, $ref, $list) = @_;
-            $$ref = $self->construct_glob($list);
-        },
-    ) if $no_objects;
+    if ($no_objects) {
+        $schema->add_mapping_resolver(
+            tag => qr{^$perl_regex/glob:.+$},
+            on_create => $load_glob,
+            on_data => sub {
+                my ($constructor, $ref, $list) = @_;
+                $$ref = $self->construct_glob($list);
+            },
+        );
+    }
+    else {
+        $schema->add_mapping_resolver(
+            tag => qr{^$perl_regex/glob:$class_regex$},
+            on_create => $load_glob_blessed,
+            on_data => sub {
+                my ($constructor, $ref, $list) = @_;
+                $$$ref = $self->construct_glob($list);
+            },
+        );
+    }
 
     # Regex
     my $load_regex = sub {
@@ -959,6 +964,16 @@ C<represent_code> returns a string representation of the code reference
 with the help of B::Deparse:
 
     my $string = YAML::PP::Schema::Perl->represent_code(sub { return 23 });
+
+=item construct_glob, represent_glob
+
+C<construct_glob> returns a glob from a hash.
+
+    my $glob = YAML::PP::Schema::Perl->construct_glob($hash);
+
+C<represent_glob> returns a hash representation of the glob.
+
+    my $hash = YAML::PP::Schema::Perl->represent_glob($glob);
 
 =item object
 

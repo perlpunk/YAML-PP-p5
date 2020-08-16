@@ -67,8 +67,14 @@
   failsafe, json, core, yaml11: ['str', '>', "'>'"]
 '"''"':
   failsafe, json, core, yaml11: ['str', '''', "\"'\""]
+'"''\""':
+  failsafe, json, core, yaml11: ['str', '''"', "'''\"'"]
 '"\""':
   failsafe, json, core, yaml11: ['str', '"', "'\"'"]
+'"\n "':
+  failsafe, json, core, yaml11: ['str', "\n ", '"\n "']
+'" \n"':
+  failsafe, json, core, yaml11: ['str', " \n", '" \n"']
 '"foo\nbar"':
   failsafe, json, core, yaml11: ['str', "foo\nbar", "|-\n  foo\n  bar"]
 '"x\n\"y\\z"':

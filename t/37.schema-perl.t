@@ -10,17 +10,25 @@ use YAML::PP;
 use YAML::PP::Perl;
 my $tests = require "$Bin/../examples/schema-perl.pm";
 
+my $perl_no_objects = YAML::PP::Schema::Perl->new(
+    classes => [],
+);
+my $perl_no_objects_loadcode = YAML::PP::Schema::Perl->new(
+    classes => [],
+    loadcode => 1,
+);
+
 my $yp_perl = YAML::PP::Perl->new(
     schema => [qw/ JSON Perl tags=!perl /],
 );
 my $yp_perl_no_objects = YAML::PP::Perl->new(
-    schema => [qw/ JSON Perl tags=!perl -objects /],
+    schema => [qw/ JSON /, $perl_no_objects],
 );
 my $yp_loadcode = YAML::PP->new(
     schema => [qw/ JSON Perl +loadcode /],
 );
 my $yp_loadcode_no_objects = YAML::PP->new(
-    schema => [qw/ JSON Perl +loadcode -objects /],
+    schema => [qw/ JSON /, $perl_no_objects_loadcode],
 );
 my $yp_perl_two = YAML::PP::Perl->new(
     schema => [qw/ JSON Perl tags=!!perl /],
