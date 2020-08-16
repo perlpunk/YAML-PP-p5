@@ -219,7 +219,7 @@ EOM
     is($dump, $yaml, 'dump with preserved flow && order');
 
 };
-subtest 'tie-methods' => sub {
+subtest 'tie-array' => sub {
     my $x = YAML::PP->preserved_sequence([23, 24], style => YAML_FLOW_SEQUENCE_STYLE);
     @$x = (25, 26);
     is("@$x", '25 26', 'STORE');
@@ -237,6 +237,18 @@ subtest 'tie-methods' => sub {
     $x->[1] = 99;
     $#$x = 1;
     is("@$x", '25 99', 'STORESIZE');
+};
+
+subtest 'tie-scalar' => sub {
+    my $scalar = YAML::PP->preserved_scalar("abc", style => YAML_LITERAL_SCALAR_STYLE );
+    like $scalar, qr{abc}, 'Regex';
+    ok($scalar eq 'abc', 'eq');
+    ok('abc' eq $scalar, 'eq');
+    ok($scalar gt 'abb', 'gt');
+
+    $scalar = YAML::PP->preserved_scalar(23, style => YAML_LITERAL_SCALAR_STYLE );
+    ok($scalar > 22, '>');
+    ok($scalar <= 23, '<=');
 };
 
 done_testing;

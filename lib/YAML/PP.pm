@@ -344,6 +344,7 @@ sub EXTEND {}
 package YAML::PP::Preserve::Scalar;
 
 use overload
+    fallback => 1,
     '+' => \&value,
     '""' => \&value,
     'bool' => \&value,
