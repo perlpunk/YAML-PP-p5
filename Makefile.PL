@@ -18,12 +18,7 @@ my %WriteMakefileArgs = (
     "bin/yamlpp-highlight",
     "bin/yamlpp-load",
     "bin/yamlpp-load-dump",
-    "bin/yamlpp-parse-emit",
-    "bin/yamlpp5-events",
-    "bin/yamlpp5-highlight",
-    "bin/yamlpp5-load",
-    "bin/yamlpp5-load-dump",
-    "bin/yamlpp5-parse-emit"
+    "bin/yamlpp-parse-emit"
   ],
   "LICENSE" => "perl",
   "MIN_PERL_VERSION" => "5.008000",
