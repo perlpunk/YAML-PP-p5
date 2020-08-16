@@ -23,12 +23,13 @@ my @skip = qw/
     4FJ6 4ABK 87E4 8CWC 8UDB 9MMW
     CN3R CT4Q DFF7
     FRK4 G5U8
-    KZN9 L9U5 LQZ7 LX3P
+    L9U5 LQZ7 LX3P
     Q9WF QF4Y
 
     6BFJ
     F6MC
     NB6Z
+    CFD4
 
 /;
 
@@ -62,7 +63,6 @@ XLQ9
 K54U
 PUW8
 3MYT
-JDH8
 MJS9
 
 
