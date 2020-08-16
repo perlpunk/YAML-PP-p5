@@ -322,6 +322,23 @@ sub EXISTS {
     my ($self, $i) = @_;
     return exists $self->{data}->[ $i ];
 }
+sub CLEAR {
+    my ($self) = @_;
+    $self->{data} = [];
+}
+sub SHIFT {
+    my ($self) = @_;
+    shift @{ $self->{data} };
+}
+sub UNSHIFT {
+    my ($self, @args) = @_;
+    unshift @{ $self->{data} }, @args;
+}
+sub SPLICE {
+    my ($self, $offset, $length, @args) = @_;
+    splice @{ $self->{data} }, $offset, $length, @args;
+}
+sub EXTEND {}
 
 
 package YAML::PP::Preserve::Scalar;

@@ -10,7 +10,6 @@ use YAML::PP::Common qw/
     YAML_LITERAL_SCALAR_STYLE YAML_FLOW_MAPPING_STYLE YAML_FLOW_SEQUENCE_STYLE
 /;
 
-
 subtest 'preserve-scalar-style' => sub {
     my $yp = YAML::PP->new( preserve => PRESERVE_ORDER | PRESERVE_SCALAR_STYLE );
     my $yaml = <<'EOM';
@@ -114,6 +113,10 @@ EOM
     $data->{z} = 99;
     @keys = keys %$data;
     is("@keys", "a y b x c z", 'keys()');
+    my $scalar = scalar %$data;
+    if ($] >= 5.026) {
+        is(scalar %$data, 6, 'scalar');
+    }
 
     my @values = values %$data;
     is("@values", "2 3 4 5 6 99", 'values()');
@@ -123,6 +126,7 @@ EOM
 
     %$data = ();
     is(scalar keys %$data, 0, 'clear');
+    is(scalar %$data, 0, 'clear');
 };
 
 subtest 'object-order' => sub {
@@ -213,6 +217,26 @@ map: {z: 1, a: 2, y: 3, b: 4}
 seq: [23, 24]
 EOM
     is($dump, $yaml, 'dump with preserved flow && order');
+
+};
+subtest 'tie-methods' => sub {
+    my $x = YAML::PP->preserved_sequence([23, 24], style => YAML_FLOW_SEQUENCE_STYLE);
+    @$x = (25, 26);
+    is("@$x", '25 26', 'STORE');
+    unshift @$x, 24;
+    is("@$x", '24 25 26', 'UNSHIFT');
+    shift @$x;
+    is("@$x", '25 26', 'SHIFT');
+    splice @$x, 1, 1, 99, 100;
+    is("@$x", '25 99 100', 'SPLICE');
+    delete $x->[1];
+    {
+        no warnings 'uninitialized';
+        is("@$x", '25  100', 'DELETE');
+    }
+    $x->[1] = 99;
+    $#$x = 1;
+    is("@$x", '25 99', 'STORESIZE');
 };
 
 done_testing;
