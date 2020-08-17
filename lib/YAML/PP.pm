@@ -449,7 +449,7 @@ Some utility scripts, mostly useful for debugging:
 
 YAML::PP is a modular YAML processor.
 
-It aims to support C<YAML 1.2> and C<YAML 1.1>. See L<http://yaml.org/>.
+It aims to support C<YAML 1.2> and C<YAML 1.1>. See L<https://yaml.org/>.
 Some (rare) syntax elements are not yet supported and documented below.
 
 YAML is a serialization language. The YAML input is called "YAML Stream".
@@ -622,7 +622,7 @@ Preserving scalar styles is still experimental.
     # Preserve the quoting style of scalars
     my $yp = YAML::PP->new( preserve => PRESERVE_SCALAR_STYLE );
 
-    # Preserve block/flow style
+    # Preserve block/flow style (since 0.024)
     my $yp = YAML::PP->new( preserve => PRESERVE_FLOW_STYLE );
 
     # Combine, e.g. preserve order and scalar style
@@ -730,6 +730,8 @@ L<YAML::PP::Writer> and output a string.
 
 =head2 preserved_scalar
 
+Since version 0.024
+
 Experimental. Please report bugs or let me know this is useful and works.
 
 You can define a certain scalar style when dumping data.
@@ -753,6 +755,8 @@ it right for all cases. It's also a matter of taste.
 
 
 =head2 preserved_mapping, preserved_sequence
+
+Since version 0.024
 
 Experimental. Please report bugs or let me know this is useful and works.
 
@@ -1211,7 +1215,7 @@ and created a matrix view.
 
 L<https://github.com/perlpunk/yaml-test-matrix>
 
-You can find the latest build at L<http://matrix.yaml.io>
+You can find the latest build at L<https://matrix.yaml.io>
 
 As of this writing, the test matrix only contains valid test cases.
 Invalid ones will be added.
@@ -1247,6 +1251,8 @@ Felix answered countless questions about the YAML Specification.
 =item L<YAML::PP::LibYAML>
 
 =item L<YAML::LibYAML::API>
+
+=item L<https://www.yaml.info>
 
 =back
 
