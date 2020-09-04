@@ -60,6 +60,7 @@ sub mapping_start_event {
     my $last = $stack->[-1];
     my $indent = $last->{indent};
     my $new_indent = $indent;
+    my $yaml = '';
 
     my $props = '';
     my $anchor = $info->{anchor};
@@ -71,11 +72,10 @@ sub mapping_start_event {
         $tag = $self->emit_tag('map', $tag);
     }
     $props = join ' ', grep defined, ($anchor, $tag);
+
     my $flow = $last->{flow} || 0;
     $flow++ if ($info->{style} || 0) eq YAML_FLOW_MAPPING_STYLE;
 
-    my $column = $last->{column};
-    my $yaml = '';
     my $newline = 0;
     if ($flow > 1) {
         if ($last->{type} eq 'SEQ') {
@@ -102,49 +102,44 @@ sub mapping_start_event {
         }
         elsif ($last->{type} eq 'MAPVALUE') {
             if ($last->{index} == 0) {
-                $yaml .= "{";
+                die "Should not happen (index 0 in MAPVALUE)";
             }
-            else {
-                $yaml .= ": ";
-            }
+            $yaml .= ": ";
         }
+        $last->{column} = 1;
         if ($props) {
-            $yaml .= $last->{column} ? ' ' : $indent;
-            $yaml .= "$props ";
+            $yaml .= " $props ";
         }
     }
     else {
         if ($last->{type} eq 'DOC') {
-            if ($props) {
-                $newline = 1;
-                $yaml .= $last->{column} ? ' ' : $indent;
-                $yaml .= "$props";
-            }
-            if ($last->{newline}) {
-                    $newline = 1;
-            }
-            else {
-                if ($props) {
-                    $newline = 1;
-                }
-            }
+            $newline = $last->{newline};
         }
         else {
-            $new_indent .= ' ' x $self->indent;
             if ($last->{newline}) {
                 $yaml .= "\n";
                 $last->{column} = 0;
-                $last->{newline} = 0;
-            }
-            if ($props) {
-                $newline = 1;
             }
             if ($last->{type} eq 'MAPVALUE') {
+                $new_indent .= ' ' x $self->indent;
                 $newline = 1;
             }
             else {
-                $yaml .= $last->{column} ? ' ' : $indent;
-                $last->{newline} = 0;
+                $new_indent = $indent;
+                if (not $props and $self->indent == 1) {
+                    $new_indent .= ' ' x 2;
+                }
+                else {
+                    $new_indent .= ' ' x $self->indent;
+                }
+
+                if ($last->{column}) {
+                    my $space = $self->indent > 1 ? ' ' x ($self->indent - 1) : ' ';
+                    $yaml .= $space;
+                }
+                else {
+                    $yaml .= $indent;
+                }
                 if ($last->{type} eq 'SEQ') {
                     $yaml .= '-';
                 }
@@ -152,23 +147,23 @@ sub mapping_start_event {
                     $yaml .= "?";
                     $last->{type} = 'COMPLEX';
                 }
-                elsif ($last->{type} eq 'COMPLEX') {
-                    $yaml .= ":";
-                    $last->{type} = 'COMPLEXVALUE';
-                }
                 elsif ($last->{type} eq 'COMPLEXVALUE') {
                     $yaml .= ":";
                 }
                 else {
-                    die "Unexpected";
+                    die "Should not happen ($last->{type} in mapping_start)";
                 }
+                $last->{column} = 1;
             }
-            if ($props) {
-                $yaml .= " $props";
-                $newline = 1;
-            }
+            $last->{newline} = 0;
+        }
+        if ($props) {
+            $yaml .= $last->{column} ? ' ' : $indent;
+            $yaml .= $props;
+            $newline = 1;
         }
     }
+    my $column = $last->{column};
     if (length $yaml) {
         $column = substr($yaml, -1) eq "\n" ? 0 : 1;
     }
@@ -242,7 +237,6 @@ sub sequence_start_event {
     my $new_indent = $indent;
     my $yaml = '';
 
-    my $writer = $self->writer;
     my $props = '';
     my $anchor = $info->{anchor};
     my $tag = $info->{tag};
@@ -258,7 +252,7 @@ sub sequence_start_event {
     $flow++ if $flow or ($info->{style} || 0) eq YAML_FLOW_SEQUENCE_STYLE;
     my $newline = 0;
     my $zero_indent = 0;
-    if ($last->{flow}) {
+    if ($flow > 1) {
         if ($last->{type} eq 'SEQ') {
             if ($last->{newline}) {
                 $yaml .= ' ';
@@ -269,10 +263,9 @@ sub sequence_start_event {
             else {
                 $yaml .= ", ";
             }
-            $last->{column} = 1;
         }
         elsif ($last->{type} eq 'MAP') {
-            if ($flow == 2) {
+            if ($last->{newline}) {
                 $yaml .= ' ';
             }
             if ($last->{index} == 0) {
@@ -281,14 +274,16 @@ sub sequence_start_event {
             else {
                 $yaml .= ", ";
             }
-            $last->{column} = 1;
         }
         elsif ($last->{type} eq 'MAPVALUE') {
             if ($last->{index} == 0) {
                 die "Should not happen (index 0 in MAPVALUE)";
             }
             $yaml .= ": ";
-            $last->{column} = 1;
+        }
+        $last->{column} = 1;
+        if ($props) {
+            $yaml .= " $props ";
         }
     }
     else {
@@ -299,41 +294,48 @@ sub sequence_start_event {
             if ($last->{newline}) {
                 $yaml .= "\n";
                 $last->{column} = 0;
-                $last->{newline} = 0;
             }
             if ($last->{type} eq 'MAPVALUE') {
                 $zero_indent = 1;
                 $newline = 1;
             }
             else {
-                $yaml .= $last->{column} ? ' ' : $indent;
-                if ($last->{type} eq 'SEQ') {
+                if (not $props and $self->indent == 1) {
+                    $new_indent .= ' ' x 2;
+                }
+                else {
                     $new_indent .= ' ' x $self->indent;
+                }
+                if ($last->{column}) {
+                    my $space = $self->indent > 1 ? ' ' x ($self->indent - 1) : ' ';
+                    $yaml .= $space;
+                }
+                else {
+                    $yaml .= $indent;
+                }
+                if ($last->{type} eq 'SEQ') {
                     $yaml .= "-";
                 }
                 elsif ($last->{type} eq 'MAP') {
-                    $new_indent .= ' ' x $self->indent;
-                    $yaml .= "?";
                     $last->{type} = 'COMPLEX';
                     $zero_indent = 1;
+                    $yaml .= "?";
                 }
                 elsif ($last->{type} eq 'COMPLEXVALUE') {
-                    $new_indent .= ' ' x $self->indent;
                     $yaml .= ":";
                     $zero_indent = 1;
                 }
+                else {
+                    die "Should not happen ($last->{type} in sequence_start)";
+                }
                 $last->{column} = 1;
             }
+            $last->{newline} = 0;
         }
-    }
-    if ($props) {
-        if ($flow) {
-            $yaml .= " $props ";
-        }
-        else {
-            $newline = 1;
+        if ($props) {
             $yaml .= $last->{column} ? ' ' : $indent;
             $yaml .= $props;
+            $newline = 1;
         }
     }
     $self->writer->write($yaml);
@@ -737,20 +739,27 @@ sub scalar_event {
         my $space = ' ';
         if ($last->{type} eq 'MAP') {
 
+            if ($last->{column}) {
+                my $space = $self->indent > 1 ? ' ' x ($self->indent - 1) : ' ';
+                $yaml .= $space;
+            }
+            else {
+                $yaml .= $indent;
+            }
             if ($props and not length $value) {
                 $pvalue .= ' ';
             }
             my $new_event = 'MAPVALUE';
-            $yaml .= $last->{column} ? $space : $indent;
+            $last->{type} = $new_event;
             if ($multiline) {
                 # oops, a complex key
                 $yaml .= "? ";
                 $new_event = 'COMPLEXVALUE';
+                $last->{type} = $new_event;
             }
             if (not $multiline) {
                 $pvalue .= ":";
             }
-            $last->{type} = $new_event;
         }
         else {
             if ($last->{type} eq 'MAPVALUE') {
@@ -759,19 +768,23 @@ sub scalar_event {
             elsif ($last->{type} eq 'DOC') {
             }
             else {
-                $yaml .= $last->{column} ? $space : $indent;
+                if ($last->{column}) {
+                    my $space = $self->indent > 1 ? ' ' x ($self->indent - 1) : ' ';
+                    $yaml .= $space;
+                }
+                else {
+                    $yaml .= $indent;
+                }
                 if ($last->{type} eq 'COMPLEXVALUE') {
                     $last->{type} = 'MAP';
                     $yaml .= ":";
-                }
-                elsif ($last->{type} eq 'COMPLEX') {
-                    die "Should not happen (scalar_event in COMPLEX)";
                 }
                 elsif ($last->{type} eq 'SEQ') {
                     $yaml .= "-";
                 }
                 else {
-                    die "Unexpected";
+                    die "Should not happen ($last->{type} in scalar_event)";
+
                 }
                 $last->{column} = 1;
             }

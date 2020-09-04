@@ -610,6 +610,7 @@ sub compare_dump_yaml {
 sub emit_yaml {
     my ($self, $testcase, $args) = @_;
     my $flow = $args->{flow} ||= 'no';
+    my $indent = $args->{indent} ||= 2;
     my $id = $testcase->{id};
     my $exp_yaml = $testcase->{emit_yaml};
 
@@ -701,8 +702,9 @@ sub emit_yaml {
 
 sub _emit_events {
     my ($testsuite, $events, $args) = @_;
+    my $indent = $args->{indent} ||= 2;
     my $writer = YAML::PP::Writer->new;
-    my $emitter = YAML::PP::Emitter->new();
+    my $emitter = YAML::PP::Emitter->new( indent => $indent );
     $emitter->set_writer($writer);
     $emitter->init;
     for my $event (@$events) {
