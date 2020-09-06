@@ -512,6 +512,11 @@ Options:
 
 Values: C<perl> (currently default), C<JSON::PP>, C<boolean>
 
+Note that when dumping, only the chosen boolean style will be recognized.
+So if you choose C<JSON::PP>, C<boolean> objects will not be recognized
+as booleans and will be dumped as ordinary objects (if you enable the
+Perl schema).
+
 =item schema
 
 Default: C<['Core']>
