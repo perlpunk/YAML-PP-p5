@@ -92,6 +92,9 @@ Note that if you enable this schema, a plain scalar `<<` will be seen as
 special anywhere in your document, so if you want a literal `<<`, you have
 to put it in quotes.
 
+Note that the performed merge is not a "deep merge". Only top-level keys are
+merged.
+
 =head1 METHODS
 
 =over

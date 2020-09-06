@@ -546,6 +546,18 @@ Default: 2
 
 Use that many spaces for indenting
 
+=item width
+
+Since version 0.025
+
+Default: 80
+
+Maximum columns when dumping.
+
+This is only respected when dumping flow collections right now.
+
+in the future it will be used also for wrapping long strings.
+
 =item header
 
 Default: 1
