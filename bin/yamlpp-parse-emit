@@ -16,6 +16,7 @@ GetOptions(
     'module|M=s' => \my $module,
     'verbose' => \my $verbose,
     'flow=s' => \my $flow,
+    'width=i' => \my $width,
 ) or usage(1);
 
 usage(0) if $help;
@@ -62,7 +63,7 @@ if ($@) {
     exit 1;
 }
 my $writer = YAML::PP::Writer->new;
-my $emitter = $emitterclass->new( indent => $indent );
+my $emitter = $emitterclass->new( indent => $indent, width => $width );
 $emitter->set_writer($writer);
 for my $event (@events) {
     my $type = $event->{name};
@@ -96,6 +97,7 @@ Usage:
 
 Options:
     --indent=             Number of spaces for indentation
+    --width=              Maximum column width (only used in flow style for now)
     --module, -M          YAML::PP or YAML::PP::LibYAML
     --flow                'no' (default, always output block style), 'yes'
                           (always output flow style), 'keep' (output flow

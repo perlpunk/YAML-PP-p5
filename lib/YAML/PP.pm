@@ -26,6 +26,7 @@ sub new {
     my $schemas = delete $args{schema} || ['+'];
     my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
     my $indent = delete $args{indent};
+    my $width = delete $args{width};
     my $writer = delete $args{writer};
     my $header = delete $args{header};
     my $footer = delete $args{footer};
@@ -36,6 +37,7 @@ sub new {
     my $parser = delete $args{parser};
     my $emitter = delete $args{emitter} || {
         indent => $indent,
+        width => $width,
         writer => $writer,
     };
     if (keys %args) {

@@ -11,6 +11,7 @@ use Getopt::Long;
 GetOptions(
     'help|h' => \my $help,
     'indent=i' => \my $indent,
+    'width=i' => \my $width,
     'header!' => \my $header,
     'footer!' => \my $footer,
     'boolean=s' => \my $boolean,
@@ -89,6 +90,7 @@ sub _yamlpp {
         boolean => $boolean,
         preserve => $preserve,
         indent => $indent,
+        width => $width,
         header => $header ? 1 : 0,
         footer => $footer ? 1 : 0,
         yaml_version => \@yaml_versions,
@@ -160,6 +162,7 @@ Usage:
 Options:
     --boolean=            'perl', 'JSON::PP', 'boolean'
     --indent=             Number of spaces for indentation
+    --width=              Maximum column width (only used in flow style for now)
     --[no-]header         Print '---' (default)
     --[no-]footer         Print '...'
     --merge               Enable loading merge keys '<<'
