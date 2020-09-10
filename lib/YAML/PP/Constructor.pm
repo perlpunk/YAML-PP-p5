@@ -8,6 +8,7 @@ our $VERSION = '0.000'; # VERSION
 use YAML::PP;
 use YAML::PP::Common qw/ PRESERVE_ALL PRESERVE_ORDER PRESERVE_SCALAR_STYLE PRESERVE_FLOW_STYLE /;
 use Scalar::Util qw/ reftype /;
+use Carp qw/ croak /;
 
 use constant DEBUG => ($ENV{YAML_PP_LOAD_DEBUG} or $ENV{YAML_PP_LOAD_TRACE}) ? 1 : 0;
 use constant TRACE => $ENV{YAML_PP_LOAD_TRACE} ? 1 : 0;
@@ -18,6 +19,11 @@ sub new {
     my ($class, %args) = @_;
 
     my $default_yaml_version = delete $args{default_yaml_version};
+    # TODO: switch to default 0
+    my $duplicate_keys = delete $args{duplicate_keys};
+    unless (defined $duplicate_keys) {
+        $duplicate_keys = 1;
+    }
     my $preserve = delete $args{preserve} || 0;
     if ($preserve == PRESERVE_ALL) {
         $preserve = PRESERVE_ORDER | PRESERVE_SCALAR_STYLE | PRESERVE_FLOW_STYLE;
@@ -36,6 +42,7 @@ sub new {
         schemas => $schemas,
         cyclic_refs => $cyclic_refs,
         preserve => $preserve,
+        duplicate_keys => $duplicate_keys,
     }, $class;
     $self->init;
     return $self;
@@ -79,6 +86,7 @@ sub default_yaml_version { return $_[0]->{default_yaml_version} }
 sub preserve_order { return $_[0]->{preserve} & PRESERVE_ORDER }
 sub preserve_scalar_style { return $_[0]->{preserve} & PRESERVE_SCALAR_STYLE }
 sub preserve_flow_style { return $_[0]->{preserve} & PRESERVE_FLOW_STYLE }
+sub duplicate_keys { return $_[0]->{duplicate_keys} }
 
 sub document_start_event {
     my ($self, $event) = @_;
@@ -185,11 +193,15 @@ sub mapping_end_event {
     }
     my $on_data = $last->{on_data} || sub {
         my ($self, $hash, $items) = @_;
+        my %seen;
         for (my $i = 0; $i < @$items; $i += 2) {
             my ($key, $value) = @$items[ $i, $i + 1 ];
             $key = '' unless defined $key;
             if (ref $key) {
                 $key = $self->stringify_complex($key);
+            }
+            if ($seen{ $key }++ and not $self->duplicate_keys) {
+                croak "Duplicate key '$key'";
             }
             $$hash->{ $key } = $value;
         }

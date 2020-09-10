@@ -30,6 +30,7 @@ sub new {
     my $writer = delete $args{writer};
     my $header = delete $args{header};
     my $footer = delete $args{footer};
+    my $duplicate_keys = delete $args{duplicate_keys};
     my $yaml_version = $class->_arg_yaml_version(delete $args{yaml_version});
     my $default_yaml_version = $yaml_version->[0];
     my $version_directive = delete $args{version_directive};
@@ -67,6 +68,7 @@ sub new {
         parser => $parser,
         default_yaml_version => $default_yaml_version,
         preserve => $preserve,
+        duplicate_keys => $duplicate_keys,
     );
     my $dumper = YAML::PP::Dumper->new(
         schema => $default_schema,
@@ -512,6 +514,8 @@ Options:
 
 Values: C<perl> (currently default), C<JSON::PP>, C<boolean>
 
+This option is for loading and dumping.
+
 Note that when dumping, only the chosen boolean style will be recognized.
 So if you choose C<JSON::PP>, C<boolean> objects will not be recognized
 as booleans and will be dumped as ordinary objects (if you enable the
@@ -520,6 +524,8 @@ Perl schema).
 =item schema
 
 Default: C<['Core']>
+
+This option is for loading and dumping.
 
 Array reference. Here you can define what schema to use.
 Supported standard Schemas are: C<Failsafe>, C<JSON>, C<Core>, C<YAML1_1>.
@@ -533,6 +539,8 @@ Additionally you can add further schemas, for example C<Merge>.
 
 Default: 'allow' but will be switched to fatal in the future for safety!
 
+This option is for loading only.
+
 Defines what to do when a cyclic reference is detected when loading.
 
     # fatal  - die
@@ -540,9 +548,37 @@ Defines what to do when a cyclic reference is detected when loading.
     # ignore - replace with undef
     # allow  - Default
 
+=item duplicate_keys
+
+Default: 1
+
+Since version 0.026
+
+This option is for loading.
+
+NOTE: THIS OPTION WILL BE SET TO 0 IN THE NEXT RELEASE.
+
+The YAML Spec says duplicate mapping keys should be forbidden.
+
+When set to true, duplicate keys in mappings are allowed (and will overwrite
+the previous key).
+
+When set to false, duplicate keys will result in an error when loading.
+
+This is especially useful when you have a longer mapping and don't see
+the duplicate key in your editor:
+
+    ---
+    a: 1
+    b: 2
+    # .............
+    a: 23 # error
+
 =item indent
 
 Default: 2
+
+This option is for dumping.
 
 Use that many spaces for indenting
 
@@ -551,6 +587,8 @@ Use that many spaces for indenting
 Since version 0.025
 
 Default: 80
+
+This option is for dumping.
 
 Maximum columns when dumping.
 
@@ -562,17 +600,23 @@ in the future it will be used also for wrapping long strings.
 
 Default: 1
 
+This option is for dumping.
+
 Print document heaader C<--->
 
 =item footer
 
 Default: 0
 
+This option is for dumping.
+
 Print document footer C<...>
 
 =item yaml_version
 
 Since version 0.020
+
+This option is for loading and dumping.
 
 Default: C<1.2>
 
@@ -620,6 +664,8 @@ schema.
 
 Since version 0.020
 
+This option is for dumping.
+
 Default: 0
 
 Print Version Directive C<%YAML 1.2> (or C<%YAML 1.1>) on top of each YAML
@@ -630,6 +676,8 @@ document. It will use the first version specified in the C<yaml_version> option.
 Since version 0.021
 
 Default: false
+
+This option is for loading and dumping.
 
 Preserving scalar styles is still experimental.
 

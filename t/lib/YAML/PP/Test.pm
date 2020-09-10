@@ -532,7 +532,7 @@ sub dump_yaml {
     my ($self, $testcase) = @_;
     my $id = $testcase->{id};
 
-    my $ypp = YAML::PP->new( boolean => 'JSON::PP' );
+    my $ypp = YAML::PP->new( boolean => 'JSON::PP', duplicate_keys => 1 );
     my @docs = eval { $ypp->load_string($testcase->{in_yaml}) };
     my $err = $@;
     my $result = {};
