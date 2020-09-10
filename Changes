@@ -1,5 +1,10 @@
 Revision history for Perl module YAML::PP
 
+0.026 2020-09-11 00:39:09+02:00
+
+    - Add option 'duplicate_keys'. The default allows it for now and will
+      change to forbid in the next release.
+
 0.025 2020-09-06 22:14:07+02:00
 
     - Emitter: Fix indentation issues for non-default indents
