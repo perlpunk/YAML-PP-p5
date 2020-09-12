@@ -32,7 +32,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - run: env
+    - run: env | sort
     - run: perl -V
     - name: Add testsuite worktree
       run: |
@@ -51,26 +51,20 @@ jobs:
     - name: Run Tests
       run: prove -lr t
 
-# GitHub actions doesn't support YAML aliases :(
-#  codecov:
-#    runs-on: *runner
-#    strategy:
-#      matrix:
-#        perl-version:
-#        - '5.30'
-#    container: *container
-#
-#    steps:
-#    - uses: actions/checkout@v2
-#    - *checkouttestsuite
-#    - *installdeps
-#    - name: Install codecov deps
-#      run: >
-#        cpanm --quiet --notest --skip-satisfied Devel::Cover::Report::Codecov
-#    - name: Run Tests
-#      run: >
-#        PERL5OPT="-MDevel::Cover=-db,cover_db,-select,^lib,-ignore,^t/|bin/prove|^examples"
-#        prove -lr t
-#    - name: Codecov
-#      run: >
-#        cover -report codecov
+  spelling:
+    runs-on: ubuntu-latest
+
+    container:
+      image: perl:5.32
+
+    steps:
+    - uses: actions/checkout@v2
+    - run: env | sort
+    - run: perl -V
+    - name: Install deps
+      run: >
+        apt-get update && apt-get install -y aspell
+
+        cpanm --quiet --notest Test::Spelling
+    - name: Run Tests
+      run: prove -lv xt/03.spelling.t

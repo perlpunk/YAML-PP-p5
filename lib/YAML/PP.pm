@@ -605,7 +605,7 @@ Default: 1
 
 This option is for dumping.
 
-Print document heaader C<--->
+Print document header C<--->
 
 =item footer
 
@@ -733,7 +733,7 @@ with this code:
 Then dumping it will return the same output.
 Only folded block scalars '>' cannot preserve the style yet.
 
-Note that YAML allows repeated definition of anchors. They cannot bw preserved
+Note that YAML allows repeated definition of anchors. They cannot be preserved
 with YAML::PP right now. Example:
 
     ---
@@ -761,8 +761,8 @@ a scalar, the object will be replaced by a simple scalar.
 You can also pass C<1> as a value. In this case all preserving options will be
 enabled, also if there are new options added in the future.
 
-There are also methods to craete preserved nodes from scratch. See the
-C<preserved_(scalar|mapping|sequence> L<"METHODS"> below.
+There are also methods to create preserved nodes from scratch. See the
+C<preserved_(scalar|mapping|sequence)> L<"METHODS"> below.
 
 =back
 
@@ -1195,7 +1195,7 @@ they will be dumped with double quotes.
 It will recognize JSON::PP::Boolean and boolean.pm objects and dump them
 correctly.
 
-Numbers which also have a PV flag will be recognized as numbers and not
+Numbers which also have a C<PV> flag will be recognized as numbers and not
 as strings:
 
     my $int = 23;

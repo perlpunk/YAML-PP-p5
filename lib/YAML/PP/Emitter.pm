@@ -1052,7 +1052,7 @@ TODO: Currently sequences are always zero-indented.
 =item writer, set_writer
 
 Getter/setter for the writer object. By default L<YAML::PP::Writer>.
-You can pass your own writer if you want to output the resulting YAML yorself.
+You can pass your own writer if you want to output the resulting YAML yourself.
 
 =item init
 

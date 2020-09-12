@@ -224,7 +224,7 @@ YAML::PP::Common - Constants and common functions
 
 =head1 DESCRIPTION
 
-=head1 FUNCTONS
+=head1 FUNCTIONS
 
 =over
 
