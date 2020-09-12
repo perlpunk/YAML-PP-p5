@@ -13,7 +13,7 @@ my $jsonpp = eval { require JSON::PP };
 
 my $schema_file = "$Bin/../ext/yaml-test-schema/yaml-schema.yaml";
 my $strings_file = "$Bin/../examples/strings.yaml";
-my $schema_data = do { YAML::PP->new( duplicate_keys => 1 )->load_file($schema_file) };
+my $schema_data = do { YAML::PP->new->load_file($schema_file) };
 my $strings_data = do { YAML::PP->new->load_file($strings_file) };
 
 $schema_data->{'#empty'}->{json_empty_null} = ['null', 'null()', "null"];
