@@ -206,6 +206,7 @@ sub preserved_mapping {
     %$data = %$hash;
     my $t = tied %$data;
     $t->{style} = $args{style};
+    $t->{alias} = $args{alias};
     return $data;
 }
 
@@ -216,6 +217,7 @@ sub preserved_sequence {
     push @$data, @$array;
     my $t = tied @$data;
     $t->{style} = $args{style};
+    $t->{alias} = $args{alias};
     return $data;
 }
 
@@ -362,7 +364,8 @@ sub new {
 }
 sub value { $_[0]->{value} }
 sub tag { $_[0]->{tag} }
-sub style { $_[0]->{style} }
+sub style { $_[0]->{style} || 0 }
+sub alias { $_[0]->{alias} }
 
 1;
 
@@ -692,6 +695,9 @@ Preserving scalar styles is still experimental.
     # Preserve block/flow style (since 0.024)
     my $yp = YAML::PP->new( preserve => PRESERVE_FLOW_STYLE );
 
+    # Preserve alias names (since 0.027)
+    my $yp = YAML::PP->new( preserve => PRESERVE_ALIAS );
+
     # Combine, e.g. preserve order and scalar style
     my $yp = YAML::PP->new( preserve => PRESERVE_ORDER | PRESERVE_SCALAR_STYLE );
 
@@ -709,20 +715,38 @@ If you load the following input:
     - |
       literal
     ---
-    block mapping:
+    block mapping: &alias
       flow sequence: [a, b]
+    same mapping: *alias
     flow mapping: {a: b}
+
 
 with this code:
 
     my $yp = YAML::PP->new(
-        preserve => PRESERVE_ORDER | PRESERVE_SCALAR_STYLE | PRESERVE_FLOW_STYLE
+        preserve => PRESERVE_ORDER | PRESERVE_SCALAR_STYLE
+                    | PRESERVE_FLOW_STYLE | PRESERVE_ALIAS
     );
     my ($hash, $styles, $flow) = $yp->load_file($file);
     $yp->dump_file($hash, $styles, $flow);
 
 Then dumping it will return the same output.
 Only folded block scalars '>' cannot preserve the style yet.
+
+Note that YAML allows repeated definition of anchors. They cannot bw preserved
+with YAML::PP right now. Example:
+
+    ---
+    - &seq [a]
+    - *seq
+    - &seq [b]
+    - *seq
+
+Because the data could be shuffled before dumping again, the anchor definition
+could be broken. In this case repeated anchor names will be discarded when
+loading and dumped with numeric anchors like usual.
+
+Implementation:
 
 When loading, hashes will be tied to an internal class
 (C<YAML::PP::Preserve::Hash>) that keeps the key order.

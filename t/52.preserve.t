@@ -6,7 +6,7 @@ use Test::Deep;
 use FindBin '$Bin';
 use YAML::PP;
 use YAML::PP::Common qw/
-    PRESERVE_ORDER PRESERVE_SCALAR_STYLE PRESERVE_FLOW_STYLE
+    PRESERVE_ORDER PRESERVE_SCALAR_STYLE PRESERVE_FLOW_STYLE PRESERVE_ALIAS
     YAML_LITERAL_SCALAR_STYLE YAML_FLOW_MAPPING_STYLE YAML_FLOW_SEQUENCE_STYLE
 /;
 
@@ -192,7 +192,7 @@ EOM
 
 subtest 'create-preserve' => sub {
     my $yp = YAML::PP->new(
-        preserve => PRESERVE_SCALAR_STYLE | PRESERVE_FLOW_STYLE | PRESERVE_ORDER
+        preserve => 1,
     );
     my $scalar = $yp->preserved_scalar("\n", style => YAML_LITERAL_SCALAR_STYLE );
     my $data = { literal => $scalar };
@@ -218,7 +218,23 @@ seq: [23, 24]
 EOM
     is($dump, $yaml, 'dump with preserved flow && order');
 
+    my $alias1 = $yp->preserved_mapping({ a => 1 }, alias => 'MAP', style => YAML_FLOW_MAPPING_STYLE);
+    my $alias2 = $yp->preserved_sequence([qw/ x y z /], alias => 'SEQ', style => YAML_FLOW_SEQUENCE_STYLE);
+    my $alias3 = $yp->preserved_scalar('string', alias => 'SCALAR');
+    $data = $yp->preserved_sequence([$alias1, $alias2, $alias3, $alias3, $alias2, $alias1]);
+    $dump = $yp->dump_string($data);
+    my $expected = <<'EOM';
+---
+- &MAP {a: 1}
+- &SEQ [x, y, z]
+- &SCALAR string
+- *SCALAR
+- *SEQ
+- *MAP
+EOM
+    is $dump, $expected, 'dump with preserved map/seq/scalar and aliases';
 };
+
 subtest 'tie-array' => sub {
     my $x = YAML::PP->preserved_sequence([23, 24], style => YAML_FLOW_SEQUENCE_STYLE);
     @$x = (25, 26);
@@ -249,6 +265,93 @@ subtest 'tie-scalar' => sub {
     $scalar = YAML::PP->preserved_scalar(23, style => YAML_LITERAL_SCALAR_STYLE );
     ok($scalar > 22, '>');
     ok($scalar <= 23, '<=');
+};
+
+subtest 'aliases' => sub {
+    my $yaml = <<'EOM';
+---
+mapping: &mapping
+  a: 1
+  b: 2
+alias: *mapping
+seq: &seq
+- a
+- b
+same: *seq
+str: &scalar xyz
+copy: *scalar
+EOM
+    my $sorted = <<'EOM';
+---
+alias: &mapping
+  a: 1
+  b: 2
+copy: &scalar xyz
+mapping: *mapping
+same: &seq
+- a
+- b
+seq: *seq
+str: *scalar
+EOM
+    my $yp = YAML::PP->new( preserve => PRESERVE_ALIAS );
+    my $data = $yp->load_string($yaml);
+    my $dump = $yp->dump_string($data);
+    is($dump, $sorted, "Preserving alias names, but not order");
+
+    $yp = YAML::PP->new( preserve => PRESERVE_ORDER | PRESERVE_ALIAS );
+    $data = $yp->load_string($yaml);
+    $dump = $yp->dump_string($data);
+    is($dump, $yaml, "Preserving alias names and order");
+
+    $yp = YAML::PP->new( preserve => PRESERVE_ALIAS | PRESERVE_FLOW_STYLE );
+    $yaml = <<'EOM';
+---
+a: &seq [a]
+b: *seq
+c: &seq [c]
+d: *seq
+e: &map {e: 1}
+f: *map
+g: &map {g: 1}
+h: *map
+i: &scalar X
+j: *scalar
+k: &scalar Y
+l: *scalar
+EOM
+    $data = $yp->load_string($yaml);
+    $dump = $yp->dump_string($data);
+
+    my $swap = $data->{a};
+    $data->{a} = $data->{d};
+    $data->{d} = $swap;
+    $swap = $data->{e};
+    $data->{e} = $data->{h};
+    $data->{h} = $swap;
+    $swap = $data->{i};
+    $data->{i} = $data->{l};
+    $data->{l} = $swap;
+
+    $dump = $yp->dump_string($data);
+    my $expected = <<'EOM';
+---
+a: &1 [c]
+b: &seq [a]
+c: *1
+d: *seq
+e: &2 {g: 1}
+f: &map {e: 1}
+g: *2
+h: *map
+i: &3 Y
+j: &scalar X
+k: *3
+l: *scalar
+EOM
+    is $dump, $expected, 'dump - Repeated anchors are removed';
+    my $reload = $yp->load_string($dump);
+    is_deeply($reload, $data, 'Reloading after shuffling wiht repeated anchors');
 };
 
 done_testing;

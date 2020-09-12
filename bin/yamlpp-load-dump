@@ -4,7 +4,9 @@ use warnings;
 
 use YAML::PP;
 use YAML::PP::Dumper;
-use YAML::PP::Common qw/ PRESERVE_ORDER PRESERVE_SCALAR_STYLE PRESERVE_FLOW_STYLE /;
+use YAML::PP::Common qw/
+    PRESERVE_ORDER PRESERVE_SCALAR_STYLE PRESERVE_FLOW_STYLE PRESERVE_ALIAS
+/;
 use Encode;
 use Getopt::Long;
 
@@ -46,6 +48,7 @@ if (defined $preserve) {
         $preserve |= PRESERVE_ORDER if $split eq 'order';
         $preserve |= PRESERVE_SCALAR_STYLE if $split eq 'scalar';
         $preserve |= PRESERVE_FLOW_STYLE if $split eq 'flow';
+        $preserve |= PRESERVE_ALIAS if $split eq 'alias';
     }
 }
 else {
@@ -168,8 +171,8 @@ Options:
     --merge               Enable loading merge keys '<<'
     --perl                Enable loading perl types and objects (use only
                           on trusted input!)
-    --preserve            Comma separated: 'order', 'scalar', 'flow'. By
-                          default all things are preserved
+    --preserve            Comma separated: 'order', 'scalar', 'flow', 'alias'.
+                          By default all things are preserved
     --module -M           YAML::PP (default), YAML, YAML::PP::LibYAML,
                           YAML::Syck, YAML::Tiny, YAML::XS
     --yaml-version=       '1.2' (default), '1.1', '1.2,1.1', '1.1,1.2'
