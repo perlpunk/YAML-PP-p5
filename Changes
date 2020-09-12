@@ -1,5 +1,9 @@
 Revision history for Perl module YAML::PP
 
+0.026_001 2020-09-12 19:41:39+02:00
+
+    - Add possibility to preserve alias names (see 'preserve' option)
+
 0.026 2020-09-11 00:39:09+02:00
 
     - Add option 'duplicate_keys'. The default allows it for now and will
