@@ -323,11 +323,11 @@ sub alias_event {
             my $cyclic_refs = $self->cyclic_refs;
             if ($cyclic_refs ne 'allow') {
                 if ($cyclic_refs eq 'fatal') {
-                    die "Found cyclic ref";
+                    die "Found cyclic ref for alias '$name'";
                 }
                 if ($cyclic_refs eq 'warn') {
                     $anchor = { data => \undef };
-                    warn "Found cyclic ref";
+                    warn "Found cyclic ref for alias '$name'";
                 }
                 elsif ($cyclic_refs eq 'ignore') {
                     $anchor = { data => \undef };
@@ -335,6 +335,9 @@ sub alias_event {
             }
         }
         $value = $anchor->{data};
+    }
+    else {
+        croak "No anchor defined for alias '$name'";
     }
     my $last = $self->stack->[-1];
     push @{ $last->{ref} }, $$value;
