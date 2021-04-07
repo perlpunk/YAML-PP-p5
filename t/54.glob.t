@@ -178,7 +178,7 @@ subtest ioscalar => sub {
     my $dump = $yp->dump_string($fh);
     my $fn = $fh->fileno;
     like $dump, qr{--- !perl/glob:IO::File}, "IO::Scalar correctly dumped as blessed per/glob";
-    like $dump, qr{fileno: $fn$}m, "IO::Scalar fileno correct";
+    like $dump, qr{fileno: $fn\n}, "IO::Scalar fileno correct";
 };
 
 my @error = (
