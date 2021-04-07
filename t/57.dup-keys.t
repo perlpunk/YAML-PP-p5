@@ -12,6 +12,7 @@ my $allow = YAML::PP->new(
 my $forbid = YAML::PP->new(
     duplicate_keys => 0,
 );
+my $default = YAML::PP->new;
 
 
 my $yaml = <<'EOM';
@@ -31,6 +32,10 @@ is_deeply($data, $expected, "Allowed duplicate keys");
 $data = eval { $forbid->load_string($yaml) };
 my $err = $@;
 like $err, qr{Duplicate key 'a'}, "Forbidden duplicate keys";
+
+$data = eval { $default->load_string($yaml) };
+$err = $@;
+like $err, qr{Duplicate key 'a'}, "Forbidden duplicate keys by default";
 
 
 done_testing;

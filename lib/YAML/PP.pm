@@ -553,13 +553,11 @@ Defines what to do when a cyclic reference is detected when loading.
 
 =item duplicate_keys
 
-Default: 1
+Default: 0
 
-Since version 0.026
+Since version 0.027
 
 This option is for loading.
-
-NOTE: THIS OPTION WILL BE SET TO 0 IN THE NEXT RELEASE.
 
 The YAML Spec says duplicate mapping keys should be forbidden.
 

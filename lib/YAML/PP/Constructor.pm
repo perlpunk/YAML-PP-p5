@@ -21,10 +21,9 @@ sub new {
     my ($class, %args) = @_;
 
     my $default_yaml_version = delete $args{default_yaml_version};
-    # TODO: switch to default 0
     my $duplicate_keys = delete $args{duplicate_keys};
     unless (defined $duplicate_keys) {
-        $duplicate_keys = 1;
+        $duplicate_keys = 0;
     }
     my $preserve = delete $args{preserve} || 0;
     if ($preserve == 1) {
