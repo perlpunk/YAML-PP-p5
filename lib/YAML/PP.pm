@@ -827,7 +827,7 @@ You can define a certain scalar style when dumping data.
 Figuring out the best style is a hard task and practically impossible to get
 it right for all cases. It's also a matter of taste.
 
-    use YAML::PP::Common qw/ PRESERVE_SCALAR_STYLE /;
+    use YAML::PP::Common qw/ PRESERVE_SCALAR_STYLE YAML_LITERAL_SCALAR_STYLE /;
     my $yp = YAML::PP->new(
         preserve => PRESERVE_SCALAR_STYLE,
     );
@@ -855,7 +855,10 @@ style instead of block style.
 If you add C<PRESERVE_ORDER> to the C<preserve> option, it will also keep the
 order of the keys in a hash.
 
-    use YAML::PP::Common qw/ PRESERVE_ORDER PRESERVE_FLOW_STYLE /;
+    use YAML::PP::Common qw/
+        PRESERVE_ORDER PRESERVE_FLOW_STYLE
+        YAML_FLOW_MAPPING_STYLE YAML_FLOW_SEQUENCE_STYLE
+    /;
     my $yp = YAML::PP->new(
         preserve => PRESERVE_FLOW_STYLE | PRESERVE_ORDER
     );
