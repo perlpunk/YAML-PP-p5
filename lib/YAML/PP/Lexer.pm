@@ -525,7 +525,8 @@ sub fetch_block {
     }
     if ($set_indent) {
         $started = 1;
-        $current_indent = $set_indent;
+        $indent-- if $indent > 0;
+        $current_indent = $indent + $set_indent;
     }
     if (not length $$yaml) {
         push @tokens, ( EOL => $eol, $self->line );

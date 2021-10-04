@@ -1,0 +1,12 @@
++STR
++DOC
++SEQ
++MAP
+=VAL :one
+=VAL | two\n
+=VAL :three
+=VAL |four\n
+-MAP
+-SEQ
+-DOC
+-STR
