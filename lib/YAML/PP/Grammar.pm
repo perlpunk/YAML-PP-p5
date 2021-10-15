@@ -145,6 +145,16 @@ $GRAMMAR = {
       'new' => 'FLOWSEQ_NEXT'
     }
   },
+  'FLOWSEQ_EMPTY' => {
+    'FLOWSEQ_END' => {
+      'match' => 'cb_empty_flowseq_end',
+      'return' => 1
+    },
+    'FLOW_COMMA' => {
+      'match' => 'cb_empty_flowseq_comma',
+      'return' => 1
+    }
+  },
   'FLOWSEQ_NEXT' => {
     'EOL' => {
       'new' => 'FLOWSEQ_NEXT'
@@ -158,6 +168,40 @@ $GRAMMAR = {
       'return' => 1
     },
     'WS' => {
+      'new' => 'FLOWSEQ_NEXT'
+    }
+  },
+  'FLOWSEQ_PROPS' => {
+    'FLOWMAP_START' => {
+      'match' => 'cb_start_flowmap',
+      'new' => 'NEWFLOWMAP'
+    },
+    'FLOWSEQ_END' => {
+      'match' => 'cb_empty_flowseq_end',
+      'return' => 1
+    },
+    'FLOWSEQ_START' => {
+      'match' => 'cb_start_flowseq',
+      'new' => 'NEWFLOWSEQ'
+    },
+    'FLOW_COMMA' => {
+      'match' => 'cb_empty_flowseq_comma',
+      'return' => 1
+    },
+    'PLAIN' => {
+      'match' => 'cb_flow_plain',
+      'new' => 'FLOWSEQ_NEXT'
+    },
+    'PLAIN_MULTI' => {
+      'match' => 'cb_send_plain_multi',
+      'new' => 'FLOWSEQ_NEXT'
+    },
+    'QUOTED' => {
+      'match' => 'cb_flowkey_quoted',
+      'new' => 'FLOWSEQ_NEXT'
+    },
+    'QUOTED_MULTILINE' => {
+      'match' => 'cb_quoted_multiline',
       'new' => 'FLOWSEQ_NEXT'
     }
   },
@@ -468,14 +512,13 @@ $GRAMMAR = {
   'NEWFLOWSEQ' => {
     'ANCHOR' => {
       'DEFAULT' => {
-        'match' => 'cb_empty_flowseq_value',
-        'new' => 'FLOWSEQ_NEXT'
+        'new' => 'NEWFLOWSEQ_ANCHOR'
       },
       'EOL' => {
-        'new' => 'NEWFLOWSEQ_ANCHOR'
+        'new' => 'NEWFLOWSEQ_ANCHOR_SPC'
       },
       'WS' => {
-        'new' => 'NEWFLOWSEQ_ANCHOR'
+        'new' => 'NEWFLOWSEQ_ANCHOR_SPC'
       },
       'match' => 'cb_anchor'
     },
@@ -491,14 +534,13 @@ $GRAMMAR = {
     },
     'TAG' => {
       'DEFAULT' => {
-        'match' => 'cb_empty_flowseq_value',
-        'new' => 'FLOWSEQ_NEXT'
+        'new' => 'NEWFLOWSEQ_TAG'
       },
       'EOL' => {
-        'new' => 'NEWFLOWSEQ_TAG'
+        'new' => 'NEWFLOWSEQ_TAG_SPC'
       },
       'WS' => {
-        'new' => 'NEWFLOWSEQ_TAG'
+        'new' => 'NEWFLOWSEQ_TAG_SPC'
       },
       'match' => 'cb_tag'
     },
@@ -508,42 +550,70 @@ $GRAMMAR = {
   },
   'NEWFLOWSEQ_ANCHOR' => {
     'DEFAULT' => {
-      'new' => 'FLOWSEQ'
+      'new' => 'FLOWSEQ_EMPTY'
     },
     'EOL' => {
-      'new' => 'NEWFLOWSEQ_ANCHOR'
+      'new' => 'NEWFLOWSEQ_ANCHOR_SPC'
+    },
+    'WS' => {
+      'new' => 'NEWFLOWSEQ_ANCHOR_SPC'
+    }
+  },
+  'NEWFLOWSEQ_ANCHOR_SPC' => {
+    'DEFAULT' => {
+      'new' => 'FLOWSEQ_PROPS'
+    },
+    'EOL' => {
+      'new' => 'NEWFLOWSEQ_ANCHOR_SPC'
     },
     'TAG' => {
+      'DEFAULT' => {
+        'new' => 'FLOWSEQ_EMPTY'
+      },
       'EOL' => {
-        'new' => 'FLOWSEQ'
+        'new' => 'FLOWSEQ_PROPS'
       },
       'WS' => {
-        'new' => 'FLOWSEQ'
+        'new' => 'FLOWSEQ_PROPS'
       },
       'match' => 'cb_tag'
     },
     'WS' => {
-      'new' => 'NEWFLOWSEQ_ANCHOR'
+      'new' => 'NEWFLOWSEQ_ANCHOR_SPC'
     }
   },
   'NEWFLOWSEQ_TAG' => {
+    'DEFAULT' => {
+      'new' => 'FLOWSEQ_EMPTY'
+    },
+    'EOL' => {
+      'new' => 'NEWFLOWSEQ_TAG_SPC'
+    },
+    'WS' => {
+      'new' => 'NEWFLOWSEQ_TAG_SPC'
+    }
+  },
+  'NEWFLOWSEQ_TAG_SPC' => {
     'ANCHOR' => {
+      'DEFAULT' => {
+        'new' => 'FLOWSEQ_EMPTY'
+      },
       'EOL' => {
-        'new' => 'FLOWSEQ'
+        'new' => 'FLOWSEQ_PROPS'
       },
       'WS' => {
-        'new' => 'FLOWSEQ'
+        'new' => 'FLOWSEQ_PROPS'
       },
       'match' => 'cb_anchor'
     },
     'DEFAULT' => {
-      'new' => 'FLOWSEQ'
+      'new' => 'FLOWSEQ_PROPS'
     },
     'EOL' => {
-      'new' => 'NEWFLOWSEQ_TAG'
+      'new' => 'NEWFLOWSEQ_TAG_SPC'
     },
     'WS' => {
-      'new' => 'NEWFLOWSEQ_TAG'
+      'new' => 'NEWFLOWSEQ_TAG_SPC'
     }
   },
   'NODETYPE_COMPLEX' => {
@@ -1319,6 +1389,31 @@ This is the Grammar in YAML
       QUOTED: { match: cb_flowkey_quoted, new: FLOWSEQ_NEXT }
       QUOTED_MULTILINE: { match: cb_quoted_multiline, new: FLOWSEQ_NEXT }
     
+    FLOWSEQ_PROPS:
+      FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
+      FLOWMAP_START: { match: cb_start_flowmap, new: NEWFLOWMAP }
+    
+      PLAIN: { match: cb_flow_plain, new: FLOWSEQ_NEXT }
+      PLAIN_MULTI: { match: cb_send_plain_multi, new: FLOWSEQ_NEXT }
+    
+      QUOTED: { match: cb_flowkey_quoted, new: FLOWSEQ_NEXT }
+      QUOTED_MULTILINE: { match: cb_quoted_multiline, new: FLOWSEQ_NEXT }
+    
+      FLOW_COMMA:
+        match: cb_empty_flowseq_comma
+        return: 1
+      FLOWSEQ_END:
+        match: cb_empty_flowseq_end
+        return: 1
+    
+    FLOWSEQ_EMPTY:
+      FLOW_COMMA:
+        match: cb_empty_flowseq_comma
+        return: 1
+      FLOWSEQ_END:
+        match: cb_empty_flowseq_end
+        return: 1
+    
     FLOWSEQ_NEXT:
       WS: { new: FLOWSEQ_NEXT }
       EOL: { new: FLOWSEQ_NEXT }
@@ -1326,7 +1421,6 @@ This is the Grammar in YAML
       FLOW_COMMA:
         match: cb_flow_comma
         return: 1
-    
       FLOWSEQ_END:
         match: cb_end_flowseq
         return: 1
@@ -1358,19 +1452,15 @@ This is the Grammar in YAML
     
       ANCHOR:
         match: cb_anchor
-        WS: { new: NEWFLOWSEQ_ANCHOR }
-        EOL: { new: NEWFLOWSEQ_ANCHOR }
-        DEFAULT:
-          match: cb_empty_flowseq_value
-          new: FLOWSEQ_NEXT
+        WS: { new: NEWFLOWSEQ_ANCHOR_SPC }
+        EOL: { new: NEWFLOWSEQ_ANCHOR_SPC }
+        DEFAULT: { new: NEWFLOWSEQ_ANCHOR }
     
       TAG:
         match: cb_tag
-        WS: { new: NEWFLOWSEQ_TAG }
-        EOL: { new: NEWFLOWSEQ_TAG }
-        DEFAULT:
-          match: cb_empty_flowseq_value
-          new: FLOWSEQ_NEXT
+        WS: { new: NEWFLOWSEQ_TAG_SPC }
+        EOL: { new: NEWFLOWSEQ_TAG_SPC }
+        DEFAULT: { new: NEWFLOWSEQ_TAG }
     
       FLOWSEQ_END:
         match: cb_end_flowseq
@@ -1402,23 +1492,34 @@ This is the Grammar in YAML
         return: 1
     
     NEWFLOWSEQ_ANCHOR:
-      WS: { new: NEWFLOWSEQ_ANCHOR }
-      EOL: { new: NEWFLOWSEQ_ANCHOR }
+      WS: { new: NEWFLOWSEQ_ANCHOR_SPC }
+      EOL: { new: NEWFLOWSEQ_ANCHOR_SPC }
+      DEFAULT: { new: FLOWSEQ_EMPTY }
+    
+    NEWFLOWSEQ_ANCHOR_SPC:
+      WS: { new: NEWFLOWSEQ_ANCHOR_SPC }
+      EOL: { new: NEWFLOWSEQ_ANCHOR_SPC }
       TAG:
         match: cb_tag
-        WS: { new: FLOWSEQ }
-        EOL: { new: FLOWSEQ }
-      DEFAULT: { new: FLOWSEQ }
+        WS: { new: FLOWSEQ_PROPS }
+        EOL: { new: FLOWSEQ_PROPS }
+        DEFAULT: { new: FLOWSEQ_EMPTY }
+      DEFAULT: { new: FLOWSEQ_PROPS }
     
     NEWFLOWSEQ_TAG:
-      WS: { new: NEWFLOWSEQ_TAG }
-      EOL: { new: NEWFLOWSEQ_TAG }
+      WS: { new: NEWFLOWSEQ_TAG_SPC }
+      EOL: { new: NEWFLOWSEQ_TAG_SPC }
+      DEFAULT: { new: FLOWSEQ_EMPTY }
+    
+    NEWFLOWSEQ_TAG_SPC:
+      WS: { new: NEWFLOWSEQ_TAG_SPC }
+      EOL: { new: NEWFLOWSEQ_TAG_SPC }
       ANCHOR:
         match: cb_anchor
-        WS: { new: FLOWSEQ }
-        EOL: { new: FLOWSEQ }
-      DEFAULT: { new: FLOWSEQ }
-    
+        WS: { new: FLOWSEQ_PROPS }
+        EOL: { new: FLOWSEQ_PROPS }
+        DEFAULT: { new: FLOWSEQ_EMPTY }
+      DEFAULT: { new: FLOWSEQ_PROPS }
     
     NEWFLOWMAP_ANCHOR:
       WS: { new: NEWFLOWMAP_ANCHOR }

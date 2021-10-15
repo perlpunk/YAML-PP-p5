@@ -1,8 +1,20 @@
 - - !!str
   - second value
+- - !!str
+- - !!str
+- - !!str
+- - !!str
 - - &anchor
   - second value
-- - !!str
 - - &anchor
-- - !!str
 - - &anchor
+- - &anchor
+- - &anchor
+- - &anchor !!str
+- - &anchor !!str
+- - &anchor !!str
+- - &anchor !!str
+- - &anchor !!str
+- - &anchor !!str
+- - &anchor !!str
+- - &anchor !!str

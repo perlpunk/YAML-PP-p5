@@ -6,20 +6,56 @@
 =VAL :second value
 -SEQ
 +SEQ
+=VAL <tag:yaml.org,2002:str> :
+-SEQ
++SEQ
+=VAL <tag:yaml.org,2002:str> :
+-SEQ
++SEQ
+=VAL <tag:yaml.org,2002:str> :
+-SEQ
++SEQ
+=VAL <tag:yaml.org,2002:str> :
+-SEQ
++SEQ
 =VAL &anchor :
 =VAL :second value
 -SEQ
 +SEQ
-=VAL <tag:yaml.org,2002:str> :
+=VAL &anchor :
 -SEQ
 +SEQ
 =VAL &anchor :
 -SEQ
 +SEQ
-=VAL <tag:yaml.org,2002:str> :
+=VAL &anchor :
 -SEQ
 +SEQ
 =VAL &anchor :
+-SEQ
++SEQ
+=VAL &anchor <tag:yaml.org,2002:str> :
+-SEQ
++SEQ
+=VAL &anchor <tag:yaml.org,2002:str> :
+-SEQ
++SEQ
+=VAL &anchor <tag:yaml.org,2002:str> :
+-SEQ
++SEQ
+=VAL &anchor <tag:yaml.org,2002:str> :
+-SEQ
++SEQ
+=VAL &anchor <tag:yaml.org,2002:str> :
+-SEQ
++SEQ
+=VAL &anchor <tag:yaml.org,2002:str> :
+-SEQ
++SEQ
+=VAL &anchor <tag:yaml.org,2002:str> :
+-SEQ
++SEQ
+=VAL &anchor <tag:yaml.org,2002:str> :
 -SEQ
 -SEQ
 -DOC
