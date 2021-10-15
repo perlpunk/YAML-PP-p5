@@ -6,6 +6,7 @@ use Encode;
 use YAML::PP::Parser;
 use YAML::PP::Common;
 use Getopt::Long;
+Getopt::Long::Configure('bundling');
 GetOptions(
     'help|h' => \my $help,
     'module|M=s' => \my $module,
