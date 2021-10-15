@@ -205,6 +205,11 @@ sub fetch_next_tokens {
     if (not $spaces and $$yaml =~ s/\A(---|\.\.\.)(?=$RE_WS|\z)//) {
         $self->push_tokens([ $TOKEN_NAMES{ $1 } => $1, $self->line ]);
     }
+    elsif ($$yaml =~ m/\A[ \t]+(#.*)?\z/) {
+        $self->push_tokens([ EOL => join('', @$next_line), $self->line ]);
+        $self->set_next_line(undef);
+        return $next;
+    }
     else {
         $self->push_tokens([ SPACE => $spaces, $self->line ]);
     }
