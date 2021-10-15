@@ -28,6 +28,7 @@ my @skip = qw/
     CFD4
     Q9WF
 
+    v022
 /;
 
 push @skip, qw/

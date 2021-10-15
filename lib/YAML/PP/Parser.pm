@@ -1280,6 +1280,11 @@ sub cb_empty_flowmap_value {
     $self->scalar_event($info);
 }
 
+sub cb_empty_flowseq_value {
+    my ($self, $token) = @_;
+    $self->cb_empty_flowmap_value($token);
+}
+
 sub cb_insert_map_alias {
     my ($self, $res) = @_;
     my $stack = $self->event_stack;

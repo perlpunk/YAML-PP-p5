@@ -467,6 +467,10 @@ $GRAMMAR = {
   },
   'NEWFLOWSEQ' => {
     'ANCHOR' => {
+      'DEFAULT' => {
+        'match' => 'cb_empty_flowseq_value',
+        'new' => 'FLOWSEQ_NEXT'
+      },
       'EOL' => {
         'new' => 'NEWFLOWSEQ_ANCHOR'
       },
@@ -486,6 +490,10 @@ $GRAMMAR = {
       'return' => 1
     },
     'TAG' => {
+      'DEFAULT' => {
+        'match' => 'cb_empty_flowseq_value',
+        'new' => 'FLOWSEQ_NEXT'
+      },
       'EOL' => {
         'new' => 'NEWFLOWSEQ_TAG'
       },
@@ -1352,10 +1360,17 @@ This is the Grammar in YAML
         match: cb_anchor
         WS: { new: NEWFLOWSEQ_ANCHOR }
         EOL: { new: NEWFLOWSEQ_ANCHOR }
+        DEFAULT:
+          match: cb_empty_flowseq_value
+          new: FLOWSEQ_NEXT
+    
       TAG:
         match: cb_tag
         WS: { new: NEWFLOWSEQ_TAG }
         EOL: { new: NEWFLOWSEQ_TAG }
+        DEFAULT:
+          match: cb_empty_flowseq_value
+          new: FLOWSEQ_NEXT
     
       FLOWSEQ_END:
         match: cb_end_flowseq
