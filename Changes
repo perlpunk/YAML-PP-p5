@@ -1,5 +1,13 @@
 Revision history for Perl module YAML::PP
 
+0.027_001 2021-10-16 01:57:18+02:00
+
+    - Fix empty values in flow sequences
+    - Allow comment lines with tabs in flow
+    - Fix parsing of explicit block indenting (issue #46)
+    - yamlpp-load-dump: Add options --dump-module and --include*
+    - docs: Add mising constants (issue #45)
+
 0.027 2021-04-09 11:13:28+02:00
 
     - Forbid duplicate keys by default like announced in 0.026
