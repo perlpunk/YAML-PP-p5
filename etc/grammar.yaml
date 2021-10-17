@@ -224,6 +224,37 @@ FLOWMAP:
       match: cb_empty_flow_mapkey
       new: RULE_FULLFLOWSCALAR
 
+FLOWMAP_PROPS:
+  FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
+  FLOWMAP_START: { match: cb_start_flowmap, new: NEWFLOWMAP }
+
+  PLAIN: { match: cb_flowkey_plain, return: 1 }
+  PLAIN_MULTI: { match: cb_send_plain_multi, return: 1 }
+
+  QUOTED: { match: cb_flowkey_quoted, return: 1 }
+  QUOTED_MULTILINE: { match: cb_quoted_multiline, return: 1 }
+
+  COLON:
+    WS:
+      match: cb_empty_flow_mapkey
+      new: RULE_FULLFLOWSCALAR
+    EOL:
+      match: cb_empty_flow_mapkey
+      new: RULE_FULLFLOWSCALAR
+  FLOW_COMMA:
+    match: cb_empty_flowmap_key_value
+    return: 1
+  FLOWMAP_END:
+    match: cb_end_empty_flowmap_key_value
+    return: 1
+
+FLOWMAP_EMPTYKEY:
+  FLOW_COMMA:
+    match: cb_empty_flowmap_key_value
+    return: 1
+  FLOWMAP_END:
+    match: cb_end_empty_flowmap_key_value
+    return: 1
 
 NEWFLOWSEQ:
   EOL: { new: NEWFLOWSEQ }
@@ -271,8 +302,8 @@ NODETYPE_FLOWMAPVALUE:
     return: 1
 
 NEWFLOWSEQ_ANCHOR:
-  WS: { new: NEWFLOWSEQ_ANCHOR_SPC }
-  EOL: { new: NEWFLOWSEQ_ANCHOR_SPC }
+  DEFAULT: { new: FLOWSEQ_EMPTY }
+NEWFLOWSEQ_TAG:
   DEFAULT: { new: FLOWSEQ_EMPTY }
 
 NEWFLOWSEQ_ANCHOR_SPC:
@@ -285,11 +316,6 @@ NEWFLOWSEQ_ANCHOR_SPC:
     DEFAULT: { new: FLOWSEQ_EMPTY }
   DEFAULT: { new: FLOWSEQ_PROPS }
 
-NEWFLOWSEQ_TAG:
-  WS: { new: NEWFLOWSEQ_TAG_SPC }
-  EOL: { new: NEWFLOWSEQ_TAG_SPC }
-  DEFAULT: { new: FLOWSEQ_EMPTY }
-
 NEWFLOWSEQ_TAG_SPC:
   WS: { new: NEWFLOWSEQ_TAG_SPC }
   EOL: { new: NEWFLOWSEQ_TAG_SPC }
@@ -300,23 +326,31 @@ NEWFLOWSEQ_TAG_SPC:
     DEFAULT: { new: FLOWSEQ_EMPTY }
   DEFAULT: { new: FLOWSEQ_PROPS }
 
+
 NEWFLOWMAP_ANCHOR:
-  WS: { new: NEWFLOWMAP_ANCHOR }
-  EOL: { new: NEWFLOWMAP_ANCHOR }
+  DEFAULT: { new: FLOWMAP_EMPTYKEY }
+NEWFLOWMAP_TAG:
+  DEFAULT: { new: FLOWMAP_EMPTYKEY }
+
+NEWFLOWMAP_ANCHOR_SPC:
+  WS: { new: NEWFLOWMAP_ANCHOR_SPC }
+  EOL: { new: NEWFLOWMAP_ANCHOR_SPC }
   TAG:
     match: cb_tag
-    WS: { new: FLOWMAP }
-    EOL: { new: FLOWMAP }
-  DEFAULT: { new: FLOWMAP }
+    WS: { new: FLOWMAP_PROPS }
+    EOL: { new: FLOWMAP_PROPS }
+    DEFAULT: { new: FLOWMAP_EMPTYKEY }
+  DEFAULT: { new: FLOWMAP_PROPS }
 
-NEWFLOWMAP_TAG:
-  WS: { new: NEWFLOWMAP_TAG }
-  EOL: { new: NEWFLOWMAP_TAG }
+NEWFLOWMAP_TAG_SPC:
+  WS: { new: NEWFLOWMAP_TAG_SPC }
+  EOL: { new: NEWFLOWMAP_TAG_SPC }
   ANCHOR:
     match: cb_anchor
-    WS: { new: FLOWMAP }
-    EOL: { new: FLOWMAP }
-  DEFAULT: { new: FLOWMAP }
+    WS: { new: FLOWMAP_PROPS }
+    EOL: { new: FLOWMAP_PROPS }
+    DEFAULT: { new: FLOWMAP_EMPTYKEY }
+  DEFAULT: { new: FLOWMAP_PROPS }
 
 NEWFLOWMAP:
   EOL: { new: NEWFLOWMAP }
@@ -326,12 +360,14 @@ NEWFLOWMAP:
 
   ANCHOR:
     match: cb_anchor
-    WS: { new: NEWFLOWMAP_ANCHOR }
-    EOL: { new: NEWFLOWMAP_ANCHOR }
+    WS: { new: NEWFLOWMAP_ANCHOR_SPC }
+    EOL: { new: NEWFLOWMAP_ANCHOR_SPC }
+    DEFAULT: { new: NEWFLOWMAP_ANCHOR }
   TAG:
     match: cb_tag
-    WS: { new: NEWFLOWMAP_TAG }
-    EOL: { new: NEWFLOWMAP_TAG }
+    WS: { new: NEWFLOWMAP_TAG_SPC }
+    EOL: { new: NEWFLOWMAP_TAG_SPC }
+    DEFAULT: { new: NEWFLOWMAP_TAG }
 
   FLOWMAP_END:
     match: cb_end_flowmap

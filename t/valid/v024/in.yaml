@@ -1,0 +1,18 @@
+- {!!str,second key}
+- {!!str,}
+- {!!str ,}
+- {!!str}
+- {!!str	}
+- {&anchor1,second key}
+- {&anchor2,}
+- {&anchor3	,}
+- {&anchor4}
+- {&anchor5 }
+- {!!str &anchor6,}
+- {!!str &anchor7 ,}
+- {!!str &anchor8}
+- {!!str &anchor9	}
+- {&anchor10 !!str,}
+- {&anchor11 !!str	,}
+- {&anchor12 !!str}
+- {&anchor13 !!str }

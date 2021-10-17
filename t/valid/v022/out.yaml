@@ -4,17 +4,17 @@
 - - !!str
 - - !!str
 - - !!str
-- - &anchor
+- - &anchor1
   - second value
-- - &anchor
-- - &anchor
-- - &anchor
-- - &anchor
-- - &anchor !!str
-- - &anchor !!str
-- - &anchor !!str
-- - &anchor !!str
-- - &anchor !!str
-- - &anchor !!str
-- - &anchor !!str
-- - &anchor !!str
+- - &anchor2
+- - &anchor3
+- - &anchor4
+- - &anchor5
+- - &anchor6 !!str
+- - &anchor7 !!str
+- - &anchor8 !!str
+- - &anchor9 !!str
+- - &anchor10 !!str
+- - &anchor11 !!str
+- - &anchor12 !!str
+- - &anchor13 !!str

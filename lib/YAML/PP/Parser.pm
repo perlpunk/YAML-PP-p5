@@ -1266,6 +1266,21 @@ sub cb_flowkey_quoted {
     $self->scalar_event($info);
 }
 
+sub cb_empty_flowmap_key_value {
+    my ($self, $token) = @_;
+    $self->cb_empty_flow_mapkey($token);
+    $self->cb_empty_flowmap_value;
+    $self->cb_flow_comma;
+}
+
+sub cb_end_empty_flowmap_key_value {
+    my ($self, $token) = @_;
+    $self->cb_empty_flow_mapkey($token);
+    $self->cb_empty_flowmap_value;
+    $self->cb_flow_comma;
+    $self->cb_end_flowmap;
+}
+
 sub cb_empty_flowmap_value {
     my ($self, $token) = @_;
     my $stack = $self->event_stack;
