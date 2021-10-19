@@ -225,6 +225,7 @@ package YAML::PP::Preserve::Hash;
 # experimental
 use Tie::Hash;
 use base qw/ Tie::StdHash /;
+use Scalar::Util qw/ reftype blessed /;
 
 sub TIEHASH {
     my ($class) = @_;
@@ -239,6 +240,14 @@ sub STORE {
     my $keys = $self->{keys};
     unless (exists $self->{data}->{ $key }) {
         push @$keys, $key;
+    }
+    if (ref $val and not blessed($val)) {
+        if (reftype($val) eq 'HASH' and not tied %$val) {
+            tie %$val, 'YAML::PP::Preserve::Hash'
+        }
+        elsif (reftype($val) eq 'ARRAY' and not tied @$val) {
+            tie @$val, 'YAML::PP::Preserve::Array'
+        }
     }
     $self->{data}->{ $key } = $val;
 }
@@ -290,6 +299,7 @@ package YAML::PP::Preserve::Array;
 # experimental
 use Tie::Array;
 use base qw/ Tie::StdArray /;
+use Scalar::Util qw/ reftype blessed /;
 
 sub TIEARRAY {
     my ($class) = @_;
@@ -310,6 +320,14 @@ sub FETCHSIZE {
 
 sub STORE {
     my ($self, $i, $val) = @_;
+    if (ref $val and not blessed($val)) {
+        if (reftype($val) eq 'HASH' and not tied %$val) {
+            tie %$val, 'YAML::PP::Preserve::Hash'
+        }
+        elsif (reftype($val) eq 'ARRAY' and not tied @$val) {
+            tie @$val, 'YAML::PP::Preserve::Array'
+        }
+    }
     $self->{data}->[ $i ] = $val;
 }
 sub PUSH {

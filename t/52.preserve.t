@@ -354,4 +354,29 @@ EOM
     is_deeply($reload, $data, 'Reloading after shuffling wiht repeated anchors');
 };
 
+subtest 'create-tied-automatically' => sub {
+    my $yp = YAML::PP->new( preserve => PRESERVE_ORDER );
+    my $outer = $yp->preserved_mapping({});
+    %$outer = (z => 1, a => 2, y => 3, b => 4);
+    my $inner = $outer->{new}->[0] = {};
+    $inner->{Z} = 1;
+    $inner->{A} = 2;
+    $inner->{Y} = 3;
+    $inner->{B} = 4;
+    my $dump = $yp->dump_string($outer);
+    my $expected = <<'EOM';
+---
+z: 1
+a: 2
+y: 3
+b: 4
+new:
+- Z: 1
+  A: 2
+  Y: 3
+  B: 4
+EOM
+    is $dump, $expected, 'dump - Newly created hashes keep order automatically';
+};
+
 done_testing;
