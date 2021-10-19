@@ -1,5 +1,10 @@
 Revision history for Perl module YAML::PP
 
+0.027_002 2021-10-19 23:02:49+02:00
+
+    - Fix empty values in flow mappings
+    - Automatically tie new hashes inside tied hashes (issue #44)
+
 0.027_001 2021-10-16 01:57:18+02:00
 
     - Fix empty values in flow sequences
