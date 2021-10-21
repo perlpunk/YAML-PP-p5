@@ -358,11 +358,34 @@ subtest 'create-tied-automatically' => sub {
     my $yp = YAML::PP->new( preserve => PRESERVE_ORDER );
     my $outer = $yp->preserved_mapping({});
     %$outer = (z => 1, a => 2, y => 3, b => 4);
+    my $array =  $outer->{new} = [];
     my $inner = $outer->{new}->[0] = {};
     $inner->{Z} = 1;
     $inner->{A} = 2;
     $inner->{Y} = 3;
     $inner->{B} = 4;
+
+    push @$array, {};
+    my $inner2 = $outer->{new}->[1];
+    $inner2->{Z} = 11;
+    $inner2->{A} = 22;
+    $inner2->{Y} = 33;
+    $inner2->{B} = 44;
+
+    splice @$array, 0, 0, {};
+    my $inner3 = $outer->{new}->[0];
+    $inner3->{Z} = 111;
+    $inner3->{A} = 222;
+    $inner3->{Y} = 333;
+    $inner3->{B} = 444;
+
+    unshift @$array, {};
+    my $inner4 = $outer->{new}->[0];
+    $inner4->{Z} = 1111;
+    $inner4->{A} = 2222;
+    $inner4->{Y} = 3333;
+    $inner4->{B} = 4444;
+
     my $dump = $yp->dump_string($outer);
     my $expected = <<'EOM';
 ---
@@ -371,10 +394,22 @@ a: 2
 y: 3
 b: 4
 new:
+- Z: 1111
+  A: 2222
+  Y: 3333
+  B: 4444
+- Z: 111
+  A: 222
+  Y: 333
+  B: 444
 - Z: 1
   A: 2
   Y: 3
   B: 4
+- Z: 11
+  A: 22
+  Y: 33
+  B: 44
 EOM
     is $dump, $expected, 'dump - Newly created hashes keep order automatically';
 };

@@ -318,21 +318,27 @@ sub FETCHSIZE {
     return $#{ $self->{data} } + 1;
 }
 
-sub STORE {
-    my ($self, $i, $val) = @_;
+sub _preserve {
+    my ($val) = @_;
     if (ref $val and not blessed($val)) {
         if (reftype($val) eq 'HASH' and not tied %$val) {
-            tie %$val, 'YAML::PP::Preserve::Hash'
+            tie %$val, 'YAML::PP::Preserve::Hash';
         }
         elsif (reftype($val) eq 'ARRAY' and not tied @$val) {
-            tie @$val, 'YAML::PP::Preserve::Array'
+            tie @$val, 'YAML::PP::Preserve::Array';
         }
     }
+    return $val;
+}
+
+sub STORE {
+    my ($self, $i, $val) = @_;
+    _preserve($val);
     $self->{data}->[ $i ] = $val;
 }
 sub PUSH {
     my ($self, @args) = @_;
-    push @{ $self->{data} }, @args;
+    push @{ $self->{data} }, map { _preserve $_ } @args;
 }
 sub STORESIZE {
     my ($self, $i) = @_;
@@ -356,11 +362,11 @@ sub SHIFT {
 }
 sub UNSHIFT {
     my ($self, @args) = @_;
-    unshift @{ $self->{data} }, @args;
+    unshift @{ $self->{data} }, map { _preserve $_ } @args;
 }
 sub SPLICE {
     my ($self, $offset, $length, @args) = @_;
-    splice @{ $self->{data} }, $offset, $length, @args;
+    splice @{ $self->{data} }, $offset, $length, map { _preserve $_ } @args;
 }
 sub EXTEND {}
 
