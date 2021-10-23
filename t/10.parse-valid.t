@@ -17,15 +17,15 @@ $|++;
 my $yts = "$Bin/../test-suite/yaml-test-suite-data";
 
 my @skip = qw/
-    4FJ6 87E4 8CWC 8UDB 9MMW
-    CN3R CT4Q DFF7
+    4FJ6 8CWC 9MMW
     G5U8
-    L9U5 LQZ7 LX3P
-    Q9WF QF4Y
-
+    LX3P
+    Q9WF
     6BFJ
-    CFD4
 
+
+    CT4Q
+    DFF7
 /;
 
 my $testsuite = YAML::PP::Test->new(

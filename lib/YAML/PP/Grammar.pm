@@ -174,6 +174,16 @@ $GRAMMAR = {
       'match' => 'cb_send_flow_alias',
       'new' => 'FLOWSEQ_NEXT'
     },
+    'COLON' => {
+      'EOL' => {
+        'match' => 'cb_insert_empty_implicit_flowseq_map',
+        'new' => 'RULE_FULLFLOWSCALAR'
+      },
+      'WS' => {
+        'match' => 'cb_insert_empty_implicit_flowseq_map',
+        'new' => 'RULE_FULLFLOWSCALAR'
+      }
+    },
     'FLOWMAP_START' => {
       'match' => 'cb_start_flowmap',
       'new' => 'NEWFLOWMAP'
@@ -183,16 +193,28 @@ $GRAMMAR = {
       'new' => 'NEWFLOWSEQ'
     },
     'PLAIN' => {
-      'match' => 'cb_flow_plain',
-      'new' => 'FLOWSEQ_NEXT'
+      'DEFAULT' => {
+        'new' => 'FLOWSEQ_MAYBE_KEY'
+      },
+      'EOL' => {
+        'match' => 'cb_send_scalar',
+        'new' => 'FLOWSEQ_NEXT'
+      },
+      'match' => 'cb_start_plain'
     },
     'PLAIN_MULTI' => {
       'match' => 'cb_send_plain_multi',
       'new' => 'FLOWSEQ_NEXT'
     },
     'QUOTED' => {
-      'match' => 'cb_flowkey_quoted',
-      'new' => 'FLOWSEQ_NEXT'
+      'DEFAULT' => {
+        'new' => 'FLOWSEQ_MAYBE_KEY'
+      },
+      'EOL' => {
+        'match' => 'cb_send_scalar',
+        'new' => 'FLOWSEQ_NEXT'
+      },
+      'match' => 'cb_take_quoted'
     },
     'QUOTED_MULTILINE' => {
       'match' => 'cb_quoted_multiline',
@@ -207,6 +229,28 @@ $GRAMMAR = {
     'FLOW_COMMA' => {
       'match' => 'cb_empty_flowseq_comma',
       'return' => 1
+    }
+  },
+  'FLOWSEQ_MAYBE_KEY' => {
+    'COLON' => {
+      'DEFAULT' => {
+        'match' => 'cb_insert_implicit_flowseq_map',
+        'new' => 'RULE_FULLFLOWSCALAR'
+      },
+      'EOL' => {
+        'match' => 'cb_insert_implicit_flowseq_map',
+        'new' => 'RULE_FULLFLOWSCALAR'
+      },
+      'WS' => {
+        'match' => 'cb_insert_implicit_flowseq_map',
+        'new' => 'RULE_FULLFLOWSCALAR'
+      }
+    },
+    'DEFAULT' => {
+      'new' => 'FLOWSEQ_NEXT'
+    },
+    'WS' => {
+      'new' => 'FLOWSEQ_MAYBE_KEY'
     }
   },
   'FLOWSEQ_NEXT' => {
@@ -226,6 +270,16 @@ $GRAMMAR = {
     }
   },
   'FLOWSEQ_PROPS' => {
+    'COLON' => {
+      'EOL' => {
+        'match' => 'cb_insert_empty_implicit_flowseq_map',
+        'new' => 'RULE_FULLFLOWSCALAR'
+      },
+      'WS' => {
+        'match' => 'cb_insert_empty_implicit_flowseq_map',
+        'new' => 'RULE_FULLFLOWSCALAR'
+      }
+    },
     'FLOWMAP_START' => {
       'match' => 'cb_start_flowmap',
       'new' => 'NEWFLOWMAP'
@@ -243,16 +297,28 @@ $GRAMMAR = {
       'return' => 1
     },
     'PLAIN' => {
-      'match' => 'cb_flow_plain',
-      'new' => 'FLOWSEQ_NEXT'
+      'DEFAULT' => {
+        'new' => 'FLOWSEQ_MAYBE_KEY'
+      },
+      'EOL' => {
+        'match' => 'cb_send_scalar',
+        'new' => 'FLOWSEQ_NEXT'
+      },
+      'match' => 'cb_start_plain'
     },
     'PLAIN_MULTI' => {
       'match' => 'cb_send_plain_multi',
       'new' => 'FLOWSEQ_NEXT'
     },
     'QUOTED' => {
-      'match' => 'cb_flowkey_quoted',
-      'new' => 'FLOWSEQ_NEXT'
+      'DEFAULT' => {
+        'new' => 'FLOWSEQ_MAYBE_KEY'
+      },
+      'EOL' => {
+        'match' => 'cb_send_scalar',
+        'new' => 'FLOWSEQ_NEXT'
+      },
+      'match' => 'cb_take_quoted'
     },
     'QUOTED_MULTILINE' => {
       'match' => 'cb_quoted_multiline',
@@ -1447,20 +1513,52 @@ This is the Grammar in YAML
     
       ALIAS: { match: cb_send_flow_alias, new: FLOWSEQ_NEXT }
     
-      PLAIN: { match: cb_flow_plain, new: FLOWSEQ_NEXT }
+      PLAIN:
+        match: cb_start_plain
+        EOL:
+          match: cb_send_scalar
+          new: FLOWSEQ_NEXT
+        DEFAULT:
+          new: FLOWSEQ_MAYBE_KEY
       PLAIN_MULTI: { match: cb_send_plain_multi, new: FLOWSEQ_NEXT }
     
-      QUOTED: { match: cb_flowkey_quoted, new: FLOWSEQ_NEXT }
+      QUOTED:
+        match: cb_take_quoted
+        EOL:
+          match: cb_send_scalar
+          new: FLOWSEQ_NEXT
+        DEFAULT:
+          new: FLOWSEQ_MAYBE_KEY
       QUOTED_MULTILINE: { match: cb_quoted_multiline, new: FLOWSEQ_NEXT }
+    
+      COLON:
+        WS:
+          match: cb_insert_empty_implicit_flowseq_map
+          new: RULE_FULLFLOWSCALAR
+        EOL:
+          match: cb_insert_empty_implicit_flowseq_map
+          new: RULE_FULLFLOWSCALAR
     
     FLOWSEQ_PROPS:
       FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
       FLOWMAP_START: { match: cb_start_flowmap, new: NEWFLOWMAP }
     
-      PLAIN: { match: cb_flow_plain, new: FLOWSEQ_NEXT }
+      PLAIN:
+        match: cb_start_plain
+        EOL:
+          match: cb_send_scalar
+          new: FLOWSEQ_NEXT
+        DEFAULT:
+          new: FLOWSEQ_MAYBE_KEY
       PLAIN_MULTI: { match: cb_send_plain_multi, new: FLOWSEQ_NEXT }
     
-      QUOTED: { match: cb_flowkey_quoted, new: FLOWSEQ_NEXT }
+      QUOTED:
+        match: cb_take_quoted
+        EOL:
+          match: cb_send_scalar
+          new: FLOWSEQ_NEXT
+        DEFAULT:
+          new: FLOWSEQ_MAYBE_KEY
       QUOTED_MULTILINE: { match: cb_quoted_multiline, new: FLOWSEQ_NEXT }
     
       FLOW_COMMA:
@@ -1469,6 +1567,14 @@ This is the Grammar in YAML
       FLOWSEQ_END:
         match: cb_empty_flowseq_end
         return: 1
+    
+      COLON:
+        WS:
+          match: cb_insert_empty_implicit_flowseq_map
+          new: RULE_FULLFLOWSCALAR
+        EOL:
+          match: cb_insert_empty_implicit_flowseq_map
+          new: RULE_FULLFLOWSCALAR
     
     FLOWSEQ_EMPTY:
       FLOW_COMMA:
@@ -1488,6 +1594,22 @@ This is the Grammar in YAML
       FLOWSEQ_END:
         match: cb_end_flowseq
         return: 1
+    
+    FLOWSEQ_MAYBE_KEY:
+      WS: { new: FLOWSEQ_MAYBE_KEY }
+    
+      COLON:
+        WS:
+          match: cb_insert_implicit_flowseq_map
+          new: RULE_FULLFLOWSCALAR
+        EOL:
+          match: cb_insert_implicit_flowseq_map
+          new: RULE_FULLFLOWSCALAR
+        DEFAULT:
+          match: cb_insert_implicit_flowseq_map
+          new: RULE_FULLFLOWSCALAR
+      DEFAULT:
+        new: FLOWSEQ_NEXT
     
     FLOWMAP:
       FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
@@ -1588,6 +1710,8 @@ This is the Grammar in YAML
     
     NEWFLOWSEQ_ANCHOR:
       DEFAULT: { new: FLOWSEQ_EMPTY }
+    NEWFLOWSEQ_TAG:
+      DEFAULT: { new: FLOWSEQ_EMPTY }
     
     NEWFLOWSEQ_ANCHOR_SPC:
       WS: { new: NEWFLOWSEQ_ANCHOR_SPC }
@@ -1599,9 +1723,6 @@ This is the Grammar in YAML
         DEFAULT: { new: FLOWSEQ_EMPTY }
       DEFAULT: { new: FLOWSEQ_PROPS }
     
-    NEWFLOWSEQ_TAG:
-      DEFAULT: { new: FLOWSEQ_EMPTY }
-    
     NEWFLOWSEQ_TAG_SPC:
       WS: { new: NEWFLOWSEQ_TAG_SPC }
       EOL: { new: NEWFLOWSEQ_TAG_SPC }
@@ -1612,7 +1733,10 @@ This is the Grammar in YAML
         DEFAULT: { new: FLOWSEQ_EMPTY }
       DEFAULT: { new: FLOWSEQ_PROPS }
     
+    
     NEWFLOWMAP_ANCHOR:
+      DEFAULT: { new: FLOWMAP_EMPTYKEY }
+    NEWFLOWMAP_TAG:
       DEFAULT: { new: FLOWMAP_EMPTYKEY }
     
     NEWFLOWMAP_ANCHOR_SPC:
@@ -1624,9 +1748,6 @@ This is the Grammar in YAML
         EOL: { new: FLOWMAP_PROPS }
         DEFAULT: { new: FLOWMAP_EMPTYKEY }
       DEFAULT: { new: FLOWMAP_PROPS }
-    
-    NEWFLOWMAP_TAG:
-      DEFAULT: { new: FLOWMAP_EMPTYKEY }
     
     NEWFLOWMAP_TAG_SPC:
       WS: { new: NEWFLOWMAP_TAG_SPC }

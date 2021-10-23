@@ -162,20 +162,52 @@ FLOWSEQ:
 
   ALIAS: { match: cb_send_flow_alias, new: FLOWSEQ_NEXT }
 
-  PLAIN: { match: cb_flow_plain, new: FLOWSEQ_NEXT }
+  PLAIN:
+    match: cb_start_plain
+    EOL:
+      match: cb_send_scalar
+      new: FLOWSEQ_NEXT
+    DEFAULT:
+      new: FLOWSEQ_MAYBE_KEY
   PLAIN_MULTI: { match: cb_send_plain_multi, new: FLOWSEQ_NEXT }
 
-  QUOTED: { match: cb_flowkey_quoted, new: FLOWSEQ_NEXT }
+  QUOTED:
+    match: cb_take_quoted
+    EOL:
+      match: cb_send_scalar
+      new: FLOWSEQ_NEXT
+    DEFAULT:
+      new: FLOWSEQ_MAYBE_KEY
   QUOTED_MULTILINE: { match: cb_quoted_multiline, new: FLOWSEQ_NEXT }
+
+  COLON:
+    WS:
+      match: cb_insert_empty_implicit_flowseq_map
+      new: RULE_FULLFLOWSCALAR
+    EOL:
+      match: cb_insert_empty_implicit_flowseq_map
+      new: RULE_FULLFLOWSCALAR
 
 FLOWSEQ_PROPS:
   FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
   FLOWMAP_START: { match: cb_start_flowmap, new: NEWFLOWMAP }
 
-  PLAIN: { match: cb_flow_plain, new: FLOWSEQ_NEXT }
+  PLAIN:
+    match: cb_start_plain
+    EOL:
+      match: cb_send_scalar
+      new: FLOWSEQ_NEXT
+    DEFAULT:
+      new: FLOWSEQ_MAYBE_KEY
   PLAIN_MULTI: { match: cb_send_plain_multi, new: FLOWSEQ_NEXT }
 
-  QUOTED: { match: cb_flowkey_quoted, new: FLOWSEQ_NEXT }
+  QUOTED:
+    match: cb_take_quoted
+    EOL:
+      match: cb_send_scalar
+      new: FLOWSEQ_NEXT
+    DEFAULT:
+      new: FLOWSEQ_MAYBE_KEY
   QUOTED_MULTILINE: { match: cb_quoted_multiline, new: FLOWSEQ_NEXT }
 
   FLOW_COMMA:
@@ -184,6 +216,14 @@ FLOWSEQ_PROPS:
   FLOWSEQ_END:
     match: cb_empty_flowseq_end
     return: 1
+
+  COLON:
+    WS:
+      match: cb_insert_empty_implicit_flowseq_map
+      new: RULE_FULLFLOWSCALAR
+    EOL:
+      match: cb_insert_empty_implicit_flowseq_map
+      new: RULE_FULLFLOWSCALAR
 
 FLOWSEQ_EMPTY:
   FLOW_COMMA:
@@ -203,6 +243,22 @@ FLOWSEQ_NEXT:
   FLOWSEQ_END:
     match: cb_end_flowseq
     return: 1
+
+FLOWSEQ_MAYBE_KEY:
+  WS: { new: FLOWSEQ_MAYBE_KEY }
+
+  COLON:
+    WS:
+      match: cb_insert_implicit_flowseq_map
+      new: RULE_FULLFLOWSCALAR
+    EOL:
+      match: cb_insert_implicit_flowseq_map
+      new: RULE_FULLFLOWSCALAR
+    DEFAULT:
+      match: cb_insert_implicit_flowseq_map
+      new: RULE_FULLFLOWSCALAR
+  DEFAULT:
+    new: FLOWSEQ_NEXT
 
 FLOWMAP:
   FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
