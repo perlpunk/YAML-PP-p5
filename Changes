@@ -1,5 +1,9 @@
 Revision history for Perl module YAML::PP
 
+0.029 2021-10-25 00:02:53+02:00
+
+    - Fix basic implicit mappings in flow sequences, e.g. [a, b: c, d]
+
 0.028 2021-10-21 22:00:36+02:00
 
     - Fix empty values with properties in flow mappings and sequences
