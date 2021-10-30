@@ -411,7 +411,19 @@ NEWFLOWMAP_TAG_SPC:
 NEWFLOWMAP:
   EOL: { new: NEWFLOWMAP }
   WS: { new: NEWFLOWMAP }
-  QUESTION: { match: cb_flow_question, new: FLOWMAP }
+  QUESTION: { match: cb_flow_question, new: FLOWMAP_EXPLICIT_KEY }
+  DEFAULT: { new: FLOWMAP }
+
+
+FLOWMAP_EXPLICIT_KEY:
+  WS: { new: FLOWMAP_EXPLICIT_KEY }
+  EOL: { new: FLOWMAP_EXPLICIT_KEY }
+  FLOWMAP_END:
+    match: cb_end_empty_flowmap_key_value
+    return: 1
+  FLOW_COMMA:
+    match: cb_empty_flowmap_key_value
+    return: 1
   DEFAULT: { new: FLOWMAP }
 
 FLOWMAP:

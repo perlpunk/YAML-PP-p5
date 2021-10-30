@@ -1075,6 +1075,7 @@ sub cb_question {
 
 sub cb_flow_question {
     my ($self, $res) = @_;
+    $self->set_new_node(2);
 }
 
 sub cb_empty_complexvalue {
