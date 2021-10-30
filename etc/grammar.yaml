@@ -260,7 +260,7 @@ FLOWSEQ_MAYBE_KEY:
   DEFAULT:
     new: FLOWSEQ_NEXT
 
-FLOWMAP:
+FLOWMAP_CONTENT:
   FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
   FLOWMAP_START: { match: cb_start_flowmap, new: NEWFLOWMAP }
 
@@ -411,8 +411,12 @@ NEWFLOWMAP_TAG_SPC:
 NEWFLOWMAP:
   EOL: { new: NEWFLOWMAP }
   WS: { new: NEWFLOWMAP }
-  # TODO
-  QUESTION: { match: cb_flow_question, new: NEWFLOWMAP }
+  QUESTION: { match: cb_flow_question, new: FLOWMAP }
+  DEFAULT: { new: FLOWMAP }
+
+FLOWMAP:
+  EOL: { new: FLOWMAP }
+  WS: { new: FLOWMAP }
 
   ANCHOR:
     match: cb_anchor
@@ -437,7 +441,7 @@ NEWFLOWMAP:
       match: cb_empty_flow_mapkey
       new: RULE_FULLFLOWSCALAR
 
-  DEFAULT: { new: FLOWMAP }
+  DEFAULT: { new: FLOWMAP_CONTENT }
 
 NODETYPE_FLOWMAP:
   EOL: { new: NODETYPE_FLOWMAP }
