@@ -775,38 +775,47 @@ sub _remaining_tokens {
     return \@tokens;
 }
 
+# deprecated
 sub event_to_test_suite {
-    my ($self, $event) = @_;
-    if (ref $event eq 'ARRAY') {
-        return YAML::PP::Common::event_to_test_suite($event->[1]);
+    # uncoverable subroutine
+    my ($self, $event) = @_; # uncoverable statement
+    if (ref $event eq 'ARRAY') { # uncoverable statement
+        return YAML::PP::Common::event_to_test_suite($event->[1]); # uncoverable statement
     }
-    return YAML::PP::Common::event_to_test_suite($event);
+    return YAML::PP::Common::event_to_test_suite($event); # uncoverable statement
 }
 
 sub debug_events {
-    my ($self) = @_;
-    $self->note("EVENTS: ("
-        . join (' | ', @{ $_[0]->events }) . ')'
+    # uncoverable subroutine
+    my ($self) = @_; # uncoverable statement
+    $self->note("EVENTS: (" # uncoverable statement
+        . join (' | ', @{ $_[0]->events }) . ')' # uncoverable statement
     );
-    $self->debug_offset;
+    $self->debug_offset; # uncoverable statement
 }
 
 sub debug_offset {
-    my ($self) = @_;
+    # uncoverable subroutine
+    my ($self) = @_; # uncoverable statement
     $self->note(
         qq{OFFSET: (}
+        # uncoverable statement count:1
+        # uncoverable statement count:2
+        # uncoverable statement count:3
         . join (' | ', map { defined $_ ? sprintf "%-3d", $_ : '?' } @{ $_[0]->offset })
+        # uncoverable statement
         . qq/) level=@{[ $_[0]->level ]}]}/
     );
 }
 
 sub debug_yaml {
-    my ($self) = @_;
-    my $line = $self->lexer->line;
-    $self->note("LINE NUMBER: $line");
-    my $next_tokens = $self->lexer->next_tokens;
-    if (@$next_tokens) {
-        $self->debug_tokens($next_tokens);
+    # uncoverable subroutine
+    my ($self) = @_; # uncoverable statement
+    my $line = $self->lexer->line; # uncoverable statement
+    $self->note("LINE NUMBER: $line"); # uncoverable statement
+    my $next_tokens = $self->lexer->next_tokens; # uncoverable statement
+    if (@$next_tokens) { # uncoverable statement
+        $self->debug_tokens($next_tokens); # uncoverable statement
     }
 }
 
@@ -836,60 +845,64 @@ sub got {
 }
 
 sub _colorize_warn {
-    my ($self, $colors, $text) = @_;
-    require Term::ANSIColor;
-    warn Term::ANSIColor::colored($colors, $text), "\n";
+    # uncoverable subroutine
+    my ($self, $colors, $text) = @_; # uncoverable statement
+    require Term::ANSIColor; # uncoverable statement
+    warn Term::ANSIColor::colored($colors, $text), "\n"; # uncoverable statement
 }
 
 sub debug_event {
-    my ($self, $event) = @_;
-    my $str = YAML::PP::Common::event_to_test_suite($event);
-    require Term::ANSIColor;
-    warn Term::ANSIColor::colored(["magenta"], "============ $str"), "\n";
+    # uncoverable subroutine
+    my ($self, $event) = @_; # uncoverable statement
+    my $str = YAML::PP::Common::event_to_test_suite($event); # uncoverable statement
+    require Term::ANSIColor; # uncoverable statement
+    warn Term::ANSIColor::colored(["magenta"], "============ $str"), "\n"; # uncoverable statement
 }
 
 sub debug_rules {
-    my ($self, $rules) = @_;
-    local $Data::Dumper::Maxdepth = 2;
-    $self->note("RULES:");
-    for my $rule ($rules) {
-        if (ref $rule eq 'ARRAY') {
-            my $first = $rule->[0];
-            if (ref $first eq 'SCALAR') {
-                $self->info("-> $$first");
+    # uncoverable subroutine
+    my ($self, $rules) = @_; # uncoverable statement
+    local $Data::Dumper::Maxdepth = 2; # uncoverable statement
+    $self->note("RULES:"); # uncoverable statement
+    for my $rule ($rules) { # uncoverable statement
+        if (ref $rule eq 'ARRAY') { # uncoverable statement
+            my $first = $rule->[0]; # uncoverable statement
+            if (ref $first eq 'SCALAR') { # uncoverable statement
+                $self->info("-> $$first"); # uncoverable statement
             }
-            else {
-                if (ref $first eq 'ARRAY') {
-                    $first = $first->[0];
+            else { # uncoverable statement
+                if (ref $first eq 'ARRAY') { # uncoverable statement
+                    $first = $first->[0]; # uncoverable statement
                 }
-                $self->info("TYPE $first");
+                $self->info("TYPE $first"); # uncoverable statement
             }
         }
-        else {
-            eval {
-                my @keys = sort keys %$rule;
-                $self->info("@keys");
+        else { # uncoverable statement
+            eval { # uncoverable statement
+                my @keys = sort keys %$rule; # uncoverable statement
+                $self->info("@keys"); # uncoverable statement
             };
         }
     }
 }
 
 sub debug_tokens {
-    my ($self, $tokens) = @_;
-    $tokens ||= $self->tokens;
-    require Term::ANSIColor;
-    for my $token (@$tokens) {
-        my $type = Term::ANSIColor::colored(["green"],
-            sprintf "%-22s L %2d C %2d ",
-                $token->{name}, $token->{line}, $token->{column} + 1
+    # uncoverable subroutine
+    my ($self, $tokens) = @_; # uncoverable statement
+    $tokens ||= $self->tokens; # uncoverable statement
+    require Term::ANSIColor; # uncoverable statement
+    for my $token (@$tokens) { # uncoverable statement
+        my $type = Term::ANSIColor::colored(["green"], # uncoverable statement
+            sprintf "%-22s L %2d C %2d ", # uncoverable statement
+                $token->{name}, $token->{line}, $token->{column} + 1 # uncoverable statement
         );
-        local $Data::Dumper::Useqq = 1;
-        local $Data::Dumper::Terse = 1;
-        require Data::Dumper;
-        my $str = Data::Dumper->Dump([$token->{value}], ['str']);
-        chomp $str;
-        $str =~ s/(^.|.$)/Term::ANSIColor::colored(['blue'], $1)/ge;
-        warn "$type$str\n";
+        local $Data::Dumper::Useqq = 1; # uncoverable statement
+        local $Data::Dumper::Terse = 1; # uncoverable statement
+        require Data::Dumper; # uncoverable statement
+        my $str = Data::Dumper->Dump([$token->{value}], ['str']); # uncoverable statement
+        chomp $str; # uncoverable statement
+        $str =~ s/(^.|.$)/Term::ANSIColor::colored(['blue'], $1)/ge; # uncoverable statement
+        warn "$type$str\n"; # uncoverable statement
     }
 
 }
@@ -1253,20 +1266,6 @@ sub cb_end_flowmap_empty {
     $self->cb_empty_flowmap_value;
     $self->end_flow_mapping;
     $self->set_new_node(0);
-}
-
-sub cb_flow_plain {
-    my ($self, $token) = @_;
-    my $stack = $self->event_stack;
-    my $info = {
-        style => YAML_PLAIN_SCALAR_STYLE,
-        value => $token->{value},
-        offset => $token->{column},
-    };
-    if (@$stack and $stack->[-1]->[0] eq 'properties') {
-        $self->fetch_inline_properties($stack, $info);
-    }
-    $self->scalar_event($info);
 }
 
 sub cb_flowkey_plain {
