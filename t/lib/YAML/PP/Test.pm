@@ -262,8 +262,8 @@ sub parse_events {
     my @events;
     my $parser = YAML::PP::Parser->new(
         receiver => sub {
-            my ($self, @args) = @_;
-            push @events, YAML::PP::Parser->event_to_test_suite(\@args);
+            my ($self, $event, $info) = @_;
+            push @events, YAML::PP::Common::event_to_test_suite($info, { flow => 1 });
         },
     );
     eval {

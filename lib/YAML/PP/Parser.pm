@@ -548,7 +548,7 @@ sub start_flow_sequence {
 }
 
 sub start_flow_mapping {
-    my ($self, $offset) = @_;
+    my ($self, $offset, $implicit_flowseq_map) = @_;
     my $offsets = $self->offset;
     my $new_offset = $offsets->[-1];
     my $event_types = $self->events;
@@ -560,7 +560,7 @@ sub start_flow_mapping {
             $new_offset++;
         }
     }
-    push @{ $self->events }, 'FLOWMAP';
+    push @{ $self->events }, $implicit_flowseq_map ? 'IMAP' : 'FLOWMAP';
     push @{ $offsets }, $new_offset;
 
     my $event_stack = $self->event_stack;
@@ -592,9 +592,9 @@ sub end_flow_mapping {
 }
 
 sub start_mapping {
-    my ($self, $offset, $implicit_flowseq_map) = @_;
+    my ($self, $offset) = @_;
     my $offsets = $self->offset;
-    push @{ $self->events }, $implicit_flowseq_map ? 'IMAP' : 'MAP';
+    push @{ $self->events }, 'MAP';
     push @{ $offsets }, $offset;
     my $event_stack = $self->event_stack;
     my $info = { name => 'mapping_start_event' };
@@ -1345,7 +1345,7 @@ sub cb_insert_implicit_flowseq_map {
     my $stack = $self->event_stack;
     my $scalar = pop @$stack;
     my $info = $scalar->[1];
-    $self->start_mapping($info->{offset}, 1);
+    $self->start_flow_mapping($info->{offset}, 1);
     $self->scalar_event($info);
     $self->set_new_node(1);
 }
@@ -1355,7 +1355,7 @@ sub cb_insert_empty_implicit_flowseq_map {
     my $stack = $self->event_stack;
     my $scalar = pop @$stack;
     my $info = $scalar->[1];
-    $self->start_mapping($info->{offset}, 1);
+    $self->start_flow_mapping($info->{offset}, 1);
     $self->cb_empty_flowmap_value;
     $self->set_new_node(2);
 }

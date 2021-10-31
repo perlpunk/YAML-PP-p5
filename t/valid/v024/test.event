@@ -1,79 +1,79 @@
 +STR
 +DOC
 +SEQ
-+MAP
++MAP {}
 =VAL <tag:yaml.org,2002:str> :
 =VAL :
 =VAL :second key
 =VAL :
 -MAP
-+MAP
++MAP {}
 =VAL <tag:yaml.org,2002:str> :
 =VAL :
 -MAP
-+MAP
++MAP {}
 =VAL <tag:yaml.org,2002:str> :
 =VAL :
 -MAP
-+MAP
++MAP {}
 =VAL <tag:yaml.org,2002:str> :
 =VAL :
 -MAP
-+MAP
++MAP {}
 =VAL <tag:yaml.org,2002:str> :
 =VAL :
 -MAP
-+MAP
++MAP {}
 =VAL &anchor1 :
 =VAL :
 =VAL :second key
 =VAL :
 -MAP
-+MAP
++MAP {}
 =VAL &anchor2 :
 =VAL :
 -MAP
-+MAP
++MAP {}
 =VAL &anchor3 :
 =VAL :
 -MAP
-+MAP
++MAP {}
 =VAL &anchor4 :
 =VAL :
 -MAP
-+MAP
++MAP {}
 =VAL &anchor5 :
 =VAL :
 -MAP
-+MAP
++MAP {}
 =VAL &anchor6 <tag:yaml.org,2002:str> :
 =VAL :
 -MAP
-+MAP
++MAP {}
 =VAL &anchor7 <tag:yaml.org,2002:str> :
 =VAL :
 -MAP
-+MAP
++MAP {}
 =VAL &anchor8 <tag:yaml.org,2002:str> :
 =VAL :
 -MAP
-+MAP
++MAP {}
 =VAL &anchor9 <tag:yaml.org,2002:str> :
 =VAL :
 -MAP
-+MAP
++MAP {}
 =VAL &anchor10 <tag:yaml.org,2002:str> :
 =VAL :
 -MAP
-+MAP
++MAP {}
 =VAL &anchor11 <tag:yaml.org,2002:str> :
 =VAL :
 -MAP
-+MAP
++MAP {}
 =VAL &anchor12 <tag:yaml.org,2002:str> :
 =VAL :
 -MAP
-+MAP
++MAP {}
 =VAL &anchor13 <tag:yaml.org,2002:str> :
 =VAL :
 -MAP

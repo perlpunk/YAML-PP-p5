@@ -22,7 +22,7 @@ my $yts = "$Bin/../test-suite/yaml-test-suite-data";
 my @skip = qw/
     4FJ6 4ABK 87E4 8CWC 8UDB 9MMW
     CN3R CT4Q
-    FRK4 G5U8
+    FRK4
     L9U5 LQZ7 LX3P
     Q9WF QF4Y
 

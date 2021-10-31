@@ -20,7 +20,7 @@
 -MAP
 +MAP
 =VAL :b
-+SEQ
++SEQ []
 =VAL :c
 -SEQ
 -MAP

@@ -1,60 +1,60 @@
 +STR
 +DOC
 +SEQ
-+SEQ
++SEQ []
 =VAL <tag:yaml.org,2002:str> :
 =VAL :second value
 -SEQ
-+SEQ
++SEQ []
 =VAL <tag:yaml.org,2002:str> :
 -SEQ
-+SEQ
++SEQ []
 =VAL <tag:yaml.org,2002:str> :
 -SEQ
-+SEQ
++SEQ []
 =VAL <tag:yaml.org,2002:str> :
 -SEQ
-+SEQ
++SEQ []
 =VAL <tag:yaml.org,2002:str> :
 -SEQ
-+SEQ
++SEQ []
 =VAL &anchor1 :
 =VAL :second value
 -SEQ
-+SEQ
++SEQ []
 =VAL &anchor2 :
 -SEQ
-+SEQ
++SEQ []
 =VAL &anchor3 :
 -SEQ
-+SEQ
++SEQ []
 =VAL &anchor4 :
 -SEQ
-+SEQ
++SEQ []
 =VAL &anchor5 :
 -SEQ
-+SEQ
++SEQ []
 =VAL &anchor6 <tag:yaml.org,2002:str> :
 -SEQ
-+SEQ
++SEQ []
 =VAL &anchor7 <tag:yaml.org,2002:str> :
 -SEQ
-+SEQ
++SEQ []
 =VAL &anchor8 <tag:yaml.org,2002:str> :
 -SEQ
-+SEQ
++SEQ []
 =VAL &anchor9 <tag:yaml.org,2002:str> :
 -SEQ
-+SEQ
++SEQ []
 =VAL &anchor10 <tag:yaml.org,2002:str> :
 -SEQ
-+SEQ
++SEQ []
 =VAL &anchor11 <tag:yaml.org,2002:str> :
 -SEQ
-+SEQ
++SEQ []
 =VAL &anchor12 <tag:yaml.org,2002:str> :
 -SEQ
-+SEQ
++SEQ []
 =VAL &anchor13 <tag:yaml.org,2002:str> :
 -SEQ
 -SEQ
