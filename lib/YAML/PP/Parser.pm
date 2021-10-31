@@ -420,6 +420,9 @@ sub parse_tokens {
         }
         if ($eol) {
             unless ($self->lex_next_tokens) {
+                if ($rule_name eq 'DIRECTIVE') {
+                    $self->exception("Directive needs document start");
+                }
                 $self->end_document(1);
                 return 0;
             }
