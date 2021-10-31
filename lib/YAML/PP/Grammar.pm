@@ -75,6 +75,12 @@ $GRAMMAR = {
       'new' => 'DOCUMENT_END'
     }
   },
+  'END_FLOW' => {
+    'EOL' => {
+      'match' => 'cb_end_outer_flow',
+      'return' => 1
+    }
+  },
   'FLOWMAP' => {
     'ANCHOR' => {
       'DEFAULT' => {
@@ -1797,8 +1803,8 @@ This is the Grammar in YAML
     
     
     FLOWMAP_EXPLICIT_KEY:
-      EOL: { new: FLOWMAP_EXPLICIT_KEY }
       WS: { new: FLOWMAP_EXPLICIT_KEY }
+      EOL: { new: FLOWMAP_EXPLICIT_KEY }
       FLOWMAP_END:
         match: cb_end_empty_flowmap_key_value
         return: 1
@@ -1845,6 +1851,10 @@ This is the Grammar in YAML
       FLOW_COMMA: { match: cb_flow_comma, new: NEWFLOWMAP }
       DEFAULT: { new: NEWFLOWMAP }
     
+    END_FLOW:
+      EOL:
+        match: cb_end_outer_flow
+        return: 1
     
     RULE_MAPKEY:
       QUESTION:

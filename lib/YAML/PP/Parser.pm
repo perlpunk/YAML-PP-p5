@@ -140,6 +140,7 @@ my %nodetypes = (
     DOC          => 'FULLNODE',
     DOC_END      => 'DOCUMENT_END',
     STR          => 'STREAM',
+    END_FLOW     => 'END_FLOW',
 );
 
 sub parse {
@@ -581,7 +582,12 @@ sub end_flow_sequence {
     pop @{ $self->offset };
     my $info = { name => 'sequence_end_event' };
     $self->callback->($self, $info->{name}, $info);
-    $event_types->[-1] = $next_event{ $event_types->[-1] };
+    if ($event_types->[-1] =~ m/^FLOW|^IMAP/) {
+        $event_types->[-1] = $next_event{ $event_types->[-1] };
+    }
+    else {
+        push @$event_types, 'END_FLOW';
+    }
 }
 
 sub end_flow_mapping {
@@ -591,6 +597,18 @@ sub end_flow_mapping {
     pop @{ $self->offset };
     my $info = { name => 'mapping_end_event' };
     $self->callback->($self, $info->{name}, $info);
+    if ($event_types->[-1] =~ m/^FLOW|^IMAP/) {
+        $event_types->[-1] = $next_event{ $event_types->[-1] };
+    }
+    else {
+        push @$event_types, 'END_FLOW';
+    }
+}
+
+sub cb_end_outer_flow {
+    my ($self) = @_;
+    my $event_types = $self->events;
+    pop @$event_types;
     $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
 

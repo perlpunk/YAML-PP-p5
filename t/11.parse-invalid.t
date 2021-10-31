@@ -17,8 +17,6 @@ my @skip = qw/
     CXX2
 
     9KBC
-    P2EQ
-    62EZ
     S98Z
     T833
     5LLU

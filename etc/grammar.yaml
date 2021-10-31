@@ -464,6 +464,10 @@ NODETYPE_FLOWMAP:
   FLOW_COMMA: { match: cb_flow_comma, new: NEWFLOWMAP }
   DEFAULT: { new: NEWFLOWMAP }
 
+END_FLOW:
+  EOL:
+    match: cb_end_outer_flow
+    return: 1
 
 RULE_MAPKEY:
   QUESTION:
