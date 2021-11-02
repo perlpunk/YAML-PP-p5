@@ -71,9 +71,9 @@ pre.diff {
 <a href="test-suite.html">YAML Test Suite Test Cases</a>
 | <a href="schema-examples.html">Schema examples</a>
 | <a href="schemas.html">Schema comparison</a><hr>
-Generated with YAML::PP v0.024<br>
-<a href="#valid">Valid (249)</a><br>
-<a href="#invalid">Invalid (73)</a><br>
+Generated with YAML::PP v0.029<br>
+<a href="#valid">Valid (248)</a><br>
+<a href="#invalid">Invalid (74)</a><br>
 <h1><a name="valid">Valid</a></h1>
 <table class="highlight">
 <tr>
@@ -361,25 +361,22 @@ Generated with YAML::PP v0.024<br>
 <td style="max-width: 15em;" valign="top" >Tags:<br>duplicate-key, empty-key, mapping<br>
 <a href="https://github.com/yaml/yaml-test-suite/blob/master/test/2JQS.tml">View source</a><br>
 </td>
-<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="colon">:</span><span class="default"> </span><span class="default">a</span><span class="eol">
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="error"><span class="colon">:</span><span class="default"> </span><span class="default">a</span><span class="eol">
 </span><span class="colon">:</span><span class="default"> </span><span class="default">b</span><span class="eol">
 </span></pre>
-<pre></pre>
+<pre>Duplicate key &#39;&#39; at YAML/PP/Parser.pm line 61.
+ at YAML/PP/Loader.pm line 94.
+</pre>
 
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre>$doc1 = { &quot;&quot; =&gt; &quot;b&quot; }</pre>
+<pre></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre>Doc 1: {
-   &quot;&quot; : &quot;b&quot;
-}
-</pre>
+<pre></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre><span class="doc_start">---</span><span class="eol">
-</span><span class="singlequote">&#39;</span><span class="singlequote">&#39;</span><span class="colon">:</span><span class="default"> </span><span class="default">b</span><span class="eol">
-</span></pre>
+<pre></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
 <pre><span class="colon">:</span><span class="default"> </span><span class="default">a</span><span class="eol">
@@ -917,9 +914,9 @@ Doc 3: &quot;d e&quot;
 Column    : 17
 Expected  : EOL FLOWSEQ_END FLOW_COMMA WS
 Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;: d, e]]: 23\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -1841,14 +1838,14 @@ Doc 2: &quot;green&quot;
 </td>
 <td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="error"><span class="doc_start">---</span><span class="eol">
 </span><span class="anchor">&amp;mapping</span><span class="eol">
-</span><span class="anchor">&amp;key</span><span class="default"> </span><span class="flowseq_start">[</span><span class="default"> </span><span class="anchor">&amp;item</span><span class="default"> </span><span class="default">a</span><span class="error">,</span><span class="error"> </span><span class="error">b, c ]: value
+</span><span class="anchor">&amp;key</span><span class="default"> </span><span class="flowseq_start">[</span><span class="default"> </span><span class="anchor">&amp;item</span><span class="default"> </span><span class="default">a</span><span class="flow_comma">,</span><span class="error"> </span><span class="error">b, c ]: value
 </span></pre>
 <pre>Line      : 3
-Column    : 15
+Column    : 16
 Message   : A node can only have one anchor
-Where     : YAML/PP/Parser.pm line 678
-YAML      : &quot;, b, c ]: value\n&quot;
-  at YAML/PP/Loader.pm line 92.
+Where     : YAML/PP/Parser.pm line 683
+YAML      : &quot; b, c ]: value\n&quot;
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -3148,31 +3145,36 @@ Doc 2: {
 <td style="max-width: 15em;" valign="top" >Tags:<br>flow, mapping, sequence, spec<br>
 <a href="https://github.com/yaml/yaml-test-suite/blob/master/test/87E4.tml">View source</a><br>
 </td>
-<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="error"><span class="singlequote">&#39;</span><span class="singlequoted">implicit block key</span><span class="singlequote">&#39;</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="flowseq_start">[</span><span class="eol">
-</span><span class="default">  </span><span class="singlequote">&#39;</span><span class="singlequoted">implicit flow key</span><span class="singlequote">&#39;</span><span class="default"> </span><span class="error">:</span><span class="error"> </span><span class="error">value,
- ]
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="singlequote">&#39;</span><span class="singlequoted">implicit block key</span><span class="singlequote">&#39;</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="flowseq_start">[</span><span class="eol">
+</span><span class="default">  </span><span class="singlequote">&#39;</span><span class="singlequoted">implicit flow key</span><span class="singlequote">&#39;</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="flow_comma">,</span><span class="eol">
+</span><span class="default"> </span><span class="flowseq_end">]</span><span class="eol">
 </span></pre>
-<pre>Line      : 2
-Column    : 23
-Expected  : EOL FLOWSEQ_END FLOW_COMMA WS
-Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
-YAML      : &quot;: value,\n&quot;
-  at YAML/PP/Loader.pm line 92.
-</pre>
+<pre></pre>
 
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre>$doc1 = { &quot;implicit block key&quot; =&gt; [{ &quot;implicit flow key&quot; =&gt; &quot;value&quot; }] }</pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre>Doc 1: {
+   &quot;implicit block key&quot; : [
+      {
+         &quot;implicit flow key&quot; : &quot;value&quot;
+      }
+   ]
+}
+</pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="plainkey">implicit block key</span><span class="colon">:</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="plainkey">implicit flow key</span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="eol">
+</span></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre><span class="singlequote">&#39;</span><span class="singlequoted">implicit block key</span><span class="singlequote">&#39;</span><span class="colon">:</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="singlequote">&#39;</span><span class="singlequoted">implicit flow key</span><span class="singlequote">&#39;</span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="eol">
+</span></pre>
 </td>
 </tr>
 <tr>
@@ -3188,9 +3190,9 @@ YAML      : &quot;: value,\n&quot;
 <pre>Line      : 2
 Column    : 25
 Message   : Invalid plain scalar
-Where     : YAML/PP/Lexer.pm line 361
+Where     : YAML/PP/Lexer.pm line 366
 YAML      : &quot;::: value&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -3359,36 +3361,57 @@ YAML      : &quot;::: value&quot;
 <td style="max-width: 15em;" valign="top" >Tags:<br>flow, sequence, spec<br>
 <a href="https://github.com/yaml/yaml-test-suite/blob/master/test/8UDB.tml">View source</a><br>
 </td>
-<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="error"><span class="flowseq_start">[</span><span class="eol">
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="flowseq_start">[</span><span class="eol">
 </span><span class="doublequote">&quot;</span><span class="doublequoted">double</span><span class="eol">
 </span><span class="default"> </span><span class="doublequoted">quoted</span><span class="doublequote">&quot;</span><span class="flow_comma">,</span><span class="default"> </span><span class="singlequote">&#39;</span><span class="singlequoted">single</span><span class="eol">
 </span><span class="default">           </span><span class="singlequoted">quoted</span><span class="singlequote">&#39;</span><span class="flow_comma">,</span><span class="eol">
 </span><span class="default">plain</span><span class="eol">
 </span><span class="indent"> </span><span class="default">text</span><span class="flow_comma">,</span><span class="default"> </span><span class="flowseq_start">[</span><span class="default"> </span><span class="default">nested</span><span class="default"> </span><span class="flowseq_end">]</span><span class="flow_comma">,</span><span class="eol">
-</span><span class="default">single</span><span class="error">:</span><span class="error"> </span><span class="error">pair,
-]
+</span><span class="plainkey">single</span><span class="colon">:</span><span class="default"> </span><span class="default">pair</span><span class="flow_comma">,</span><span class="eol">
+</span><span class="flowseq_end">]</span><span class="eol">
 </span></pre>
-<pre>Line      : 7
-Column    : 7
-Expected  : EOL FLOWSEQ_END FLOW_COMMA WS
-Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
-YAML      : &quot;: pair,\n&quot;
-  at YAML/PP/Loader.pm line 92.
-</pre>
+<pre></pre>
 
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre>$doc1 = [
+  &quot;double quoted&quot;,
+  &quot;single quoted&quot;,
+  &quot;plain text&quot;,
+  [&quot;nested&quot;],
+  { single =&gt; &quot;pair&quot; },
+]</pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre>Doc 1: [
+   &quot;double quoted&quot;,
+   &quot;single quoted&quot;,
+   &quot;plain text&quot;,
+   [
+      &quot;nested&quot;
+   ],
+   {
+      &quot;single&quot; : &quot;pair&quot;
+   }
+]
+</pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">double quoted</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">single quoted</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">plain text</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="dash">-</span><span class="default"> </span><span class="default">nested</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="plainkey">single</span><span class="colon">:</span><span class="default"> </span><span class="default">pair</span><span class="eol">
+</span></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre><span class="dash">-</span><span class="default"> </span><span class="doublequote">&quot;</span><span class="doublequoted">double quoted</span><span class="doublequote">&quot;</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="singlequote">&#39;</span><span class="singlequoted">single quoted</span><span class="singlequote">&#39;</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="default">plain text</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="dash">-</span><span class="default"> </span><span class="default">nested</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="plainkey">single</span><span class="colon">:</span><span class="default"> </span><span class="default">pair</span><span class="eol">
+</span></pre>
 </td>
 </tr>
 <tr>
@@ -3875,17 +3898,17 @@ Doc 8: &quot;value11&quot;
 <td style="max-width: 15em;" valign="top" >Tags:<br>flow, mapping, sequence<br>
 <a href="https://github.com/yaml/yaml-test-suite/blob/master/test/9MMW.tml">View source</a><br>
 </td>
-<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="error"><span class="dash">-</span><span class="default"> </span><span class="flowseq_start">[</span><span class="default"> </span><span class="default">YAML</span><span class="default"> </span><span class="error">:</span><span class="error"> </span><span class="error">separate ]
-- [ &quot;JSON like&quot;:adjacent ]
-- [ {JSON: like}:adjacent ]
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="error"><span class="dash">-</span><span class="default"> </span><span class="flowseq_start">[</span><span class="default"> </span><span class="plainkey">YAML</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="default">separate</span><span class="default"> </span><span class="flowseq_end">]</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="flowseq_start">[</span><span class="default"> </span><span class="doublequote">&quot;</span><span class="doublequoted">JSON like</span><span class="doublequote">&quot;</span><span class="colon">:</span><span class="default">adjacent</span><span class="default"> </span><span class="flowseq_end">]</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="flowseq_start">[</span><span class="default"> </span><span class="flowmap_start">{</span><span class="plainkey">JSON</span><span class="colon">:</span><span class="default"> </span><span class="default">like</span><span class="flowmap_end">}</span><span class="error">:adjacent</span><span class="error"> </span><span class="error">]</span><span class="error">
 </span></pre>
-<pre>Line      : 1
-Column    : 10
+<pre>Line      : 3
+Column    : 17
 Expected  : EOL FLOWSEQ_END FLOW_COMMA WS
-Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
-YAML      : &quot;: separate ]\n&quot;
-  at YAML/PP/Loader.pm line 92.
+Got       : PLAIN
+Where     : YAML/PP/Parser.pm line 391
+YAML      : &quot;:adjacent ]&quot;
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -4699,30 +4722,40 @@ Doc 2: &quot;bar&quot;
 <td style="max-width: 15em;" valign="top" >Tags:<br>empty-key, flow, sequence<br>
 <a href="https://github.com/yaml/yaml-test-suite/blob/master/test/CFD4.tml">View source</a><br>
 </td>
-<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="error"><span class="dash">-</span><span class="default"> </span><span class="flowseq_start">[</span><span class="default"> </span><span class="error">:</span><span class="error"> </span><span class="error">empty key ]
-- [: another empty key]
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="dash">-</span><span class="default"> </span><span class="flowseq_start">[</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="default">empty key</span><span class="default"> </span><span class="flowseq_end">]</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="flowseq_start">[</span><span class="colon">:</span><span class="default"> </span><span class="default">another empty key</span><span class="flowseq_end">]</span><span class="eol">
 </span></pre>
-<pre>Line      : 1
-Column    : 5
-Expected  : ALIAS FLOWMAP_START FLOWSEQ_START PLAIN PLAIN_MULTI QUOTED QUOTED_MULTILINE
-Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
-YAML      : &quot;: empty key ]\n&quot;
-  at YAML/PP/Loader.pm line 92.
-</pre>
+<pre></pre>
 
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre>$doc1 = [[{ &quot;&quot; =&gt; &quot;empty key&quot; }], [{ &quot;&quot; =&gt; &quot;another empty key&quot; }]]</pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre>Doc 1: [
+   [
+      {
+         &quot;&quot; : &quot;empty key&quot;
+      }
+   ],
+   [
+      {
+         &quot;&quot; : &quot;another empty key&quot;
+      }
+   ]
+]
+</pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="dash">-</span><span class="default"> </span><span class="singlequote">&#39;</span><span class="singlequote">&#39;</span><span class="colon">:</span><span class="default"> </span><span class="default">empty key</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="dash">-</span><span class="default"> </span><span class="singlequote">&#39;</span><span class="singlequote">&#39;</span><span class="colon">:</span><span class="default"> </span><span class="default">another empty key</span><span class="eol">
+</span></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre><span class="dash">-</span><span class="default"> </span><span class="dash">-</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="default">empty key</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="dash">-</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="default">another empty key</span><span class="eol">
+</span></pre>
 </td>
 </tr>
 <tr>
@@ -4732,34 +4765,51 @@ YAML      : &quot;: empty key ]\n&quot;
 <td style="max-width: 15em;" valign="top" >Tags:<br>anchor, flow, mapping, sequence<br>
 <a href="https://github.com/yaml/yaml-test-suite/blob/master/test/CN3R.tml">View source</a><br>
 </td>
-<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="error"><span class="anchor">&amp;flowseq</span><span class="default"> </span><span class="flowseq_start">[</span><span class="eol">
-</span><span class="default"> </span><span class="default">a</span><span class="error">:</span><span class="error"> </span><span class="error">b,
- &amp;c c: d,
- { &amp;e e: f },
- &amp;g { g: h }
-]
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="anchor">&amp;flowseq</span><span class="default"> </span><span class="flowseq_start">[</span><span class="eol">
+</span><span class="default"> </span><span class="plainkey">a</span><span class="colon">:</span><span class="default"> </span><span class="default">b</span><span class="flow_comma">,</span><span class="eol">
+</span><span class="default"> </span><span class="anchor">&amp;c</span><span class="default"> </span><span class="plainkey">c</span><span class="colon">:</span><span class="default"> </span><span class="default">d</span><span class="flow_comma">,</span><span class="eol">
+</span><span class="default"> </span><span class="flowmap_start">{</span><span class="default"> </span><span class="anchor">&amp;e</span><span class="default"> </span><span class="plainkey">e</span><span class="colon">:</span><span class="default"> </span><span class="default">f</span><span class="default"> </span><span class="flowmap_end">}</span><span class="flow_comma">,</span><span class="eol">
+</span><span class="default"> </span><span class="anchor">&amp;g</span><span class="default"> </span><span class="flowmap_start">{</span><span class="default"> </span><span class="plainkey">g</span><span class="colon">:</span><span class="default"> </span><span class="default">h</span><span class="default"> </span><span class="flowmap_end">}</span><span class="eol">
+</span><span class="flowseq_end">]</span><span class="eol">
 </span></pre>
-<pre>Line      : 2
-Column    : 3
-Expected  : EOL FLOWSEQ_END FLOW_COMMA WS
-Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
-YAML      : &quot;: b,\n&quot;
-  at YAML/PP/Loader.pm line 92.
-</pre>
+<pre></pre>
 
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre>$doc1 = [{ a =&gt; &quot;b&quot; }, { c =&gt; &quot;d&quot; }, { e =&gt; &quot;f&quot; }, { g =&gt; &quot;h&quot; }]</pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre>Doc 1: [
+   {
+      &quot;a&quot; : &quot;b&quot;
+   },
+   {
+      &quot;c&quot; : &quot;d&quot;
+   },
+   {
+      &quot;e&quot; : &quot;f&quot;
+   },
+   {
+      &quot;g&quot; : &quot;h&quot;
+   }
+]
+</pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="plainkey">a</span><span class="colon">:</span><span class="default"> </span><span class="default">b</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="plainkey">c</span><span class="colon">:</span><span class="default"> </span><span class="default">d</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="plainkey">e</span><span class="colon">:</span><span class="default"> </span><span class="default">f</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="plainkey">g</span><span class="colon">:</span><span class="default"> </span><span class="default">h</span><span class="eol">
+</span></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre><span class="anchor">&amp;flowseq</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="plainkey">a</span><span class="colon">:</span><span class="default"> </span><span class="default">b</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="anchor">&amp;c</span><span class="default"> </span><span class="plainkey">c</span><span class="colon">:</span><span class="default"> </span><span class="default">d</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="flowmap_start">{</span><span class="anchor">&amp;e</span><span class="default"> </span><span class="plainkey">e</span><span class="colon">:</span><span class="default"> </span><span class="default">f</span><span class="flowmap_end">}</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="anchor">&amp;g</span><span class="default"> </span><span class="flowmap_start">{</span><span class="plainkey">g</span><span class="colon">:</span><span class="default"> </span><span class="default">h</span><span class="flowmap_end">}</span><span class="eol">
+</span></pre>
 </td>
 </tr>
 <tr>
@@ -4809,11 +4859,11 @@ YAML      : &quot;: b,\n&quot;
 </span></pre>
 <pre>Line      : 2
 Column    : 1
-Expected  : ALIAS FLOWMAP_START FLOWSEQ_START PLAIN PLAIN_MULTI QUOTED QUOTED_MULTILINE
+Expected  : ALIAS COLON FLOWMAP_START FLOWSEQ_START PLAIN PLAIN_MULTI QUOTED QUOTED_MULTILINE
 Got       : QUESTION
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;? foo\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -5326,7 +5376,7 @@ YAML      : &quot;? foo\n&quot;
 </span></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre><span class="tag">!!map</span><span class="default"> </span><span class="flowmap_start">{</span><span class="plainkey">k</span><span class="colon">:</span><span class="default">  </span><span class="tag">!!seq</span><span class="default"> </span><span class="flowseq_start">[</span><span class="default">a</span><span class="flow_comma">,</span><span class="default"> </span><span class="tag">!!str</span><span class="default"> </span><span class="default">b</span><span class="flowseq_end">]</span><span class="flowmap_end">}</span><span class="eol">
+<pre><span class="tag">!!map</span><span class="default"> </span><span class="flowmap_start">{</span><span class="plainkey">k</span><span class="colon">:</span><span class="default">  </span><span class="tag">!!seq</span><span class="default">  </span><span class="flowseq_start">[</span><span class="default">a</span><span class="flow_comma">,</span><span class="default"> </span><span class="tag">!!str</span><span class="default"> </span><span class="default">b</span><span class="flowseq_end">]</span><span class="flowmap_end">}</span><span class="eol">
 </span></pre>
 </td>
 </tr>
@@ -5483,7 +5533,7 @@ YAML      : &quot;? foo\n&quot;
 </span></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre><span class="doc_start">---</span><span class="default"> </span><span class="flowmap_start">{</span><span class="plainkey">a</span><span class="colon">:</span><span class="default"> </span><span class="flowseq_start">[</span><span class="plainkey">b</span><span class="flow_comma">,</span><span class="default"> </span><span class="plainkey">c</span><span class="flow_comma">,</span><span class="default"> </span><span class="flowmap_start">{</span><span class="plainkey">d</span><span class="colon">:</span><span class="default"> </span><span class="flowseq_start">[</span><span class="default">e</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">f</span><span class="flowseq_end">]</span><span class="flowmap_end">}</span><span class="flowseq_end">]</span><span class="flowmap_end">}</span><span class="eol">
+<pre><span class="doc_start">---</span><span class="default"> </span><span class="flowmap_start">{</span><span class="plainkey">a</span><span class="colon">:</span><span class="default">  </span><span class="flowseq_start">[</span><span class="plainkey">b</span><span class="flow_comma">,</span><span class="default"> </span><span class="plainkey">c</span><span class="flow_comma">,</span><span class="default"> </span><span class="flowmap_start">{</span><span class="plainkey">d</span><span class="colon">:</span><span class="default">  </span><span class="flowseq_start">[</span><span class="default">e</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">f</span><span class="flowseq_end">]</span><span class="flowmap_end">}</span><span class="flowseq_end">]</span><span class="flowmap_end">}</span><span class="eol">
 </span></pre>
 </td>
 </tr>
@@ -5944,38 +5994,6 @@ YAML      : &quot;? foo\n&quot;
 </span><span class="plainkey">quoted</span><span class="colon">:</span><span class="default"> </span><span class="singlequote">&#39;</span><span class="singlequoted"> # Not a &#39;&#39;comment&#39;&#39;.</span><span class="singlequote">&#39;</span><span class="eol">
 </span><span class="plainkey">tie-fighter</span><span class="colon">:</span><span class="default"> </span><span class="singlequote">&#39;</span><span class="singlequoted">|\-*-/|</span><span class="singlequote">&#39;</span><span class="eol">
 </span></pre>
-</td>
-</tr>
-<tr>
-<td colspan="6" valign="top" style="background-color: #dddddd"><b>G5U8 - Plain dashes in flow sequence
-</b></td></tr>
-<tr>
-<td style="max-width: 15em;" valign="top" >Tags:<br>flow, sequence<br>
-<a href="https://github.com/yaml/yaml-test-suite/blob/master/test/G5U8.tml">View source</a><br>
-</td>
-<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="error"><span class="doc_start">---</span><span class="eol">
-</span><span class="dash">-</span><span class="default"> </span><span class="flowseq_start">[</span><span class="error">-, -]
-</span></pre>
-<pre>Line      : 2
-Column    : 4
-Message   : Invalid plain scalar
-Where     : YAML/PP/Lexer.pm line 361
-YAML      : &quot;-, -]&quot;
-  at YAML/PP/Loader.pm line 92.
-</pre>
-
-</td>
-<td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
-</td>
-<td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
-</td>
-<td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
-</td>
-<td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
 </td>
 </tr>
 <tr>
@@ -7188,31 +7206,36 @@ Doc 2: &quot;foo&quot;
 <td style="max-width: 15em;" valign="top" >Tags:<br>flow, mapping, spec<br>
 <a href="https://github.com/yaml/yaml-test-suite/blob/master/test/L9U5.tml">View source</a><br>
 </td>
-<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="error"><span class="plainkey">implicit block key</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="flowseq_start">[</span><span class="eol">
-</span><span class="default">  </span><span class="default">implicit flow key</span><span class="default"> </span><span class="error">:</span><span class="error"> </span><span class="error">value,
- ]
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="plainkey">implicit block key</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="flowseq_start">[</span><span class="eol">
+</span><span class="default">  </span><span class="plainkey">implicit flow key</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="flow_comma">,</span><span class="eol">
+</span><span class="default"> </span><span class="flowseq_end">]</span><span class="eol">
 </span></pre>
-<pre>Line      : 2
-Column    : 21
-Expected  : EOL FLOWSEQ_END FLOW_COMMA WS
-Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
-YAML      : &quot;: value,\n&quot;
-  at YAML/PP/Loader.pm line 92.
-</pre>
+<pre></pre>
 
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre>$doc1 = { &quot;implicit block key&quot; =&gt; [{ &quot;implicit flow key&quot; =&gt; &quot;value&quot; }] }</pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre>Doc 1: {
+   &quot;implicit block key&quot; : [
+      {
+         &quot;implicit flow key&quot; : &quot;value&quot;
+      }
+   ]
+}
+</pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="plainkey">implicit block key</span><span class="colon">:</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="plainkey">implicit flow key</span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="eol">
+</span></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre><span class="plainkey">implicit block key</span><span class="colon">:</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="plainkey">implicit flow key</span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="eol">
+</span></pre>
 </td>
 </tr>
 <tr>
@@ -7325,31 +7348,36 @@ YAML      : &quot;: value,\n&quot;
 <td style="max-width: 15em;" valign="top" >Tags:<br>flow, scalar, spec<br>
 <a href="https://github.com/yaml/yaml-test-suite/blob/master/test/LQZ7.tml">View source</a><br>
 </td>
-<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="error"><span class="doublequote">&quot;</span><span class="doublequoted">implicit block key</span><span class="doublequote">&quot;</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="flowseq_start">[</span><span class="eol">
-</span><span class="default">  </span><span class="doublequote">&quot;</span><span class="doublequoted">implicit flow key</span><span class="doublequote">&quot;</span><span class="default"> </span><span class="error">:</span><span class="error"> </span><span class="error">value,
- ]
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="doublequote">&quot;</span><span class="doublequoted">implicit block key</span><span class="doublequote">&quot;</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="flowseq_start">[</span><span class="eol">
+</span><span class="default">  </span><span class="doublequote">&quot;</span><span class="doublequoted">implicit flow key</span><span class="doublequote">&quot;</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="flow_comma">,</span><span class="eol">
+</span><span class="default"> </span><span class="flowseq_end">]</span><span class="eol">
 </span></pre>
-<pre>Line      : 2
-Column    : 23
-Expected  : EOL FLOWSEQ_END FLOW_COMMA WS
-Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
-YAML      : &quot;: value,\n&quot;
-  at YAML/PP/Loader.pm line 92.
-</pre>
+<pre></pre>
 
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre>$doc1 = { &quot;implicit block key&quot; =&gt; [{ &quot;implicit flow key&quot; =&gt; &quot;value&quot; }] }</pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre>Doc 1: {
+   &quot;implicit block key&quot; : [
+      {
+         &quot;implicit flow key&quot; : &quot;value&quot;
+      }
+   ]
+}
+</pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="plainkey">implicit block key</span><span class="colon">:</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="plainkey">implicit flow key</span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="eol">
+</span></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre><span class="doublequote">&quot;</span><span class="doublequoted">implicit block key</span><span class="doublequote">&quot;</span><span class="colon">:</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="doublequote">&quot;</span><span class="doublequoted">implicit flow key</span><span class="doublequote">&quot;</span><span class="colon">:</span><span class="default"> </span><span class="default">value</span><span class="eol">
+</span></pre>
 </td>
 </tr>
 <tr>
@@ -7365,9 +7393,9 @@ YAML      : &quot;: value,\n&quot;
 Column    : 7
 Expected  : DOC_END DOC_START EOL
 Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;: block\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -7625,7 +7653,7 @@ Doc 2: &quot;%!PS-Adobe-2.0 # Not the first line\n&quot;
 </span></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre><span class="doc_start">---</span><span class="default"> </span><span class="flowmap_start">{</span><span class="plainkey">a</span><span class="colon">:</span><span class="default"> </span><span class="flowseq_start">[</span><span class="plainkey">b</span><span class="flow_comma">,</span><span class="default"> </span><span class="plainkey">c</span><span class="flow_comma">,</span><span class="default"> </span><span class="flowmap_start">{</span><span class="plainkey">d</span><span class="colon">:</span><span class="default"> </span><span class="flowseq_start">[</span><span class="default">e</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">f</span><span class="flowseq_end">]</span><span class="flowmap_end">}</span><span class="flowseq_end">]</span><span class="flowmap_end">}</span><span class="eol">
+<pre><span class="doc_start">---</span><span class="default"> </span><span class="flowmap_start">{</span><span class="plainkey">a</span><span class="colon">:</span><span class="default">  </span><span class="flowseq_start">[</span><span class="plainkey">b</span><span class="flow_comma">,</span><span class="default"> </span><span class="plainkey">c</span><span class="flow_comma">,</span><span class="default"> </span><span class="flowmap_start">{</span><span class="plainkey">d</span><span class="colon">:</span><span class="default">  </span><span class="flowseq_start">[</span><span class="default">e</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">f</span><span class="flowseq_end">]</span><span class="flowmap_end">}</span><span class="flowseq_end">]</span><span class="flowmap_end">}</span><span class="eol">
 </span></pre>
 </td>
 </tr>
@@ -8589,9 +8617,9 @@ Doc 2: null
 Column    : 29
 Expected  : DOC_END DOC_START EOL
 Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;:&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -8615,31 +8643,32 @@ YAML      : &quot;:&quot;
 <td style="max-width: 15em;" valign="top" >Tags:<br>flow, mapping, spec<br>
 <a href="https://github.com/yaml/yaml-test-suite/blob/master/test/QF4Y.tml">View source</a><br>
 </td>
-<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="error"><span class="flowseq_start">[</span><span class="eol">
-</span><span class="default">foo</span><span class="error">:</span><span class="error"> </span><span class="error">bar
-]
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="flowseq_start">[</span><span class="eol">
+</span><span class="plainkey">foo</span><span class="colon">:</span><span class="default"> </span><span class="default">bar</span><span class="eol">
+</span><span class="flowseq_end">]</span><span class="eol">
 </span></pre>
-<pre>Line      : 2
-Column    : 4
-Expected  : EOL FLOWSEQ_END FLOW_COMMA WS
-Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
-YAML      : &quot;: bar\n&quot;
-  at YAML/PP/Loader.pm line 92.
-</pre>
+<pre></pre>
 
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre>$doc1 = [{ foo =&gt; &quot;bar&quot; }]</pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre>Doc 1: [
+   {
+      &quot;foo&quot; : &quot;bar&quot;
+   }
+]
+</pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre><span class="doc_start">---</span><span class="eol">
+</span><span class="dash">-</span><span class="default"> </span><span class="plainkey">foo</span><span class="colon">:</span><span class="default"> </span><span class="default">bar</span><span class="eol">
+</span></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre></pre>
+<pre><span class="dash">-</span><span class="default"> </span><span class="plainkey">foo</span><span class="colon">:</span><span class="default"> </span><span class="default">bar</span><span class="eol">
+</span></pre>
 </td>
 </tr>
 <tr>
@@ -8775,7 +8804,7 @@ YAML      : &quot;: bar\n&quot;
 </span></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre><span class="doc_start">---</span><span class="default"> </span><span class="flowmap_start">{</span><span class="plainkey">top1</span><span class="colon">:</span><span class="default"> </span><span class="flowseq_start">[</span><span class="plainkey">item1</span><span class="flow_comma">,</span><span class="default"> </span><span class="flowmap_start">{</span><span class="plainkey">key2</span><span class="colon">:</span><span class="default"> </span><span class="plainkey">value2</span><span class="flowmap_end">}</span><span class="flow_comma">,</span><span class="default"> </span><span class="plainkey">item3</span><span class="flowseq_end">]</span><span class="flow_comma">,</span><span class="default"> </span><span class="plainkey">top2</span><span class="colon">:</span><span class="default"> </span><span class="default">value2</span><span class="flowmap_end">}</span><span class="eol">
+<pre><span class="doc_start">---</span><span class="default"> </span><span class="flowmap_start">{</span><span class="plainkey">top1</span><span class="colon">:</span><span class="default">  </span><span class="flowseq_start">[</span><span class="plainkey">item1</span><span class="flow_comma">,</span><span class="default"> </span><span class="flowmap_start">{</span><span class="plainkey">key2</span><span class="colon">:</span><span class="default"> </span><span class="plainkey">value2</span><span class="flowmap_end">}</span><span class="flow_comma">,</span><span class="default"> </span><span class="plainkey">item3</span><span class="flowseq_end">]</span><span class="flow_comma">,</span><span class="default"> </span><span class="plainkey">top2</span><span class="colon">:</span><span class="default"> </span><span class="default">value2</span><span class="flowmap_end">}</span><span class="eol">
 </span></pre>
 </td>
 </tr>
@@ -9355,7 +9384,7 @@ Doc 3: {
 </span></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre><span class="flowmap_start">{</span><span class="plainkey">a</span><span class="colon">:</span><span class="default"> </span><span class="flowseq_start">[</span><span class="plainkey">b</span><span class="flow_comma">,</span><span class="default"> </span><span class="plainkey">c</span><span class="flowseq_end">]</span><span class="default"> </span><span class="flow_comma">,</span><span class="default"> </span><span class="flowseq_start">[</span><span class="plainkey">d</span><span class="flow_comma">,</span><span class="default"> </span><span class="plainkey">e</span><span class="flowseq_end">]</span><span class="colon">:</span><span class="default"> </span><span class="default">f</span><span class="flowmap_end">}</span><span class="eol">
+<pre><span class="flowmap_start">{</span><span class="plainkey">a</span><span class="colon">:</span><span class="default">  </span><span class="flowseq_start">[</span><span class="plainkey">b</span><span class="flow_comma">,</span><span class="default"> </span><span class="plainkey">c</span><span class="flowseq_end">]</span><span class="flow_comma">,</span><span class="default"> </span><span class="flowseq_start">[</span><span class="plainkey">d</span><span class="flow_comma">,</span><span class="default"> </span><span class="plainkey">e</span><span class="flowseq_end">]</span><span class="colon">:</span><span class="default"> </span><span class="default">f</span><span class="flowmap_end">}</span><span class="eol">
 </span></pre>
 </td>
 </tr>
@@ -10460,35 +10489,24 @@ Doc 2: null
 <td style="max-width: 15em;" valign="top" >Tags:<br>alias, complex-key, flow<br>
 <a href="https://github.com/yaml/yaml-test-suite/blob/master/test/X38W.tml">View source</a><br>
 </td>
-<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="flowmap_start">{</span><span class="default"> </span><span class="anchor">&amp;a</span><span class="default"> </span><span class="flowseq_start">[</span><span class="plainkey">a</span><span class="flow_comma">,</span><span class="default"> </span><span class="anchor">&amp;b</span><span class="default"> </span><span class="plainkey">b</span><span class="flowseq_end">]</span><span class="colon">:</span><span class="default"> </span><span class="alias">*b</span><span class="flow_comma">,</span><span class="default"> </span><span class="alias">*a</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="flowseq_start">[</span><span class="default">c</span><span class="flow_comma">,</span><span class="default"> </span><span class="alias">*b</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">d</span><span class="flowseq_end">]</span><span class="flowmap_end">}</span><span class="eol">
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="error"><span class="flowmap_start">{</span><span class="default"> </span><span class="anchor">&amp;a</span><span class="default"> </span><span class="flowseq_start">[</span><span class="plainkey">a</span><span class="flow_comma">,</span><span class="default"> </span><span class="anchor">&amp;b</span><span class="default"> </span><span class="plainkey">b</span><span class="flowseq_end">]</span><span class="colon">:</span><span class="default"> </span><span class="alias">*b</span><span class="flow_comma">,</span><span class="default"> </span><span class="alias">*a</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="flowseq_start">[</span><span class="default">c</span><span class="flow_comma">,</span><span class="default"> </span><span class="alias">*b</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">d</span><span class="flowseq_end">]</span><span class="flowmap_end">}</span><span class="error">
 </span></pre>
-<pre></pre>
+<pre>Duplicate key &#39;[&#39;a&#39;,&#39;b&#39;]&#39; at YAML/PP/Parser.pm line 61.
+ at YAML/PP/Loader.pm line 94.
+</pre>
 
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre>$doc1 = { &quot;[&#39;a&#39;,&#39;b&#39;]&quot; =&gt; [&quot;c&quot;, &quot;b&quot;, &quot;d&quot;] }</pre>
+<pre></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre>Doc 1: {
-   &quot;[&#39;a&#39;,&#39;b&#39;]&quot; : [
-      &quot;c&quot;,
-      &quot;b&quot;,
-      &quot;d&quot;
-   ]
-}
-</pre>
+<pre></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre><span class="doc_start">---</span><span class="eol">
-</span><span class="doublequote">&quot;</span><span class="doublequoted">[&#39;a&#39;,&#39;b&#39;]</span><span class="doublequote">&quot;</span><span class="colon">:</span><span class="eol">
-</span><span class="dash">-</span><span class="default"> </span><span class="default">c</span><span class="eol">
-</span><span class="dash">-</span><span class="default"> </span><span class="default">b</span><span class="eol">
-</span><span class="dash">-</span><span class="default"> </span><span class="default">d</span><span class="eol">
-</span></pre>
+<pre></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre><span class="default"> </span><span class="flowmap_start">{</span><span class="default"> </span><span class="anchor">&amp;a</span><span class="default"> </span><span class="flowseq_start">[</span><span class="plainkey">a</span><span class="flow_comma">,</span><span class="default"> </span><span class="anchor">&amp;b</span><span class="default"> </span><span class="plainkey">b</span><span class="flowseq_end">]</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="alias">*b</span><span class="default"> </span><span class="flow_comma">,</span><span class="default"> </span><span class="alias">*a</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="flowseq_start">[</span><span class="default">c</span><span class="default"> </span><span class="flow_comma">,</span><span class="default"> </span><span class="alias">*b</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">d</span><span class="flowseq_end">]</span><span class="flowmap_end">}</span><span class="eol">
-</span></pre>
+<pre><span class="flowmap_start">{</span><span class="default"> </span><span class="anchor">&amp;a</span><span class="default">  </span><span class="flowseq_start">[</span><span class="plainkey">a</span><span class="flow_comma">,</span><span class="default"> </span><span class="anchor">&amp;b</span><span class="default"> </span><span class="plainkey">b</span><span class="flowseq_end">]</span><span class="default"> </span><span class="colon">:</span><span class="default"> </span><span class="alias">*b</span><span class="default"> </span><span class="flow_comma">,</span><span class="default"> </span><span class="alias">*a</span><span class="default"> </span><span class="colon">:</span><span class="default">  </span><span class="flowseq_start">[</span><span class="default">c</span><span class="default"> </span><span class="flow_comma">,</span><span class="default"> </span><span class="alias">*b</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">d</span><span class="flowseq_end">]</span><span class="flowmap_end">}</span></pre>
 </td>
 </tr>
 <tr>
@@ -10982,7 +11000,7 @@ Doc 2: null
 </span></pre>
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
-<pre><span class="flowmap_start">{</span><span class="plainkey">key</span><span class="colon">:</span><span class="default"> </span><span class="flowseq_start">[</span><span class="flowseq_start">[</span><span class="flowseq_start">[</span><span class="default">value</span><span class="flowseq_end">]</span><span class="flowseq_end">]</span><span class="flowseq_end">]</span><span class="flowmap_end">}</span><span class="eol">
+<pre><span class="flowmap_start">{</span><span class="plainkey">key</span><span class="colon">:</span><span class="default"> </span><span class="flowseq_start">[</span><span class="flowseq_start">[</span><span class="default"> </span><span class="flowseq_start">[</span><span class="default">value</span><span class="flowseq_end">]</span><span class="flowseq_end">]</span><span class="flowseq_end">]</span><span class="flowmap_end">}</span><span class="eol">
 </span></pre>
 </td>
 </tr>
@@ -11054,9 +11072,9 @@ Doc 2: null
 Column    : 8
 Expected  : COLON WS
 Got       : EOL
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11088,9 +11106,9 @@ YAML      : &quot;&quot;
 Column    : 10
 Expected  : EOL
 Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;: x\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11122,9 +11140,9 @@ YAML      : &quot;: x\n&quot;
 Column    : 4
 Expected  : EOL
 Got       : WS
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot; invalid\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11157,9 +11175,9 @@ YAML      : &quot; invalid\n&quot;
 Column    : 1
 Expected  : ALIAS COLON DOC_END DOC_START EOL PLAIN QUESTION QUOTED
 Got       : WS
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;\tb:\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11190,9 +11208,9 @@ YAML      : &quot;\tb:\n&quot;
 Column    : 12
 Expected  : DOC_END DOC_START EOL
 Got       : WS
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot; ]&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11224,9 +11242,9 @@ YAML      : &quot; ]&quot;
 <pre>Line      : 4
 Column    : 3
 Message   : Expected MAP
-Where     : YAML/PP/Parser.pm line 237
+Where     : YAML/PP/Parser.pm line 238
 YAML      : &quot;- wrong\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11258,9 +11276,9 @@ YAML      : &quot;- wrong\n&quot;
 <pre>Line      : 4
 Column    : 1
 Message   : A node can only have one anchor
-Where     : YAML/PP/Parser.pm line 678
+Where     : YAML/PP/Parser.pm line 683
 YAML      : &quot;&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11290,9 +11308,9 @@ YAML      : &quot;&quot;
 <pre>Line      : 2
 Column    : 2
 Message   : Invalid quoted &lt;&quot;&gt; string
-Where     : YAML/PP/Lexer.pm line 732
+Where     : YAML/PP/Lexer.pm line 738
 YAML      : &quot;\\.\&quot;&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11325,9 +11343,9 @@ YAML      : &quot;\\.\&quot;&quot;
 <pre>Line      : 5
 Column    : 2
 Message   : Bad indendation in MAP
-Where     : YAML/PP/Parser.pm line 202
+Where     : YAML/PP/Parser.pm line 203
 YAML      : &quot;invalid\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11359,9 +11377,9 @@ YAML      : &quot;invalid\n&quot;
 <pre>Line      : 3
 Column    : 1
 Message   : Missing closing quote &lt;&quot;&gt; or invalid document marker
-Where     : YAML/PP/Lexer.pm line 639
+Where     : YAML/PP/Lexer.pm line 645
 YAML      : &quot;---&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11392,9 +11410,9 @@ YAML      : &quot;---&quot;
 Column    : 6
 Expected  : ALIAS BLOCK_SCALAR DOC_END FLOWMAP_START FLOWSEQ_START PLAIN PLAIN_MULTI QUOTED QUOTED_MULTILINE
 Got       : DASH
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;- a\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11460,8 +11478,8 @@ YAML      : &quot;- a\n&quot;
 <td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="error"><span class="doc_start">---</span><span class="eol">
 </span><span class="flowseq_start">[</span><span class="default"> </span><span class="flowseq_start">[</span><span class="default"> </span><span class="default">a</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">b</span><span class="flow_comma">,</span><span class="default"> </span><span class="default">c</span><span class="default"> </span><span class="flowseq_end">]</span><span class="eol">
 </span></pre>
-<pre>Unexpected end of flow context at YAML/PP/Parser.pm line 608.
- at YAML/PP/Loader.pm line 92.
+<pre>Unexpected end of flow context at YAML/PP/Parser.pm line 613.
+ at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11494,9 +11512,9 @@ YAML      : &quot;- a\n&quot;
 Column    : 2
 Expected  : DASH DOC_END DOC_START EOL
 Got       : PLAIN
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;invalid&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11528,9 +11546,9 @@ YAML      : &quot;invalid&quot;
 Column    : 1
 Expected  : ALIAS COLON DOC_END DOC_START EOL PLAIN QUESTION QUOTED
 Got       : QUOTED_MULTILINE
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;c d: 1\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11562,9 +11580,9 @@ YAML      : &quot;c d: 1\n&quot;
 Column    : 5
 Expected  : COLON WS
 Got       : EOL
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11595,9 +11613,9 @@ YAML      : &quot;&quot;
 <pre>Line      : 3
 Column    : 3
 Message   : Bad indendation in MAP
-Where     : YAML/PP/Parser.pm line 202
+Where     : YAML/PP/Parser.pm line 203
 YAML      : &quot;word2\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11629,9 +11647,9 @@ c]
 <pre>Line      : 3
 Column    : 1
 Message   : Bad indendation in FLOWSEQ
-Where     : YAML/PP/Parser.pm line 197
+Where     : YAML/PP/Parser.pm line 198
 YAML      : &quot;b,\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11664,9 +11682,9 @@ YAML      : &quot;b,\n&quot;
 Column    : 8
 Expected  : COLON WS
 Got       : EOL
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11699,9 +11717,9 @@ YAML      : &quot;&quot;
 Column    : 1
 Expected  : DOC_END DOC_START EOL
 Got       : TAG_DIRECTIVE
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;%TAG ! tag:example.com,2000:app/&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11731,9 +11749,9 @@ YAML      : &quot;%TAG ! tag:example.com,2000:app/&quot;
 <pre>Line      : 2
 Column    : 13
 Message   : Invalid plain scalar
-Where     : YAML/PP/Lexer.pm line 361
+Where     : YAML/PP/Lexer.pm line 366
 YAML      : &quot;#invalid&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11798,12 +11816,37 @@ YAML      : &quot;#invalid&quot;
 </span></pre>
 <pre>Line      : 2
 Column    : 3
-Expected  : ALIAS FLOWMAP_START FLOWSEQ_START PLAIN PLAIN_MULTI QUOTED QUOTED_MULTILINE
+Expected  : ALIAS COLON FLOWMAP_START FLOWSEQ_START PLAIN PLAIN_MULTI QUOTED QUOTED_MULTILINE
 Got       : FLOW_COMMA
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;, a, b, c ]\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
+
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+<td valign="top" style="max-width: 20em; overflow-x: auto;">
+<pre></pre>
+</td>
+</tr>
+<tr>
+<td colspan="6" valign="top" style="background-color: #dddddd"><b>9MMA - Directive by itself with no document
+</b></td></tr>
+<tr>
+<td style="max-width: 15em;" valign="top" >Tags:<br>directive, error<br>
+<a href="https://github.com/yaml/yaml-test-suite/blob/master/test/9MMA.tml">View source</a><br>
+</td>
+<td style="max-width: 20em; overflow-x: auto;" valign="top"><pre class="ok"><span class="yaml_directive">%YAML 1.2</span><span class="eol">
+</span></pre>
+<pre></pre>
 
 </td>
 <td valign="top" style="max-width: 20em; overflow-x: auto;">
@@ -11833,9 +11876,9 @@ YAML      : &quot;, a, b, c ]\n&quot;
 Column    : 1
 Expected  : DOC_START EOL RESERVED_DIRECTIVE TAG_DIRECTIVE YAML_DIRECTIVE
 Got       : DOC_END
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;...&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11867,9 +11910,9 @@ YAML      : &quot;...&quot;
 Column    : 1
 Expected  : DASH DOC_END DOC_START EOL
 Got       : PLAIN
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;invalid: x\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11901,9 +11944,9 @@ YAML      : &quot;invalid: x\n&quot;
 <pre>Line      : 4
 Column    : 8
 Message   : Bad indendation in MAP
-Where     : YAML/PP/Parser.pm line 202
+Where     : YAML/PP/Parser.pm line 203
 YAML      : &quot;c\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11934,9 +11977,9 @@ YAML      : &quot;c\n&quot;
 Column    : 1
 Expected  : DOC_END DOC_START EOL
 Got       : PLAIN
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;word2&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -11967,9 +12010,9 @@ YAML      : &quot;word2&quot;
 Column    : 2
 Expected  : DOC_END DOC_START EOL
 Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;: 42\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12001,9 +12044,9 @@ YAML      : &quot;: 42\n&quot;
 Column    : 3
 Expected  : EOL FLOWSEQ_END FLOW_COMMA WS
 Got       : PLAIN
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;word2 ]&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12033,9 +12076,9 @@ YAML      : &quot;word2 ]&quot;
 <pre>Line      : 2
 Column    : 1
 Message   : Missing closing quote &lt;&quot;&gt; at EOF
-Where     : YAML/PP/Lexer.pm line 619
+Where     : YAML/PP/Lexer.pm line 625
 YAML      : &quot;&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12064,11 +12107,11 @@ YAML      : &quot;&quot;
 </span></pre>
 <pre>Line      : 2
 Column    : 12
-Expected  : ALIAS FLOWMAP_START FLOWSEQ_START PLAIN PLAIN_MULTI QUOTED QUOTED_MULTILINE
+Expected  : ALIAS COLON FLOWMAP_START FLOWSEQ_START PLAIN PLAIN_MULTI QUOTED QUOTED_MULTILINE
 Got       : FLOW_COMMA
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;, ]&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12099,9 +12142,9 @@ YAML      : &quot;, ]&quot;
 <pre>Line      : 2
 Column    : 11
 Message   : Invalid plain scalar
-Where     : YAML/PP/Lexer.pm line 361
+Where     : YAML/PP/Lexer.pm line 366
 YAML      : &quot;#invalid&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12165,9 +12208,9 @@ YAML      : &quot;#invalid&quot;
 Column    : 1
 Expected  : ALIAS COLON DOC_END DOC_START EOL PLAIN QUESTION QUOTED
 Got       : QUOTED_MULTILINE
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;c d: 1\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12199,9 +12242,9 @@ YAML      : &quot;c d: 1\n&quot;
 Column    : 3
 Expected  : EOL FLOWSEQ_END FLOW_COMMA WS
 Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;: value ]\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12232,9 +12275,9 @@ YAML      : &quot;: value ]\n&quot;
 <pre>Line      : 3
 Column    : 2
 Message   : Expected MAP
-Where     : YAML/PP/Parser.pm line 237
+Where     : YAML/PP/Parser.pm line 238
 YAML      : &quot;wrong: 2\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12268,9 +12311,9 @@ scalar2
 Column    : 1
 Expected  : DOC_END DOC_START EOL
 Got       : YAML_DIRECTIVE
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;%YAML 1.2&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12301,9 +12344,9 @@ YAML      : &quot;%YAML 1.2&quot;
 Column    : 4
 Expected  : EOL
 Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;: v2\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12335,9 +12378,9 @@ YAML      : &quot;: v2\n&quot;
 Column    : 1
 Expected  : ALIAS COLON DOC_END DOC_START EOL PLAIN QUESTION QUOTED
 Got       : PLAIN_MULTI
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;c d: 1\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12371,9 +12414,9 @@ YAML      : &quot;c d: 1\n&quot;
 Column    : 8
 Expected  : WS
 Got       : EOL
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12404,9 +12447,9 @@ YAML      : &quot;&quot;
 Column    : 8
 Expected  : COLON WS
 Got       : EOL
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12438,9 +12481,9 @@ YAML      : &quot;&quot;
 Column    : 1
 Expected  : DASH DOC_END DOC_START EOL
 Got       : ANCHOR
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;&amp;node&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12472,9 +12515,9 @@ YAML      : &quot;&amp;node&quot;
 Column    : 6
 Expected  : WS
 Got       : EOL
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12504,9 +12547,9 @@ YAML      : &quot;&quot;
 <pre>Line      : 2
 Column    : 17
 Message   : Invalid quoted &lt;&quot;&gt; string
-Where     : YAML/PP/Lexer.pm line 732
+Where     : YAML/PP/Lexer.pm line 738
 YAML      : &quot;\\&#39; scalar\&quot;&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12538,9 +12581,9 @@ YAML      : &quot;\\&#39; scalar\&quot;&quot;
 Column    : 5
 Expected  : EOL
 Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;: key\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12572,9 +12615,9 @@ key3: &quot;quoted3&quot;
 Column    : 16
 Expected  : EOL
 Got       : WS
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot; no key: nor value\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12608,9 +12651,9 @@ YAML      : &quot; no key: nor value\n&quot;
 Column    : 1
 Expected  : DOC_END DOC_START EOL
 Got       : PLAIN
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;invalid item&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12641,9 +12684,9 @@ YAML      : &quot;invalid item&quot;
 Column    : 9
 Expected  : EOL WS
 Got       : FLOWMAP_START
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;{}tag scalar\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12674,9 +12717,9 @@ YAML      : &quot;{}tag scalar\n&quot;
 <pre>Line      : 3
 Column    : 2
 Message   : Expected MAP
-Where     : YAML/PP/Parser.pm line 237
+Where     : YAML/PP/Parser.pm line 238
 YAML      : &quot;key2: \&quot;bad indentation\&quot;\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12707,11 +12750,11 @@ YAML      : &quot;key2: \&quot;bad indentation\&quot;\n&quot;
 </span></pre>
 <pre>Line      : 2
 Column    : 1
-Expected  : ALIAS FLOWMAP_START FLOWSEQ_START PLAIN PLAIN_MULTI QUOTED QUOTED_MULTILINE
+Expected  : ALIAS COLON FLOWMAP_START FLOWSEQ_START PLAIN PLAIN_MULTI QUOTED QUOTED_MULTILINE
 Got       : DOC_START
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;--- ,&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12781,9 +12824,9 @@ key3: &quot;quoted3&quot;
 Column    : 16
 Expected  : EOL
 Got       : WS
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot; trailing content\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12815,9 +12858,9 @@ c&quot;
 <pre>Line      : 3
 Column    : 1
 Message   : Wrong indendation or missing closing quote &lt;&quot;&gt;
-Where     : YAML/PP/Lexer.pm line 649
+Where     : YAML/PP/Lexer.pm line 655
 YAML      : &quot;b&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12849,8 +12892,8 @@ YAML      : &quot;b&quot;
 --- !prefix!C
 e: f
 </span></pre>
-<pre>Found undefined tag handle &#39;!prefix!&#39; at YAML/PP/Parser.pm line 955.
- at YAML/PP/Loader.pm line 92.
+<pre>Found undefined tag handle &#39;!prefix!&#39; at YAML/PP/Parser.pm line 960.
+ at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12883,9 +12926,9 @@ e: f
 Column    : 1
 Expected  : ALIAS COLON DOC_END DOC_START EOL PLAIN QUESTION QUOTED
 Got       : YAML_DIRECTIVE
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;%YAML 1.2&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12917,9 +12960,9 @@ YAML      : &quot;%YAML 1.2&quot;
 <pre>Line      : 3
 Column    : 1
 Message   : Missing closing quote &lt;&#39;&gt; or invalid document marker
-Where     : YAML/PP/Lexer.pm line 639
+Where     : YAML/PP/Lexer.pm line 645
 YAML      : &quot;...&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -12950,9 +12993,9 @@ YAML      : &quot;...&quot;
 <pre>Line      : 2
 Column    : 10
 Message   : Invalid block scalar
-Where     : YAML/PP/Lexer.pm line 538
+Where     : YAML/PP/Lexer.pm line 544
 YAML      : &quot; first line&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -13015,8 +13058,8 @@ YAML      : &quot; first line&quot;
 </span><span class="yaml_directive">%YAML 1.2</span><span class="error">
 </span><span class="error">---
 </span></pre>
-<pre>Found duplicate YAML directive at YAML/PP/Loader.pm line 92.
- at YAML/PP/Loader.pm line 92.
+<pre>Found duplicate YAML directive at YAML/PP/Loader.pm line 94.
+ at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -13046,9 +13089,9 @@ YAML      : &quot; first line&quot;
 <pre>Line      : 2
 Column    : 12
 Message   : Parse error: Alias not allowed in this context
-Where     : YAML/PP/Parser.pm line 705
+Where     : YAML/PP/Parser.pm line 710
 YAML      : &quot;&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -13077,9 +13120,9 @@ YAML      : &quot;&quot;
 <pre>Line      : 1
 Column    : 13
 Message   : Invalid plain scalar
-Where     : YAML/PP/Lexer.pm line 361
+Where     : YAML/PP/Lexer.pm line 366
 YAML      : &quot;# invalid comment&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -13109,9 +13152,9 @@ YAML      : &quot;# invalid comment&quot;
 <pre>Line      : 2
 Column    : 10
 Message   : Parse error: Alias not allowed in this context
-Where     : YAML/PP/Parser.pm line 705
+Where     : YAML/PP/Parser.pm line 710
 YAML      : &quot; : value2\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -13141,9 +13184,9 @@ YAML      : &quot; : value2\n&quot;
 Column    : 9
 Expected  : ALIAS BLOCK_SCALAR COLON DOC_END DOC_START EOL FLOWMAP_START FLOWSEQ_START PLAIN PLAIN_MULTI QUESTION QUOTED QUOTED_MULTILINE WS
 Got       : DASH
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;- sequence entry\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -13211,9 +13254,9 @@ YAML      : &quot;- sequence entry\n&quot;
 Column    : 1
 Expected  : DASH DOC_END DOC_START EOL
 Got       : PLAIN
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;invalid&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -13244,9 +13287,9 @@ YAML      : &quot;invalid&quot;
 <pre>Line      : 3
 Column    : 4
 Message   : Bad indendation in MAP
-Where     : YAML/PP/Parser.pm line 202
+Where     : YAML/PP/Parser.pm line 203
 YAML      : &quot;key2: \&quot;bad indentation\&quot;\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -13276,9 +13319,9 @@ YAML      : &quot;key2: \&quot;bad indentation\&quot;\n&quot;
 Column    : 8
 Expected  : EOL WS
 Got       : FLOW_COMMA
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;, xxx\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -13311,9 +13354,9 @@ YAML      : &quot;, xxx\n&quot;
 <pre>Line      : 4
 Column    : 3
 Message   : Bad indendation in MAP
-Where     : YAML/PP/Parser.pm line 202
+Where     : YAML/PP/Parser.pm line 203
 YAML      : &quot;more spaces at the beginning\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -13343,9 +13386,9 @@ YAML      : &quot;more spaces at the beginning\n&quot;
 <pre>Line      : 1
 Column    : 9
 Message   : Invalid block scalar
-Where     : YAML/PP/Lexer.pm line 538
+Where     : YAML/PP/Lexer.pm line 544
 YAML      : &quot;# comment&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -13375,9 +13418,9 @@ YAML      : &quot;# comment&quot;
 Column    : 5
 Expected  : EOL
 Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;: c: d\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -13408,9 +13451,9 @@ YAML      : &quot;: c: d\n&quot;
 Column    : 7
 Expected  : EOL
 Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;: c\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -13440,9 +13483,9 @@ YAML      : &quot;: c\n&quot;
 <pre>Line      : 2
 Column    : 2
 Message   : Expected SEQ
-Where     : YAML/PP/Parser.pm line 237
+Where     : YAML/PP/Parser.pm line 238
 YAML      : &quot;- item1\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
@@ -13473,9 +13516,9 @@ YAML      : &quot;- item1\n&quot;
 Column    : 3
 Expected  : EOL FLOWSEQ_END FLOW_COMMA WS
 Got       : COLON
-Where     : YAML/PP/Parser.pm line 386
+Where     : YAML/PP/Parser.pm line 391
 YAML      : &quot;:value ]\n&quot;
-  at YAML/PP/Loader.pm line 92.
+  at YAML/PP/Loader.pm line 94.
 </pre>
 
 </td>
