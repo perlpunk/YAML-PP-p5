@@ -386,6 +386,11 @@ subtest 'create-tied-automatically' => sub {
     $inner4->{Y} = 3333;
     $inner4->{B} = 4444;
 
+    $outer->{new}->[4] = { key => 4 };
+    $outer->{new}->[5] = [55];
+    $outer->{newer} = { key => 6 };
+    $outer->{newest} = [66];
+
     my $dump = $yp->dump_string($outer);
     my $expected = <<'EOM';
 ---
@@ -410,6 +415,12 @@ new:
   A: 22
   Y: 33
   B: 44
+- key: 4
+- - 55
+newer:
+  key: 6
+newest:
+- 66
 EOM
     is $dump, $expected, 'dump - Newly created hashes keep order automatically';
 };

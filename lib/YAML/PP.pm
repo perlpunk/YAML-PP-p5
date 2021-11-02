@@ -228,10 +228,10 @@ use base qw/ Tie::StdHash /;
 use Scalar::Util qw/ reftype blessed /;
 
 sub TIEHASH {
-    my ($class) = @_;
+    my ($class, %args) = @_;
     my $self = bless {
-        keys => [],
-        data => {},
+        keys => [keys %args],
+        data => { %args },
     }, $class;
 }
 
@@ -243,10 +243,10 @@ sub STORE {
     }
     if (ref $val and not blessed($val)) {
         if (reftype($val) eq 'HASH' and not tied %$val) {
-            tie %$val, 'YAML::PP::Preserve::Hash'
+            tie %$val, 'YAML::PP::Preserve::Hash', %$val;
         }
         elsif (reftype($val) eq 'ARRAY' and not tied @$val) {
-            tie @$val, 'YAML::PP::Preserve::Array'
+            tie @$val, 'YAML::PP::Preserve::Array', @$val;
         }
     }
     $self->{data}->{ $key } = $val;
@@ -302,9 +302,9 @@ use base qw/ Tie::StdArray /;
 use Scalar::Util qw/ reftype blessed /;
 
 sub TIEARRAY {
-    my ($class) = @_;
+    my ($class, @items) = @_;
     my $self = bless {
-        data => [],
+        data => [@items],
     }, $class;
     return $self;
 }
@@ -322,10 +322,10 @@ sub _preserve {
     my ($val) = @_;
     if (ref $val and not blessed($val)) {
         if (reftype($val) eq 'HASH' and not tied %$val) {
-            tie %$val, 'YAML::PP::Preserve::Hash';
+            tie %$val, 'YAML::PP::Preserve::Hash', %$val;
         }
         elsif (reftype($val) eq 'ARRAY' and not tied @$val) {
-            tie @$val, 'YAML::PP::Preserve::Array';
+            tie @$val, 'YAML::PP::Preserve::Array', @$val;
         }
     }
     return $val;
