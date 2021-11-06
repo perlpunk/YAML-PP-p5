@@ -1090,6 +1090,8 @@ Still TODO:
 
 =item Implicit mapping in flow style sequences
 
+This is supported since 0.029 (except some not relevant cases):
+
     ---
     [ a, b, c: d ]
     # equals

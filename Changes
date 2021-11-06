@@ -1,5 +1,13 @@
 Revision history for Perl module YAML::PP
 
+0.029_001 2021-11-07 00:45:14+01:00
+
+    - preserve: Keep existing data (issue #44)
+    - Forbid directive without directive end marker
+    - Support explicit empty key/value pairs in flow mappings
+    - Enforce EOL after end of flow context
+    - Forbid multiple question marks in flow mappings
+
 0.029 2021-10-25 00:02:53+02:00
 
     - Fix basic implicit mappings in flow sequences, e.g. [a, b: c, d]
