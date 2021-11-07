@@ -1,6 +1,6 @@
 Revision history for Perl module YAML::PP
 
-0.029_001 2021-11-07 00:45:14+01:00
+0.030 2021-11-07 21:57:28+01:00
 
     - preserve: Keep existing data (issue #44)
     - Forbid directive without directive end marker
