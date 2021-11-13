@@ -1,0 +1,12 @@
++STR
++DOC
++SEQ
+=VAL "1 trailing\t tab
+=VAL "2 trailing\t tab
+=VAL "3 trailing\t tab
+=VAL "4 trailing\t tab
+=VAL "5 trailing tab
+=VAL "6 trailing tab
+-SEQ
+-DOC
+-STR

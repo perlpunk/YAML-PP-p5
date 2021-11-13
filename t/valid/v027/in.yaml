@@ -1,0 +1,12 @@
+- "1 trailing\t
+    tab"
+- "2 trailing\t  
+    tab"
+- "3 trailing\	
+    tab"
+- "4 trailing\	  
+    tab"
+- "5 trailing	
+    tab"
+- "6 trailing	  
+    tab"

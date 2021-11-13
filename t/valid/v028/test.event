@@ -1,0 +1,12 @@
++STR
++DOC
++SEQ
+=VAL "1 leading \ttab
+=VAL "2 leading \ttab
+=VAL "3 leading tab
+=VAL "4 leading \t  tab
+=VAL "5 leading \t  tab
+=VAL "6 leading tab
+-SEQ
+-DOC
+-STR

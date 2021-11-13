@@ -1,0 +1,9 @@
++STR
++DOC
++SEQ
+=VAL "1 inline\ttab
+=VAL "2 inline\ttab
+=VAL "3 inline\ttab
+-SEQ
+-DOC
+-STR

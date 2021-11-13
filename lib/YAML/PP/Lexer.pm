@@ -229,12 +229,12 @@ my %FLOW =                ( '{' => 1, '[' => 1, '}' => 1, ']' => 1, ',' => 1 );
 my %CONTEXT =             ( '"' => 1, "'" => 1, '>' => 1, '|' => 1 );
 
 my $RE_ESCAPES = qr{(?:
-    \\([ \\\/_0abefnrtvLNP"]) | \\x([0-9a-fA-F]{2})
+    \\([ \\\/_0abefnrtvLNP\t"]) | \\x([0-9a-fA-F]{2})
     | \\u([A-Fa-f0-9]{4}) | \\U([A-Fa-f0-9]{4,8})
 )}x;
 my %CONTROL = (
     '\\' => '\\', '/' => '/', n => "\n", t => "\t", r => "\r", b => "\b",
-    'a' => "\a", 'b' => "\b", 'e' => "\e", 'f' => "\f", 'v' => "\x0b",
+    'a' => "\a", 'b' => "\b", 'e' => "\e", 'f' => "\f", 'v' => "\x0b", "\t" => "\t",
     'P' => "\x{2029}", L => "\x{2028}", 'N' => "\x85",
     '0' => "\0", '_' => "\xa0", ' ' => ' ', q/"/ => q/"/,
 );
@@ -702,6 +702,7 @@ sub _read_quoted_tokens {
     my $quoted = '';
     my $decoded = '';
     my $token_name = $TOKEN_NAMES{ $first };
+    my $eol = '';
     if ($first eq "'") {
         my $regex = $REGEXES{SINGLEQUOTED};
         if ($$yaml =~ s/\A($regex)//) {
@@ -709,16 +710,15 @@ sub _read_quoted_tokens {
             $decoded .= $1;
             $decoded =~ s/''/'/g;
         }
+        unless (length $$yaml) {
+            if ($quoted =~ s/($RE_WS+)\z//) {
+                $eol = $1;
+                $decoded =~ s/($eol)\z//;
+            }
+        }
     }
     else {
-        ($quoted, $decoded) = $self->_read_doublequoted($yaml);
-    }
-    my $eol = '';
-    unless (length $$yaml) {
-        if ($quoted =~ s/($RE_WS+)\z//) {
-            $eol = $1;
-            $decoded =~ s/($eol)\z//;
-        }
+        ($quoted, $decoded, $eol) = $self->_read_doublequoted($yaml);
     }
     my $value = { value => $decoded, orig => $quoted };
 
@@ -748,9 +748,10 @@ sub _read_doublequoted {
     my ($self, $yaml) = @_;
     my $quoted = '';
     my $decoded = '';
+    my $eol = '';
     while (1) {
         my $last = 1;
-        if ($$yaml =~ s/\A([^"\\]+)//) {
+        if ($$yaml =~ s/\A([^"\\ \t]+)//) {
             $quoted .= $1;
             $decoded .= $1;
             $last = 0;
@@ -764,6 +765,18 @@ sub _read_doublequoted {
             $decoded .= $dec;
             $last = 0;
         }
+        if ($$yaml =~ s/\A([ \t]+)//) {
+            my $spaces = $1;
+            if (length $$yaml) {
+                $quoted .= $spaces;
+                $decoded .= $spaces;
+                $last = 0;
+            }
+            else {
+                $eol = $spaces;
+                last;
+            }
+        }
         if ($$yaml =~ s/\A(\\)\z//) {
             $quoted .= $1;
             $decoded .= $1;
@@ -771,7 +784,7 @@ sub _read_doublequoted {
         }
         last if $last;
     }
-    return ($quoted, $decoded);
+    return ($quoted, $decoded, $eol);
 }
 
 sub _fetch_next_tokens_directive {
