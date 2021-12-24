@@ -791,12 +791,14 @@ sub _fetch_next_tokens_directive {
     my ($self, $yaml, $eol) = @_;
     my @tokens;
 
+    my $trailing_ws = '';
     if ($$yaml =~ s/\A(\s*%YAML)//) {
         my $dir = $1;
         if ($$yaml =~ s/\A( )//) {
             $dir .= $1;
-            if ($$yaml =~ s/\A(1\.[12]$RE_WS*)//) {
+            if ($$yaml =~ s/\A(1\.[12])($RE_WS*)//) {
                 $dir .= $1;
+                $trailing_ws = $2;
                 push @tokens, ( YAML_DIRECTIVE => $dir, $self->line );
             }
             else {
@@ -821,11 +823,12 @@ sub _fetch_next_tokens_directive {
             return;
         }
     }
-    elsif ($$yaml =~ s/\A(\s*%TAG +(!$RE_NS_WORD_CHAR*!|!) +(tag:\S+|!$RE_URI_CHAR+)$RE_WS*)//) {
+    elsif ($$yaml =~ s/\A(\s*%TAG +(!$RE_NS_WORD_CHAR*!|!) +(tag:\S+|!$RE_URI_CHAR+))($RE_WS*)//) {
         push @tokens, ( TAG_DIRECTIVE => $1, $self->line );
         # TODO
         my $tag_alias = $2;
         my $tag_url = $3;
+        $trailing_ws = $4;
     }
     elsif ($$yaml =~ s/\A(\s*\A%(?:\w+).*)//) {
         push @tokens, ( RESERVED_DIRECTIVE => $1, $self->line );
@@ -845,6 +848,16 @@ sub _fetch_next_tokens_directive {
     }
     if (not length $$yaml) {
         push @tokens, ( EOL => $eol, $self->line );
+    }
+    elsif ($trailing_ws and $$yaml =~ s/\A(#.*)?\z//) {
+        push @tokens, ( EOL => "$trailing_ws$1$eol", $self->line );
+        $self->push_tokens(\@tokens);
+        return;
+    }
+    elsif ($$yaml =~ s/\A([ \t]+#.*)?\z//) {
+        push @tokens, ( EOL => "$1$eol", $self->line );
+        $self->push_tokens(\@tokens);
+        return;
     }
     else {
         push @tokens, ( 'Invalid directive' => $$yaml, $self->line );
