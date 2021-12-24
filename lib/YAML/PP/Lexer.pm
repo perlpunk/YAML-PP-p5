@@ -516,13 +516,13 @@ sub fetch_block {
     my $started = 0;
     my $set_indent = 0;
     my $chomp = '';
-    if ($$yaml =~ s/\A([1-9]\d*)([+-]?)//) {
+    if ($$yaml =~ s/\A([1-9])([+-]?)//) {
         push @tokens, ( BLOCK_SCALAR_INDENT => $1, $self->line );
         $set_indent = $1;
         $chomp = $2 if $2;
         push @tokens, ( BLOCK_SCALAR_CHOMP => $2, $self->line ) if $2;
     }
-    elsif ($$yaml =~ s/\A([+-])([1-9]\d*)?//) {
+    elsif ($$yaml =~ s/\A([+-])([1-9])?//) {
         push @tokens, ( BLOCK_SCALAR_CHOMP => $1, $self->line );
         $chomp = $1;
         push @tokens, ( BLOCK_SCALAR_INDENT => $2, $self->line ) if $2;
