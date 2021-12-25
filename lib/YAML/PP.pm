@@ -1293,7 +1293,7 @@ overview of which frameworks support which YAML features:
 
 L<https://github.com/yaml/yaml-test-suite>
 
-It contains about 230 test cases and expected parsing events and more.
+It contains almost 400 test cases and expected parsing events and more.
 There will be more tests coming. This test suite allows you to write parsers
 without turning the examples from the Specification into tests yourself.
 Also the examples aren't completely covering all cases - the test suite
@@ -1333,10 +1333,7 @@ and created a matrix view.
 
 L<https://github.com/perlpunk/yaml-test-matrix>
 
-You can find the latest build at L<https://matrix.yaml.io>
-
-As of this writing, the test matrix only contains valid test cases.
-Invalid ones will be added.
+You can find the latest build at L<https://matrix.yaml.info>
 
 =head1 CONTRIBUTORS
 

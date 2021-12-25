@@ -1,5 +1,16 @@
 Revision history for Perl module YAML::PP
 
+0.031 2021-12-25 23:43:19+01:00
+
+    - Fix several rare test cases:
+    - Support literal escaped tabs
+    - Allow only one digit for block scalar indent indicator
+    - Allow comments at the end of directives
+    - Match word boundary after '%YAML'
+    - Allow tabs and multiple spaces between directive elements
+    - Forbid lines starting with tabs in block mode
+    - After tabs no further indentation elements allowed
+
 0.030 2021-11-07 21:57:28+01:00
 
     - preserve: Keep existing data (issue #44)
