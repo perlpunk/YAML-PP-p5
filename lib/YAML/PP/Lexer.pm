@@ -42,6 +42,8 @@ sub context { return $_[0]->{context} }
 sub set_context { $_[0]->{context} = $_[1] }
 sub flowcontext { return $_[0]->{flowcontext} }
 sub set_flowcontext { $_[0]->{flowcontext} = $_[1] }
+sub block { return $_[0]->{block} }
+sub set_block { $_[0]->{block} = $_[1] }
 
 my $RE_WS = '[\t ]';
 my $RE_LB = '[\r\n]';
@@ -141,6 +143,7 @@ sub fetch_next_line {
         $self->set_next_line(undef);
         return;
     }
+    $self->set_block(1);
     $self->inc_line;
     $line =~ m/\A( *)([^\r\n]*)([\r\n]|\z)/ or die "Unexpected";
     $next_line = [ $1,  $2, $3 ];
@@ -278,7 +281,15 @@ sub _fetch_next_tokens {
         }
         elsif ($COLON_DASH_QUESTION{ $first }) {
             my $token_name = $TOKEN_NAMES{ $first };
-            if ($$yaml =~ s/\A\Q$first\E(?:($RE_WS+)|\z)//) {
+            if ($$yaml =~ s/\A\Q$first\E($RE_WS+|\z)//) {
+                if (not $self->flowcontext and not $self->block) {
+                    $self->push_tokens(\@tokens);
+                    $self->exception("Tabs can not be used for indentation");
+                }
+                my $after = $1;
+                if ($after =~ tr/\t//) {
+                    $self->set_block(0);
+                }
                 my $token_name = $TOKEN_NAMES{ $first };
                 push @tokens, ( $token_name => $first, $self->line );
                 if (not defined $1) {
