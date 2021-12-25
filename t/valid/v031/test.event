@@ -1,0 +1,11 @@
++STR
++DOC ---
+=VAL :a
+-DOC ...
++DOC ---
+=VAL :b
+-DOC ...
++DOC ---
+=VAL :c
+-DOC
+-STR

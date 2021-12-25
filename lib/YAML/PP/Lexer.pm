@@ -794,7 +794,7 @@ sub _fetch_next_tokens_directive {
     my $trailing_ws = '';
     if ($$yaml =~ s/\A(\s*%YAML\b)//) {
         my $dir = $1;
-        if ($$yaml =~ s/\A( )//) {
+        if ($$yaml =~ s/\A([ \t]+)//) {
             $dir .= $1;
             if ($$yaml =~ s/\A(1\.[12])($RE_WS*)//) {
                 $dir .= $1;
@@ -823,7 +823,7 @@ sub _fetch_next_tokens_directive {
             return;
         }
     }
-    elsif ($$yaml =~ s/\A(\s*%TAG +(!$RE_NS_WORD_CHAR*!|!) +(tag:\S+|!$RE_URI_CHAR+))($RE_WS*)//) {
+    elsif ($$yaml =~ s/\A(\s*%TAG[ \t]+(!$RE_NS_WORD_CHAR*!|!)[ \t]+(tag:\S+|!$RE_URI_CHAR+))($RE_WS*)//) {
         push @tokens, ( TAG_DIRECTIVE => $1, $self->line );
         # TODO
         my $tag_alias = $2;

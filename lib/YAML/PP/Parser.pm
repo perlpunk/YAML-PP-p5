@@ -1454,7 +1454,7 @@ sub cb_set_yaml_version_directive {
     if ($self->yaml_version_directive) {
         croak "Found duplicate YAML directive";
     }
-    my ($version) = $token->{value} =~ m/^%YAML (1\.[12])/;
+    my ($version) = $token->{value} =~ m/^%YAML[ \t]+(1\.[12])/;
     $self->set_yaml_version($version);
     $self->set_yaml_version_directive(1);
 }
