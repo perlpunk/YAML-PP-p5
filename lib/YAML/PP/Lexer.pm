@@ -205,7 +205,7 @@ sub fetch_next_tokens {
     if (not $spaces and $$yaml =~ s/\A(---|\.\.\.)(?=$RE_WS|\z)//) {
         $self->push_tokens([ $TOKEN_NAMES{ $1 } => $1, $self->line ]);
     }
-    elsif ($$yaml =~ m/\A[ \t]+(#.*)?\z/) {
+    elsif ($self->flowcontext and $$yaml =~ m/\A[ \t]+(#.*)?\z/) {
         $self->push_tokens([ EOL => join('', @$next_line), $self->line ]);
         $self->set_next_line(undef);
         return $next;
@@ -559,6 +559,9 @@ sub fetch_block {
         }
         if ((length $spaces) < $current_indent) {
             if (length $content) {
+                if ($content =~ m/\A\t/) {
+                    $self->exception("Invalid block scalar");
+                }
                 last;
             }
             else {
