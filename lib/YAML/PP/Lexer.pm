@@ -792,7 +792,7 @@ sub _fetch_next_tokens_directive {
     my @tokens;
 
     my $trailing_ws = '';
-    if ($$yaml =~ s/\A(\s*%YAML)//) {
+    if ($$yaml =~ s/\A(\s*%YAML\b)//) {
         my $dir = $1;
         if ($$yaml =~ s/\A( )//) {
             $dir .= $1;
