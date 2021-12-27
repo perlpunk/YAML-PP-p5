@@ -109,6 +109,8 @@ my @skip = qw/
     NB6Z
     CFD4
 
+    M2N8:01
+    UKK6:01
 /;
 
 # emitter
@@ -117,10 +119,22 @@ push @skip, qw/
 # quoting
 push @skip, qw/
 36F6
+6CA3
 9YRD
 HS5T
 EX5H
 NAT4
+L24T:00
+L24T:01
+L24T:02
+DK95:00
+DK95:02
+DK95:03
+DK95:04
+DK95:05
+DK95:06
+DK95:07
+DK95:08
 /;
 # tags
 push @skip, qw/

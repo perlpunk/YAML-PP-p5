@@ -33,6 +33,7 @@ my @skip = qw/
     LQZ7
     QF4Y
 
+    UKK6:01
 /;
 
 my $testsuite = YAML::PP::Test->new(

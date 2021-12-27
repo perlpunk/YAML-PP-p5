@@ -24,6 +24,9 @@ my @skip = qw/
 
 
     CT4Q
+
+    M2N8:01
+    UKK6:01
 /;
 
 my $testsuite = YAML::PP::Test->new(

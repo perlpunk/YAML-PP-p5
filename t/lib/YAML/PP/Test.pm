@@ -50,23 +50,34 @@ sub get_tests {
 
         opendir my $dh, $test_suite_dir or die $!;
         my @ids = grep { m/^[A-Z0-9]{4}\z/ } readdir $dh;
-        @ids = grep {
+        closedir $dh;
+        my @allids;
+        for my $id (@ids) {
+            if (-f "$test_suite_dir/$id/===") {
+                push @allids, $id;
+                next;
+            }
+            opendir my $dh, "$test_suite_dir/$id" or die $!;
+            my @subids = map { "$id/$_" } grep { m/^[0-9]+\z/ } readdir $dh;
+            closedir $dh;
+            push @allids, @subids;
+        }
+        @allids = grep {
             $valid
             ? not -f "$test_suite_dir/$_/error"
             : -f "$test_suite_dir/$_/error"
-        } @ids;
+        } @allids;
         if ($json) {
-            @ids = grep {
+            @allids = grep {
                 -f "$test_suite_dir/$_/in.json"
-            } @ids;
+            } @allids;
         }
         if ($tag) {
-            @ids = grep {
+            @allids = grep {
                 $id2tags->{ $_ }->{ $tag };
-            } @ids;
+            } @allids;
         }
-        push @dirs, map { "$test_suite_dir/$_" } @ids;
-        closedir $dh;
+        push @dirs, map { "$test_suite_dir/$_" } @allids;
 
     }
     else {
@@ -77,6 +88,7 @@ sub get_tests {
         Test::More::diag("############################");
     }
 
+    @dirs = sort @dirs;
     opendir my $dh, $dir or die $!;
     push @dirs, map { "$dir/$_" } grep {
         m/^[iv][A-Z0-9]{3}\z/
@@ -119,6 +131,9 @@ sub read_tests {
     my @testcases;
     for my $dir (sort @dirs) {
         my $id = basename $dir;
+        if ($id =~ m/^\d+$/) {
+            $id = (basename dirname $dir) . ':' . $id;
+        }
 
         open my $fh, '<', "$dir/===" or die $!;
         chomp(my $title = <$fh>);
@@ -138,16 +153,23 @@ sub read_tests {
             close $fh;
         }
 
-        my $linecount;
-        if ($self->{linecount}) {
-            $linecount = () = $in_yaml =~ m/\n/g;
+        my $linecount = 0;
+        if ($self->{linecount} and length $in_yaml) {
+            $linecount = () = $in_yaml =~ m/^/mg;
         }
 
         my $out_yaml;
-        if ($self->{out_yaml} and -f "$dir/out.yaml") {
-            open my $fh, "<:encoding(UTF-8)", "$dir/out.yaml" or die $!;
-            $out_yaml = do { local $/; <$fh> };
-            close $fh;
+        if ($self->{out_yaml}) {
+            if (-f "$dir/out.yaml") {
+                open my $fh, "<:encoding(UTF-8)", "$dir/out.yaml" or die $!;
+                $out_yaml = do { local $/; <$fh> };
+                close $fh;
+            }
+            else {
+                open my $fh, "<:encoding(UTF-8)", "$dir/in.yaml" or die $!;
+                $out_yaml = do { local $/; <$fh> };
+                close $fh;
+            }
         }
 
         my $emit_yaml;
@@ -554,6 +576,7 @@ sub dump_yaml {
     }
     $result->{dump_yaml} = $out_yaml;
 
+
     my @reload = eval { $ypp->load_string($out_yaml) };
     $err = $@;
     if ($err) {
@@ -563,6 +586,35 @@ sub dump_yaml {
     }
     $result->{data} = \@docs;
     $result->{data_reload} = \@reload;
+
+    my $exp_out_yaml = $testcase->{out_yaml};
+    my @events;
+    my @reparse_events;
+    my $parser = YAML::PP::Parser->new(
+        receiver => sub {
+            my ($self, $event, $info) = @_;
+            push @events, YAML::PP::Common::event_to_test_suite($info, { flow => 0 });
+        },
+    );
+    eval {
+        $parser->parse_string($out_yaml);
+    };
+    $err = $@;
+    if ($err) {
+        diag "ERROR parsing $id\n$err";
+        $result->{err} = $err;
+        return $result;
+    }
+    @reparse_events = @events;
+    @events = ();
+    my @exp_events;
+    eval {
+        $parser->parse_string($testcase->{out_yaml});
+    };
+    $err = $@;
+    @exp_events = @events;
+    $result->{dump_events} = \@reparse_events;
+    $result->{expected_events} = \@exp_events;
 
     return $result;
 }
@@ -578,6 +630,8 @@ sub compare_dump_yaml {
     my $docs = $result->{data};
     my $reload_docs = $result->{data_reload};
     my $dump_yaml = $result->{dump_yaml};
+    my $dump_events = $result->{dump_events};
+    my $exp_events = $result->{expected_events};
 
     my $ok = 0;
     if ($err) {
@@ -605,6 +659,8 @@ sub compare_dump_yaml {
         }
     }
 
+# TODO
+#    my $same_events = is_deeply($dump_events, $exp_events, "$id - $title - Events from re-parsing are the same");
 }
 
 sub emit_yaml {
