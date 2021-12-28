@@ -122,6 +122,7 @@ my %htmlcolors = (
     FLOWMAP_END => 'flowmap_end',
     FLOW_COMMA => 'flow_comma',
     PLAINKEY => 'plainkey',
+    NOEOL => 'noeol',
 );
 sub htmlcolored {
     require HTML::Entities;
@@ -153,6 +154,10 @@ sub transform {
         }
         for my $token (@values) {
             my $value = defined $token->{orig} ? $token->{orig} : $token->{value};
+            if ($token->{name} eq 'EOL' and not length $value) {
+                push @list, { name => 'NOEOL', value => '' };
+                next;
+            }
             push @list, map {
                     $_ =~ tr/\t/\t/
                     ? { name => 'TAB', value => $_ }
@@ -183,7 +188,7 @@ sub transform {
             }
             my $next = $list[ $i + 1];
             if ($next->{name} eq 'EOL') {
-                if ($str =~ m/ \z/ and $name =~ m/^(BLOCK_SCALAR_CONTENT|WS)$/) {
+                if ($str =~ m/ \z/ and $name =~ m/^(BLOCK_SCALAR_CONTENT|WS|INDENT)$/) {
                     $token->{name} = "TRAILING_SPACE";
                 }
             }
