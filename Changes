@@ -1,5 +1,9 @@
 Revision history for Perl module YAML::PP
 
+0.031_001 2022-01-08 18:58:51+01:00
+
+    - Support YAML::PP::Ref in yamlpp-* utility scripts
+
 0.031 2021-12-25 23:43:19+01:00
 
     - Fix several rare test cases:

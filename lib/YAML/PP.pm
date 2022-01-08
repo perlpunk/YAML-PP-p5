@@ -1378,7 +1378,7 @@ The Perl Foundation L<https://www.perlfoundation.org/> sponsored this project
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright 2017-2020 by Tina Müller
+Copyright 2017-2022 by Tina Müller
 
 This library is free software and may be distributed under the same terms
 as perl itself.
