@@ -22,6 +22,10 @@ elsif ($module eq 'YAML::PP::LibYAML') {
     require YAML::PP::LibYAML::Parser;
     $module = 'YAML::PP::LibYAML::Parser';
 }
+elsif ($module eq 'YAML::PP::Ref') {
+    require YAML::PP::Ref;
+    $module = 'YAML::PP::Ref::Parser';
+}
 
 my ($file) = @ARGV;
 
@@ -51,7 +55,8 @@ Usage:
     $0 [options] file
 
 Options:
-    --module -M  Module to use for parsing. YAML::PP (default) or YAML::PP::LibYAML
+    --module -M  Module to use for parsing. YAML::PP (default),
+                 YAML::PP::LibYAML or YAML::PP::Ref
 EOM
     exit $rc;
 }

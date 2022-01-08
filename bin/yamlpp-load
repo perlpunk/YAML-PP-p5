@@ -52,6 +52,7 @@ $yaml = decode_utf8($yaml) if $decode;
 my %codes = (
     'YAML::PP' => \&yamlpp,
     'YAML::PP::LibYAML' => \&yamlpplibyaml,
+    'YAML::PP::Ref' => \&yamlppref,
     'YAML::XS' => \&yamlxs,
     'YAML::Tiny' => \&yamltiny,
     'YAML::Syck' => \&yamlsyck,
@@ -79,6 +80,10 @@ sub yamlpp {
 sub yamlpplibyaml {
     eval { require YAML::PP::LibYAML };
     _yamlpp('YAML::PP::LibYAML' => $_[0]);
+}
+sub yamlppref {
+    eval { require YAML::PP::Ref };
+    _yamlpp('YAML::PP::Ref' => $_[0]);
 }
 
 sub yamlxs {
@@ -129,7 +134,7 @@ Options:
     --perl                Enable loading perl types and objects (use only
                           on trusted input!)
     --module -M           YAML::PP (default), YAML, YAML::PP::LibYAML,
-                          YAML::Syck, YAML::Tiny, YAML::XS
+                          YAML::Syck, YAML::Tiny, YAML::XS, YAML::PP::Ref
     --yaml-version=       '1.2' (default), '1.1', '1.2,1.1', '1.1,1.2'
 EOM
     exit $rc;

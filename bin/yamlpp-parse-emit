@@ -47,6 +47,11 @@ if ($module eq 'YAML::PP::LibYAML') {
     $parserclass = 'YAML::PP::LibYAML::Parser';
     $emitterclass = 'YAML::PP::LibYAML::Emitter';
 }
+elsif ($module eq 'YAML::PP::Ref') {
+    eval { require YAML::PP::Ref } or die "Module $module not supported: $@";
+    $parserclass = 'YAML::PP::Ref::Parser';
+#    $emitterclass = 'YAML::PP::LibYAML::Emitter';
+}
 my $parser = $parserclass->new(
     receiver => sub {
         my ($self, undef, $event) = @_;
@@ -99,7 +104,7 @@ Usage:
 Options:
     --indent=             Number of spaces for indentation
     --width=              Maximum column width (only used in flow style for now)
-    --module, -M          YAML::PP or YAML::PP::LibYAML
+    --module, -M          YAML::PP, YAML::PP::LibYAML or YAML::PP::Ref
     --flow                'no' (default, always output block style), 'yes'
                           (always output flow style), 'keep' (output flow
                           style like in the original input)

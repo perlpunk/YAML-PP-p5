@@ -87,6 +87,7 @@ $yaml = decode_utf8($yaml) if $decode;
 my %load_modules = (
     'YAML::PP' => \&yamlpp,
     'YAML::PP::LibYAML' => \&yamlpplibyaml,
+    'YAML::PP::Ref' => \&yamlppref,
     'YAML::XS' => \&yamlxs,
     'YAML::Tiny' => \&yamltiny,
     'YAML::Syck' => \&yamlsyck,
@@ -148,6 +149,10 @@ sub yamlpp_dump {
 sub yamlpplibyaml {
     eval { require YAML::PP::LibYAML };
     _yamlpp('YAML::PP::LibYAML' => @_);
+}
+sub yamlppref {
+    eval { require YAML::PP::Ref };
+    _yamlpp('YAML::PP::Ref' => @_);
 }
 sub yamlpplibyaml_dump {
     eval { require YAML::PP::LibYAML };
@@ -278,7 +283,7 @@ Options:
     --preserve            Comma separated: 'order', 'scalar', 'flow', 'alias'.
                           By default all things are preserved
     --module -M           YAML::PP (default), YAML, YAML::PP::LibYAML,
-                          YAML::Syck, YAML::Tiny, YAML::XS
+                          YAML::Syck, YAML::Tiny, YAML::XS, YAML::PP::Ref
     --dump-module -D      All of the above plus Data::Dumper, JSON::PP,
                           JSON::XS, Cpanel::JSON::XS
     --yaml-version=       '1.2' (default), '1.1', '1.2,1.1', '1.1,1.2'
