@@ -248,7 +248,7 @@ sub json_xs_dump { require JSON::XS; _json_dump('JSON::XS', @_) }
 sub cpanel_json_xs_dump { require Cpanel::JSON::XS; _json_dump('Cpanel::JSON::XS', @_) }
 sub _json_dump {
     my ($class, $docs) = @_;
-    my $coder = $class->new->ascii->pretty->allow_nonref;
+    my $coder = $class->new->ascii->pretty->allow_nonref->space_before(0);
     $coder = $coder->indent_length($indent) if $coder->can('indent_length');
     $coder = $coder->canonical unless $preserve_order;
     my $out = '';
