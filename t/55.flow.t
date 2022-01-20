@@ -12,6 +12,8 @@ use YAML::PP::Emitter;
 use YAML::PP::Writer;
 use Encode;
 
+$ENV{YAML_PP_RESERVED_DIRECTIVE} = 'ignore';
+
 $|++;
 
 my $yts = "$Bin/../test-suite/yaml-test-suite-data";

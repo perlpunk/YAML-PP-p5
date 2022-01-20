@@ -1,5 +1,11 @@
 Revision history for Perl module YAML::PP
 
+0.031_002 2022-01-20 19:14:40+01:00
+
+    - Update yaml-test-suite to 2022-01-17
+    - Add --dump option to yamlpp-parse-emit
+    - yamlpp-load-dump -D JSON::PP: don't output space before colon
+
 0.031_001 2022-01-08 18:58:51+01:00
 
     - Support YAML::PP::Ref in yamlpp-* utility scripts
