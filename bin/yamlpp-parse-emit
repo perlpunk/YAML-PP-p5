@@ -15,6 +15,7 @@ GetOptions(
     'help|h' => \my $help,
     'indent=i' => \my $indent,
     'module|M=s' => \my $module,
+    'dump|D=s' => \my $emit,
     'verbose' => \my $verbose,
     'flow=s' => \my $flow,
     'width=i' => \my $width,
@@ -23,6 +24,7 @@ GetOptions(
 usage(0) if $help;
 
 $module ||= 'YAML::PP';
+$emit ||= $module;
 
 $flow ||= 'no';
 
@@ -39,7 +41,9 @@ else {
 }
 $yaml = decode_utf8($yaml);
 
-my @events;
+if ($emit eq 'YAML::PP::Ref') {
+    $emit = 'YAML::PP';
+}
 my $parserclass = 'YAML::PP::Parser';
 my $emitterclass = 'YAML::PP::Emitter';
 if ($module eq 'YAML::PP::LibYAML') {
@@ -50,8 +54,13 @@ if ($module eq 'YAML::PP::LibYAML') {
 elsif ($module eq 'YAML::PP::Ref') {
     eval { require YAML::PP::Ref } or die "Module $module not supported: $@";
     $parserclass = 'YAML::PP::Ref::Parser';
-#    $emitterclass = 'YAML::PP::LibYAML::Emitter';
 }
+if ($emit eq 'YAML::PP::LibYAML') {
+    eval { require YAML::PP::LibYAML } or die "Module $emit not supported: $@";
+    $emitterclass = 'YAML::PP::LibYAML::Emitter';
+}
+
+my @events;
 my $parser = $parserclass->new(
     receiver => sub {
         my ($self, undef, $event) = @_;
@@ -105,6 +114,7 @@ Options:
     --indent=             Number of spaces for indentation
     --width=              Maximum column width (only used in flow style for now)
     --module, -M          YAML::PP, YAML::PP::LibYAML or YAML::PP::Ref
+    --dump, -D            YAML::PP, YAML::PP::LibYAML
     --flow                'no' (default, always output block style), 'yes'
                           (always output flow style), 'keep' (output flow
                           style like in the original input)
