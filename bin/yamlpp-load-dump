@@ -20,7 +20,7 @@ GetOptions(
     'boolean=s' => \my $boolean,
     'merge' => \my $merge,
     'perl' => \my $perl,
-    'preserve=s' => \my $preserve,
+    'preserve|P=s' => \my $preserve,
     'module|M=s' => \my $module,
     'dump-module|D=s' => \my $dump_module,
     'include' => \my $include,
@@ -37,6 +37,9 @@ $footer ||= 0;
 $indent ||= 2;
 $yaml_version ||= 1.2;
 $dump_module ||= $module;
+if ($dump_module eq 'YAML::PP::Ref') {
+    $dump_module = 'YAML::PP';
+}
 my @yaml_versions = split m/,/, $yaml_version;
 my @schema = ('+');
 if ($merge) {
@@ -280,7 +283,8 @@ Options:
     --merge               Enable loading merge keys '<<'
     --perl                Enable loading perl types and objects (use only
                           on trusted input!)
-    --preserve            Comma separated: 'order', 'scalar', 'flow', 'alias'.
+    --preserve, -P        Comma separated: 'order', 'scalar', 'flow', 'alias'.
+                          Set to 0 to preserve nothing.
                           By default all things are preserved
     --module -M           YAML::PP (default), YAML, YAML::PP::LibYAML,
                           YAML::Syck, YAML::Tiny, YAML::XS, YAML::PP::Ref
