@@ -55,7 +55,7 @@ my $RE_EOL = qr/\A($RE_WS+#.*|$RE_WS+)\z/;
 #ns-word-char    ::= ns-dec-digit | ns-ascii-letter | “-”
 my $RE_NS_WORD_CHAR = '[0-9A-Za-z-]';
 my $RE_URI_CHAR = '(?:' . '%[0-9a-fA-F]{2}' .'|'.  q{[0-9A-Za-z#;/?:@&=+$,_.!*'\(\)\[\]-]} . ')';
-my $RE_NS_TAG_CHAR = '(?:' . '%[0-9a-fA-F]{2}' .'|'.  q{[0-9A-Za-z#;/?:@&=+$_.*'\(\)-]} . ')';
+my $RE_NS_TAG_CHAR = '(?:' . '%[0-9a-fA-F]{2}' .'|'.  q{[0-9A-Za-z#;/?:@&=+$_.~*'\(\)-]} . ')';
 
 #  [#x21-#x7E]          /* 8 bit */
 # | #x85 | [#xA0-#xD7FF] | [#xE000-#xFFFD] /* 16 bit */
