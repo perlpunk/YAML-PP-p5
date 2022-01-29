@@ -706,7 +706,7 @@ This option is for loading and dumping.
 
 Preserving scalar styles is still experimental.
 
-    use YAML::PP::Common qw/ PRESERVE_ORDER PRESERVE_SCALAR_STYLE /;
+    use YAML::PP::Common qw/ :PRESERVE /;
 
     # Preserve the order of hash keys
     my $yp = YAML::PP->new( preserve => PRESERVE_ORDER );

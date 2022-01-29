@@ -5,7 +5,7 @@ use warnings;
 use YAML::PP;
 use YAML::PP::Dumper;
 use YAML::PP::Common qw/
-    PRESERVE_ORDER PRESERVE_SCALAR_STYLE PRESERVE_FLOW_STYLE PRESERVE_ALIAS
+    :PRESERVE
 /;
 use Encode;
 use Getopt::Long;

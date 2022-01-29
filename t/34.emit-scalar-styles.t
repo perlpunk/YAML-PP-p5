@@ -8,11 +8,7 @@ use YAML::PP::Parser;
 use YAML::PP::Emitter;
 use YAML::PP::Writer;
 use YAML::PP;
-use YAML::PP::Common qw/
-    YAML_PLAIN_SCALAR_STYLE YAML_SINGLE_QUOTED_SCALAR_STYLE
-    YAML_DOUBLE_QUOTED_SCALAR_STYLE YAML_LITERAL_SCALAR_STYLE
-    YAML_FOLDED_SCALAR_STYLE
-/;
+use YAML::PP::Common qw/ :STYLES /;
 
 my @input = (
     "",
@@ -44,7 +40,7 @@ my $yp = YAML::PP->new( schema => ['Failsafe'] );
 #my @styles = qw/ : " ' | > /;
 my @styles = (
     YAML_PLAIN_SCALAR_STYLE, YAML_DOUBLE_QUOTED_SCALAR_STYLE,
-    YAML_SINGLE_QUOTED_SCALAR_STYLE, YAML_LITERAL_SCALAR_STYLE
+    YAML_SINGLE_QUOTED_SCALAR_STYLE, YAML_LITERAL_SCALAR_STYLE,
 );
 
 for my $style (@styles) {
