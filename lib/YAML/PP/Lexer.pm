@@ -806,36 +806,29 @@ sub _fetch_next_tokens_directive {
     my @tokens;
 
     my $trailing_ws = '';
-    if ($$yaml =~ s/\A(\s*%YAML\b)//) {
+    my $warn = $ENV{YAML_PP_RESERVED_DIRECTIVE} || 'warn';
+    if ($$yaml =~ s/\A(\s*%YAML[ \t]+([0-9]+\.[0-9]+))//) {
         my $dir = $1;
-        if ($$yaml =~ s/\A([ \t]+)//) {
-            $dir .= $1;
-            if ($$yaml =~ s/\A(1\.[12])($RE_WS*)//) {
-                $dir .= $1;
-                $trailing_ws = $2;
-                push @tokens, ( YAML_DIRECTIVE => $dir, $self->line );
-            }
-            else {
-                $$yaml =~ s/\A(.*)//;
-                $dir .= $1;
-                my $warn = $ENV{YAML_PP_RESERVED_DIRECTIVE} || 'warn';
-                if ($warn eq 'warn') {
-                    warn "Found reserved directive '$dir'";
-                }
-                elsif ($warn eq 'fatal') {
-                    die "Found reserved directive '$dir'";
-                }
-                push @tokens, ( RESERVED_DIRECTIVE => "$dir", $self->line );
-            }
+        my $version = $2;
+        if ($$yaml =~ s/\A($RE_WS+)//) {
+            $trailing_ws = $1;
         }
-        else {
-            $$yaml =~ s/\A(.*)//;
-            $dir .= $1;
+        elsif (length $$yaml) {
             push @tokens, ( 'Invalid directive' => $dir, $self->line );
-            push @tokens, ( EOL => $eol, $self->line );
             $self->push_tokens(\@tokens);
             return;
         }
+        if ($version !~ m/^1\.[12]$/) {
+            if ($warn eq 'warn') {
+                warn "Unsupported YAML version '$dir'";
+            }
+            elsif ($warn eq 'fatal') {
+                push @tokens, ( 'Unsupported YAML version' => $dir, $self->line );
+                $self->push_tokens(\@tokens);
+                return;
+            }
+        }
+        push @tokens, ( YAML_DIRECTIVE => $dir, $self->line );
     }
     elsif ($$yaml =~ s/\A(\s*%TAG[ \t]+(!$RE_NS_WORD_CHAR*!|!)[ \t]+(tag:\S+|!$RE_URI_CHAR+))($RE_WS*)//) {
         push @tokens, ( TAG_DIRECTIVE => $1, $self->line );
@@ -846,7 +839,6 @@ sub _fetch_next_tokens_directive {
     }
     elsif ($$yaml =~ s/\A(\s*\A%(?:\w+).*)//) {
         push @tokens, ( RESERVED_DIRECTIVE => $1, $self->line );
-        my $warn = $ENV{YAML_PP_RESERVED_DIRECTIVE} || 'warn';
         if ($warn eq 'warn') {
             warn "Found reserved directive '$1'";
         }
