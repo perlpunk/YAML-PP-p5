@@ -1,14 +1,15 @@
 Revision history for Perl module YAML::PP
 
-0.031_002 2022-01-20 19:14:40+01:00
+0.032 2022-03-08 19:02:00+01:00
 
-    - Update yaml-test-suite to 2022-01-17
+    - Add missing '~' to allowed chars in tags
+    - Restructure directive parsing a bit
+    - Support YAML::PP::Ref in yamlpp-* utility scripts
+    - Add -P to yaml-load-dump --preserve
     - Add --dump option to yamlpp-parse-emit
     - yamlpp-load-dump -D JSON::PP: don't output space before colon
-
-0.031_001 2022-01-08 18:58:51+01:00
-
-    - Support YAML::PP::Ref in yamlpp-* utility scripts
+    - Add export tags to YAML::PP::Common
+    - Update yaml-test-suite to 2022-01-17
 
 0.031 2021-12-25 23:43:19+01:00
 
