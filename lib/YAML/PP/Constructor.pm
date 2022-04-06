@@ -139,7 +139,7 @@ sub mapping_start_event {
     my $preserve_style = $self->preserve_flow_style;
     my $preserve_alias = $self->preserve_alias;
     if (($preserve_order or $preserve_style or $preserve_alias) and not tied(%$data)) {
-        tie %$data, 'YAML::PP::Preserve::Hash';
+        tie %$data, 'YAML::PP::Preserve::Hash', %$data;
     }
     if ($preserve_style) {
         my $t = tied %$data;
