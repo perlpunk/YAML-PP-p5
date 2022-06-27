@@ -1,5 +1,9 @@
 Revision history for Perl module YAML::PP
 
+0.033 2022-06-27 16:31:32+02:00
+
+    - Fix add_mapping_resolver + on_create (tie existing data)
+
 0.032 2022-03-08 19:02:00+01:00
 
     - Add missing '~' to allowed chars in tags

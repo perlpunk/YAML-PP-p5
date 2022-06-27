@@ -164,7 +164,7 @@ YAML::PP::Schema::Include - Include YAML files
 
     my $include = YAML::PP::Schema::Include->new;
 
-    my $yp = YAML::PP->new( schema => ['JSON', $include] );
+    my $yp = YAML::PP->new( schema => ['+', $include] );
     # we need the original YAML::PP object for getting the current filename
     # and for loading another file
     $include->yp($yp);
@@ -188,7 +188,7 @@ Specify paths to search for includes:
     my $include = YAML::PP::Schema::Include->new(
         paths => \@include_paths,
     );
-    my $yp = YAML::PP->new( schema => ['JSON', $include] );
+    my $yp = YAML::PP->new( schema => ['+', $include] );
     $include->yp($yp);
 
     # /path/to/include/yaml/1/file1.yaml
