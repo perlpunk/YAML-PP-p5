@@ -1,5 +1,9 @@
 Revision history for Perl module YAML::PP
 
+0.033_002 2022-06-28 13:17:29+02:00
+
+    - Support experimental v5.36 booleans
+
 0.033_001 2022-06-28 12:12:58+02:00
 
     - Allow to specify multiple boolean classes (issue #37)
