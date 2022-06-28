@@ -282,11 +282,12 @@ sub _fetch_next_tokens {
         elsif ($COLON_DASH_QUESTION{ $first }) {
             my $token_name = $TOKEN_NAMES{ $first };
             if ($$yaml =~ s/\A\Q$first\E($RE_WS+|\z)//) {
+                my $after = $1;
                 if (not $self->flowcontext and not $self->block) {
+                    push @tokens, ERROR => $first . $after, $self->line;
                     $self->_push_tokens(\@tokens);
                     $self->exception("Tabs can not be used for indentation");
                 }
-                my $after = $1;
                 if ($after =~ tr/\t//) {
                     $self->set_block(0);
                 }
@@ -571,6 +572,7 @@ sub fetch_block {
         if ((length $spaces) < $current_indent) {
             if (length $content) {
                 if ($content =~ m/\A\t/) {
+                    $self->_push_tokens(\@tokens);
                     $self->exception("Invalid block scalar");
                 }
                 last;
@@ -814,7 +816,7 @@ sub _fetch_next_tokens_directive {
             $trailing_ws = $1;
         }
         elsif (length $$yaml) {
-            push @tokens, ( 'Invalid directive' => $dir, $self->line );
+            push @tokens, ( 'Invalid directive' => $dir.$$yaml.$eol, $self->line );
             $self->_push_tokens(\@tokens);
             return;
         }
@@ -866,7 +868,7 @@ sub _fetch_next_tokens_directive {
         return;
     }
     else {
-        push @tokens, ( 'Invalid directive' => $$yaml, $self->line );
+        push @tokens, ( 'Invalid directive' => $trailing_ws.$$yaml, $self->line );
         push @tokens, ( EOL => $eol, $self->line );
     }
     $self->_push_tokens(\@tokens);

@@ -9,7 +9,7 @@ use IO::All;
 use Data::Dumper;
 use YAML::PP;
 use YAML::PP::Dumper;
-use File::Basename qw/ basename /;
+use File::Basename qw/ basename dirname /;
 use HTML::Entities qw/ encode_entities /;
 use YAML::PP::Highlight;
 use JSON::XS ();
@@ -18,8 +18,18 @@ use Encode;
 chomp(my $version = qx{git describe --dirty});
 my $yaml_test_suite = 'test-suite/yaml-test-suite-data/';
 my @dirs = grep { m{/[0-9A-Z]{4}$} } map { "$_" } io->dir($yaml_test_suite)->all;
-my @valid = grep { not -f "$_/error" } @dirs;
-my @invalid = grep { -f "$_/error" } @dirs;
+my @subdirs;
+for my $dir (@dirs) {
+    if (-f "$dir/in.yaml") {
+        push @subdirs, $dir;
+    }
+    else {
+        push @subdirs, grep { m{/[0-9]+$} } map { "$_" } io->dir($dir)->all;
+    }
+}
+@subdirs = sort @subdirs;
+my @valid = grep { not -f "$_/error" } @subdirs;
+my @invalid = grep { -f "$_/error" } @subdirs;
 
 my %tags;
 for my $tagdir (io->dir("$yaml_test_suite/tags")->all) {
@@ -157,6 +167,11 @@ sub highlight_test {
     my $html;
     my $file = "$dir/in.yaml";
     my $id = basename $dir;
+    my $main_id = $id;
+    if ($id !~ tr/0-9//c) {
+        $main_id = basename(dirname $dir);
+        $id =  "$main_id/$id";
+    }
     my $title = io->file("$dir/===")->slurp;
     my $yaml;
 
@@ -294,7 +309,7 @@ sub highlight_test {
 <td colspan="6" valign="top" style="background-color: #dddddd"><b>$id - $title</b></td></tr>
 <tr>
 <td style="max-width: 15em;" valign="top" >Tags:<br>$taglist<br>
-<a href="https://github.com/yaml/yaml-test-suite/blob/master/test/$id.tml">View source</a><br>
+<a href="https://github.com/yaml/yaml-test-suite/blob/master/src/$main_id.yaml">View source</a><br>
 </td>
 EOM
     my $high = YAML::PP::Highlight->htmlcolored($tokens);
