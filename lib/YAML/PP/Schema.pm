@@ -30,23 +30,23 @@ sub new {
         }
         elsif ($b eq 'JSON::PP') {
             require JSON::PP;
-            $true ||= \&bool_jsonpp_true;
-            $false ||= \&bool_jsonpp_false;
+            $true ||= \&_bool_jsonpp_true;
+            $false ||= \&_bool_jsonpp_false;
             push @bool_class, 'JSON::PP::Boolean';
         }
         elsif ($b eq 'boolean') {
             require boolean;
-            $true ||= \&bool_booleanpm_true;
-            $false ||= \&bool_booleanpm_false;
+            $true ||= \&_bool_booleanpm_true;
+            $false ||= \&_bool_booleanpm_false;
             push @bool_class, 'boolean';
         }
         elsif ($b eq 'perl') {
-            $true ||= \&bool_perl_true;
-            $false ||= \&bool_perl_false;
+            $true ||= \&_bool_perl_true;
+            $false ||= \&_bool_perl_false;
         }
         elsif ($b eq 'perl_experimental') {
-            $true ||= \&bool_perl_true;
-            $false ||= \&bool_perl_false;
+            $true ||= \&_bool_perl_true;
+            $false ||= \&_bool_perl_false;
             push @bool_class, 'perl_experimental';
         }
         else {
@@ -413,17 +413,17 @@ sub create_mapping {
     return ($data, $on_data);
 }
 
-sub bool_jsonpp_true { JSON::PP::true() }
+sub _bool_jsonpp_true { JSON::PP::true() }
 
-sub bool_booleanpm_true { boolean::true() }
+sub _bool_booleanpm_true { boolean::true() }
 
-sub bool_perl_true { !!1 }
+sub _bool_perl_true { !!1 }
 
-sub bool_jsonpp_false { JSON::PP::false() }
+sub _bool_jsonpp_false { JSON::PP::false() }
 
-sub bool_booleanpm_false { boolean::false() }
+sub _bool_booleanpm_false { boolean::false() }
 
-sub bool_perl_false { !!0 }
+sub _bool_perl_false { !!0 }
 
 1;
 

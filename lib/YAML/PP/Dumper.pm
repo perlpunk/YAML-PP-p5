@@ -105,8 +105,8 @@ sub dump {
         }
         $self->emitter->document_start_event( \%args );
         $self->init;
-        $self->check_references($docs[ $i ]);
-        $self->dump_node($docs[ $i ]);
+        $self->_check_references($docs[ $i ]);
+        $self->_dump_node($docs[ $i ]);
         my $footer_implicit = (not $self->footer);
         $self->emitter->document_end_event({ implicit => $footer_implicit });
     }
@@ -118,7 +118,7 @@ sub dump {
     return $output;
 }
 
-sub dump_node {
+sub _dump_node {
     my ($self, $value) = @_;
     my $node = {
         value => $value,
@@ -162,17 +162,17 @@ sub dump_node {
             }
             else {
                 $node->{value} = $anchor;
-                $self->emit_node([ alias => $node ]);
+                $self->_emit_node([ alias => $node ]);
                 return;
             }
 
         }
     }
     $node = $self->representer->represent_node($node);
-    $self->emit_node($node);
+    $self->_emit_node($node);
 }
 
-sub emit_node {
+sub _emit_node {
     my ($self, $item) = @_;
     my ($type, $node, %args) = @$item;
     if ($type eq 'alias') {
@@ -191,7 +191,7 @@ sub emit_node {
             tag => $node->{tag},
         });
         for (@{ $node->{items} }) {
-            $self->dump_node($_);
+            $self->_dump_node($_);
         }
         $self->emitter->mapping_end_event;
         return;
@@ -207,7 +207,7 @@ sub emit_node {
             tag => $node->{tag},
         });
         for (@{ $node->{items} }) {
-            $self->dump_node($_);
+            $self->_dump_node($_);
         }
         $self->emitter->sequence_end_event;
         return;
@@ -248,7 +248,7 @@ my %_reftypes = (
     GLOB => 1,
 );
 
-sub check_references {
+sub _check_references {
     my ($self, $doc) = @_;
     my $reftype = reftype $doc or return;
     my $seen = $self->{seen};
@@ -270,13 +270,13 @@ sub check_references {
             $reftype;
     }
     if ($reftype eq 'HASH') {
-        $self->check_references($doc->{ $_ }) for keys %$doc;
+        $self->_check_references($doc->{ $_ }) for keys %$doc;
     }
     elsif ($reftype eq 'ARRAY') {
-        $self->check_references($_) for @$doc;
+        $self->_check_references($_) for @$doc;
     }
     elsif ($reftype eq 'REF') {
-        $self->check_references($$doc);
+        $self->_check_references($$doc);
     }
 }
 

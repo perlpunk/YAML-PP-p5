@@ -76,7 +76,7 @@ sub mapping_start_event {
         $anchor = "&$anchor";
     }
     if (defined $tag) {
-        $tag = $self->emit_tag('map', $tag);
+        $tag = $self->_emit_tag('map', $tag);
     }
     $props = join ' ', grep defined, ($anchor, $tag);
 
@@ -243,7 +243,7 @@ sub sequence_start_event {
         $anchor = "&$anchor";
     }
     if (defined $tag) {
-        $tag = $self->emit_tag('seq', $tag);
+        $tag = $self->_emit_tag('seq', $tag);
     }
     $props = join ' ', grep defined, ($anchor, $tag);
 
@@ -501,7 +501,7 @@ sub scalar_event {
         $anchor = "&$anchor";
     }
     if (defined $tag) {
-        $tag = $self->emit_tag('scalar', $tag);
+        $tag = $self->_emit_tag('scalar', $tag);
     }
     $props = join ' ', grep defined, ($anchor, $tag);
 
@@ -942,7 +942,7 @@ sub stream_start_event {
 sub stream_end_event {
 }
 
-sub emit_tag {
+sub _emit_tag {
     my ($self, $type, $tag) = @_;
     my $map = $self->tagmap;
     for my $key (sort keys %$map) {

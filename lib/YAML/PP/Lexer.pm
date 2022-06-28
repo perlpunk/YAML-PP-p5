@@ -131,7 +131,7 @@ my %REGEXES = (
     SINGLEQUOTED => qr{(?:''|[^'\r\n]+)*},
 );
 
-sub fetch_next_line {
+sub _fetch_next_line {
     my ($self) = @_;
     my $next_line = $self->next_line;
     if (defined $next_line ) {
@@ -182,7 +182,7 @@ sub fetch_next_tokens {
     my $next = $self->next_tokens;
     return $next if @$next;
 
-    my $next_line = $self->fetch_next_line;
+    my $next_line = $self->_fetch_next_line;
     if (not $next_line) {
         return [];
     }
@@ -190,12 +190,12 @@ sub fetch_next_tokens {
     my $spaces = $next_line->[0];
     my $yaml = \$next_line->[1];
     if (not length $$yaml) {
-        $self->push_tokens([ EOL => join('', @$next_line), $self->line ]);
+        $self->_push_tokens([ EOL => join('', @$next_line), $self->line ]);
         $self->set_next_line(undef);
         return $next;
     }
     if (substr($$yaml, 0, 1) eq '#') {
-        $self->push_tokens([ EOL => join('', @$next_line), $self->line ]);
+        $self->_push_tokens([ EOL => join('', @$next_line), $self->line ]);
         $self->set_next_line(undef);
         return $next;
     }
@@ -206,15 +206,15 @@ sub fetch_next_tokens {
         return $next;
     }
     if (not $spaces and $$yaml =~ s/\A(---|\.\.\.)(?=$RE_WS|\z)//) {
-        $self->push_tokens([ $TOKEN_NAMES{ $1 } => $1, $self->line ]);
+        $self->_push_tokens([ $TOKEN_NAMES{ $1 } => $1, $self->line ]);
     }
     elsif ($self->flowcontext and $$yaml =~ m/\A[ \t]+(#.*)?\z/) {
-        $self->push_tokens([ EOL => join('', @$next_line), $self->line ]);
+        $self->_push_tokens([ EOL => join('', @$next_line), $self->line ]);
         $self->set_next_line(undef);
         return $next;
     }
     else {
-        $self->push_tokens([ SPACE => $spaces, $self->line ]);
+        $self->_push_tokens([ SPACE => $spaces, $self->line ]);
     }
 
     my $partial = $self->_fetch_next_tokens($next_line);
@@ -254,7 +254,7 @@ sub _fetch_next_tokens {
     while (1) {
         unless (length $$yaml) {
             push @tokens, ( EOL => $eol, $self->line );
-            $self->push_tokens(\@tokens);
+            $self->_push_tokens(\@tokens);
             return;
         }
         my $first = substr($$yaml, 0, 1);
@@ -269,21 +269,21 @@ sub _fetch_next_tokens {
             }
             if ($$yaml =~ s/\A($RE_WS*(?: #.*))\z//) {
                 push @tokens, ( EOL => $1 . $eol, $self->line );
-                $self->push_tokens(\@tokens);
+                $self->_push_tokens(\@tokens);
                 return;
             }
             $self->set_context(0);
         }
         if ($CONTEXT{ $first }) {
             push @tokens, ( CONTEXT => $first, $self->line );
-            $self->push_tokens(\@tokens);
+            $self->_push_tokens(\@tokens);
             return 1;
         }
         elsif ($COLON_DASH_QUESTION{ $first }) {
             my $token_name = $TOKEN_NAMES{ $first };
             if ($$yaml =~ s/\A\Q$first\E($RE_WS+|\z)//) {
                 if (not $self->flowcontext and not $self->block) {
-                    $self->push_tokens(\@tokens);
+                    $self->_push_tokens(\@tokens);
                     $self->exception("Tabs can not be used for indentation");
                 }
                 my $after = $1;
@@ -294,13 +294,13 @@ sub _fetch_next_tokens {
                 push @tokens, ( $token_name => $first, $self->line );
                 if (not defined $1) {
                     push @tokens, ( EOL => $eol, $self->line );
-                    $self->push_tokens(\@tokens);
+                    $self->_push_tokens(\@tokens);
                     return;
                 }
                 my $ws = $1;
                 if ($$yaml =~ s/\A(#.*|)\z//) {
                     push @tokens, ( EOL => $ws . $1 . $eol, $self->line );
-                    $self->push_tokens(\@tokens);
+                    $self->_push_tokens(\@tokens);
                     return;
                 }
                 push @tokens, ( WS => $ws, $self->line );
@@ -320,7 +320,7 @@ sub _fetch_next_tokens {
             }
             else {
                 push @tokens, ( "Invalid $token_name" => $$yaml, $self->line );
-                $self->push_tokens(\@tokens);
+                $self->_push_tokens(\@tokens);
                 return;
             }
         }
@@ -329,7 +329,7 @@ sub _fetch_next_tokens {
                 my $ws = $1;
                 if ($$yaml =~ s/\A((?:#.*)?\z)//) {
                     push @tokens, ( EOL => $ws . $1 . $eol, $self->line );
-                    $self->push_tokens(\@tokens);
+                    $self->_push_tokens(\@tokens);
                     return;
                 }
                 push @tokens, ( WS => $ws, $self->line );
@@ -352,7 +352,7 @@ sub _fetch_next_tokens {
 
         if ($plain) {
             push @tokens, ( CONTEXT => '', $self->line );
-            $self->push_tokens(\@tokens);
+            $self->_push_tokens(\@tokens);
             return 1;
         }
 
@@ -373,7 +373,7 @@ sub fetch_plain {
 
     my @tokens;
     unless ($$yaml =~ s/\A($REGEX)//) {
-        $self->push_tokens(\@tokens);
+        $self->_push_tokens(\@tokens);
         $self->exception("Invalid plain scalar");
     }
     my $plain = $1;
@@ -382,7 +382,7 @@ sub fetch_plain {
     if ($$yaml =~ s/\A(?:($RE_WS+#.*)|($RE_WS*))\z//) {
         if (defined $1) {
             push @tokens, ( EOL => $1 . $eol, $self->line );
-            $self->push_tokens(\@tokens);
+            $self->_push_tokens(\@tokens);
             $self->set_next_line(undef);
             return;
         }
@@ -392,7 +392,7 @@ sub fetch_plain {
         }
     }
     else {
-        $self->push_tokens(\@tokens);
+        $self->_push_tokens(\@tokens);
         my $partial = $self->_fetch_next_tokens($next_line);
         if (not $partial) {
             $self->set_next_line(undef);
@@ -408,7 +408,7 @@ sub fetch_plain {
     my @lines = ($plain);
     my @next;
     LOOP: while (1) {
-        $next_line = $self->fetch_next_line;
+        $next_line = $self->_fetch_next_line;
         if (not $next_line) {
             last LOOP;
         }
@@ -498,10 +498,10 @@ sub fetch_plain {
             @eol = splice @tokens, -3;
         }
         $self->push_subtokens( { name => 'PLAIN_MULTI', value => $value }, \@tokens);
-        $self->push_tokens([ @eol, @next ]);
+        $self->_push_tokens([ @eol, @next ]);
     }
     else {
-        $self->push_tokens([ @tokens, @next ]);
+        $self->_push_tokens([ @tokens, @next ]);
     }
     @tokens = ();
     if ($fetch_next) {
@@ -551,14 +551,14 @@ sub fetch_block {
         push @tokens, ( EOL => $1 . $eol, $self->line );
     }
     else {
-        $self->push_tokens(\@tokens);
+        $self->_push_tokens(\@tokens);
         $self->exception("Invalid block scalar");
     }
 
     my @lines;
     while (1) {
         $self->set_next_line(undef);
-        $next_line = $self->fetch_next_line;
+        $next_line = $self->_fetch_next_line;
         if (not $next_line) {
             last;
         }
@@ -609,7 +609,7 @@ sub fetch_block {
     my $value = YAML::PP::Render->render_block_scalar($context, $chomp, \@lines);
     my @eol = splice @tokens, -3;
     $self->push_subtokens( { name => 'BLOCK_SCALAR', value => $value }, \@tokens );
-    $self->push_tokens([ @eol ]);
+    $self->_push_tokens([ @eol ]);
     return 0;
 }
 
@@ -628,14 +628,14 @@ sub fetch_quoted {
     while (1) {
 
         unless ($start) {
-            $next_line = $self->fetch_next_line or do {
+            $next_line = $self->_fetch_next_line or do {
                     for (my $i = 0; $i < @tokens; $i+= 3) {
                         my $token = $tokens[ $i + 1 ];
                         if (ref $token) {
                             $tokens[ $i + 1 ] = $token->{orig};
                         }
                     }
-                    $self->push_tokens(\@tokens);
+                    $self->_push_tokens(\@tokens);
                     $self->exception("Missing closing quote <$context> at EOF");
                 };
             $start = 0;
@@ -655,7 +655,7 @@ sub fetch_quoted {
                             $tokens[ $i + 1 ] = $token->{orig};
                         }
                     }
-                $self->push_tokens(\@tokens);
+                $self->_push_tokens(\@tokens);
                 $self->exception("Missing closing quote <$context> or invalid document marker");
             }
             elsif ((length $spaces) < $indent) {
@@ -665,7 +665,7 @@ sub fetch_quoted {
                         $tokens[ $i + 1 ] = $token->{orig};
                     }
                 }
-                $self->push_tokens(\@tokens);
+                $self->_push_tokens(\@tokens);
                 $self->exception("Wrong indendation or missing closing quote <$context>");
             }
 
@@ -700,7 +700,7 @@ sub fetch_quoted {
             else {
                 @tokens = ();
                 push @tokens, ( EOL => $next_line->[2], $self->line );
-                $self->push_tokens(\@tokens);
+                $self->_push_tokens(\@tokens);
                 $self->set_next_line(undef);
                 return;
             }
@@ -748,7 +748,7 @@ sub _read_quoted_tokens {
     }
     if (length $$yaml) {
         push @$tokens, ( $token_name . 'D' => $value->{orig}, $self->line );
-        $self->push_tokens($tokens);
+        $self->_push_tokens($tokens);
         $self->exception("Invalid quoted <$first> string");
     }
 
@@ -815,7 +815,7 @@ sub _fetch_next_tokens_directive {
         }
         elsif (length $$yaml) {
             push @tokens, ( 'Invalid directive' => $dir, $self->line );
-            $self->push_tokens(\@tokens);
+            $self->_push_tokens(\@tokens);
             return;
         }
         if ($version !~ m/^1\.[12]$/) {
@@ -824,7 +824,7 @@ sub _fetch_next_tokens_directive {
             }
             elsif ($warn eq 'fatal') {
                 push @tokens, ( 'Unsupported YAML version' => $dir, $self->line );
-                $self->push_tokens(\@tokens);
+                $self->_push_tokens(\@tokens);
                 return;
             }
         }
@@ -849,7 +849,7 @@ sub _fetch_next_tokens_directive {
     else {
         push @tokens, ( 'Invalid directive' => $$yaml, $self->line );
         push @tokens, ( EOL => $eol, $self->line );
-        $self->push_tokens(\@tokens);
+        $self->_push_tokens(\@tokens);
         return;
     }
     if (not length $$yaml) {
@@ -857,23 +857,23 @@ sub _fetch_next_tokens_directive {
     }
     elsif ($trailing_ws and $$yaml =~ s/\A(#.*)?\z//) {
         push @tokens, ( EOL => "$trailing_ws$1$eol", $self->line );
-        $self->push_tokens(\@tokens);
+        $self->_push_tokens(\@tokens);
         return;
     }
     elsif ($$yaml =~ s/\A([ \t]+#.*)?\z//) {
         push @tokens, ( EOL => "$1$eol", $self->line );
-        $self->push_tokens(\@tokens);
+        $self->_push_tokens(\@tokens);
         return;
     }
     else {
         push @tokens, ( 'Invalid directive' => $$yaml, $self->line );
         push @tokens, ( EOL => $eol, $self->line );
     }
-    $self->push_tokens(\@tokens);
+    $self->_push_tokens(\@tokens);
     return;
 }
 
-sub push_tokens {
+sub _push_tokens {
     my ($self, $new_tokens) = @_;
     my $next = $self->next_tokens;
     my $line = $self->line;

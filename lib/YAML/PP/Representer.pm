@@ -69,10 +69,10 @@ sub represent_node {
     }
 
     if ($node->{reftype}) {
-        $self->represent_noderef($node);
+        $self->_represent_noderef($node);
     }
     else {
-        $self->represent_node_nonref($node);
+        $self->_represent_node_nonref($node);
     }
     $node->{reftype} = (reftype $node->{data}) || '';
 
@@ -140,7 +140,7 @@ sub {
 EOM
 my $is_bool;
 
-sub represent_node_nonref {
+sub _represent_node_nonref {
     my ($self, $node) = @_;
     my $representers = $self->schema->representers;
 
@@ -185,7 +185,7 @@ sub represent_node_nonref {
     }
 }
 
-sub represent_noderef {
+sub _represent_noderef {
     my ($self, $node) = @_;
     my $representers = $self->schema->representers;
 
