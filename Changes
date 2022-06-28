@@ -1,5 +1,9 @@
 Revision history for Perl module YAML::PP
 
+0.033_001 2022-06-28 12:12:58+02:00
+
+    - Allow to specify multiple boolean classes (issue #37)
+
 0.033 2022-06-27 16:31:32+02:00
 
     - Fix add_mapping_resolver + on_create (tie existing data)
