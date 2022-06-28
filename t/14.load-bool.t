@@ -38,5 +38,13 @@ SKIP: {
     is(! $data_jp->{FALSE}, 1, 'JSON::PP::Boolean false');
 }
 
+SKIP: {
+    skip "JSON::PP not installed", 3 unless $json_pp;
+    my $ypp = YAML::PP->new(boolean => 'JSON::PP,boolean');
+    my $data_jp = $ypp->load_string($yaml);
+    isa_ok($data_jp->{TRUE}, 'JSON::PP::Boolean');
+    is($data_jp->{TRUE}, 1, 'JSON::PP::Boolean true');
+    is(! $data_jp->{FALSE}, 1, 'JSON::PP::Boolean false');
+}
 
 done_testing;

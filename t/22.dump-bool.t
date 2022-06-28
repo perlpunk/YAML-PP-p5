@@ -77,4 +77,36 @@ EOM
     cmp_ok($yaml, 'eq', $exp_boolean, "boolean (no JSON::PP::Boolean) dump");
 }
 
+SKIP: {
+    skip "JSON::PP and boolean not installed", 1 unless ($json_pp and $boolean);
+    my @tests = (
+        'JSON::PP,boolean',
+        'boolean,JSON::PP',
+        'boolean,*',
+        'JSON::PP,*',
+        '*',
+        'perl,*',
+    );
+
+    my $data = {
+        "true1" => boolean::true(),
+        "false1" => boolean::false(),
+        "true2" => JSON::PP::true(),
+        "false2" => JSON::PP::false(),
+    };
+    for my $test (@tests) {
+        my $yppd = YAML::PP->new(boolean => $test, schema => [qw/ + Perl /]);
+        my $yaml = $yppd->dump_string($data);
+        my $exp_json_pp = <<'EOM';
+---
+false1: false
+false2: false
+true1: true
+true2: true
+EOM
+        cmp_ok($yaml, 'eq', $exp_json_pp, "$test dump");
+    }
+
+}
+
 done_testing;

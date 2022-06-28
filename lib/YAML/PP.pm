@@ -543,10 +543,22 @@ Values: C<perl> (currently default), C<JSON::PP>, C<boolean>
 
 This option is for loading and dumping.
 
-Note that when dumping, only the chosen boolean style will be recognized.
-So if you choose C<JSON::PP>, C<boolean> objects will not be recognized
-as booleans and will be dumped as ordinary objects (if you enable the
-Perl schema).
+You can also specify more than one class, comma separated.
+This is important for dumping.
+
+Examples:
+
+    boolean => 'JSON::PP,boolean'
+    Booleans will be loaded as JSON::PP::Booleans, but when dumping, also
+    'boolean' objects will be recognized
+
+    boolean => 'JSON::PP,*'
+    Booleans will be loaded as JSON::PP::Booleans, but when dumping, all
+    currently supported boolean classes will be recognized
+
+    boolean => '*'
+    Booleans will be loaded as perl booleans, but when dumping, all
+    currently supported boolean classes will be recognized
 
 =item schema
 

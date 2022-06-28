@@ -178,10 +178,12 @@ sub register {
     );
 
     if ($schema->bool_class) {
-        $schema->add_representer(
-            class_equals => $schema->bool_class,
-            code => \&represent_bool,
-        );
+        for my $class (@{ $schema->bool_class }) {
+            $schema->add_representer(
+                class_equals => $class,
+                code => \&represent_bool,
+            );
+        }
     }
 
     return;
