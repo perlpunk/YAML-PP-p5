@@ -42,7 +42,7 @@ SKIP: {
 }
 
 SKIP: {
-    skip "JSON::PP and boolean not installed", 1 unless ($json_pp and $boolean);
+    skip "JSON::PP and boolean not installed", 2 unless ($json_pp and $boolean);
     my $data = {
         "true1" => boolean::true(),
         "false1" => boolean::false(),
@@ -78,7 +78,7 @@ EOM
 }
 
 SKIP: {
-    skip "JSON::PP and boolean not installed", 1 unless ($json_pp and $boolean);
+    skip "JSON::PP and boolean not installed", 6 unless ($json_pp and $boolean);
     my @tests = (
         'JSON::PP,boolean',
         'boolean,JSON::PP',
@@ -95,7 +95,7 @@ SKIP: {
         "false2" => JSON::PP::false(),
     };
     for my $test (@tests) {
-        my $yppd = YAML::PP->new(boolean => $test, schema => [qw/ + Perl /]);
+        my $yppd = YAML::PP->new(boolean => $test);
         my $yaml = $yppd->dump_string($data);
         my $exp_json_pp = <<'EOM';
 ---
@@ -103,6 +103,57 @@ false1: false
 false2: false
 true1: true
 true2: true
+EOM
+        cmp_ok($yaml, 'eq', $exp_json_pp, "$test dump");
+    }
+
+}
+
+SKIP: {
+    skip "perl version < v5.36", 1 unless $] >= 5.036000;
+    my $data = {
+        "true1" => !!1,
+        "false1" => !!0,
+    };
+    my $yppd = YAML::PP->new(boolean => 'perl_experimental');
+    my $yaml = $yppd->dump_string($data);
+    my $exp_json_pp = <<'EOM';
+---
+false1: false
+true1: true
+EOM
+    cmp_ok($yaml, 'eq', $exp_json_pp, "perl_experimental dump");
+}
+
+SKIP: {
+    skip "perl version < v5.36", 3 unless $] >= 5.036000;
+    skip "JSON::PP and boolean not installed", 3 unless ($json_pp and $boolean);
+
+    my @tests = (
+        'perl_experimental,JSON::PP,boolean',
+        'perl_experimental,boolean,JSON::PP',
+        'perl_experimental,*',
+    );
+
+    my $data = {
+        "true1" => boolean::true(),
+        "false1" => boolean::false(),
+        "true2" => JSON::PP::true(),
+        "false2" => JSON::PP::false(),
+        "true3" => !!1,
+        "false3" => !!0,
+    };
+    for my $test (@tests) {
+        my $yppd = YAML::PP->new(boolean => $test);
+        my $yaml = $yppd->dump_string($data);
+        my $exp_json_pp = <<'EOM';
+---
+false1: false
+false2: false
+false3: false
+true1: true
+true2: true
+true3: true
 EOM
         cmp_ok($yaml, 'eq', $exp_json_pp, "$test dump");
     }

@@ -44,6 +44,11 @@ sub new {
             $true ||= \&bool_perl_true;
             $false ||= \&bool_perl_false;
         }
+        elsif ($b eq 'perl_experimental') {
+            $true ||= \&bool_perl_true;
+            $false ||= \&bool_perl_false;
+            push @bool_class, 'perl_experimental';
+        }
         else {
             die "Invalid value for 'boolean': '$b'. Allowed: ('perl', 'boolean', 'JSON::PP')";
         }
@@ -234,6 +239,12 @@ sub add_representer {
         return;
     }
     if (my $class_equals = $args{class_equals}) {
+        if ($] >= 5.036000 and $class_equals eq 'perl_experimental') {
+            $representers->{bool} = {
+                code => $args{code},
+            };
+            return;
+        }
         my $rep = $representers->{class_equals};
         $rep->{ $class_equals } = {
             code => $args{code},
@@ -406,13 +417,13 @@ sub bool_jsonpp_true { JSON::PP::true() }
 
 sub bool_booleanpm_true { boolean::true() }
 
-sub bool_perl_true { 1 }
+sub bool_perl_true { !!1 }
 
 sub bool_jsonpp_false { JSON::PP::false() }
 
 sub bool_booleanpm_false { boolean::false() }
 
-sub bool_perl_false { !1 }
+sub bool_perl_false { !!0 }
 
 1;
 

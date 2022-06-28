@@ -131,6 +131,15 @@ sub represent_node {
 
 }
 
+my $bool_code = <<'EOM';
+sub {
+    my ($x) = @_;
+    use experimental qw/ builtin /;
+    builtin::is_bool($x);
+}
+EOM
+my $is_bool;
+
 sub represent_node_nonref {
     my ($self, $node) = @_;
     my $representers = $self->schema->representers;
@@ -143,6 +152,12 @@ sub represent_node_nonref {
             $node->{style} = YAML_SINGLE_QUOTED_SCALAR_STYLE;
             $node->{data} = '';
             return 1;
+        }
+    }
+    if ($] >= 5.036000 and my $rep = $representers->{bool}) {
+        $is_bool ||= eval $bool_code;
+        if ($is_bool->($node->{value})) {
+            return $rep->{code}->($self, $node);
         }
     }
     for my $rep (@{ $representers->{flags} }) {

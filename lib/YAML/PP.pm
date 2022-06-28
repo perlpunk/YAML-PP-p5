@@ -539,7 +539,7 @@ Options:
 
 =item boolean
 
-Values: C<perl> (currently default), C<JSON::PP>, C<boolean>
+Values: C<perl> (currently default), C<JSON::PP>, C<boolean>, C<perl_experimental>
 
 This option is for loading and dumping.
 
@@ -559,6 +559,20 @@ Examples:
     boolean => '*'
     Booleans will be loaded as perl booleans, but when dumping, all
     currently supported boolean classes will be recognized
+
+If you have perl >= 5.36 then you might want to try out the experimental
+boolean support, see L<builtin>.
+
+YAML::PP supports that by using the C<perl_experimental> value for the boolean
+option. Rules are the same as for the experimental L<builtin> class: It's
+not guaranteed to work in the future.
+
+As soon as the builtin boolean support leaves experimental status, I will
+update YAML::PP to support this via the default C<perl> value.
+
+    boolean => 'perl_experimental'
+    Booleans will be loaded as perl booleans, and they will be recognized
+    as such when dumping also
 
 =item schema
 
