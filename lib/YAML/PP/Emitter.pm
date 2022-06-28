@@ -505,11 +505,109 @@ sub scalar_event {
     }
     $props = join ' ', grep defined, ($anchor, $tag);
 
-    my $style = $info->{style};
     DEBUG and local $Data::Dumper::Useqq = 1;
     $value = '' unless defined $value;
-    my $first = substr($value, 0, 1);
 
+    my $style = $self->_find_best_scalar_style(
+        info => $info,
+        value => $value,
+    );
+
+    my $open_ended = 0;
+
+    if ($style == YAML_PLAIN_SCALAR_STYLE) {
+        $value =~ s/\n/\n\n/g;
+    }
+    elsif ($style == YAML_SINGLE_QUOTED_SCALAR_STYLE) {
+        my $new_indent = $last->{indent} . (' ' x $self->indent);
+        $value =~ s/(\n+)/"\n" x (1 + (length $1))/eg;
+        my @lines = split m/\n/, $value, -1;
+        if (@lines > 1) {
+            for my $line (@lines[1 .. $#lines]) {
+                $line = $new_indent . $line
+                    if length $line;
+            }
+        }
+        $value = join "\n", @lines;
+        $value =~ s/'/''/g;
+        $value = "'" . $value . "'";
+    }
+    elsif ($style == YAML_LITERAL_SCALAR_STYLE) {
+        DEBUG and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$value], ['value']);
+        my $indicators = '';
+        if ($value =~ m/\A\n* +/) {
+            $indicators .= $self->indent;
+        }
+        my $indent = $indent . ' ' x $self->indent;
+        if ($value !~ m/\n\z/) {
+            $indicators .= '-';
+            $value .= "\n";
+        }
+        elsif ($value =~ m/(\n|\A)\n\z/) {
+            $indicators .= '+';
+            $open_ended = 1;
+        }
+        $value =~ s/^(?=.)/$indent/gm;
+        $value = "|$indicators\n$value";
+    }
+    elsif ($style == YAML_FOLDED_SCALAR_STYLE) {
+        DEBUG and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$value], ['value']);
+        my @lines = split /\n/, $value, -1;
+        DEBUG and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@lines], ['lines']);
+        my $eol = 0;
+        my $indicators = '';
+        if ($value =~ m/\A\n* +/) {
+            $indicators .= $self->indent;
+        }
+        my $indent = $indent . ' ' x $self->indent;
+        if ($lines[-1] eq '') {
+            pop @lines;
+            $eol = 1;
+        }
+        else {
+            $indicators .= '-';
+        }
+        $value = ">$indicators\n";
+        for my $i (0 .. $#lines) {
+            my $line = $lines[ $i ];
+            if (length $line) {
+                $value .= "$indent$line\n";
+            }
+            if ($i != $#lines) {
+                $value .= "\n";
+            }
+        }
+    }
+    else {
+        $value =~ s/([$escape_re"\\])/$to_escape{ $1 } || sprintf '\\u%04x', ord($1)/eg;
+        $value = '"' . $value . '"';
+    }
+
+    DEBUG and warn __PACKAGE__.':'.__LINE__.": (@$stack)\n";
+    my $yaml = $self->_emit_scalar(
+        indent => $indent,
+        props => $props,
+        value => $value,
+        style => $style,
+    );
+
+    $last->{index}++;
+    $last->{newline} = 0;
+    $self->_write($yaml);
+    $last->{column} = $self->column;
+    $self->{open_ended} = $open_ended;
+}
+
+sub _find_best_scalar_style {
+    my ($self, %args) = @_;
+    my $info = $args{info};
+    my $style = $info->{style};
+    my $value = $args{value};
+    my $stack = $self->event_stack;
+    my $last = $stack->[-1];
+    my $flow = $last->{flow};
+
+    my $first = substr($value, 0, 1);
     if ($value eq '') {
         if ($flow and $last->{type} ne 'MAPVALUE' and $last->{type} ne 'MAP') {
             $style = YAML_SINGLE_QUOTED_SCALAR_STYLE;
@@ -596,78 +694,18 @@ sub scalar_event {
             $style = YAML_DOUBLE_QUOTED_SCALAR_STYLE;
         }
     }
+    return $style;
+}
 
-    my $open_ended = 0;
+sub _emit_scalar {
+    my ($self, %args) = @_;
+    my $props = $args{props};
+    my $value = $args{value};
+    my $style = $args{style};
+    my $stack = $self->event_stack;
+    my $last = $stack->[-1];
+    my $flow = $last->{flow};
 
-    if ($style == YAML_PLAIN_SCALAR_STYLE) {
-        $value =~ s/\n/\n\n/g;
-    }
-    elsif ($style == YAML_SINGLE_QUOTED_SCALAR_STYLE) {
-        my $new_indent = $last->{indent} . (' ' x $self->indent);
-        $value =~ s/(\n+)/"\n" x (1 + (length $1))/eg;
-        my @lines = split m/\n/, $value, -1;
-        if (@lines > 1) {
-            for my $line (@lines[1 .. $#lines]) {
-                $line = $new_indent . $line
-                    if length $line;
-            }
-        }
-        $value = join "\n", @lines;
-        $value =~ s/'/''/g;
-        $value = "'" . $value . "'";
-    }
-    elsif ($style == YAML_LITERAL_SCALAR_STYLE) {
-        DEBUG and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$value], ['value']);
-        my $indicators = '';
-        if ($value =~ m/\A\n* +/) {
-            $indicators .= $self->indent;
-        }
-        my $indent = $indent . ' ' x $self->indent;
-        if ($value !~ m/\n\z/) {
-            $indicators .= '-';
-            $value .= "\n";
-        }
-        elsif ($value =~ m/(\n|\A)\n\z/) {
-            $indicators .= '+';
-            $open_ended = 1;
-        }
-        $value =~ s/^(?=.)/$indent/gm;
-        $value = "|$indicators\n$value";
-    }
-    elsif ($style == YAML_FOLDED_SCALAR_STYLE) {
-        DEBUG and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$value], ['value']);
-        my @lines = split /\n/, $value, -1;
-        DEBUG and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@lines], ['lines']);
-        my $eol = 0;
-        my $indicators = '';
-        if ($value =~ m/\A\n* +/) {
-            $indicators .= $self->indent;
-        }
-        my $indent = $indent . ' ' x $self->indent;
-        if ($lines[-1] eq '') {
-            pop @lines;
-            $eol = 1;
-        }
-        else {
-            $indicators .= '-';
-        }
-        $value = ">$indicators\n";
-        for my $i (0 .. $#lines) {
-            my $line = $lines[ $i ];
-            if (length $line) {
-                $value .= "$indent$line\n";
-            }
-            if ($i != $#lines) {
-                $value .= "\n";
-            }
-        }
-    }
-    else {
-        $value =~ s/([$escape_re"\\])/$to_escape{ $1 } || sprintf '\\u%04x', ord($1)/eg;
-        $value = '"' . $value . '"';
-    }
-
-    DEBUG and warn __PACKAGE__.':'.__LINE__.": (@$stack)\n";
     my $yaml = '';
     my $pvalue = $props;
     if ($props and length $value) {
@@ -676,61 +714,77 @@ sub scalar_event {
     elsif (length $value) {
         $pvalue .= $value;
     }
-    my $multiline = ($style == YAML_LITERAL_SCALAR_STYLE or $style == YAML_FOLDED_SCALAR_STYLE);
-    my $newline = 0;
     if ($flow) {
-        $indent = 0;
         if ($props and not length $value) {
             $pvalue .= ' ';
         }
-        if ($last->{type} eq 'SEQ') {
-            if ($last->{index} == 0) {
-                if ($self->column) {
-                    $yaml .= ' ';
-                }
-                $yaml .= "[";
-            }
-            else {
-                $yaml .= ", ";
-            }
-        }
-        elsif ($last->{type} eq 'MAP') {
-            if ($last->{index} == 0) {
-                if ($self->column) {
-                    $yaml .= ' ';
-                }
-                $yaml .= "{";
-            }
-            else {
-                $yaml .= ", ";
-            }
-            $last->{type} = 'MAPVALUE';
-        }
-        elsif ($last->{type} eq 'MAPVALUE') {
-            if ($last->{index} == 0) {
-                die "Should not happen (index 0 in MAPVALUE)";
-            }
-            $yaml .= ": ";
-            $last->{type} = 'MAP';
-        }
-        if ($self->column + length $pvalue > $self->width) {
-            $yaml .= "\n";
-            $yaml .= $last->{indent};
-            $yaml .= ' ' x $self->indent;
-        }
-        $yaml .= $pvalue;
+        $yaml = $self->_emit_flow_scalar(
+            value => $value,
+            pvalue => $pvalue,
+            style => $args{style},
+        );
     }
     else {
-        if ($last->{type} eq 'MAP' or $last->{type} eq 'SEQ') {
-            if ($last->{index} == 0 and $last->{newline}) {
-                $yaml .= "\n";
-                $last->{column} = 0;
-                $last->{newline} = 0;
-            }
-        }
-        my $space = ' ';
-        if ($last->{type} eq 'MAP') {
+        $yaml = $self->_emit_block_scalar(
+            props => $props,
+            value => $value,
+            pvalue => $pvalue,
+            indent => $args{indent},
+            style => $args{style},
+        );
+    }
+    return $yaml;
+}
 
+sub _emit_block_scalar {
+    my ($self, %args) = @_;
+    my $props = $args{props};
+    my $value = $args{value};
+    my $pvalue = $args{pvalue};
+    my $indent = $args{indent};
+    my $style = $args{style};
+    my $stack = $self->event_stack;
+    my $last = $stack->[-1];
+
+    my $yaml;
+    if ($last->{type} eq 'MAP' or $last->{type} eq 'SEQ') {
+        if ($last->{index} == 0 and $last->{newline}) {
+            $yaml .= "\n";
+            $last->{column} = 0;
+            $last->{newline} = 0;
+        }
+    }
+    my $space = ' ';
+    my $multiline = ($style == YAML_LITERAL_SCALAR_STYLE or $style == YAML_FOLDED_SCALAR_STYLE);
+    if ($last->{type} eq 'MAP') {
+
+        if ($last->{column}) {
+            my $space = $self->indent > 1 ? ' ' x ($self->indent - 1) : ' ';
+            $yaml .= $space;
+        }
+        else {
+            $yaml .= $indent;
+        }
+        if ($props and not length $value) {
+            $pvalue .= ' ';
+        }
+        $last->{type} = 'MAPVALUE';
+        if ($multiline) {
+            # oops, a complex key
+            $yaml .= "? ";
+            $last->{type} = 'COMPLEXVALUE';
+        }
+        if (not $multiline) {
+            $pvalue .= ":";
+        }
+    }
+    else {
+        if ($last->{type} eq 'MAPVALUE') {
+            $last->{type} = 'MAP';
+        }
+        elsif ($last->{type} eq 'DOC') {
+        }
+        else {
             if ($last->{column}) {
                 my $space = $self->indent > 1 ? ' ' x ($self->indent - 1) : ' ';
                 $yaml .= $space;
@@ -738,66 +792,78 @@ sub scalar_event {
             else {
                 $yaml .= $indent;
             }
-            if ($props and not length $value) {
-                $pvalue .= ' ';
-            }
-            my $new_event = 'MAPVALUE';
-            $last->{type} = $new_event;
-            if ($multiline) {
-                # oops, a complex key
-                $yaml .= "? ";
-                $new_event = 'COMPLEXVALUE';
-                $last->{type} = $new_event;
-            }
-            if (not $multiline) {
-                $pvalue .= ":";
-            }
-        }
-        else {
-            if ($last->{type} eq 'MAPVALUE') {
+            if ($last->{type} eq 'COMPLEXVALUE') {
                 $last->{type} = 'MAP';
+                $yaml .= ":";
             }
-            elsif ($last->{type} eq 'DOC') {
+            elsif ($last->{type} eq 'SEQ') {
+                $yaml .= "-";
             }
             else {
-                if ($last->{column}) {
-                    my $space = $self->indent > 1 ? ' ' x ($self->indent - 1) : ' ';
-                    $yaml .= $space;
-                }
-                else {
-                    $yaml .= $indent;
-                }
-                if ($last->{type} eq 'COMPLEXVALUE') {
-                    $last->{type} = 'MAP';
-                    $yaml .= ":";
-                }
-                elsif ($last->{type} eq 'SEQ') {
-                    $yaml .= "-";
-                }
-                else {
-                    die "Should not happen ($last->{type} in scalar_event)";
+                die "Should not happen ($last->{type} in scalar_event)";
 
-                }
-                $last->{column} = 1;
             }
+            $last->{column} = 1;
+        }
 
-            if (length $pvalue) {
-                if ($last->{column}) {
-                    $pvalue = "$space$pvalue";
-                }
-            }
-            if (not $multiline) {
-                $pvalue .= "\n";
+        if (length $pvalue) {
+            if ($last->{column}) {
+                $pvalue = "$space$pvalue";
             }
         }
-        $yaml .= $pvalue;
+        if (not $multiline) {
+            $pvalue .= "\n";
+        }
     }
+    $yaml .= $pvalue;
+    return $yaml;
+}
 
-    $last->{index}++;
-    $last->{newline} = $newline;
-    $self->_write($yaml);
-    $last->{column} = $self->column;
-    $self->{open_ended} = $open_ended;
+sub _emit_flow_scalar {
+    my ($self, %args) = @_;
+    my $value = $args{value};
+    my $pvalue = $args{pvalue};
+    my $stack = $self->event_stack;
+    my $last = $stack->[-1];
+
+    my $yaml;
+    if ($last->{type} eq 'SEQ') {
+        if ($last->{index} == 0) {
+            if ($self->column) {
+                $yaml .= ' ';
+            }
+            $yaml .= "[";
+        }
+        else {
+            $yaml .= ", ";
+        }
+    }
+    elsif ($last->{type} eq 'MAP') {
+        if ($last->{index} == 0) {
+            if ($self->column) {
+                $yaml .= ' ';
+            }
+            $yaml .= "{";
+        }
+        else {
+            $yaml .= ", ";
+        }
+        $last->{type} = 'MAPVALUE';
+    }
+    elsif ($last->{type} eq 'MAPVALUE') {
+        if ($last->{index} == 0) {
+            die "Should not happen (index 0 in MAPVALUE)";
+        }
+        $yaml .= ": ";
+        $last->{type} = 'MAP';
+    }
+    if ($self->column + length $pvalue > $self->width) {
+        $yaml .= "\n";
+        $yaml .= $last->{indent};
+        $yaml .= ' ' x $self->indent;
+    }
+    $yaml .= $pvalue;
+    return $yaml;
 }
 
 sub alias_event {
