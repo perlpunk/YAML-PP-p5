@@ -39,7 +39,7 @@ SKIP: {
 }
 
 SKIP: {
-    skip "JSON::PP not installed", 3 unless $json_pp;
+    skip "JSON::PP and boolean not installed", 3 unless ($json_pp and $boolean);
     my $ypp = YAML::PP->new(boolean => 'JSON::PP,boolean');
     my $data_jp = $ypp->load_string($yaml);
     isa_ok($data_jp->{TRUE}, 'JSON::PP::Boolean');
