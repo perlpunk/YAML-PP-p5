@@ -71,6 +71,13 @@ sub render_block_scalar {
     if ($folded) {
 
         my $prev = 'START';
+        my $trailing = '';
+        if ($keep) {
+            while (@$lines and $lines->[-1] eq '') {
+                pop @$lines;
+                $trailing .= "\n";
+            }
+        }
         for my $i (0 .. $#$lines) {
             my $line = $lines->[ $i ];
 
@@ -106,6 +113,9 @@ sub render_block_scalar {
             }
 
             $prev = $type;
+        }
+        if ($keep) {
+            $string .= $trailing;
         }
         $string .= "\n" if @$lines and not $trim;
     }

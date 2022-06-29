@@ -1,0 +1,12 @@
++STR
++DOC ---
++SEQ
+=VAL >
+=VAL >\n
+=VAL >\n\n
+=VAL >a\n
+=VAL >a\n\n
+=VAL >a\n\n\n
+-SEQ
+-DOC ...
+-STR
