@@ -554,29 +554,63 @@ sub scalar_event {
         DEBUG and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$value], ['value']);
         my @lines = split /\n/, $value, -1;
         DEBUG and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\@lines], ['lines']);
-        my $eol = 0;
+        my $trailing = -1;
+        while (@lines) {
+            last if $lines[-1] ne '';
+            pop @lines;
+            $trailing++;
+        }
+        my %start_with_space;
+        for my $i (0 .. $#lines) {
+            if ($lines[ $i ] =~ m/^[ \t]+/) {
+                $start_with_space{ $i } = 1;
+            }
+        }
         my $indicators = '';
         if ($value =~ m/\A\n* +/) {
             $indicators .= $self->indent;
         }
         my $indent = $indent . ' ' x $self->indent;
-        if ($lines[-1] eq '') {
-            pop @lines;
-            $eol = 1;
+        if ($trailing > 0) {
+            $indicators .= '+';
+            $open_ended = 1;
         }
-        else {
+        elsif ($trailing < 0) {
             $indicators .= '-';
         }
         $value = ">$indicators\n";
+        my $got_content = 0;
         for my $i (0 .. $#lines) {
             my $line = $lines[ $i ];
-            if (length $line) {
-                $value .= "$indent$line\n";
+            my $sp = $start_with_space{ $i } || 0;
+            my $spnext = $i == $#lines ? 1 : $start_with_space{ $i+1 } || 0;
+            my $spprev = $i == 0 ? 1 : $start_with_space{ $i-1 } || 0;
+            my $empty = length $line ? 0 : 1;
+            my $emptynext = $i == $#lines ? '' : length $lines[$i+1] ? 0 : 1;
+            my $nl = 0;
+            if ($empty) {
+                if ($spnext and $spprev) {
+                    $nl = 1;
+                }
+                elsif (not $spnext) {
+                    $nl = 1;
+                }
+                elsif (not $got_content) {
+                    $nl = 1;
+                }
             }
-            if ($i != $#lines) {
+            else {
+                $got_content = 1;
+                $value .= "$indent$line\n";
+                if (not $sp and not $spnext) {
+                    $nl = 1;
+                }
+            }
+            if ($nl) {
                 $value .= "\n";
             }
         }
+        $value .= "\n" x ($trailing) if $trailing > 0;
     }
     else {
         $value =~ s/([$escape_re"\\])/$to_escape{ $1 } || sprintf '\\u%04x', ord($1)/eg;

@@ -63,8 +63,6 @@ v014
 # block scalar
 push @skip, qw/
 4QFQ
-6VJK
-7T8X
 
 R4YG
 v033
@@ -75,7 +73,6 @@ push @skip, qw/
 XLQ9
 K54U
 PUW8
-3MYT
 MJS9
 
 

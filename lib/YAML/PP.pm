@@ -762,6 +762,8 @@ If you load the following input:
     - "double"
     - |
       literal
+    - >
+      folded
     ---
     block mapping: &alias
       flow sequence: [a, b]
@@ -779,7 +781,6 @@ with this code:
     $yp->dump_file($hash, $styles, $flow);
 
 Then dumping it will return the same output.
-Only folded block scalars '>' cannot preserve the style yet.
 
 Note that YAML allows repeated definition of anchors. They cannot be preserved
 with YAML::PP right now. Example:

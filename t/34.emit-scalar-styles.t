@@ -41,6 +41,7 @@ my $yp = YAML::PP->new( schema => ['Failsafe'] );
 my @styles = (
     YAML_PLAIN_SCALAR_STYLE, YAML_DOUBLE_QUOTED_SCALAR_STYLE,
     YAML_SINGLE_QUOTED_SCALAR_STYLE, YAML_LITERAL_SCALAR_STYLE,
+    YAML_FOLDED_SCALAR_STYLE
 );
 
 for my $style (@styles) {
@@ -50,13 +51,14 @@ for my $style (@styles) {
             $emitter->init;
             local $Data::Dumper::Useqq = 1;
             my $label = Data::Dumper->Dump([$input], ['input']);
+            chomp $label;
 
             $emitter->stream_start_event;
             $emitter->document_start_event({ implicit => 1 });
             $emitter->sequence_start_event;
             $emitter->scalar_event({ value => $input, style => $style });
             $emitter->sequence_end_event;
-            $emitter->document_end_event({ implicit => 1 });
+            $emitter->document_end_event({ implicit => 0 });
             $emitter->stream_end_event;
 
             my $yaml = $emitter->writer->output;
@@ -66,6 +68,7 @@ for my $style (@styles) {
 
             cmp_ok($data->[0], 'eq', $input, "style $style - $label") or do {
                 diag ">>$yaml<<\n";
+                explain $data;
                 diag(Data::Dumper->Dump([$data], ['data']));
                 diag(Data::Dumper->Dump([$yaml], ['yaml']));
             };

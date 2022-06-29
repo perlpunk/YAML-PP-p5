@@ -38,7 +38,8 @@ EOM
 p: plain
 's': 'single'
 "d": "double"
-f: folded
+f: >-
+  folded
 ? |-
   l
 : |-
