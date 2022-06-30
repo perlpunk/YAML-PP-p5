@@ -1,1 +1,6 @@
-"foo \n\n\t bar\n\nbaz\n"
+>
+  foo 
+
+  	 bar
+
+  baz
