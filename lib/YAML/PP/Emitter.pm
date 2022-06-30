@@ -586,16 +586,9 @@ sub scalar_event {
             my $spnext = $i == $#lines ? 1 : $start_with_space{ $i+1 } || 0;
             my $spprev = $i == 0 ? 1 : $start_with_space{ $i-1 } || 0;
             my $empty = length $line ? 0 : 1;
-            my $emptynext = $i == $#lines ? '' : length $lines[$i+1] ? 0 : 1;
             my $nl = 0;
             if ($empty) {
-                if ($spnext and $spprev) {
-                    $nl = 1;
-                }
-                elsif (not $spnext) {
-                    $nl = 1;
-                }
-                elsif (not $got_content) {
+                if ($spprev or not $spnext or not $got_content) {
                     $nl = 1;
                 }
             }
