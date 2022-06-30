@@ -1229,7 +1229,7 @@ $GRAMMAR = {
           }
         }
       },
-      'match' => 'cb_send_alias'
+      'match' => 'cb_send_alias_key'
     },
     'COLON' => {
       'EOL' => {
@@ -1862,7 +1862,7 @@ This is the Grammar in YAML
         EOL: { new: FULLNODE }
         WS: { new: FULLNODE }
       ALIAS:
-        match: cb_send_alias
+        match: cb_send_alias_key
         WS:
           COLON:
             EOL: { new: FULLNODE }

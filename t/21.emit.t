@@ -88,7 +88,6 @@ push @skip, qw/
 H3Z8
 /;
 push @skip, qw/
-    X38W
 /;
 
 my $testsuite = YAML::PP::Test->new(

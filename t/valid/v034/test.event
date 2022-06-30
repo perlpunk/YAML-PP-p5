@@ -1,0 +1,22 @@
++STR
++DOC ---
++MAP
+=VAL :key
+=VAL &alias :value
+=ALI *alias
++SEQ
+=VAL :key
+-SEQ
+-MAP
+-DOC
++DOC ---
++MAP
+=VAL :key
+=VAL &alias :value
+=ALI *alias
++SEQ
+=VAL :key
+-SEQ
+-MAP
+-DOC
+-STR

@@ -1,0 +1,8 @@
+---
+key: &alias value
+*alias :
+- key
+---
+key: &alias value
+*alias :
+- key

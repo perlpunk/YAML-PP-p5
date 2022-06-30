@@ -1087,6 +1087,13 @@ sub cb_send_alias {
     $self->alias_event({ value => $alias });
 }
 
+sub cb_send_alias_key {
+    my ($self, $token) = @_;
+    my $alias = substr($token->{value}, 1);
+    $self->alias_event({ value => $alias });
+    $self->set_new_node(1);
+}
+
 sub cb_send_alias_from_stack {
     my ($self, $token) = @_;
     my $last = pop @{ $self->event_stack };
