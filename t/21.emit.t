@@ -40,21 +40,12 @@ push @skip, qw/
 /;
 # quoting
 push @skip, qw/
-36F6
-6CA3
 9YRD
 HS5T
 EX5H
 NAT4
-L24T:00
 L24T:01
-DK95:00
-DK95:02
-DK95:03
-DK95:04
-DK95:05
 DK95:07
-DK95:08
 /;
 # tags
 push @skip, qw/
@@ -64,15 +55,13 @@ v014
 push @skip, qw/
 4QFQ
 
-R4YG
+
 v033
 /;
 
-# test
+# folded
 push @skip, qw/
-XLQ9
-K54U
-PUW8
+R4YG
 MJS9
 
 
