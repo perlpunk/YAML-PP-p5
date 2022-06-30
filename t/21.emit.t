@@ -53,21 +53,8 @@ v014
 /;
 # block scalar
 push @skip, qw/
-4QFQ
-
-
 v033
 /;
-
-# folded
-push @skip, qw/
-R4YG
-MJS9
-
-
-/;
-# TODO fix testsuite
-# 4QFQ
 
 # unicode
 push @skip, qw/
