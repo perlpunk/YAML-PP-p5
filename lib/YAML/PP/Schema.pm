@@ -355,7 +355,7 @@ sub load_scalar {
 
 sub create_sequence {
     my ($self, $constructor, $event) = @_;
-    my $tag = $event->{tag};
+    my $tag = $event->{tag} || 'tag:yaml.org,2002:seq';
     my $data = [];
     my $on_data;
 
@@ -385,7 +385,7 @@ sub create_sequence {
 
 sub create_mapping {
     my ($self, $constructor, $event) = @_;
-    my $tag = $event->{tag};
+    my $tag = $event->{tag} || 'tag:yaml.org,2002:map';
     my $data = {};
     my $on_data;
 
