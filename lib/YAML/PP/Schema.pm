@@ -304,10 +304,13 @@ sub load_scalar {
     my ($self, $constructor, $event) = @_;
     my $tag = $event->{tag};
     my $value = $event->{value};
+    unless ($tag) {
+        $tag = $event->{style} == YAML_PLAIN_SCALAR_STYLE ? '?' : '!';
+    }
 
     my $resolvers = $self->resolvers;
     my $res;
-    if ($tag) {
+    if ($tag ne '?') {
         $res = $resolvers->{tag}->{ $tag };
         if (not $res and my $matches = $resolvers->{tags}) {
             for my $match (@$matches) {
@@ -355,7 +358,7 @@ sub load_scalar {
 
 sub create_sequence {
     my ($self, $constructor, $event) = @_;
-    my $tag = $event->{tag};
+    my $tag = $event->{tag} || '?';
     my $data = [];
     my $on_data;
 
@@ -385,7 +388,7 @@ sub create_sequence {
 
 sub create_mapping {
     my ($self, $constructor, $event) = @_;
-    my $tag = $event->{tag};
+    my $tag = $event->{tag} || '?';
     my $data = {};
     my $on_data;
 
