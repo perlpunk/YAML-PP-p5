@@ -103,6 +103,6 @@ jobs:
       run: >
         apt-get update && apt-get install -y aspell
 
-        cpanm --quiet --notest Test::Spelling Test::Pod
+        cpanm --quiet --notest Pod::Spell@1.20 Test::Spelling Test::Pod
     - name: Run Tests
       run: prove -lv xt/03.spelling.t xt/04.pod.t
