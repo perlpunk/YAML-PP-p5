@@ -15,8 +15,8 @@ jobs:
     strategy:
       matrix:
         perl-version:
-#        - '5.8'
-#        - '5.10'
+        - '5.8'
+        - '5.10'
         - '5.12'
         - '5.14'
         - '5.16'
@@ -49,10 +49,12 @@ jobs:
         else
           echo "Running without yaml-test-suite data"
         fi
+    - name: Install optional dep
+      run: cpanm --notest Test::Deep || true
     - name: Install deps
       run: >
         cpanm --quiet --notest
-        Module::Load Test::Deep Test::Warn Test::More JSON::PP boolean
+        Module::Load Test::Warn Test::More JSON::PP boolean
     - name: Run Tests
       run: prove -lr t
 

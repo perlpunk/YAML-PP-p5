@@ -4,11 +4,23 @@ use warnings;
 use Test::More;
 use FindBin '$Bin';
 use Data::Dumper;
-use Test::Deep qw/ cmp_deeply /;
 use IO::File;
 use YAML::PP;
 use YAML::PP::Schema::Perl;
 use Scalar::Util qw/ blessed reftype /;
+
+my $test_deep;
+BEGIN {
+    eval "use Test::Deep qw/ cmp_deeply /";
+    unless ($@) {
+        $test_deep = 1;
+    }
+}
+unless ($test_deep) {
+    plan skip_all => "No Test::Deep available";
+    exit;
+}
+
 
 our $var = "Hola";
 our @var = (3, 14, 15);

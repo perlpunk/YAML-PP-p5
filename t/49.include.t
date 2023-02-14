@@ -6,9 +6,20 @@ use FindBin '$Bin';
 use Data::Dumper;
 use YAML::PP;
 use YAML::PP::Schema::Include;
-use Test::Deep;
 use File::Spec;
 use Scalar::Util qw/ refaddr /;
+
+my $test_deep;
+BEGIN {
+    eval "use Test::Deep qw/ cmp_deeply /";
+    unless ($@) {
+        $test_deep = 1;
+    }
+}
+unless ($test_deep) {
+    plan skip_all => "No Test::Deep available";
+    exit;
+}
 
 my $include_path = "$Bin/data/include";
 

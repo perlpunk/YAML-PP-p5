@@ -4,7 +4,6 @@ use warnings;
 use Test::More;
 use Data::Dumper;
 use YAML::PP;
-use Test::Deep;
 
 my $allow = YAML::PP->new(
     duplicate_keys => 1,

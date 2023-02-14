@@ -5,7 +5,6 @@ use Test::More;
 use FindBin '$Bin';
 use Data::Dumper;
 use YAML::PP;
-use Test::Deep;
 
 # https://yaml.org/type/merge.html
 

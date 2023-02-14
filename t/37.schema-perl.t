@@ -4,10 +4,22 @@ use warnings;
 use Test::More;
 use FindBin '$Bin';
 use Data::Dumper;
-use Test::Deep;
 use Scalar::Util ();
 use YAML::PP;
 use YAML::PP::Perl;
+
+my $test_deep;
+BEGIN {
+    eval "use Test::Deep qw/ cmp_deeply /";
+    unless ($@) {
+      $test_deep = 1;
+    }
+}
+unless ($test_deep) {
+    plan skip_all => "No Test::Deep available";
+    exit;
+}
+
 my $tests = require "$Bin/../examples/schema-perl.pm";
 
 my $perl_no_objects = YAML::PP::Schema::Perl->new(
