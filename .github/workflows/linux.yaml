@@ -42,6 +42,7 @@ jobs:
       run: |
         # .git/ doesn't seem to exist for all containers
         if [ -d .git ]; then
+            git config --global --add safe.directory '*'
             git fetch --depth=1 origin refs/heads/test-suite
             git branch test-suite --track origin/test-suite
             git worktree add test-suite test-suite
@@ -68,6 +69,7 @@ jobs:
 
     - name: Add testsuite worktree
       run: |
+        git config --global --add safe.directory '*'
         git fetch --depth=1 origin refs/heads/test-suite
         git branch test-suite --track origin/test-suite
         git worktree add test-suite test-suite
