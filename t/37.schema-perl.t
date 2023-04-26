@@ -60,6 +60,9 @@ my $yp_perl_one_two = YAML::PP::Perl->new(
 my $yp_perl_two_one = YAML::PP::Perl->new(
     schema => [qw/ JSON Perl tags=!!perl+!perl /],
 );
+my $yp_no_dumpcode = YAML::PP::Perl->new(
+    schema => [qw/ + Perl -dumpcode /],
+);
 
 my @tests = sort keys %$tests;
 @tests = qw/
@@ -346,6 +349,16 @@ EOM
             cmp_ok($blessed, 'eq', '', "Data $i not blessed");
         }
     }
+};
+
+subtest no_dumpcode => sub {
+    my $data = { foo => sub { 23 } };
+    my $yaml = $yp_no_dumpcode->dump_string($data);
+    my $exp = <<'EOM';
+---
+foo: !perl/code '{ "DUMMY" }'
+EOM
+    is $yaml, $exp, "Use -loadcode";
 };
 
 done_testing;

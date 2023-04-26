@@ -17,6 +17,7 @@ LoadFile
 RAML
 Schema
 Schemas
+dumpcode
 loadcode
 refref
 scalarref
