@@ -352,11 +352,14 @@ EOM
 };
 
 subtest no_dumpcode => sub {
-    my $data = { foo => sub { 23 } };
+    my $code1 = sub { 23 };
+    my $code2 = sub { 23 };
+    my $data = { foo => bless ($code1, "Foo"), bar => $code2 };
     my $yaml = $yp_no_dumpcode->dump_string($data);
     my $exp = <<'EOM';
 ---
-foo: !perl/code '{ "DUMMY" }'
+bar: !perl/code '{ "DUMMY" }'
+foo: !perl/code:Foo '{ "DUMMY" }'
 EOM
     is $yaml, $exp, "Use -loadcode";
 };

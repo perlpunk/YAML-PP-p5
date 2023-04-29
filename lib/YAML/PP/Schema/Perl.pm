@@ -360,26 +360,14 @@ sub register {
             $node->{data} = $self->represent_ref($node->{value});
         },
     );
-    if ($dumpcode) {
-        $schema->add_representer(
-            coderef => 1,
-            code => sub {
-                my ($rep, $node) = @_;
-                $node->{tag} = $perl_tag . "/code";
-                $node->{data} = $self->represent_code($node->{value});
-            },
-        );
-    }
-    else {
-        $schema->add_representer(
-            coderef => 1,
-            code => sub {
-                my ($rep, $node) = @_;
-                $node->{tag} = $perl_tag . "/code";
-                $node->{data} = '{ "DUMMY" }';
-            },
-        );
-    }
+    $schema->add_representer(
+        coderef => 1,
+        code => sub {
+            my ($rep, $node) = @_;
+            $node->{tag} = $perl_tag . "/code";
+            $node->{data} = $dumpcode ? $self->represent_code($node->{value}) : '{ "DUMMY" }';
+        },
+    );
     $schema->add_representer(
         glob => 1,
         code => sub {
@@ -442,7 +430,7 @@ sub register {
             }
 
             elsif ($node->{reftype} eq 'CODE') {
-                $node->{data} = $self->represent_code($node->{value});
+                $node->{data} = $dumpcode ? $self->represent_code($node->{value}) : '{ "DUMMY" }';
             }
             elsif ($node->{reftype} eq 'GLOB') {
                 $node->{data} = $self->represent_glob($node->{value});
