@@ -1282,6 +1282,16 @@ The layout is like libyaml output:
     - - b1
       - b2
 
+=head1 FAQ
+
+=over
+
+=item Are C<<<> merge keys supported?
+
+Yes, this can be enabled optionally, see L<YAML::PP::Schema::Merge>
+
+=back
+
 =head1 WHY
 
 All the available parsers and loaders for Perl are behaving differently,
