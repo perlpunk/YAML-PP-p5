@@ -24,7 +24,7 @@ sub new {
     my $bool = delete $args{boolean};
     $bool = 'perl' unless defined $bool;
     my $schemas = delete $args{schema} || ['+'];
-    my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
+    my $cyclic_refs = delete $args{cyclic_refs} || 'fatal';
     my $indent = delete $args{indent};
     my $width = delete $args{width};
     my $writer = delete $args{writer};
@@ -590,7 +590,10 @@ Additionally you can add further schemas, for example C<Merge>.
 
 =item cyclic_refs
 
-Default: 'allow' but will be switched to fatal in the future for safety!
+Default: C<fatal> (since 0.037)
+
+Before the default was C<allow>, but this can lead to memory leaks
+when loading on untrusted data, so it was changed to C<fatal> by default.
 
 This option is for loading only.
 

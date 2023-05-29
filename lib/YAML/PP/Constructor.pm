@@ -29,7 +29,7 @@ sub new {
     if ($preserve == 1) {
         $preserve = PRESERVE_ORDER | PRESERVE_SCALAR_STYLE | PRESERVE_FLOW_STYLE | PRESERVE_ALIAS;
     }
-    my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
+    my $cyclic_refs = delete $args{cyclic_refs} || 'fatal';
     die "Invalid value for cyclic_refs: $cyclic_refs"
         unless $cyclic_refs{ $cyclic_refs };
     my $schemas = delete $args{schemas};
@@ -322,7 +322,7 @@ sub alias_event {
             my $cyclic_refs = $self->cyclic_refs;
             if ($cyclic_refs ne 'allow') {
                 if ($cyclic_refs eq 'fatal') {
-                    die "Found cyclic ref for alias '$name'";
+                    croak "Found cyclic ref for alias '$name'";
                 }
                 if ($cyclic_refs eq 'warn') {
                     $anchor = { data => \undef };

@@ -24,41 +24,53 @@ my $tests = require "$Bin/../examples/schema-perl.pm";
 
 my $perl_no_objects = YAML::PP::Schema::Perl->new(
     classes => [],
+    cyclic_refs => 'allow',
 );
 my $perl_no_objects_loadcode = YAML::PP::Schema::Perl->new(
     classes => [],
     loadcode => 1,
+    cyclic_refs => 'allow',
 );
 
 my $yp_perl = YAML::PP::Perl->new(
     schema => [qw/ JSON Perl tags=!perl /],
+    cyclic_refs => 'allow',
 );
 my $yp_perl_no_objects = YAML::PP::Perl->new(
     schema => [qw/ JSON /, $perl_no_objects],
+    cyclic_refs => 'allow',
 );
 my $yp_loadcode = YAML::PP->new(
     schema => [qw/ JSON Perl +loadcode /],
+    cyclic_refs => 'allow',
 );
 my $yp_loadcode_no_objects = YAML::PP->new(
     schema => [qw/ JSON /, $perl_no_objects_loadcode],
+    cyclic_refs => 'allow',
 );
 my $yp_perl_two = YAML::PP::Perl->new(
     schema => [qw/ JSON Perl tags=!!perl /],
+    cyclic_refs => 'allow',
 );
 my $yp_loadcode_two = YAML::PP->new(
     schema => [qw/ JSON Perl tags=!!perl +loadcode /],
+    cyclic_refs => 'allow',
 );
 my $yp_loadcode_one_two = YAML::PP->new(
     schema => [qw/ JSON Perl tags=!perl+!!perl +loadcode /],
+    cyclic_refs => 'allow',
 );
 my $yp_loadcode_two_one = YAML::PP->new(
     schema => [qw/ JSON Perl tags=!!perl+!perl +loadcode /],
+    cyclic_refs => 'allow',
 );
 my $yp_perl_one_two = YAML::PP::Perl->new(
     schema => [qw/ JSON Perl tags=!perl+!!perl /],
+    cyclic_refs => 'allow',
 );
 my $yp_perl_two_one = YAML::PP::Perl->new(
     schema => [qw/ JSON Perl tags=!!perl+!perl /],
+    cyclic_refs => 'allow',
 );
 my $yp_no_dumpcode = YAML::PP::Perl->new(
     schema => [qw/ + Perl -dumpcode /],

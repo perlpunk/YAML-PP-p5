@@ -12,7 +12,7 @@ use YAML::PP::Reader;
 sub new {
     my ($class, %args) = @_;
 
-    my $cyclic_refs = delete $args{cyclic_refs} || 'allow';
+    my $cyclic_refs = delete $args{cyclic_refs} || 'fatal';
     my $default_yaml_version = delete $args{default_yaml_version} || '1.2';
     my $preserve = delete $args{preserve};
     my $duplicate_keys = delete $args{duplicate_keys};
