@@ -1,5 +1,9 @@
 Revision history for Perl module YAML::PP
 
+0.036_002 2023-07-02 22:59:06+02:00
+
+    - Add support for plain scalars ending with colons
+
 0.036_001 2023-05-30 01:45:01+02:00
 
     - Make cyclic_refs fatal by default for safety, like announced

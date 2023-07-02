@@ -1132,6 +1132,8 @@ This is supported since 0.029 (except some not relevant cases):
     ---
     key ends with two colons::: value
 
+This was added in 0.037
+
 =item Supported Characters
 
 If you have valid YAML that's not parsed, or the other way round, please
