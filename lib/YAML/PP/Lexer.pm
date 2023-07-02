@@ -373,7 +373,7 @@ sub fetch_plain {
     }
 
     my @tokens;
-    unless ($$yaml =~ s/\A($REGEX)//) {
+    unless ($$yaml =~ s/\A($REGEX(?:[:]+(?=\:(\s|\z)))?)//) {
         $self->_push_tokens(\@tokens);
         $self->exception("Invalid plain scalar");
     }
