@@ -46,6 +46,7 @@ sub new {
         preserve => $preserve,
         duplicate_keys => $duplicate_keys,
         alias_depth => $limit->{alias_depth} || 1024,
+        max_size => $limit->{alias_depth} || 1024,
     }, $class;
     $self->init;
     return $self;
@@ -135,6 +136,7 @@ sub mapping_start_event {
         data => \$data,
         event => $event,
         on_data => $on_data,
+        size => 1,
     };
     my $stack = $self->stack;
 
@@ -158,7 +160,7 @@ sub mapping_start_event {
                 $t->{alias} = $anchor;
             }
         }
-        $self->anchors->{ $anchor } = { data => $ref->{data}, alias_depth => 1 };
+        $self->anchors->{ $anchor } = { data => $ref->{data} };
         $self->{open_anchors}->{ $anchor } = 1;
     }
 }
@@ -222,11 +224,16 @@ sub mapping_end_event {
     };
     $on_data->($self, $data, \@ref);
     push @{ $stack->[-1]->{ref} }, $$data;
+    my $size = $last->{size};
+    $stack->[-1]->{size} += $size;
+    if ($stack->[-1]->{size} > $self->{max_size}) {
+        die "Size limit reached: $self->{max_size}";
+    }
     my $depth = ($last->{depth} || 0) + 1;
     $stack->[-1]->{depth} = $depth;
     if (defined(my $anchor = $last->{event}->{anchor})) {
         $self->anchors->{ $anchor }->{finished} = 1;
-        $self->anchors->{ $anchor }->{alias_depth} *= $depth;
+        $self->anchors->{ $anchor }->{size} = $size;
         delete $self->{open_anchors}->{ $anchor };
     }
     return;
@@ -241,6 +248,7 @@ sub sequence_start_event {
         data => \$data,
         event => $event,
         on_data => $on_data,
+        size => 1,
     };
     my $stack = $self->stack;
 
@@ -261,7 +269,7 @@ sub sequence_start_event {
                 $t->{alias} = $anchor;
             }
         }
-        $self->anchors->{ $anchor } = { data => $ref->{data}, alias_depth => 1 };
+        $self->anchors->{ $anchor } = { data => $ref->{data} };
         $self->{open_anchors}->{ $anchor } = 1;
     }
 }
@@ -279,12 +287,17 @@ sub sequence_end_event {
     };
     $on_data->($self, $data, $ref);
     push @{ $stack->[-1]->{ref} }, $$data;
+    my $size = $last->{size};
+    $stack->[-1]->{size} += $size;
+    if ($stack->[-1]->{size} > $self->{max_size}) {
+        die "Size limit reached: $self->{max_size}";
+    }
     my $depth = ($last->{depth} || 0) + 1;
     $stack->[-1]->{depth} = $depth;
     if (defined(my $anchor = $last->{event}->{anchor})) {
         my $test = $self->anchors->{ $anchor };
         $self->anchors->{ $anchor }->{finished} = 1;
-        $self->anchors->{ $anchor }->{alias_depth} *= $depth;
+        $self->anchors->{ $anchor }->{size} = $size;
         delete $self->{open_anchors}->{ $anchor };
     }
     return;
@@ -318,56 +331,55 @@ sub scalar_event {
         }
         $value = YAML::PP::Preserve::Scalar->new( %args );
     }
+    my $size = int( length( $event->{value} ) / 10 ) + 1;
     if (defined (my $name = $event->{anchor})) {
         my $d = int( length( $event->{value} ) / 1000 ) + 1;
         $self->anchors->{ $name } = {
             data => \$value,
             finished => 1,
-            alias_depth => $d,
+            size => $size,
         };
     }
     push @{ $last->{ref} }, $value;
+    $last->{size} += $size;
+    if ($last->{size} > $self->{max_size}) {
+        die "Size limit reached: $self->{max_size}";
+    }
 }
 
 sub alias_event {
     my ($self, $event) = @_;
     my $value;
     my $name = $event->{value};
-    if (my $anchor = $self->anchors->{ $name }) {
-        # We know this is a cyclic ref since the node hasn't
-        # been constructed completely yet
-        unless ($anchor->{finished} ) {
-            my $cyclic_refs = $self->cyclic_refs;
-            if ($cyclic_refs ne 'allow') {
-                if ($cyclic_refs eq 'fatal') {
-                    croak "Found cyclic ref for alias '$name'";
-                }
-                if ($cyclic_refs eq 'warn') {
-                    $anchor = { data => \undef };
-                    warn "Found cyclic ref for alias '$name'";
-                }
-                elsif ($cyclic_refs eq 'ignore') {
-                    $anchor = { data => \undef };
-                }
-            }
-        }
-        $value = $anchor->{data};
-        if (my $open = $self->{open_anchors}) {
-            for my $n (sort keys %$open) {
-                $self->anchors->{ $n }->{alias_depth}
-                    += $anchor->{alias_depth} || 1;
-            }
-        }
-        $self->{alias_depth_count} += $anchor->{alias_depth} || 1;
-        if ($self->{alias_depth_count} > $self->{alias_depth}) {
-            die "Limit of nested aliases reached for alias '$name': $self->{alias_depth_count}";
-        }
-    }
-    else {
+    my $anchor;
+    unless ($anchor = $self->anchors->{ $name }) {
         croak "No anchor defined for alias '$name'";
     }
+    my $size = $anchor->{size};
+    # We know this is a cyclic ref since the node hasn't
+    # been constructed completely yet
+    unless ($anchor->{finished} ) {
+        my $cyclic_refs = $self->cyclic_refs;
+        if ($cyclic_refs ne 'allow') {
+            if ($cyclic_refs eq 'fatal') {
+                croak "Found cyclic ref for alias '$name'";
+            }
+            if ($cyclic_refs eq 'warn') {
+                $anchor = { data => \undef };
+                warn "Found cyclic ref for alias '$name'";
+            }
+            elsif ($cyclic_refs eq 'ignore') {
+                $anchor = { data => \undef };
+            }
+        }
+    }
+    $value = $anchor->{data};
     my $last = $self->stack->[-1];
     push @{ $last->{ref} }, $$value;
+    $last->{size} += $size;
+    if ($last->{size} > $self->{max_size}) {
+        die "Size limit reached: $self->{max_size}";
+    }
 }
 
 sub stringify_complex {
