@@ -1,5 +1,9 @@
 Revision history for Perl module YAML::PP
 
+v0.36.3 2023-11-09 15:53:20+01:00
+
+    - Just a dev release
+
 0.036_002 2023-07-02 22:59:06+02:00
 
     - Add support for plain scalars ending with colons
