@@ -110,7 +110,6 @@ sub document_start_event {
     }
     my $ref = [];
     push @$stack, { type => 'document', ref => $ref, data => $ref, event => $event };
-    $self->{alias_depth_count} = 0;
 }
 
 sub document_end_event {
@@ -138,6 +137,7 @@ sub mapping_start_event {
         on_data => $on_data,
         size => 1,
     };
+    $self->{size_left}--;
     my $stack = $self->stack;
 
     my $preserve_order = $self->preserve_order;
@@ -161,7 +161,6 @@ sub mapping_start_event {
             }
         }
         $self->anchors->{ $anchor } = { data => $ref->{data} };
-        $self->{open_anchors}->{ $anchor } = 1;
     }
 }
 
@@ -226,15 +225,12 @@ sub mapping_end_event {
     push @{ $stack->[-1]->{ref} }, $$data;
     my $size = $last->{size};
     $stack->[-1]->{size} += $size;
-    if ($stack->[-1]->{size} > $self->{max_size}) {
-        die "Size limit reached: $self->{max_size}";
+    if ($self->{size_left} < 0) {
+        die "Size limit reached: $self->{max_size} (left: $self->{size_left})";
     }
-    my $depth = ($last->{depth} || 0) + 1;
-    $stack->[-1]->{depth} = $depth;
     if (defined(my $anchor = $last->{event}->{anchor})) {
         $self->anchors->{ $anchor }->{finished} = 1;
         $self->anchors->{ $anchor }->{size} = $size;
-        delete $self->{open_anchors}->{ $anchor };
     }
     return;
 }
@@ -250,6 +246,7 @@ sub sequence_start_event {
         on_data => $on_data,
         size => 1,
     };
+    $self->{size_left}--;
     my $stack = $self->stack;
 
     my $preserve_style = $self->preserve_flow_style;
@@ -270,7 +267,6 @@ sub sequence_start_event {
             }
         }
         $self->anchors->{ $anchor } = { data => $ref->{data} };
-        $self->{open_anchors}->{ $anchor } = 1;
     }
 }
 
@@ -289,23 +285,26 @@ sub sequence_end_event {
     push @{ $stack->[-1]->{ref} }, $$data;
     my $size = $last->{size};
     $stack->[-1]->{size} += $size;
-    if ($stack->[-1]->{size} > $self->{max_size}) {
-        die "Size limit reached: $self->{max_size}";
+    if ($self->{size_left} < 0) {
+        die "Size limit reached: $self->{max_size} (left: $self->{size_left})";
     }
-    my $depth = ($last->{depth} || 0) + 1;
-    $stack->[-1]->{depth} = $depth;
     if (defined(my $anchor = $last->{event}->{anchor})) {
         my $test = $self->anchors->{ $anchor };
         $self->anchors->{ $anchor }->{finished} = 1;
         $self->anchors->{ $anchor }->{size} = $size;
-        delete $self->{open_anchors}->{ $anchor };
     }
     return;
 }
 
-sub stream_start_event {}
+sub stream_start_event {
+    my ($self, $event) = @_;
+    $self->{size_left} = $self->{max_size};
+}
 
-sub stream_end_event {}
+sub stream_end_event {
+    my ($self, $event) = @_;
+    $self->{size_left} = $self->{max_size};
+}
 
 sub scalar_event {
     my ($self, $event) = @_;
@@ -333,7 +332,6 @@ sub scalar_event {
     }
     my $size = int( length( $event->{value} ) / 10 ) + 1;
     if (defined (my $name = $event->{anchor})) {
-        my $d = int( length( $event->{value} ) / 1000 ) + 1;
         $self->anchors->{ $name } = {
             data => \$value,
             finished => 1,
@@ -342,8 +340,11 @@ sub scalar_event {
     }
     push @{ $last->{ref} }, $value;
     $last->{size} += $size;
-    if ($last->{size} > $self->{max_size}) {
-        die "Size limit reached: $self->{max_size}";
+    $self->{size_left} -= $size;
+    my $used = $self->{max_size} - $self->{size_left};
+    warn __PACKAGE__.':'.__LINE__.": !!!!!!!!! $self->{size_left} (used: $used) $size\n";
+    if ($self->{size_left} < 0) {
+        die "Size limit reached: $self->{max_size} (left: $self->{size_left})";
     }
 }
 
@@ -355,10 +356,9 @@ sub alias_event {
     unless ($anchor = $self->anchors->{ $name }) {
         croak "No anchor defined for alias '$name'";
     }
-    my $size = $anchor->{size};
-    # We know this is a cyclic ref since the node hasn't
-    # been constructed completely yet
     unless ($anchor->{finished} ) {
+        # We know this is a cyclic ref since the node hasn't
+        # been constructed completely yet
         my $cyclic_refs = $self->cyclic_refs;
         if ($cyclic_refs ne 'allow') {
             if ($cyclic_refs eq 'fatal') {
@@ -373,12 +373,16 @@ sub alias_event {
             }
         }
     }
+    my $size = $anchor->{size};
     $value = $anchor->{data};
     my $last = $self->stack->[-1];
     push @{ $last->{ref} }, $$value;
     $last->{size} += $size;
-    if ($last->{size} > $self->{max_size}) {
-        die "Size limit reached: $self->{max_size}";
+    $self->{size_left} -= $size;
+    my $used = $self->{max_size} - $self->{size_left};
+    warn __PACKAGE__.':'.__LINE__.": !!!!!!!!! $self->{size_left} (used: $used)\n";
+    if ($self->{size_left} < 0) {
+        die "Size limit reached: $self->{max_size} (left: $self->{size_left})";
     }
 }
 

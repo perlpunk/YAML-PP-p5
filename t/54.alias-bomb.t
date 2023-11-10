@@ -22,14 +22,15 @@ subtest "nested aliases limit reached" => sub {
     };
     my $error = $@;
     note $error;
-    like($error, qr{Limit of nested aliases reached});
+    like($error, qr{Size limit reached});
 };
 
+diag "========================================";
 subtest "nested aliases ok" => sub {
     my $yp = YAML::PP->new(
         schema => ['Failsafe'],
         limit => {
-            alias_depth => 1000_000_000,
+            alias_depth => 1_240_000_000,
         },
     );
 
