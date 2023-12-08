@@ -12,6 +12,8 @@ use YAML::PP::Reader;
 sub new {
     my ($class, %args) = @_;
 
+    my $utf8 = delete $args{utf8};
+    $utf8 = 0 unless defined $utf8;
     my $cyclic_refs = delete $args{cyclic_refs} || 'fatal';
     my $default_yaml_version = delete $args{default_yaml_version} || '1.2';
     my $preserve = delete $args{preserve};
@@ -44,6 +46,7 @@ sub new {
         die "Unexpected arguments: " . join ', ', sort keys %args;
     }
     my $self = bless {
+        utf8 => $utf8,
         parser => $parser,
         constructor => $constructor,
     }, $class;
@@ -53,6 +56,7 @@ sub new {
 sub clone {
     my ($self) = @_;
     my $clone = {
+        utf8 => $self->{utf8},
         parser => $self->parser->clone,
         constructor => $self->constructor->clone,
     };
@@ -75,7 +79,7 @@ sub filename {
 
 sub load_string {
     my ($self, $yaml) = @_;
-    $self->parser->set_reader(YAML::PP::Reader->new( input => $yaml ));
+    $self->parser->set_reader(YAML::PP::Reader->new( input => $yaml, utf8 => $self->{utf8} ));
     $self->load();
 }
 

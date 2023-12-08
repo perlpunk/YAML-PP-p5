@@ -22,6 +22,8 @@ use YAML::PP::Common qw/
 sub new {
     my ($class, %args) = @_;
 
+    my $utf8 = delete $args{utf8};
+    $utf8 = 0 unless defined $utf8;
     my $header = delete $args{header};
     $header = 1 unless defined $header;
     my $footer = delete $args{footer};
@@ -44,6 +46,7 @@ sub new {
         die "Unexpected arguments: " . join ', ', sort keys %args;
     }
     my $self = bless {
+        utf8 => $utf8,
         representer => YAML::PP::Representer->new(
             schema => $schema,
             preserve => $preserve,
@@ -62,6 +65,7 @@ sub new {
 sub clone {
     my ($self) = @_;
     my $clone = {
+        utf8 => $self->{utf8},
         representer => $self->representer->clone,
         emitter => $self->emitter->clone,
         version_directive => $self->version_directive,
@@ -223,7 +227,7 @@ sub _emit_node {
 
 sub dump_string {
     my ($self, @docs) = @_;
-    my $writer = YAML::PP::Writer->new;
+    my $writer = YAML::PP::Writer->new(utf8 => $self->{utf8});
     $self->emitter->set_writer($writer);
     my $output = $self->dump(@docs);
     return $output;

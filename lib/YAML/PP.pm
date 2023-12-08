@@ -21,6 +21,7 @@ my %YAML_VERSIONS = ('1.1' => 1, '1.2' => 1);
 sub new {
     my ($class, %args) = @_;
 
+    my $utf8 = delete $args{utf8};
     my $bool = delete $args{boolean};
     $bool = 'perl' unless defined $bool;
     my $schemas = delete $args{schema} || ['+'];
@@ -63,6 +64,7 @@ sub new {
     my $default_schema = $schemas{ $default_yaml_version };
 
     my $loader = YAML::PP::Loader->new(
+        utf8 => $utf8,
         schemas => \%schemas,
         cyclic_refs => $cyclic_refs,
         parser => $parser,
@@ -71,6 +73,7 @@ sub new {
         duplicate_keys => $duplicate_keys,
     );
     my $dumper = YAML::PP::Dumper->new(
+        utf8 => $utf8,
         schema => $default_schema,
         emitter => $emitter,
         header => $header,
@@ -524,6 +527,7 @@ L<https://perlpunk.github.io/YAML-PP-p5/test-suite.html>
     my $ypp = YAML::PP->new( cyclic_refs => 'fatal' );
     
     my $ypp = YAML::PP->new(
+        utf8 => 0,
         boolean => 'JSON::PP',
         schema => ['Core'],
         cyclic_refs => 'fatal',
@@ -536,6 +540,21 @@ L<https://perlpunk.github.io/YAML-PP-p5/test-suite.html>
 Options:
 
 =over
+
+=item utf8
+
+Values: 0 or 1 (default: 0)
+
+If true, then loading a string will assume that the string is utf8 encoded.
+It will automatically decode it and croak on invalid utf8.
+Dumping a string will automatically encode the string into utf8.
+
+If false, you may have to do the decoding/encoding yourself.
+
+For historical reasons the default is false.
+
+Note that this value has no influence on loading from or dumping to a file,
+which will always read/write utf8 encoded.
 
 =item boolean
 
@@ -825,8 +844,8 @@ C<preserved_(scalar|mapping|sequence)> L<"METHODS"> below.
 
 Input should be Unicode characters.
 
-So if you read from a file, you should decode it, for example with
-C<Encode::decode()>.
+Set the C<utf8> option to automatically let YAML::PP do the decoding, or
+use C<Encode::decode()>.
 
 Note that in scalar context, C<load_string> and C<load_file> return the first
 document (like L<YAML::Syck>), while L<YAML> and L<YAML::XS> return the
@@ -845,12 +864,12 @@ Strings will be loaded as unicode characters.
     my $yaml = $ypp->dump_string($doc1, $doc2);
     my $yaml = $ypp->dump_string(@docs);
 
-Input strings should be Unicode characters.
+Input data should be Unicode characters.
 
 Output will return Unicode characters.
 
-So if you want to write that to a file (or pass to YAML::XS, for example),
-you typically encode it via C<Encode::encode()>.
+Set the C<utf8> option to get utf8 encoded data back, or use
+C<Encode::encode()>.
 
 =head2 dump_file
 

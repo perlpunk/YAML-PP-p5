@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 package YAML::PP::Writer;
+use Encode;
 
 our $VERSION = '0.000'; # VERSION
 
@@ -10,15 +11,21 @@ sub set_output { $_[0]->{output} = $_[1] }
 
 sub new {
     my ($class, %args) = @_;
+    my $utf8 = delete $args{utf8};
+    $utf8 = 0 unless defined $utf8;
     my $output = delete $args{output};
     $output = '' unless defined $output;
     return bless {
+        utf8 => $utf8,
         output => $output,
     }, $class;
 }
 
 sub write {
     my ($self, $line) = @_;
+    if ($self->{utf8}) {
+        $line = encode 'UTF-8', $line, Encode::FB_CROAK;
+    }
     $self->{output} .= $line;
 }
 

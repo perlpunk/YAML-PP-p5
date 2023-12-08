@@ -12,6 +12,9 @@ use Carp qw/ croak /;
 
 sub new {
     my ($class, %args) = @_;
+    if (keys %args) {
+        die "Unexpected arguments: " . join ', ', sort keys %args;
+    }
     my $self = bless {
         reader => $args{reader},
     }, $class;

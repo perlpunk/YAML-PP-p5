@@ -26,13 +26,14 @@ sub new {
     my ($class, %args) = @_;
     my $reader = delete $args{reader} || YAML::PP::Reader->new;
     my $default_yaml_version = delete $args{default_yaml_version};
+    my $receiver = delete $args{receiver};
+    if (keys %args) {
+        die "Unexpected arguments: " . join ', ', sort keys %args;
+    }
     my $self = bless {
         default_yaml_version => $default_yaml_version || '1.2',
-        lexer => YAML::PP::Lexer->new(
-            reader => $reader,
-        ),
+        lexer => YAML::PP::Lexer->new(),
     }, $class;
-    my $receiver = delete $args{receiver};
     if ($receiver) {
         $self->set_receiver($receiver);
     }

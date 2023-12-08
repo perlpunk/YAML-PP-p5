@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 package YAML::PP::Reader;
+use Encode;
 
 our $VERSION = '0.000'; # VERSION
 
@@ -11,6 +12,14 @@ sub set_input { $_[0]->{input} = $_[1] }
 sub new {
     my ($class, %args) = @_;
     my $input = delete $args{input};
+    my $utf8 = delete $args{utf8};
+    $utf8 = 0 unless defined $utf8;
+    if (keys %args) {
+        die "Unexpected arguments: " . join ', ', sort keys %args;
+    }
+    if ($utf8) {
+        $input = decode 'UTF-8', $input, Encode::FB_CROAK;
+    }
     return bless {
         input => $input,
     }, $class;
