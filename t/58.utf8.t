@@ -23,8 +23,8 @@ EOM
 
 my $perl = decode_utf8 $utf8;
 
-my $bear = "bär";
-my $bear_perl = decode_utf8 $bear;
+my $bear_utf8 = "bär";
+my $bear_perl = decode_utf8 $bear_utf8;
 
 subtest 'load unicode' => sub {
     my $data = $p_utf8->load_string($utf8);
@@ -40,7 +40,7 @@ subtest 'load unicode' => sub {
     is $data->[0], $bear_perl, 'load decoded with perl loader';
 
     $data = $p_perl->load_string($utf8);
-    is $data->[0], $bear, 'load utf8 with perl loader';
+    is $data->[0], $bear_utf8, 'load utf8 with perl loader';
 
     $data = $p_default->load_string($perl);
     is $data->[0], $bear_perl, 'load decoded with default loader';
@@ -52,19 +52,19 @@ subtest 'load unicode' => sub {
 subtest 'dump unicode' => sub {
     my $yaml = $p_utf8->dump_string([$bear_perl]);
     $yaml =~ s/^- //; chomp $yaml;
-    is $yaml, $bear, 'dump perl data with utf8 dumper -> utf8';
+    is $yaml, $bear_utf8, 'dump perl data with utf8 dumper -> utf8';
 
-    $yaml = $p_utf8->dump_string([$bear]);
+    $yaml = $p_utf8->dump_string([$bear_utf8]);
     $yaml =~ s/^- //; chomp $yaml;
-    is $yaml, encode_utf8($bear), 'dump utf8 data with utf8 dumper -> rubbish';
+    is $yaml, encode_utf8($bear_utf8), 'dump utf8 data with utf8 dumper -> rubbish';
 
     $yaml = $p_perl->dump_string([$bear_perl]);
     $yaml =~ s/^- //; chomp $yaml;
     is $yaml, $bear_perl, 'dump perl data with perl dumper -> perl';
 
-    $yaml = $p_perl->dump_string([$bear]);
+    $yaml = $p_perl->dump_string([$bear_utf8]);
     $yaml =~ s/^- //; chomp $yaml;
-    $yaml, $bear, 'dump utf8 data with perl dumper -> utf8';
+    $yaml, $bear_utf8, 'dump utf8 data with perl dumper -> utf8';
 };
 
 done_testing;
