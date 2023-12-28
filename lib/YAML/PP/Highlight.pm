@@ -139,6 +139,97 @@ sub htmlcolored {
     return $html;
 }
 
+my %svgcolors = (
+    ANCHOR => 'green',
+    ALIAS => 'green',
+    SINGLEQUOTE => 'green',
+    DOUBLEQUOTE => 'green',
+    SINGLEQUOTED => 'green',
+    DOUBLEQUOTED => 'green',
+    SINGLEQUOTED_LINE => 'green',
+    DOUBLEQUOTED_LINE => 'green',
+    INDENT => 'indent',
+    DASH => 'magenta',
+    COLON => 'magenta',
+    QUESTION => 'magenta',
+    YAML_DIRECTIVE => 'lightblue',
+    TAG_DIRECTIVE => 'lightblue',
+    TAG => 'blue',
+    COMMENT => 'grey',
+    LITERAL => 'magenta',
+    FOLDED => 'magenta',
+    DOC_START => 'blue',
+    DOC_END => 'blue',
+    BLOCK_SCALAR_CONTENT => 'darkorange',
+    TAB => '',
+    ERROR => 'red',
+    EOL => 'grey',
+    TRAILING_SPACE => '',
+    FLOWSEQ_START => 'green',
+    FLOWSEQ_END => 'green',
+    FLOWMAP_START => 'green',
+    FLOWMAP_END => 'green',
+    FLOW_COMMA => 'green',
+    PLAINKEY => 'blue',
+    NOEOL => '',
+);
+sub svgcolored {
+    require HTML::Entities;
+    my ($class, $tokens) = @_;
+    my @list = $class->transform($tokens);
+    my $nextx = 10;
+    my $body = '';
+    my $lines = 0;
+    my $linebreak = 0;
+    for my $i (0 .. $#list) {
+        my $token = $list[ $i ];
+        my $name = $token->{name};
+        my $str = $token->{value};
+        my $colorclass = $svgcolors{ $name };
+        $str = HTML::Entities::encode_entities($str);
+        $str =~ s/ /&#160;/g;
+        my $x = defined $nextx ? qq{x="$nextx"} : '';
+        my $style = '';
+        if ($colorclass) {
+            my ($fg, $bg) = ref $colorclass ? @$colorclass : ($colorclass, undef);
+            $fg ||= 'black';
+            $style = qq{fill:$fg;} if $fg;
+            $style .= qq{stroke:$bg} if $bg;
+        }
+        my $dy = $linebreak ? "1.5em" : $i == 0 ? "1.5em" : "0em";
+        if ($name eq 'EOL') {
+            $linebreak = 1;
+            $lines++;
+#            $dy = "1em";
+            $nextx = 10;
+        }
+        else {
+#            $dy = $i == 0 ? "1.5em" : "0em";
+            undef $nextx;
+            $linebreak = 0;
+        }
+        $body .= qq{<tspan $x dy="$dy" style="$style">$str</tspan>};
+    }
+    warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$lines], ['lines']);
+    my $height = $lines * 1.5 + 4;
+    my $header = <<"EOM";
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+height="${height}em" width="300">
+<rect x="-2" y="-2" width="100%" height="100%" fill="#f0f0f0" stroke="#787878" stroke-width="5"/>
+<polygon points="2,18 22,7 22,33" style="fill:cyan" />
+<circle cx="17" cy="18" r="3" stroke="#444444" stroke-width="1" fill="cyan" />
+<rect x="24" y="10" width="50" height="20" fill="cyan" stroke="cyan" stroke-width="5"/>
+
+<text x="28" y="25"  font-family="monospace" font-size="130%"><tspan>\$ID</tspan>
+</text>
+<text x="0" y="35" style="font-family:monospace;" xml:space="preserve">
+
+EOM
+    my $footer = qq{</text></svg>};
+    my $svg = $header . $body . $footer;
+    return $svg;
+}
+
 sub transform {
     my ($class, $tokens) = @_;
     my @list;
