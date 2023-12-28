@@ -97,6 +97,13 @@ sub register {
 
     if ($schema->bool_class) {
         for my $class (@{ $schema->bool_class }) {
+            if ($class eq 'perl_experimental') {
+                $schema->add_representer(
+                    bool => $class,
+                    code => \&represent_bool,
+                );
+                next;
+            }
             $schema->add_representer(
                 class_equals => $class,
                 code => \&represent_bool,

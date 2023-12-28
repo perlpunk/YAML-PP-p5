@@ -47,4 +47,13 @@ SKIP: {
     is(! $data_jp->{FALSE}, 1, 'JSON::PP::Boolean false');
 }
 
+SKIP: {
+    skip "perl 5.36 required for this test", 3 unless $] >= 5.036000;
+    my $is_bool = eval 'use experimental qw/ builtin /; sub { builtin::is_bool($_[0]) }';
+    my $ypp = YAML::PP->new(boolean => 'perl_experimental');
+    my $data_jp = $ypp->load_string($yaml);
+    ok $is_bool->($data_jp->{TRUE}) && $data_jp->{TRUE}, 'builtin::is_bool truw';
+    ok $is_bool->($data_jp->{FALSE}) && ! $data_jp->{FALSE}, 'builtin::is_bool false';
+}
+
 done_testing;

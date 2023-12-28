@@ -67,6 +67,7 @@ sub new {
         coderef => undef,
         glob => undef,
         tied_equals => {},
+        bool => undef,
     );
     my $self = bless {
         yaml_version => $yaml_version,
@@ -238,13 +239,13 @@ sub add_representer {
         push @$rep, [ $args{class_matches}, $args{code} ];
         return;
     }
+    if (my $bool = $args{bool} and $] >= 5.036000) {
+        $representers->{bool} = {
+            code => $args{code},
+        };
+        return;
+    }
     if (my $class_equals = $args{class_equals}) {
-        if ($] >= 5.036000 and $class_equals eq 'perl_experimental') {
-            $representers->{bool} = {
-                code => $args{code},
-            };
-            return;
-        }
         my $rep = $representers->{class_equals};
         $rep->{ $class_equals } = {
             code => $args{code},
