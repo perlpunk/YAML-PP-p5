@@ -13,11 +13,12 @@ Getopt::Long::Configure('bundling');
 
 GetOptions(
     'help|h' => \my $help,
+    'boolean=s' => \my $boolean,
+    'cyclic' => \my $cyclic,
     'indent=i' => \my $indent,
     'width=i' => \my $width,
     'header!' => \my $header,
     'footer!' => \my $footer,
-    'boolean=s' => \my $boolean,
     'merge' => \my $merge,
     'perl' => \my $perl,
     'preserve|P=s' => \my $preserve,
@@ -129,6 +130,7 @@ sub _yamlpp {
     my $ypp = $class->new(
         schema => \@schema,
         boolean => $boolean,
+        cyclic_refs => $cyclic ? 'allow' : 'fatal',
         preserve => $preserve,
         indent => $indent,
         width => $width,
@@ -276,6 +278,7 @@ Usage:
 
 Options:
     --boolean=            'perl', 'JSON::PP', 'boolean'
+    --cyclic              Allow cyclic references
     --indent=             Number of spaces for indentation
     --width=              Maximum column width (only used in flow style for now)
     --[no-]header         Print '---' (default)
