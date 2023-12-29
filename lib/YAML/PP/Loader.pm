@@ -80,8 +80,9 @@ sub filename {
 sub load_string {
     my ($self, $yaml) = @_;
     my $utf8 = $self->{utf8};
-    my $p = $self->parser;
-    if ($self->parser->can('new_reader')) {
+    my $p = ref $self->parser;
+    no strict 'refs';
+    if (defined &{$p."::new_reader"}) {
         $self->parser->new_reader('YAML::PP::Reader' =>
             input => $yaml,
             utf8_in => $self->{utf8},
@@ -93,6 +94,7 @@ sub load_string {
             input => $yaml,
             utf8_in => $self->{utf8},
         ));
+        $self->load();
     }
 }
 
