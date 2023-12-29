@@ -81,12 +81,19 @@ sub load_string {
     my ($self, $yaml) = @_;
     my $utf8 = $self->{utf8};
     my $p = $self->parser;
-    $self->parser->set_reader(YAML::PP::Reader->new(
-        input => $yaml,
-        utf8_in => $self->{utf8},
-        utf8_out => 0,
-    ));
-    $self->load();
+    if ($self->parser->can('new_reader')) {
+        $self->parser->new_reader('YAML::PP::Reader' =>
+            input => $yaml,
+            utf8_in => $self->{utf8},
+        );
+        $self->load();
+    }
+    else {
+        $self->parser->set_reader(YAML::PP::Reader->new(
+            input => $yaml,
+            utf8_in => $self->{utf8},
+        ));
+    }
 }
 
 sub load_file {

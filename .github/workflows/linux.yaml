@@ -56,6 +56,7 @@ jobs:
       run: >
         cpanm --quiet --notest
         Module::Load Test::Warn Test::More JSON::PP boolean
+        YAML::PP::LibYAML
     - name: Run Tests
       run: prove -lr t
 

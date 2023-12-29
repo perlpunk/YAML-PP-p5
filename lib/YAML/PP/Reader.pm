@@ -15,7 +15,6 @@ sub new {
     my $utf8_in = delete $args{utf8_in};
     my $utf8_out = delete $args{utf8_out};
     $utf8_in = 0 unless defined $utf8_in;
-    $utf8_out = 0 unless defined $utf8_out;
     if (keys %args) {
         die "Unexpected arguments: " . join ', ', sort keys %args;
     }
@@ -30,14 +29,14 @@ sub new {
 
 sub _prepare_input {
     my ($self) = @_;
+    return unless defined $self->{utf8_out};
+#    warn __PACKAGE__.':'.__LINE__.": ???????????????????? $self->{utf8_in} $self->{utf8_out}\n";
     if ($self->{utf8_in} and $self->{utf8_out} == 0) {
-        warn __PACKAGE__.':'.__LINE__.": !!!!!!!!! DECODE '$self->{input}'\n";
-        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$self], ['self']);
+#        warn __PACKAGE__.':'.__LINE__.": !!!!!!!!! DECODE '$self->{input}'\n";
         $self->{input} = decode 'UTF-8', $self->{input}, Encode::FB_CROAK;
     }
     elsif ($self->{utf8_in} == 0 and $self->{utf8_out}) {
-        warn __PACKAGE__.':'.__LINE__.": !!!!!!!!! ENCODE '$self->{input}'\n";
-        warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$self], ['self']);
+#        warn __PACKAGE__.':'.__LINE__.": !!!!!!!!! ENCODE '$self->{input}'\n";
         $self->{input} = encode 'UTF-8', $self->{input}, Encode::FB_CROAK;
     }
 }

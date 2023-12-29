@@ -70,6 +70,15 @@ sub set_reader {
     my ($self, $reader) = @_;
     $self->lexer->set_reader($reader);
 }
+sub new_reader {
+    my ($self, $class, %args) = @_;
+    my $reader = $class->new(
+        input => $args{input},
+        utf8_in => $args{utf8_in},
+        utf8_out => 0,
+    );
+    $self->lexer->set_reader($reader);
+}
 sub lexer { return $_[0]->{lexer} }
 sub callback { return $_[0]->{callback} }
 sub set_callback { $_[0]->{callback} = $_[1] }

@@ -46,7 +46,7 @@ subtest 'load unicode' => sub {
     is $data->[0], $bear_perl, 'load decoded with default loader';
 
     $data = $p_default->load_string($utf8);
-    is $data->[0], 'bär', 'load utf8 with default loader';
+    is $data->[0], $bear_utf8, 'load utf8 with default loader';
 };
 
 subtest 'dump unicode' => sub {
@@ -66,5 +66,41 @@ subtest 'dump unicode' => sub {
     $yaml =~ s/^- //; chomp $yaml;
     $yaml, $bear_utf8, 'dump utf8 data with perl dumper -> utf8';
 };
+
+my $pplib = eval "use YAML::PP::LibYAML; 1";
+
+subtest 'YAML::PP::LibYAML' => sub {
+    plan(skip_all => 'YAML::PP::LibYAML not installed') unless $pplib;
+    diag "YAML::PP::LibYAML " . YAML::PP::LibYAML->VERSION;
+    my $p_utf8 = YAML::PP::LibYAML->new(
+        header => 0,
+        utf8 => 1,
+    );
+    my $p_perl = YAML::PP::LibYAML->new(
+        header => 0,
+        utf8 => 0,
+    );
+    my $p_default = YAML::PP::LibYAML->new(header => 0);
+    subtest 'load unicode' => sub {
+        my $data = $p_utf8->load_string($utf8);
+        is $data->[0], $bear_perl, 'load utf8';
+
+        $data = $p_utf8->load_string($perl);
+        is $data->[0], $bear_perl, 'load decoded with utf8 loader passes (libyaml XS binding can work with both)';
+
+        $data = $p_perl->load_string($perl);
+        is $data->[0], $bear_perl, 'load decoded with perl loader';
+
+        $data = $p_perl->load_string($utf8);
+        is $data->[0], $bear_perl, 'load utf8 with perl loader';
+
+        $data = $p_default->load_string($perl);
+        is $data->[0], $bear_perl, 'load decoded with default loader';
+
+        $data = $p_default->load_string($utf8);
+        is $data->[0], $bear_perl, 'load utf8 with default loader';
+    };
+};
+
 
 done_testing;
