@@ -437,12 +437,6 @@ Here are a few examples of the basic load and dump methods:
     my $yaml = $ypp->dump_string($data1, $data2);
     $ypp->dump_file($filename, $data1, $data2);
 
-    # The loader offers JSON::PP::Boolean, boolean.pm or
-    # perl 1/'' (currently default) for booleans
-    my $ypp = YAML::PP->new(boolean => 'JSON::PP');
-    my $ypp = YAML::PP->new(boolean => 'boolean');
-    my $ypp = YAML::PP->new(boolean => 'perl');
-
     # Enable perl data types and objects
     my $ypp = YAML::PP->new(schema => [qw/ + Perl /]);
     my $yaml = $yp->dump_string($data_with_perl_objects);
@@ -508,10 +502,6 @@ L<https://perlpunk.github.io/YAML-PP-p5/test-suite.html>
 =head2 new
 
     my $ypp = YAML::PP->new;
-    # load booleans via boolean.pm
-    my $ypp = YAML::PP->new( boolean => 'boolean' );
-    # load booleans via JSON::PP::true/false
-    my $ypp = YAML::PP->new( boolean => 'JSON::PP' );
     
     # use YAML 1.2 Failsafe Schema
     my $ypp = YAML::PP->new( schema => ['Failsafe'] );
@@ -524,13 +514,13 @@ L<https://perlpunk.github.io/YAML-PP-p5/test-suite.html>
     my $ypp = YAML::PP->new( cyclic_refs => 'fatal' );
     
     my $ypp = YAML::PP->new(
-        boolean => 'JSON::PP',
+        boolean => 'perl',
         schema => ['Core'],
         cyclic_refs => 'fatal',
         indent => 4,
         header => 1,
-        footer => 1,
-        version_directive => 1,
+        footer => 0,
+        version_directive => 0,
     );
 
 Options:
@@ -543,10 +533,27 @@ Values: C<perl> (currently default), C<JSON::PP>, C<boolean>, C<perl_experimenta
 
 This option is for loading and dumping.
 
+In case of perl 5.36 and later, builtin booleans should work out of the box
+(since YAML::PP >= 0.38.0).
+
+    print YAML::PP->new->dump_string([ builtin::true, !1 ]);
+    # ---
+    # - true
+    # - false
+
+For earlier perl versions, you can use "pseudo" booleans like documented
+in the following examples.
+
+Examples:
+
+    # load/dump booleans via boolean.pm
+    my $ypp = YAML::PP->new( boolean => 'boolean' );
+    # load/dump booleans via JSON::PP::true/false
+    my $ypp = YAML::PP->new( boolean => 'JSON::PP' );
+
 You can also specify more than one class, comma separated.
 This is important for dumping.
 
-Examples:
 
     boolean => 'JSON::PP,boolean'
     Booleans will be loaded as JSON::PP::Booleans, but when dumping, also
@@ -560,19 +567,15 @@ Examples:
     Booleans will be loaded as perl booleans, but when dumping, all
     currently supported boolean classes will be recognized
 
-If you have perl >= 5.36 then you might want to try out the experimental
-boolean support, see L<builtin>.
+    boolean => ''
+    Booleans will be loaded as perl booleans, but when dumping, nothing
+    will be recognized as booleans.
+    This option is for backwards compatibility for perl versions < 5.36,
+    if you rely on [!!1, !1] being dumped as [1, ''].
 
-YAML::PP supports that by using the C<perl_experimental> value for the boolean
-option. Rules are the same as for the experimental L<builtin> class: It's
-not guaranteed to work in the future.
-
-As soon as the builtin boolean support leaves experimental status, I will
-update YAML::PP to support this via the default C<perl> value.
-
-    boolean => 'perl_experimental'
-    Booleans will be loaded as perl booleans, and they will be recognized
-    as such when dumping also
+The option c<perl_experimental> was introduced when experimental boolean
+support was added to perl 5.36. Since it will not be experimental anymore
+in perl 5.40 \o/ the option is deprecated and the same as C<perl>.
 
 =item schema
 
@@ -1132,7 +1135,7 @@ This is supported since 0.029 (except some not relevant cases):
     ---
     key ends with two colons::: value
 
-This was added in 0.037
+This was implemented in 0.037.
 
 =item Supported Characters
 
@@ -1284,7 +1287,7 @@ The layout is like libyaml output:
     - - b1
       - b2
 
-=head1 FAQ
+=head1 FAQ - Frequently Asked Questions
 
 =over
 
@@ -1292,9 +1295,95 @@ The layout is like libyaml output:
 
 Yes, this can be enabled optionally, see L<YAML::PP::Schema::Merge>
 
+=item Is there a linter / formatter for YAML
+
+There is the widely L<"yamllint"|https://yamllint.readthedocs.io/>, based on
+python's PyYAML. It is very configurable and will report errors or warnings.
+It cannot format.
+
+Now there is also L<YAML::Tidy>, which will format the given file according
+to your configuration. So far only a few configuration options exist, but
+they can already be quite helpful.
+
+=back
+
+=head1 Which YAML module should I use?
+
+There are many YAML modules on CPAN. For historical reasons some of them
+aren't handling YAML correctly.
+
+Most of them are not compatible with the YAML spec and with each other, meaning
+they can interpret the same YAML differently.
+
+The behaviours we are discussing here can be divided into parsing issues
+(syntax) and loading/constructing issues (for example type resolving which
+decides what is a number, boolean or null).
+
+See also L<https://matrix.yaml.info/> (parsing) and
+L<https://perlpunk.github.io/YAML-PP-p5/schema-examples.html> (loading).
+
+=over
+
+=item L<"YAML.pm"|YAML>
+
+It was written even before the YAML 1.0 spec was finished and by that enabled
+perl users to process YAML very early. It might work for you if you have simple
+data, but it's missing quite some features and can also produce YAML that
+doesn't roundtrip. Nowadays it might be a good idea to switch.
+
+=item L<YAML::XS>
+
+A libyaml binding that is robust and widely used. However, there are two
+things to consider.
+
+1. (syntax) libyaml diverged from the spec in several aspects. They are rare though.
+2. The type resolving does not adhere to YAML 1.1 or YAML 1.2, meaning it is
+   incompatible with other YAML libraries in perl or other languages.
+
+=item L<YAML::Tiny>
+
+It implements both a tiny subset of YAML, but also a superset. Meaning
+it will happily accept some YAML documents that are not officially valid.
+Type resolving is also not implemented according to the spec.
+
+=item L<YAML::Syck>
+
+A binding to libsyck. It is even less compatible to YAML than libyaml. Also
+type resolving is not implemented according to the spec.
+
+=item L<YAML::PP>
+
+Regarding YAML syntax, it is the second most YAML 1.2 compatible perl module.
+The cases it cannot (yet) parse are not relevant in perl programming,
+e.g. hash keys that are not strings.
+Regarding type resolving, it is compatible with the YAML 1.2 Core schema,
+so it should be possible to exchange data as YAML with other libraries
+in other languages.
+One downside is that it is the slowest perl YAML module.
+
+=item L<YAML::Parser>
+
+This is a parser generated by the YAML grammar, and it's passing all
+official tests. A L<YAML::PP::Ref> frontend exists that you can use just like
+YAML::PP.
+It is quite slow (although it might be ok for small files depending on the
+use case).
+The error messages it creates on invalid YAML are not helpful currently.
+
+=item L<YAML::PP::LibYAML>
+
+This combines the L<YAML::LibYAML::API> binding for parsing with the YAML::PP
+frontend for loading and type resolving.
+It is faster than YAML::PP but slower than YAML::XS.
+The divergence from the YAML spec regarding syntax is usually not a problem,
+and at the same time you have the advantage of being compatible to the
+YAML 1.2 Core Schema.
+
 =back
 
 =head1 WHY
+
+Why did I start to write a new YAML module?
 
 All the available parsers and loaders for Perl are behaving differently,
 and more important, aren't conforming to the spec. L<YAML::XS> is
@@ -1340,10 +1429,6 @@ There will be more tests coming. This test suite allows you to write parsers
 without turning the examples from the Specification into tests yourself.
 Also the examples aren't completely covering all cases - the test suite
 aims to do that.
-
-The suite contains .tml files, and in a separate 'data' release you will
-find the content in separate files, if you can't or don't want to
-use TestML.
 
 Thanks also to Felix Krause, who is writing a YAML parser in Nim.
 He turned all the spec examples into test cases.
@@ -1409,7 +1494,9 @@ Felix answered countless questions about the YAML Specification.
 
 =item L<YAML::LibYAML::API>
 
-=item L<https://www.yaml.info>
+=item L<YAML::Tidy>
+
+=item L<https://www.yaml.info/>
 
 =back
 
