@@ -58,7 +58,7 @@ jobs:
         Module::Load Test::Warn Test::More JSON::PP boolean
         YAML::PP::LibYAML
     - name: Run Tests
-      run: prove -lr t/58.utf8.t
+      run: prove -lr t
 
 
   cover:
