@@ -81,6 +81,8 @@ subtest 'YAML::PP::LibYAML' => sub {
         utf8 => 0,
     );
     my $p_default = YAML::PP::LibYAML->new(header => 0);
+    my $parser = $p_utf8->parser;
+    warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$parser], ['parser']);
     subtest 'load unicode' => sub {
         my $data = $p_utf8->load_string($utf8);
         is $data->[0], $bear_perl, 'load utf8';
