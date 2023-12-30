@@ -43,6 +43,14 @@ sub column { return $_[0]->{column} }
 sub set_indent { $_[0]->{indent} = $_[1] }
 sub writer { $_[0]->{writer} }
 sub set_writer { $_[0]->{writer} = $_[1] }
+sub new_writer {
+    my ($self, $class, %args) = @_;
+    my $writer = $class->new(
+        utf8_in => 0,
+        utf8_out => $args{utf8_out},
+    );
+    $self->{writer} = $writer;
+}
 sub tagmap { return $_[0]->{tagmap} }
 sub set_tagmap { $_[0]->{tagmap} = $_[1] }
 

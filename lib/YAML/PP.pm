@@ -842,10 +842,10 @@ C<preserved_(scalar|mapping|sequence)> L<"METHODS"> below.
     my $doc = $ypp->load_string("foo: bar");
     my @docs = $ypp->load_string("foo: bar\n---\n- a");
 
-Input should be Unicode characters.
+Input should be Unicode characters by default.
 
-Set the C<utf8> option to automatically let YAML::PP do the decoding, or
-use C<Encode::decode()>.
+Set the C<utf8> option to pass utf8 encoded data and automatically let YAML::PP
+do the decoding, or use C<Encode::decode()>.
 
 Note that in scalar context, C<load_string> and C<load_file> return the first
 document (like L<YAML::Syck>), while L<YAML> and L<YAML::XS> return the
@@ -866,7 +866,7 @@ Strings will be loaded as unicode characters.
 
 Input data should be Unicode characters.
 
-Output will return Unicode characters.
+Output will return Unicode characters by default.
 
 Set the C<utf8> option to get utf8 encoded data back, or use
 C<Encode::encode()>.

@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 package YAML::PP::Reader;
-use Encode;
+use Encode qw/ decode encode /;
 
 our $VERSION = '0.000'; # VERSION
 

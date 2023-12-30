@@ -227,8 +227,19 @@ sub _emit_node {
 
 sub dump_string {
     my ($self, @docs) = @_;
-    my $writer = YAML::PP::Writer->new(utf8 => $self->{utf8});
-    $self->emitter->set_writer($writer);
+    my $e = ref $self->emitter;
+    no strict 'refs';
+    if (defined &{$e."::new_writer"}) {
+        warn __PACKAGE__.':'.__LINE__.": =======================\n";
+        $self->emitter->new_writer('YAML::PP::Writer' =>
+            utf8_out => $self->{utf8},
+        );
+    }
+    else {
+        $self->emitter->set_writer(YAML::PP::Writer->new(
+            utf8_out => $self->{utf8},
+        ));
+    }
     my $output = $self->dump(@docs);
     return $output;
 }

@@ -6,36 +6,56 @@ use Encode;
 
 our $VERSION = '0.000'; # VERSION
 
-sub output { return $_[0]->{output} }
+use Devel::Peek;
+sub output {
+    my ($self) = @_;
+    warn __PACKAGE__.':'.__LINE__.": !!!!!!!!!!!!! $self->{utf8_in} <-> $self->{utf8_out}\n";
+    my $output = $self->{output};
+    Dump $output;
+    return $output if $self->{coded};
+    if ($self->{utf8_in} and ! $self->{utf8_out}) {
+        warn __PACKAGE__.':'.__LINE__.": !!!!!!!!! DECODE $output\n";
+        $output = decode 'UTF-8', $output, Encode::FB_CROAK;
+    }
+    elsif (not $self->{utf8_in} and $self->{utf8_out}) {
+        warn __PACKAGE__.':'.__LINE__.": !!!!!!!!! ENCODE $output\n";
+        $output = encode 'UTF-8', $output, Encode::FB_CROAK;
+    }
+    $self->{output} = $output;
+    $self->{coded} = 1;
+    return $output
+}
 sub set_output { $_[0]->{output} = $_[1] }
 
 sub new {
     my ($class, %args) = @_;
-    my $utf8 = delete $args{utf8};
-    $utf8 = 0 unless defined $utf8;
+    my $utf8_in = delete $args{utf8_in};
+    my $utf8_out = delete $args{utf8_out};
+    $utf8_in = 0 unless defined $utf8_in;
+    $utf8_out = 0 unless defined $utf8_out;
     my $output = delete $args{output};
     $output = '' unless defined $output;
     return bless {
-        utf8 => $utf8,
+        utf8_in => $utf8_in,
+        utf8_out => $utf8_out,
         output => $output,
     }, $class;
 }
 
 sub write {
     my ($self, $line) = @_;
-    if ($self->{utf8}) {
-        $line = encode 'UTF-8', $line, Encode::FB_CROAK;
-    }
     $self->{output} .= $line;
 }
 
 sub init {
     $_[0]->set_output('');
+    $_[0]->{coded} = 0;
 }
 
 sub finish {
     my ($self) = @_;
     $_[0]->set_output(undef);
+    $_[0]->{coded} = 0;
 }
 
 1;

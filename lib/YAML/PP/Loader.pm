@@ -87,15 +87,14 @@ sub load_string {
             input => $yaml,
             utf8_in => $self->{utf8},
         );
-        $self->load();
     }
     else {
         $self->parser->set_reader(YAML::PP::Reader->new(
             input => $yaml,
             utf8_in => $self->{utf8},
         ));
-        $self->load();
     }
+    $self->load();
 }
 
 sub load_file {
