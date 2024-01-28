@@ -208,7 +208,7 @@ EOM
 
     my %args= (
         schema => [qw/ + /],
-        boolean => 'perl',
+        boolean => '',
         version_directive => 1,
     );
 

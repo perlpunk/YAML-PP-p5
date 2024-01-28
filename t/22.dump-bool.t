@@ -124,6 +124,21 @@ true1: true
 EOM
     cmp_ok($yaml, 'eq', $exp_json_pp, "perl_experimental dump");
 }
+SKIP: {
+    skip "perl version < v5.36", 1 unless $] >= 5.036000;
+    my $data = {
+        "true1" => !!1,
+        "false1" => !!0,
+    };
+    my $yppd = YAML::PP->new(boolean => '');
+    my $yaml = $yppd->dump_string($data);
+    my $exp_json_pp = <<'EOM';
+---
+false1: ''
+true1: 1
+EOM
+    cmp_ok($yaml, 'eq', $exp_json_pp, "no booleans dump");
+}
 
 SKIP: {
     skip "perl version < v5.36", 3 unless $] >= 5.036000;

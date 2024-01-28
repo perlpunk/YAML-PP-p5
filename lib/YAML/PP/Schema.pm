@@ -40,19 +40,16 @@ sub new {
             $false ||= \&_bool_booleanpm_false;
             push @bool_class, 'boolean';
         }
-        elsif ($b eq 'perl') {
-            $true ||= \&_bool_perl_true;
-            $false ||= \&_bool_perl_false;
-        }
-        elsif ($b eq 'perl_experimental') {
-            $true ||= \&_bool_perl_true;
-            $false ||= \&_bool_perl_false;
-            push @bool_class, 'perl_experimental';
+        elsif ($b eq 'perl' or $b eq 'perl_experimental') {
+            push @bool_class, 'perl';
         }
         else {
             die "Invalid value for 'boolean': '$b'. Allowed: ('perl', 'boolean', 'JSON::PP')";
         }
     }
+    # Ensure booleans are resolved
+    $true ||= \&_bool_perl_true;
+    $false ||= \&_bool_perl_false;
 
     my %representers = (
         'undef' => undef,
