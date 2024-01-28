@@ -1,5 +1,11 @@
 Revision history for Perl module YAML::PP
 
+v0.37.1 2024-01-28 18:59:40+01:00
+
+    - Add support for builtin booleans by default
+    - Add FAQ
+    - Add --cyclic option to yamlpp-load(-dump)
+
 v0.37.0 2023-11-09 16:46:43+01:00
 
     - Breaking change: Make cyclic_refs fatal by default for safety, like
