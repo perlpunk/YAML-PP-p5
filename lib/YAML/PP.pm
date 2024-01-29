@@ -544,8 +544,6 @@ In case of perl 5.36 and later, builtin booleans should work out of the box
 For earlier perl versions, you can use "pseudo" booleans like documented
 in the following examples.
 
-Examples:
-
     # load/dump booleans via boolean.pm
     my $ypp = YAML::PP->new( boolean => 'boolean' );
     # load/dump booleans via JSON::PP::true/false
@@ -573,7 +571,7 @@ This is important for dumping.
     This option is for backwards compatibility for perl versions < 5.36,
     if you rely on [!!1, !1] being dumped as [1, ''].
 
-The option c<perl_experimental> was introduced when experimental boolean
+The option C<perl_experimental> was introduced when experimental boolean
 support was added to perl 5.36. Since it will not be experimental anymore
 in perl 5.40 \o/ the option is deprecated and the same as C<perl>.
 
@@ -1297,7 +1295,7 @@ Yes, this can be enabled optionally, see L<YAML::PP::Schema::Merge>
 
 =item Is there a linter / formatter for YAML
 
-There is the widely L<"yamllint"|https://yamllint.readthedocs.io/>, based on
+There is the widely used L<"yamllint"|https://yamllint.readthedocs.io/>, based on
 python's PyYAML. It is very configurable and will report errors or warnings.
 It cannot format.
 
