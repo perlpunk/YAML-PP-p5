@@ -376,4 +376,41 @@ EOM
     is $yaml, $exp, "Use -loadcode";
 };
 
+subtest serializer => sub {
+    my $perl = YAML::PP::Schema::Perl->new(
+        serializer => 'TO_JSON',
+    );
+    my $yp = YAML::PP->new(
+        schema => [qw/ + /, $perl],
+    );
+    my $o = bless [3,4], "Dice";
+    my $data = { dice => $o };
+
+    *Dice::TO_JSON = sub {
+        my ($self) = @_;
+        return join 'd', @$self;
+    };
+    my $yaml = $yp->dump_string($data);
+    my $exp = <<'EOM';
+---
+dice: 3d4
+EOM
+    is $yaml, $exp, "TO_JSON returns string";
+
+    no warnings 'redefine';
+    *Dice::TO_JSON = sub {
+        my ($self) = @_;
+        return { '__dice__' => [@$self] };
+    };
+    $yaml = $yp->dump_string($data);
+    $exp = <<'EOM';
+---
+dice:
+  __dice__:
+  - 3
+  - 4
+EOM
+    is $yaml, $exp, "TO_JSON returns hash";
+};
+
 done_testing;

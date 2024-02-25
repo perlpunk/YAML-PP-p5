@@ -23,12 +23,14 @@ sub new {
     my $dumpcode = $args{dumpcode};
     $dumpcode = 1 unless defined $dumpcode;
     my $classes = $args{classes};
+    my $serializer = $args{serializer};
 
     my $self = bless {
         tags => $tags,
         loadcode => $loadcode,
         dumpcode => $dumpcode,
         classes => $classes,
+        serializer => $serializer,
     }, $class;
 }
 
@@ -40,12 +42,14 @@ sub register {
     my $loadcode = 0;
     my $dumpcode = 1;
     my $classes;
+    my $serializer;
     if (blessed($self)) {
         $tags = $self->{tags};
         @$tags = ('!perl') unless @$tags;
         $loadcode = $self->{loadcode};
         $dumpcode = $self->{dumpcode};
         $classes = $self->{classes};
+        $serializer = $self->{serializer};
     }
     else {
         my $options = $args{options};
@@ -383,6 +387,13 @@ sub register {
             my ($rep, $node) = @_;
             my $blessed = blessed $node->{value};
             my $tag_blessed = ":$blessed";
+            if (defined $serializer and $node->{value}->can($serializer)) {
+                my $data = $node->{value}->$serializer;
+                $node->{value} = $data;
+                my $r = $rep->represent_node($node);
+                return $r;
+
+            }
             if ($blessed !~ m/^$class_regex$/) {
                 $tag_blessed = '';
             }
