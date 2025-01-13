@@ -15,6 +15,7 @@ GetOptions(
     'help|h' => \my $help,
     'boolean=s' => \my $boolean,
     'cyclic' => \my $cyclic,
+    'duplicate-keys' => \my $duplicate_keys,
     'indent=i' => \my $indent,
     'width=i' => \my $width,
     'header!' => \my $header,
@@ -131,6 +132,7 @@ sub _yamlpp {
         schema => \@schema,
         boolean => $boolean,
         cyclic_refs => $cyclic ? 'allow' : 'fatal',
+        duplicate_keys => $duplicate_keys ? 1 : 0,
         preserve => $preserve,
         indent => $indent,
         width => $width,
@@ -279,6 +281,7 @@ Usage:
 Options:
     --boolean=            'perl', 'JSON::PP', 'boolean'
     --cyclic              Allow cyclic references
+    --duplicate-keys      Allow duplicate keys
     --indent=             Number of spaces for indentation
     --width=              Maximum column width (only used in flow style for now)
     --[no-]header         Print '---' (default)

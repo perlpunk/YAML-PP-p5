@@ -13,6 +13,7 @@ GetOptions(
     'help|h' => \my $help,
     'boolean=s' => \my $boolean,
     'cyclic' => \my $cyclic,
+    'duplicate-keys' => \my $duplicate_keys,
     'merge' => \my $merge,
     'perl' => \my $perl,
     'module|M=s' => \my $module,
@@ -70,6 +71,7 @@ sub _yamlpp {
         schema => \@schema,
         boolean => $boolean,
         cyclic_refs => $cyclic ? 'allow' : 'fatal',
+        duplicate_keys => $duplicate_keys ? 1 : 0,
         preserve => PRESERVE_ORDER,
         yaml_version => \@yaml_versions,
     );
@@ -133,6 +135,7 @@ Usage:
 Options:
     --boolean=            'perl', 'JSON::PP', 'boolean'
     --cyclic              Allow cyclic references
+    --duplicate-keys      Allow duplicate keys
     --merge               Enable loading merge keys '<<'
     --perl                Enable loading perl types and objects (use only
                           on trusted input!)
