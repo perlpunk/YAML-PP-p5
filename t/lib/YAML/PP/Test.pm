@@ -487,7 +487,7 @@ sub compare_invalid_parse_events {
 sub load_json {
     my ($self, $testcase) = @_;
 
-    my $ypp = YAML::PP->new(boolean => 'JSON::PP', schema => [qw/ Core /]);
+    my $ypp = YAML::PP->new(boolean => 'JSON::PP', schema => [qw/ Core Catchall /]);
     my @docs = eval { $ypp->load_string($testcase->{in_yaml}) };
 
     my $err = $@;
@@ -554,7 +554,7 @@ sub dump_yaml {
     my ($self, $testcase) = @_;
     my $id = $testcase->{id};
 
-    my $ypp = YAML::PP->new( boolean => 'JSON::PP', duplicate_keys => 1 );
+    my $ypp = YAML::PP->new( boolean => 'JSON::PP', duplicate_keys => 1, schema => [qw/ + Catchall /] );
     my @docs = eval { $ypp->load_string($testcase->{in_yaml}) };
     my $err = $@;
     my $result = {};

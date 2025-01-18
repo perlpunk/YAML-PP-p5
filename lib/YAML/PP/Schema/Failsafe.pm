@@ -6,6 +6,28 @@ our $VERSION = '0.000'; # VERSION
 
 sub register {
     my ($self, %args) = @_;
+    my $schema = $args{schema};
+
+    $schema->add_resolver(
+        tag => 'tag:yaml.org,2002:str',
+        match => [ all => sub { $_[1]->{value} } ],
+    );
+    $schema->add_sequence_resolver(
+        tag => 'tag:yaml.org,2002:seq',
+        on_data => sub {
+            my ($constructor, $ref, $list) = @_;
+            push @$$ref, @$list;
+        },
+    );
+    $schema->add_mapping_resolver(
+        tag => 'tag:yaml.org,2002:map',
+        on_data => sub {
+            my ($constructor, $ref, $list) = @_;
+            for (my $i = 0; $i < @$list; $i += 2) {
+                $$ref->{ $list->[ $i ] } = $list->[ $i + 1 ];
+            }
+        },
+    );
 
     return;
 }

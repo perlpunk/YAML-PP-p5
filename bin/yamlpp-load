@@ -15,6 +15,7 @@ GetOptions(
     'cyclic' => \my $cyclic,
     'duplicate-keys' => \my $duplicate_keys,
     'merge' => \my $merge,
+    'catchall' => \my $catchall,
     'perl' => \my $perl,
     'module|M=s' => \my $module,
     'yaml-version=s' => \my $yaml_version,
@@ -32,6 +33,9 @@ if ($merge) {
 }
 if ($perl) {
     push @schema, 'Perl';
+}
+if ($catchall) {
+    push @schema, 'Catchall';
 }
 
 my ($file) = @ARGV;
@@ -137,6 +141,7 @@ Options:
     --cyclic              Allow cyclic references
     --duplicate-keys      Allow duplicate keys
     --merge               Enable loading merge keys '<<'
+    --catchall            Ignore any unknown tags
     --perl                Enable loading perl types and objects (use only
                           on trusted input!)
     --module -M           YAML::PP (default), YAML, YAML::PP::LibYAML,

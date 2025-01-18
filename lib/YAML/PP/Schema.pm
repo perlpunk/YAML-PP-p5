@@ -8,6 +8,7 @@ our $VERSION = '0.000'; # VERSION
 
 use YAML::PP::Common qw/ YAML_PLAIN_SCALAR_STYLE /;
 
+use Carp qw/ croak /;
 use Scalar::Util qw/ blessed /;
 
 sub new {
@@ -306,6 +307,9 @@ sub load_scalar {
     my $resolvers = $self->resolvers;
     my $res;
     if ($tag) {
+        if ($tag eq '!') {
+            return $value;
+        }
         $res = $resolvers->{tag}->{ $tag };
         if (not $res and my $matches = $resolvers->{tags}) {
             for my $match (@$matches) {
@@ -315,6 +319,9 @@ sub load_scalar {
                     last;
                 }
             }
+        }
+        unless ($res) {
+            croak "Unknown tag '$tag'. Use schema 'Catchall' to ignore unknown tags";
         }
     }
     else {
@@ -376,6 +383,7 @@ sub create_sequence {
                 }
             }
         }
+        croak "Unknown tag '$tag'. Use schema 'Catchall' to ignore unknown tags";
     }
 
     return ($data, $on_data);
@@ -406,6 +414,7 @@ sub create_mapping {
                 }
             }
         }
+        croak "Unknown tag '$tag'. Use schema 'Catchall' to ignore unknown tags";
     }
 
     return ($data, $on_data);

@@ -157,7 +157,7 @@ sub register {
             tag => qr{^$perl_regex/code:.+},
             match => [ all => $loadcode_dummy ],
             implicit => 0,
-        ) if $no_objects;
+        );
     }
 
     # Glob
@@ -207,6 +207,10 @@ sub register {
         my ($constructor, $event) = @_;
         return $self->construct_regex($event->{value});
     };
+    my $load_regex_dummy = sub {
+        my ($constructor, $event) = @_;
+        return $event->{value};
+    };
     my $load_regex_blessed = sub {
         my ($constructor, $event) = @_;
         my $class = $event->{tag};
@@ -225,10 +229,10 @@ sub register {
         implicit => 0,
     );
     $schema->add_resolver(
-        tag => qr{^$perl_regex/regexp:$class_regex$},
-        match => [ all => $load_regex ],
+        tag => qr{^$perl_regex/regexp:.*$},
+        match => [ all => $load_regex_dummy ],
         implicit => 0,
-    ) if $no_objects;
+    );
 
     my $load_sequence = sub { return [] };
     my $load_sequence_blessed = sub {
@@ -248,7 +252,7 @@ sub register {
     $schema->add_sequence_resolver(
         tag => qr{^$perl_regex/array:.+$},
         on_create => $load_sequence,
-    ) if $no_objects;
+    );# if $no_objects;
 
     my $load_mapping = sub { return {} };
     my $load_mapping_blessed = sub {
@@ -268,7 +272,7 @@ sub register {
     $schema->add_mapping_resolver(
         tag => qr{^$perl_regex/hash:.+$},
         on_create => $load_mapping,
-    ) if $no_objects;
+    ); # if $no_objects;
 
     # Ref
     my $load_ref = sub {
@@ -305,7 +309,7 @@ sub register {
             my ($constructor, $ref, $list) = @_;
             $$$ref = $self->construct_ref($list);
         },
-    ) if $no_objects;
+    ); # if $no_objects;
 
     # Scalar ref
     my $load_scalar_ref = sub {
@@ -342,7 +346,7 @@ sub register {
             my ($constructor, $ref, $list) = @_;
             $$$ref = $self->construct_scalar($list);
         },
-    ) if $no_objects;
+    ); # if $no_objects;
 
     $schema->add_representer(
         scalarref => 1,

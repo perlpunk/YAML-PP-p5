@@ -8,7 +8,7 @@ use Encode;
 use Data::Dumper;
 
 my $yp_binary = YAML::PP->new( schema => [qw/ JSON Binary /] );
-my $yp = YAML::PP->new( schema => [qw/ JSON /] );
+my $yp = YAML::PP->new( schema => [qw/ JSON Catchall /] );
 
 my $gif = "GIF89a\f\0\f\0\204\0\0\377\377\367\365\365\356\351\351\345fff"
     . "\0\0\0\347\347\347^^^\363\363\355\216\216\216\340\340\340\237\237\237"
@@ -62,6 +62,7 @@ my @tests = (
     [binary => [$gif, decode_utf8("ä")],],
     [binary => [$gif, 'foo'],],
 );
+
 
 subtest roundtrip => sub {
     for my $item (@tests) {

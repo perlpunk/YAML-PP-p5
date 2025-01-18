@@ -21,6 +21,7 @@ GetOptions(
     'header!' => \my $header,
     'footer!' => \my $footer,
     'merge' => \my $merge,
+    'catchall' => \my $catchall,
     'perl' => \my $perl,
     'preserve|P=s' => \my $preserve,
     'module|M=s' => \my $module,
@@ -49,6 +50,9 @@ if ($merge) {
 }
 if ($perl) {
     push @schema, 'Perl';
+}
+if ($catchall) {
+    push @schema, 'Catchall';
 }
 
 my $preserve_order = 1;
@@ -287,6 +291,7 @@ Options:
     --[no-]header         Print '---' (default)
     --[no-]footer         Print '...'
     --merge               Enable loading merge keys '<<'
+    --catchall            Ignore any unknown tags
     --perl                Enable loading perl types and objects (use only
                           on trusted input!)
     --preserve, -P        Comma separated: 'order', 'scalar', 'flow', 'alias'.
