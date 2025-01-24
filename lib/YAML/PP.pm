@@ -1029,17 +1029,25 @@ Serializing Perl objects and types
 
 Serializing binary data
 
-=item L<YAML::PP::Schema::Tie::IxHash>
-
-Deprecated. See option C<preserve>
-
 =item L<YAML::PP::Schema::Merge>
 
 YAML 1.1 merge keys for mappings
 
+=item L<YAML::PP::Schema::Catchall>
+
+Adding this allows (and ignores) all unknown tags, like
+
+    key: !something value
+
+By default they will result in an error.
+
 =item L<YAML::PP::Schema::Include>
 
 Include other YAML files via C<!include> tags
+
+=item L<YAML::PP::Schema::Tie::IxHash>
+
+Deprecated. See option C<preserve>
 
 =back
 
