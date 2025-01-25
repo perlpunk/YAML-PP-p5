@@ -16,6 +16,7 @@ GetOptions(
     'duplicate-keys' => \my $duplicate_keys,
     'merge' => \my $merge,
     'catchall' => \my $catchall,
+    'require-footer' => \my $require_footer,
     'perl' => \my $perl,
     'module|M=s' => \my $module,
     'yaml-version=s' => \my $yaml_version,
@@ -78,6 +79,7 @@ sub _yamlpp {
         duplicate_keys => $duplicate_keys ? 1 : 0,
         preserve => PRESERVE_ORDER,
         yaml_version => \@yaml_versions,
+        require_footer => $require_footer,
     );
     my @docs = $ypp->load_string($yaml);
     return @docs;
@@ -142,6 +144,7 @@ Options:
     --duplicate-keys      Allow duplicate keys
     --merge               Enable loading merge keys '<<'
     --catchall            Ignore any unknown tags
+    --require-footer      Require '...' and the end of each document
     --perl                Enable loading perl types and objects (use only
                           on trusted input!)
     --module -M           YAML::PP (default), YAML, YAML::PP::LibYAML,

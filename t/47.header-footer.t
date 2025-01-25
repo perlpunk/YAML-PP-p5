@@ -102,6 +102,52 @@ EOM
     cmp_ok($out, 'eq', $out_expected, "Dumping with indent");
 };
 
+subtest require_footer => sub {
+    my $good1 = <<'EOM';
+a: 1
+...
+EOM
+    my $good2 = <<'EOM';
+a: 1
+...
+---
+a: 2
+...
+EOM
+    my $bad1 = <<'EOM';
+a: 1
+---
+a: 2
+...
+EOM
+    my $bad2 = <<'EOM';
+a: 1
+...
+---
+a: 2
+EOM
+    my $bad3 = <<'EOM';
+a: 1
+---
+a: 2
+EOM
+    my $yp = YAML::PP->new( require_footer => 1 );
+    my $data;
+    local $@;
+
+    $data = eval { $yp->load_string($good1) };
+    is $@, '', "good 1";
+    $data = eval { $yp->load_string($good2) };
+    is $@, '', "good 2";
+
+    my $re = qr{Document .\d+. did not end with '...' .require_footer=1.};
+    $data = eval { $yp->load_string($bad1) };
+    like $@, $re, "bad 1";
+    $data = eval { $yp->load_string($bad1) };
+    like $@, $re, "bad 2";
+    $data = eval { $yp->load_string($bad1) };
+    like $@, $re, "bad 3";
+};
 
 done_testing;
 

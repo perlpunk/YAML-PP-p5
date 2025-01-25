@@ -25,6 +25,7 @@ sub new {
     unless (defined $duplicate_keys) {
         $duplicate_keys = 0;
     }
+    my $require_footer = delete $args{require_footer};
     my $preserve = delete $args{preserve} || 0;
     if ($preserve == 1) {
         $preserve = PRESERVE_ORDER | PRESERVE_SCALAR_STYLE | PRESERVE_FLOW_STYLE | PRESERVE_ALIAS;
@@ -44,6 +45,7 @@ sub new {
         cyclic_refs => $cyclic_refs,
         preserve => $preserve,
         duplicate_keys => $duplicate_keys,
+        require_footer => $require_footer,
     }, $class;
     $self->init;
     return $self;
@@ -89,6 +91,7 @@ sub preserve_scalar_style { return $_[0]->{preserve} & PRESERVE_SCALAR_STYLE }
 sub preserve_flow_style { return $_[0]->{preserve} & PRESERVE_FLOW_STYLE }
 sub preserve_alias { return $_[0]->{preserve} & PRESERVE_ALIAS }
 sub duplicate_keys { return $_[0]->{duplicate_keys} }
+sub require_footer { return $_[0]->{require_footer} }
 
 sub document_start_event {
     my ($self, $event) = @_;
@@ -118,6 +121,9 @@ sub document_end_event {
         die "Got unexpected end of document";
     }
     my $docs = $self->docs;
+    if ($event->{implicit} and $self->require_footer) {
+        die sprintf "load: Document (%d) did not end with '...' (require_footer=1)", 1 + scalar @$docs;
+    }
     push @$docs, $last->{ref}->[0];
     $self->set_anchors({});
     $self->set_stack([]);

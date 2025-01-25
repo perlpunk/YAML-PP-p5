@@ -16,6 +16,7 @@ sub new {
     my $default_yaml_version = delete $args{default_yaml_version} || '1.2';
     my $preserve = delete $args{preserve};
     my $duplicate_keys = delete $args{duplicate_keys};
+    my $require_footer = delete $args{require_footer};
     my $schemas = delete $args{schemas};
     $schemas ||= {
         '1.2' => YAML::PP->default_schema(
@@ -29,6 +30,7 @@ sub new {
         default_yaml_version => $default_yaml_version,
         preserve => $preserve,
         duplicate_keys => $duplicate_keys,
+        require_footer => $require_footer,
     );
     my $parser = delete $args{parser};
     unless ($parser) {
