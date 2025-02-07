@@ -21,7 +21,7 @@ GetOptions(
     'header!' => \my $header,
     'footer!' => \my $footer,
     'merge' => \my $merge,
-    'catchall' => \my $catchall,
+    #'catchall' => \my $catchall,
     'require-footer' => \my $require_footer,
     'perl' => \my $perl,
     'preserve|P=s' => \my $preserve,
@@ -52,9 +52,9 @@ if ($merge) {
 if ($perl) {
     push @schema, 'Perl';
 }
-if ($catchall) {
-    push @schema, 'Catchall';
-}
+#if ($catchall) {
+#    push @schema, 'Catchall';
+#}
 
 my $preserve_order = 1;
 if (defined $preserve) {
@@ -293,7 +293,6 @@ Options:
     --[no-]header         Print '---' (default)
     --[no-]footer         Print '...'
     --merge               Enable loading merge keys '<<'
-    --catchall            Ignore any unknown tags
     --require-footer      Require '...' and the end of each document
     --perl                Enable loading perl types and objects (use only
                           on trusted input!)
@@ -310,5 +309,6 @@ Options:
     --include-absolute    Allow absolute paths and ../../../ in includes (use
                           only on trusted input!)
 EOM
+#    --catchall            Ignore any unknown tags
     exit $rc;
 }

@@ -1060,9 +1060,10 @@ YAML 1.1 merge keys for mappings
 
 =item L<YAML::PP::Schema::Catchall>
 
-Adding this allows (and ignores) all unknown tags, like
+Experimental.
 
-    key: !something value
+It was accidentally added in 0.38.1, and unknown tags forbidden.
+This was reverted in 0.39.0
 
 By default they will result in an error.
 

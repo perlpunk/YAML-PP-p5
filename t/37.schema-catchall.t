@@ -7,17 +7,18 @@ use Data::Dumper;
 use Scalar::Util ();
 use YAML::PP;
 
-my $yp = YAML::PP->new(
-    schema => [qw/ JSON /],
-);
+my $yp = YAML::PP->new();
 my $catch = YAML::PP->new(
-    schema => [qw/ JSON Catchall /],
+    schema => [qw/ + Catchall /],
 );
 
 my $yaml = <<'EOM';
 - !foo null
 EOM
 
+pass "dummy";
+done_testing;
+__END__
 my $data = eval { $yp->load_string($yaml) };
 my $err = $@;
 like $err, qr{Unknown tag '!foo'. Use schema 'Catchall'}, "unknoen tags are fatal by default";
