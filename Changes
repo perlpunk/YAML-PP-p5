@@ -1,8 +1,8 @@
 Revision history for Perl module YAML::PP
 
-v0.38.2 2025-02-07 23:56:38+01:00
+v0.39.0 2025-02-10 00:01:45+01:00
 
-    - Allow unknown tags again, reverting the previous change which
+    - Allow unknown tags again, reverting the previous change in v0.38.1 which
       only was supposed to be a dev release
     - Add new option require_footer
 
