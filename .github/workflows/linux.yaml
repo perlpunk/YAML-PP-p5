@@ -89,9 +89,9 @@ jobs:
 
         cover -report codecovbash
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v6
       with:
-        file: ./cover_db/codecov.json
+        files: ./cover_db/codecov.json
         fail_ci_if_error: true
         verbose: true
 
