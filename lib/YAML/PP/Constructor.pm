@@ -15,6 +15,8 @@ use Carp qw/ croak /;
 use constant DEBUG => ($ENV{YAML_PP_LOAD_DEBUG} or $ENV{YAML_PP_LOAD_TRACE}) ? 1 : 0;
 use constant TRACE => $ENV{YAML_PP_LOAD_TRACE} ? 1 : 0;
 
+use constant MAX_DEPTH => 2 ** 9;
+
 my %cyclic_refs = qw/ allow 1 ignore 1 warn 1 fatal 1 /;
 
 sub new {
@@ -26,6 +28,7 @@ sub new {
         $duplicate_keys = 0;
     }
     my $require_footer = delete $args{require_footer};
+    my $max_depth = delete $args{max_depth} || MAX_DEPTH;
     my $preserve = delete $args{preserve} || 0;
     if ($preserve == 1) {
         $preserve = PRESERVE_ORDER | PRESERVE_SCALAR_STYLE | PRESERVE_FLOW_STYLE | PRESERVE_ALIAS;
@@ -46,6 +49,7 @@ sub new {
         preserve => $preserve,
         duplicate_keys => $duplicate_keys,
         require_footer => $require_footer,
+        max_depth => $max_depth,
     }, $class;
     $self->init;
     return $self;
@@ -59,6 +63,7 @@ sub clone {
         default_yaml_version => $self->{default_yaml_version},
         cyclic_refs => $self->cyclic_refs,
         preserve => $self->{preserve},
+        max_depth => $self->{max_depth},
     };
     return bless $clone, ref $self;
 }
@@ -92,6 +97,7 @@ sub preserve_flow_style { return $_[0]->{preserve} & PRESERVE_FLOW_STYLE }
 sub preserve_alias { return $_[0]->{preserve} & PRESERVE_ALIAS }
 sub duplicate_keys { return $_[0]->{duplicate_keys} }
 sub require_footer { return $_[0]->{require_footer} }
+sub max_depth { return $_[0]->{max_depth} }
 
 sub document_start_event {
     my ($self, $event) = @_;
@@ -129,6 +135,15 @@ sub document_end_event {
     $self->set_stack([]);
 }
 
+sub _check_depth {
+    my ($self) = @_;
+    my $stack = $self->stack;
+    my $c = @$stack;
+    if ($c > ($self->max_depth || MAX_DEPTH)){
+        croak sprintf 'Depth of nesting exceeds maximum %s', $self->max_depth;
+    }
+}
+
 sub mapping_start_event {
     my ($self, $event) = @_;
     my ($data, $on_data) = $self->schema->create_mapping($self, $event);
@@ -139,6 +154,7 @@ sub mapping_start_event {
         event => $event,
         on_data => $on_data,
     };
+    $self->_check_depth;
     my $stack = $self->stack;
 
     my $preserve_order = $self->preserve_order;
@@ -241,6 +257,7 @@ sub sequence_start_event {
         on_data => $on_data,
     };
     my $stack = $self->stack;
+    $self->_check_depth;
 
     my $preserve_style = $self->preserve_flow_style;
     my $preserve_alias = $self->preserve_alias;

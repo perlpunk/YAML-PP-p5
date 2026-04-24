@@ -32,6 +32,7 @@ sub new {
     my $footer = delete $args{footer};
     my $require_footer = delete $args{require_footer};
     my $duplicate_keys = delete $args{duplicate_keys};
+    my $max_depth = delete $args{max_depth};
     my $yaml_version = $class->_arg_yaml_version(delete $args{yaml_version});
     my $default_yaml_version = $yaml_version->[0];
     my $version_directive = delete $args{version_directive};
@@ -71,6 +72,7 @@ sub new {
         preserve => $preserve,
         duplicate_keys => $duplicate_keys,
         require_footer => $require_footer,
+        max_depth => $max_depth,
     );
     my $dumper = YAML::PP::Dumper->new(
         schema => $default_schema,
@@ -523,6 +525,8 @@ L<https://perlpunk.github.io/YAML-PP-p5/test-suite.html>
         header => 1,
         footer => 0,
         version_directive => 0,
+        require_footer => 0,
+        max_depth => 512,
     );
 
 Options:
@@ -665,6 +669,8 @@ Print document header C<--->
 
 Default: 0
 
+Since version v0.39
+
 This option is for dumping.
 
 Print document footer C<...>
@@ -691,6 +697,19 @@ the complete content, for example over network.
     ---
     a: 2
 
+=item max_depth
+
+Since version v0.40
+
+default: 512
+
+Loading deeply nested, but still small YAML documents, like
+
+    [[[[[[[[[[...]]]]]]]]]]
+
+can be significantly slower than a "normal" document with the same size.
+By default the depth is limited to 512, which should be more than enough
+for 99% of the use cases.
 
 =item yaml_version
 
