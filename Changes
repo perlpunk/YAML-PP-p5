@@ -1,5 +1,10 @@
 Revision history for Perl module YAML::PP
 
+v0.40.0 2026-04-24 16:51:28+02:00
+
+    - Security: Limit default allowed maximum nesting level.
+      Set it via new option 'max_depth'.
+
 v0.39.0 2025-02-10 00:01:45+01:00
 
     - Allow unknown tags again, reverting the previous change in v0.38.1 which
