@@ -1,5 +1,9 @@
 Revision history for Perl module YAML::PP
 
+v0.40.1 2026-04-25 18:06:22+02:00
+
+    - Fix test suite tag data
+
 v0.40.0 2026-04-24 16:51:28+02:00
 
     - Security: Limit default allowed maximum nesting level.
