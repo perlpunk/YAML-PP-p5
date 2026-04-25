@@ -5,6 +5,7 @@ use warnings;
 use File::Basename qw/ dirname basename /;
 use Encode;
 use Test::More;
+use YAML::PP qw/ LoadFile /;
 use YAML::PP::Common qw/ YAML_FLOW_SEQUENCE_STYLE YAML_FLOW_MAPPING_STYLE YAML_PLAIN_SCALAR_STYLE /;
 
 sub new {
@@ -13,27 +14,8 @@ sub new {
         stats => {},
         %args,
     }, $class;
-    my $id2tags = $self->get_tags;
-    $self->{id2tags} = $id2tags;
+    $self->{tag2ids} = LoadFile "$self->{test_suite_dir}/../tag_id.yaml";
     return $self;
-}
-
-sub get_tags {
-    my ($self, %args) = @_;
-    my %id_tags;
-    my $dir = $self->{test_suite_dir} . "/tags";
-
-    return unless -d $dir;
-    opendir my $dh, $dir or die $!;
-    my @tags = grep { not m/^\./ } readdir $dh;
-    for my $tag (sort @tags) {
-        opendir my $dh, "$dir/$tag" or die $!;
-        my @ids = grep { -l "$dir/$tag/$_" } readdir $dh;
-        $id_tags{ $_ }->{ $tag } = 1 for @ids;
-        closedir $dh;
-    }
-    closedir $dh;
-    return \%id_tags;
 }
 
 sub get_tests {
@@ -41,7 +23,7 @@ sub get_tests {
     my $test_suite_dir = $self->{test_suite_dir};
     my $dir = $self->{dir};
     my $tag = $self->{tag};
-    my $id2tags = $self->{id2tags};
+    my $tag2ids = $self->{tag2ids};
     my $valid = $self->{valid};
     my $json = $self->{in_json};
 
@@ -74,7 +56,7 @@ sub get_tests {
         }
         if ($tag) {
             @allids = grep {
-                $id2tags->{ $_ }->{ $tag };
+                $tag2ids->{ $tag }->{ $_ };
             } @allids;
         }
         push @dirs, map { "$test_suite_dir/$_" } @allids;
