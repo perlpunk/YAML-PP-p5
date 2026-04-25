@@ -9,3 +9,4 @@
 ^new_tests
 ^gh-pages
 ^bench
+^Makefile.dev
