@@ -1,8 +1,6 @@
 use strict;
 use warnings;
 package YAML::PP::Schema;
-use B;
-use Module::Load qw//;
 
 our $VERSION = '0.000'; # VERSION
 
@@ -94,6 +92,14 @@ my %DEFAULT_SCHEMA = (
     '1.1' => 'YAML1_1',
 );
 
+sub _load_module {
+    my ($class) = @_;
+    (my $file = $class) =~ s{::}{/}g;
+    $file .= '.pm';
+    require $file;
+    return 1;
+}
+
 sub load_subschemas {
     my ($self, @schemas) = @_;
     my $yaml_version = $self->yaml_version;
@@ -128,14 +134,14 @@ sub load_subschemas {
             unless ($class =~ m/\A[A-Za-z0-9_:]+\z/) {
                 die "Module name '$class' is invalid";
             }
-            Module::Load::load $class;
+            _load_module($class);
         }
         else {
             $class = "YAML::PP::Schema::$item";
             unless ($class =~ m/\A[A-Za-z0-9_:]+\z/) {
                 die "Module name '$class' is invalid";
             }
-            $LOADED_SCHEMA{ $item } ||= Module::Load::load $class;
+            $LOADED_SCHEMA{ $item } ||= _load_module($class);
         }
         $class->register(
             schema => $self,

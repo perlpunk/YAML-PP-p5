@@ -6,7 +6,8 @@ our $VERSION = '0.000'; # VERSION
 
 use Scalar::Util qw/ openhandle /;
 
-use base qw/ YAML::PP::Writer /;
+require YAML::PP::Writer;
+our @ISA = qw( YAML::PP::Writer );
 
 use Carp qw/ croak /;
 

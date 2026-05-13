@@ -9,7 +9,6 @@ use YAML::PP;
 use YAML::PP::Emitter;
 use YAML::PP::Representer;
 use YAML::PP::Writer;
-use YAML::PP::Writer::File;
 use YAML::PP::Common qw/
     YAML_PLAIN_SCALAR_STYLE YAML_SINGLE_QUOTED_SCALAR_STYLE
     YAML_DOUBLE_QUOTED_SCALAR_STYLE
@@ -231,6 +230,7 @@ sub dump_string {
 
 sub dump_file {
     my ($self, $file, @docs) = @_;
+    require YAML::PP::Writer::File;
     my $writer = YAML::PP::Writer::File->new(output => $file);
     $self->emitter->set_writer($writer);
     my $output = $self->dump(@docs);
