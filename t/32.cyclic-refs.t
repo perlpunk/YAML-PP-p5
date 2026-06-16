@@ -2,7 +2,7 @@
 use strict;
 use warnings;
 use Test::More;
-use Test::Warn;
+use Test::Warnings 0.005 qw(:all :no_end_test);
 use Data::Dumper;
 use YAML::PP;
 
@@ -35,9 +35,9 @@ my $data = eval {
 my $error = $@;
 cmp_ok($error, '=~', qr{found cyclic ref}i, "cyclic_refs=fatal");
 
-warning_like {
+like warning {
     $warn->load_string($yaml);
-} qr{found cyclic ref}i, "cyclic_refs=warn";
+}, qr{found cyclic ref}i, "cyclic_refs=warn";
 is($data->[0]->{link}->{link}, undef, "cyclic_refs=warn");
 
 $data = $ignore->load_string($yaml);
