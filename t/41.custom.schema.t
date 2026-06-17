@@ -36,4 +36,10 @@ o1: !Class1
   b: 4
 EOY
 
+eval { $yp = YAML::PP->new( schema => [qw/ Foo::Bar! /] ) };
+like $@, qr/Module name 'YAML::PP::Schema::Foo::Bar!' is invalid/;
+
+eval { $yp = YAML::PP->new( schema => [qw/ :Foo::Bar! /] ) };
+like $@, qr/Module name 'Foo::Bar!' is invalid/;
+
 done_testing;
