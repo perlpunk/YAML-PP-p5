@@ -50,10 +50,10 @@ my %WriteMakefileArgs = (
     "IO::Handle" => 0,
     "IPC::Open3" => 0,
     "Test::More" => "0.98",
-    "Test::Warn" => 0,
+    "Test::Warnings" => "0.005",
     "lib" => 0
   },
-  "VERSION" => "v0.40.1",
+  "VERSION" => "v0.41.0",
   "test" => {
     "TESTS" => "t/*.t"
   }
@@ -78,7 +78,7 @@ my %FallbackPrereqs = (
   "Module::Load" => 0,
   "Scalar::Util" => "1.07",
   "Test::More" => "0.98",
-  "Test::Warn" => 0,
+  "Test::Warnings" => "0.005",
   "Tie::Array" => 0,
   "Tie::Hash" => 0,
   "base" => 0,
