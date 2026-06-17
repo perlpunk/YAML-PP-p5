@@ -1,7 +1,6 @@
 use strict;
 use warnings;
 package YAML::PP::Schema;
-use B;
 use Module::Load qw//;
 
 our $VERSION = '0.000'; # VERSION
