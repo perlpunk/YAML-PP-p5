@@ -56,7 +56,7 @@ jobs:
     - name: Install deps
       run: >
         cpanm --quiet --notest
-        Module::Load Test::Warn Test::More JSON::PP boolean
+        Module::Load Test::Warnings Test::More JSON::PP boolean
     - name: Run Tests
       run: prove -lr t
 
@@ -81,7 +81,7 @@ jobs:
       run: >
         cpanm --quiet --notest --skip-satisfied
         Devel::Cover Devel::Cover::Report::Codecovbash
-        Module::Load Test::Deep Test::Warn Test::More JSON::PP boolean
+        Module::Load Test::Deep Test::Warnings Test::More JSON::PP boolean
     - name: Run Tests
       run: >
         PERL5OPT="-MDevel::Cover=-db,cover_db,-select,^lib,-ignore,^t/|bin/prove|^examples"
