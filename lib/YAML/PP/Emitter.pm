@@ -3,7 +3,6 @@ use warnings;
 package YAML::PP::Emitter;
 
 our $VERSION = '0.000'; # VERSION
-use Data::Dumper;
 
 use YAML::PP::Common qw/
     YAML_PLAIN_SCALAR_STYLE YAML_SINGLE_QUOTED_SCALAR_STYLE
@@ -13,6 +12,7 @@ use YAML::PP::Common qw/
 /;
 
 use constant DEBUG => $ENV{YAML_PP_EMIT_DEBUG} ? 1 : 0;
+if (DEBUG) { require Data::Dumper }
 use constant DEFAULT_WIDTH => 80;
 
 sub new {
