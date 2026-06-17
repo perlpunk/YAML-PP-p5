@@ -6,7 +6,7 @@ our $VERSION = '0.000'; # VERSION
 
 our @EXPORT_OK = qw/ Dump /;
 
-use base 'Exporter';
+use Exporter 'import';
 use YAML::PP;
 use YAML::PP::Parser;
 use Encode;

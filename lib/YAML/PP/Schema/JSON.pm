@@ -4,7 +4,7 @@ package YAML::PP::Schema::JSON;
 
 our $VERSION = '0.000'; # VERSION
 
-use base 'Exporter';
+use Exporter 'import';
 our @EXPORT_OK = qw/
     represent_int represent_float represent_literal represent_bool
     represent_undef

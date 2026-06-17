@@ -4,7 +4,7 @@ package YAML::PP::Perl;
 
 our $VERSION = '0.000'; # VERSION
 
-use base 'Exporter';
+use Exporter 'import';
 use base 'YAML::PP';
 our @EXPORT_OK = qw/ Load Dump LoadFile DumpFile /;
 

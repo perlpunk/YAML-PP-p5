@@ -4,7 +4,7 @@ package YAML::PP::Grammar;
 
 our $VERSION = '0.000'; # VERSION
 
-use base 'Exporter';
+use Exporter 'import';
 
 our @EXPORT_OK = qw/ $GRAMMAR /;
 

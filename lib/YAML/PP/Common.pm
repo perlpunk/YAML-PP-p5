@@ -4,7 +4,7 @@ package YAML::PP::Common;
 
 our $VERSION = '0.000'; # VERSION
 
-use base 'Exporter';
+use Exporter 'import';
 
 my @p = qw/
     PRESERVE_ALL PRESERVE_ORDER PRESERVE_SCALAR_STYLE PRESERVE_FLOW_STYLE
