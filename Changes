@@ -1,5 +1,10 @@
 Revision history for Perl module YAML::PP
 
+v0.42 2026-10-11 17:04:54+02:00
+
+    - Improve startup time a bit by removing unused modules or lazy-load them.
+      Issue #57, PR #60 (original PR #58 @oalders)
+
 v0.41.0 2026-06-17 22:01:34+02:00
 
     - tests: replace Test::Warn with Test::Warnings (PR #59, @haarg)
