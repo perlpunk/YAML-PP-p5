@@ -12,7 +12,7 @@ use YAML::PP::Dumper;
 use Scalar::Util qw/ blessed /;
 use Carp qw/ croak /;
 
-use base 'Exporter';
+use Exporter 'import';
 our @EXPORT_OK = qw/ Load LoadFile Dump DumpFile /;
 
 my %YAML_VERSIONS = ('1.1' => 1, '1.2' => 1);
@@ -227,8 +227,8 @@ sub preserved_sequence {
 
 package YAML::PP::Preserve::Hash;
 # experimental
-use Tie::Hash;
-use base qw/ Tie::StdHash /;
+use Tie::Hash; # provides Tie::StdHash, our parent below
+our @ISA = qw/ Tie::StdHash /;
 use Scalar::Util qw/ reftype blessed /;
 
 sub TIEHASH {
@@ -301,8 +301,8 @@ sub SCALAR {
 
 package YAML::PP::Preserve::Array;
 # experimental
-use Tie::Array;
-use base qw/ Tie::StdArray /;
+use Tie::Array; # provides Tie::StdArray, our parent below
+our @ISA = qw/ Tie::StdArray /;
 use Scalar::Util qw/ reftype blessed /;
 
 sub TIEARRAY {

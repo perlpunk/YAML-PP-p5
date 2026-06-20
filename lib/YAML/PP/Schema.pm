@@ -1,8 +1,6 @@
 use strict;
 use warnings;
 package YAML::PP::Schema;
-use B;
-use Module::Load qw//;
 
 our $VERSION = '0.000'; # VERSION
 
@@ -90,8 +88,15 @@ my %LOADED_SCHEMA = (
     JSON => 1,
 );
 my %DEFAULT_SCHEMA = (
-    '1.2' => 'Core',
-    '1.1' => 'YAML1_1',
+    '1.2' => sub { require YAML::PP::Schema::Core; return 'YAML::PP::Schema::Core' },
+    '1.1' => sub { require YAML::PP::Schema::YAML1_1; return 'YAML::PP::Schema::YAML1_1' },
+);
+my %AVAILABLE_SCHEMAS = (
+    'Core' => sub { require YAML::PP::Schema::Core; return 'YAML::PP::Schema::Core' },
+    'JSON' => sub { require YAML::PP::Schema::JSON; return 'YAML::PP::Schema::JSON' },
+    'Failsafe' => sub { require YAML::PP::Schema::Failsafe; return 'YAML::PP::Schema::Failsafe' },
+    'Merge' => sub { require YAML::PP::Schema::Merge; return 'YAML::PP::Schema::Merge' },
+    'Perl' => sub { require YAML::PP::Schema::Perl; return 'YAML::PP::Schema::Perl' },
 );
 
 sub load_subschemas {
@@ -100,11 +105,17 @@ sub load_subschemas {
     my $i = 0;
     while ($i < @schemas) {
         my $item = $schemas[ $i ];
-        if ($item eq '+') {
-            $item = $DEFAULT_SCHEMA{ $yaml_version };
-        }
         $i++;
-        if (blessed($item)) {
+        my $class;
+        if ($item eq '+') {
+            my $code = $DEFAULT_SCHEMA{ $yaml_version };
+            $class = $code->();
+        }
+        elsif ($AVAILABLE_SCHEMAS{ $item }) {
+            my $code = $AVAILABLE_SCHEMAS{ $item };
+            $class = $code->();
+        }
+        elsif (blessed($item)) {
             $item->register(
                 schema => $self,
             );
@@ -122,20 +133,22 @@ sub load_subschemas {
             $i++;
         }
 
-        my $class;
-        if ($item =~ m/^\:(.*)/) {
-            $class = "$1";
-            unless ($class =~ m/\A[A-Za-z0-9_:]+\z/) {
-                die "Module name '$class' is invalid";
+        unless ($class) {
+            require Module::Load;
+            if ($item =~ m/^\:(.*)/) {
+                $class = "$1";
+                unless ($class =~ m/\A[A-Za-z0-9_:]+\z/) {
+                    die "Module name '$class' is invalid";
+                }
+                Module::Load::load $class;
             }
-            Module::Load::load $class;
-        }
-        else {
-            $class = "YAML::PP::Schema::$item";
-            unless ($class =~ m/\A[A-Za-z0-9_:]+\z/) {
-                die "Module name '$class' is invalid";
+            else {
+                $class = "YAML::PP::Schema::$item";
+                unless ($class =~ m/\A[A-Za-z0-9_:]+\z/) {
+                    die "Module name '$class' is invalid";
+                }
+                $LOADED_SCHEMA{ $item } ||= Module::Load::load $class;
             }
-            $LOADED_SCHEMA{ $item } ||= Module::Load::load $class;
         }
         $class->register(
             schema => $self,
