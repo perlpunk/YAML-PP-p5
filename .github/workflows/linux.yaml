@@ -31,6 +31,9 @@ jobs:
         - '5.34-bullseye'
         - '5.36-bookworm'
         - '5.38-bookworm'
+        - '5.40-bookworm'
+        - '5.42-bookworm'
+        - '5.44-bookworm'
         - 'latest'
 
     container:
