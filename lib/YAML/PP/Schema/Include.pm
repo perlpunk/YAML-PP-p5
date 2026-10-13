@@ -7,6 +7,7 @@ our $VERSION = '0.000'; # VERSION
 use Carp qw/ croak /;
 use Scalar::Util qw/ weaken /;
 use File::Basename qw/ dirname /;
+use File::Spec;
 
 sub new {
     my ($class, %args) = @_;
