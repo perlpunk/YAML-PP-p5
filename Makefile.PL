@@ -31,6 +31,7 @@ my %WriteMakefileArgs = (
     "Encode" => 0,
     "Exporter" => 0,
     "File::Basename" => 0,
+    "File::Spec" => 0,
     "Getopt::Long" => 0,
     "MIME::Base64" => 0,
     "Module::Load" => 0,
@@ -53,7 +54,7 @@ my %WriteMakefileArgs = (
     "Test::Warnings" => "0.005",
     "lib" => 0
   },
-  "VERSION" => "v0.42.0",
+  "VERSION" => "v0.43.0",
   "test" => {
     "TESTS" => "t/*.t"
   }

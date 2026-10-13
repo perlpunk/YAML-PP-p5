@@ -1,5 +1,9 @@
 Revision history for Perl module YAML::PP
 
+v0.43.0 2026-10-13 11:12:25+02:00
+
+    - Fix YAML::PP::Schema::Imclude: load File::Spec (#62 @schlad)
+
 v0.42 2026-10-11 17:04:54+02:00
 
     - Improve startup time a bit by removing unused modules or lazy-load them.
