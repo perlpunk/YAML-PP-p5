@@ -6,7 +6,6 @@ use FindBin '$Bin';
 use Data::Dumper;
 use YAML::PP;
 use YAML::PP::Schema::Include;
-use File::Spec;
 use Scalar::Util qw/ refaddr /;
 
 my $test_deep;
