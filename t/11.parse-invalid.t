@@ -14,9 +14,6 @@ $|++;
 my $yts = "$Bin/../test-suite/yaml-test-suite-data";
 
 my @skip = qw/
-    CXX2
-
-    9KBC
     S98Z
     T833
     5LLU
@@ -31,7 +28,6 @@ my %skip_events = (
     SU5Z => 1,
     W9L4 => 1,
     ZL4Z => 1,
-    '9KBC' => 1,
     SY6V => 1,
     C2SP => 1,
     'NTY5' => 1,

@@ -86,7 +86,7 @@ NODETYPE_SCALAR_OR_MAP:
   DOC_START:
     match: cb_end_doc_start_document
     EOL: { new: FULLNODE }
-    WS: { new: FULLNODE }
+    WS: { new: FULLMAPVALUE_INLINE }
 
   EOL:
     new: NODETYPE_SCALAR_OR_MAP
@@ -515,7 +515,7 @@ RULE_MAPKEY:
   DOC_START:
     match: cb_end_doc_start_document
     EOL: { new: FULLNODE }
-    WS: { new: FULLNODE }
+    WS: { new: FULLMAPVALUE_INLINE }
 
   EOL:
     new: RULE_MAPKEY
@@ -532,7 +532,7 @@ NODETYPE_SEQ:
   DOC_START:
     match: cb_end_doc_start_document
     EOL: { new: FULLNODE }
-    WS: { new: FULLNODE }
+    WS: { new: FULLMAPVALUE_INLINE }
 
   EOL:
     new: NODETYPE_SEQ
@@ -632,6 +632,8 @@ FULLNODE:
   EOL: { new: FULLNODE }
   DEFAULT: { new: NODETYPE_NODE }
 
+# Inline content after a mapping colon or document start marker.
+# Block collections must start on a following line.
 FULLMAPVALUE_INLINE:
   ANCHOR:
     match: cb_anchor
@@ -700,7 +702,7 @@ DOCUMENT_END:
   DOC_START:
     match: cb_end_doc_start_document
     EOL: { new: FULLNODE }
-    WS: { new: FULLNODE }
+    WS: { new: FULLMAPVALUE_INLINE }
 
   EOL:
     new: DOCUMENT_END
@@ -714,7 +716,7 @@ STREAM:
   DOC_START:
     match: cb_doc_start_explicit
     EOL: { new: FULLNODE }
-    WS: { new: FULLNODE }
+    WS: { new: FULLMAPVALUE_INLINE }
   YAML_DIRECTIVE:
     match: cb_set_yaml_version_directive
     EOL: { new: DIRECTIVE }
@@ -739,7 +741,7 @@ DIRECTIVE:
   DOC_START:
     match: cb_doc_start_explicit
     EOL: { new: FULLNODE }
-    WS: { new: FULLNODE }
+    WS: { new: FULLMAPVALUE_INLINE }
 
   YAML_DIRECTIVE:
     match: cb_set_yaml_version_directive

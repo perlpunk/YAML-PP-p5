@@ -22,7 +22,7 @@ $GRAMMAR = {
         'new' => 'FULLNODE'
       },
       'WS' => {
-        'new' => 'FULLNODE'
+        'new' => 'FULLMAPVALUE_INLINE'
       },
       'match' => 'cb_doc_start_explicit'
     },
@@ -67,7 +67,7 @@ $GRAMMAR = {
         'new' => 'FULLNODE'
       },
       'WS' => {
-        'new' => 'FULLNODE'
+        'new' => 'FULLMAPVALUE_INLINE'
       },
       'match' => 'cb_end_doc_start_document'
     },
@@ -991,7 +991,7 @@ $GRAMMAR = {
         'new' => 'FULLNODE'
       },
       'WS' => {
-        'new' => 'FULLNODE'
+        'new' => 'FULLMAPVALUE_INLINE'
       },
       'match' => 'cb_end_doc_start_document'
     },
@@ -1098,7 +1098,7 @@ $GRAMMAR = {
         'new' => 'FULLNODE'
       },
       'WS' => {
-        'new' => 'FULLNODE'
+        'new' => 'FULLMAPVALUE_INLINE'
       },
       'match' => 'cb_end_doc_start_document'
     },
@@ -1249,7 +1249,7 @@ $GRAMMAR = {
         'new' => 'FULLNODE'
       },
       'WS' => {
-        'new' => 'FULLNODE'
+        'new' => 'FULLMAPVALUE_INLINE'
       },
       'match' => 'cb_end_doc_start_document'
     },
@@ -1324,7 +1324,7 @@ $GRAMMAR = {
         'new' => 'FULLNODE'
       },
       'WS' => {
-        'new' => 'FULLNODE'
+        'new' => 'FULLMAPVALUE_INLINE'
       },
       'match' => 'cb_doc_start_explicit'
     },
@@ -1473,7 +1473,7 @@ This is the Grammar in YAML
       DOC_START:
         match: cb_end_doc_start_document
         EOL: { new: FULLNODE }
-        WS: { new: FULLNODE }
+        WS: { new: FULLMAPVALUE_INLINE }
     
       EOL:
         new: NODETYPE_SCALAR_OR_MAP
@@ -1902,7 +1902,7 @@ This is the Grammar in YAML
       DOC_START:
         match: cb_end_doc_start_document
         EOL: { new: FULLNODE }
-        WS: { new: FULLNODE }
+        WS: { new: FULLMAPVALUE_INLINE }
     
       EOL:
         new: RULE_MAPKEY
@@ -1919,7 +1919,7 @@ This is the Grammar in YAML
       DOC_START:
         match: cb_end_doc_start_document
         EOL: { new: FULLNODE }
-        WS: { new: FULLNODE }
+        WS: { new: FULLMAPVALUE_INLINE }
     
       EOL:
         new: NODETYPE_SEQ
@@ -2019,6 +2019,8 @@ This is the Grammar in YAML
       EOL: { new: FULLNODE }
       DEFAULT: { new: NODETYPE_NODE }
     
+    # Inline content after a mapping colon or document start marker.
+    # Block collections must start on a following line.
     FULLMAPVALUE_INLINE:
       ANCHOR:
         match: cb_anchor
@@ -2087,7 +2089,7 @@ This is the Grammar in YAML
       DOC_START:
         match: cb_end_doc_start_document
         EOL: { new: FULLNODE }
-        WS: { new: FULLNODE }
+        WS: { new: FULLMAPVALUE_INLINE }
     
       EOL:
         new: DOCUMENT_END
@@ -2101,7 +2103,7 @@ This is the Grammar in YAML
       DOC_START:
         match: cb_doc_start_explicit
         EOL: { new: FULLNODE }
-        WS: { new: FULLNODE }
+        WS: { new: FULLMAPVALUE_INLINE }
       YAML_DIRECTIVE:
         match: cb_set_yaml_version_directive
         EOL: { new: DIRECTIVE }
@@ -2126,7 +2128,7 @@ This is the Grammar in YAML
       DOC_START:
         match: cb_doc_start_explicit
         EOL: { new: FULLNODE }
-        WS: { new: FULLNODE }
+        WS: { new: FULLMAPVALUE_INLINE }
     
       YAML_DIRECTIVE:
         match: cb_set_yaml_version_directive
