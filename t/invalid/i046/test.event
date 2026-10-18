@@ -1,0 +1,7 @@
++STR
++DOC
++MAP {}
+=VAL :foo
++SEQ []
+=VAL :1
+-SEQ

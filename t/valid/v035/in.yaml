@@ -1,0 +1,16 @@
+---
+{plain: first
+    second, quoted: "two", sequence: [3], mapping: {four: 4},
+ empty:, omitted, : empty key, tagged: !!str, after: done}
+---
+{first
+    second: value, ? third
+    fourth: other}
+---
+{url: http://example.org
+    /a:b, next: value}
+---
+{anchor: &v 1, alias: *v, next: 2,}
+---
+{multiline: "first
+    second", next: value}

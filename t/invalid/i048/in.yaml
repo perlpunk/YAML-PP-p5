@@ -1,0 +1,1 @@
+{foo: &v 1, bar: *v baz: 2}

@@ -18,7 +18,6 @@ my @skip = qw/
 
     9KBC
     S98Z
-    T833
     5LLU
 /;
 
@@ -103,6 +102,10 @@ sub test {
     }
     if ($skip_events{ $id }) {
         delete $result->{events};
+    }
+    # The pinned T833 reference omits flow style on its mapping start.
+    if ($id eq 'T833') {
+        s/^\+MAP$/+MAP {}/ for @{ $testcase->{test_events} };
     }
     $testsuite->compare_invalid_parse_events($testcase, $result);
     return $result;

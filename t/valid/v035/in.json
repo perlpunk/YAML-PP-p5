@@ -1,0 +1,28 @@
+{
+  "plain": "first second",
+  "quoted": "two",
+  "sequence": [3],
+  "mapping": {"four": 4},
+  "empty": null,
+  "omitted": null,
+  "": "empty key",
+  "tagged": "",
+  "after": "done"
+}
+{
+  "first second": "value",
+  "third fourth": "other"
+}
+{
+  "url": "http://example.org /a:b",
+  "next": "value"
+}
+{
+  "anchor": 1,
+  "alias": 1,
+  "next": 2
+}
+{
+  "multiline": "first second",
+  "next": "value"
+}

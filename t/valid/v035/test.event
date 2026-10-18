@@ -1,0 +1,63 @@
++STR
++DOC ---
++MAP {}
+=VAL :plain
+=VAL :first second
+=VAL :quoted
+=VAL "two
+=VAL :sequence
++SEQ []
+=VAL :3
+-SEQ
+=VAL :mapping
++MAP {}
+=VAL :four
+=VAL :4
+-MAP
+=VAL :empty
+=VAL :
+=VAL :omitted
+=VAL :
+=VAL :
+=VAL :empty key
+=VAL :tagged
+=VAL <tag:yaml.org,2002:str> :
+=VAL :after
+=VAL :done
+-MAP
+-DOC
++DOC ---
++MAP {}
+=VAL :first second
+=VAL :value
+=VAL :third fourth
+=VAL :other
+-MAP
+-DOC
++DOC ---
++MAP {}
+=VAL :url
+=VAL :http://example.org /a:b
+=VAL :next
+=VAL :value
+-MAP
+-DOC
++DOC ---
++MAP {}
+=VAL :anchor
+=VAL &v :1
+=VAL :alias
+=ALI *v
+=VAL :next
+=VAL :2
+-MAP
+-DOC
++DOC ---
++MAP {}
+=VAL :multiline
+=VAL "first second
+=VAL :next
+=VAL :value
+-MAP
+-DOC
+-STR

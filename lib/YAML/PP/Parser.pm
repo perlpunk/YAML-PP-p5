@@ -135,6 +135,7 @@ my %nodetypes = (
     SEQ0         => 'NODETYPE_SEQ',
     FLOWMAP      => 'NODETYPE_FLOWMAP',
     FLOWMAPVALUE => 'NODETYPE_FLOWMAPVALUE',
+    FLOWMAP_NEXT => 'NODETYPE_FLOWMAP_NEXT',
     FLOWSEQ      => 'NODETYPE_FLOWSEQ',
     FLOWSEQ_NEXT => 'FLOWSEQ_NEXT',
     DOC          => 'FULLNODE',
@@ -254,7 +255,7 @@ my %next_event = (
     FLOWSEQ => 'FLOWSEQ_NEXT',
     FLOWSEQ_NEXT => 'FLOWSEQ',
     FLOWMAP => 'FLOWMAPVALUE',
-    FLOWMAPVALUE => 'FLOWMAP',
+    FLOWMAPVALUE => 'FLOWMAP_NEXT',
 );
 
 my %event_to_method = (
@@ -1189,6 +1190,19 @@ sub cb_take_quoted_key {
 
 sub cb_send_plain_multi {
     my ($self, $token) = @_;
+    # A colon may terminate a multiline key, but cannot follow a plain value.
+    if ($self->events->[-1] eq 'FLOWMAPVALUE') {
+        for my $next (@{ $self->lexer->next_tokens }) {
+            next if $next->{name} eq 'WS';
+            if ($next->{name} eq 'COLON') {
+                $self->expected(
+                    expected => [qw/ FLOW_COMMA FLOWMAP_END /],
+                    got => $next,
+                );
+            }
+            last;
+        }
+    }
     my $stack = $self->event_stack;
     my $info = {
         style => YAML_PLAIN_SCALAR_STYLE,
@@ -1240,6 +1254,9 @@ sub cb_flow_comma {
     if ($event_types->[-1] =~ m/^FLOWSEQ/) {
         $self->cb_send_scalar;
         $event_types->[-1] = $next_event{ $event_types->[-1] };
+    }
+    elsif ($event_types->[-1] eq 'FLOWMAP_NEXT') {
+        $event_types->[-1] = 'FLOWMAP';
     }
 }
 
@@ -1333,6 +1350,12 @@ sub cb_empty_flowmap_value {
         $self->fetch_inline_properties($stack, $info);
     }
     $self->scalar_event($info);
+}
+
+sub cb_empty_flowmap_value_comma {
+    my ($self, $token) = @_;
+    $self->cb_empty_flowmap_value($token);
+    $self->cb_flow_comma;
 }
 
 sub cb_empty_flowseq_comma {

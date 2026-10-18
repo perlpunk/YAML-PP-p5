@@ -1,0 +1,7 @@
++STR
++DOC
++MAP {}
+=VAL :foo
+=VAL &v :1
+=VAL :bar
+=ALI *v

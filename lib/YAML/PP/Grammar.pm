@@ -840,11 +840,27 @@ $GRAMMAR = {
       'return' => 1
     },
     'FLOW_COMMA' => {
-      'match' => 'cb_empty_flowmap_value',
+      'match' => 'cb_empty_flowmap_value_comma',
       'return' => 1
     },
     'WS' => {
       'new' => 'NODETYPE_FLOWMAPVALUE'
+    }
+  },
+  'NODETYPE_FLOWMAP_NEXT' => {
+    'EOL' => {
+      'new' => 'NODETYPE_FLOWMAP_NEXT'
+    },
+    'FLOWMAP_END' => {
+      'match' => 'cb_end_flowmap',
+      'return' => 1
+    },
+    'FLOW_COMMA' => {
+      'match' => 'cb_flow_comma',
+      'new' => 'NEWFLOWMAP'
+    },
+    'WS' => {
+      'new' => 'NODETYPE_FLOWMAP_NEXT'
     }
   },
   'NODETYPE_FLOWSEQ' => {
@@ -1124,7 +1140,7 @@ $GRAMMAR = {
       'new' => 'NEWFLOWSEQ'
     },
     'FLOW_COMMA' => {
-      'match' => 'cb_empty_flow_mapkey',
+      'match' => 'cb_empty_flowmap_value_comma',
       'return' => 1
     },
     'PLAIN' => {
@@ -1537,7 +1553,7 @@ This is the Grammar in YAML
     
       PLAIN_MULTI: { match: cb_send_plain_multi, return: 1 }
     
-      FLOW_COMMA: { match: cb_empty_flow_mapkey, return: 1 }
+      FLOW_COMMA: { match: cb_empty_flowmap_value_comma, return: 1 }
     
       FLOWMAP_END:
         match: cb_end_flowmap_empty
@@ -1738,7 +1754,7 @@ This is the Grammar in YAML
         EOL: { new: RULE_FULLFLOWSCALAR }
         DEFAULT: { new: RULE_FULLFLOWSCALAR }
       FLOW_COMMA:
-        match: cb_empty_flowmap_value
+        match: cb_empty_flowmap_value_comma
         return: 1
       FLOWMAP_END:
         match: cb_end_flowmap_empty
@@ -1850,6 +1866,13 @@ This is the Grammar in YAML
         return: 1
       FLOW_COMMA: { match: cb_flow_comma, new: NEWFLOWMAP }
       DEFAULT: { new: NEWFLOWMAP }
+    NODETYPE_FLOWMAP_NEXT:
+      EOL: { new: NODETYPE_FLOWMAP_NEXT }
+      WS: { new: NODETYPE_FLOWMAP_NEXT }
+      FLOWMAP_END:
+        match: cb_end_flowmap
+        return: 1
+      FLOW_COMMA: { match: cb_flow_comma, new: NEWFLOWMAP }
     
     END_FLOW:
       EOL:

@@ -150,7 +150,7 @@ RULE_FLOWSCALAR:
 
   PLAIN_MULTI: { match: cb_send_plain_multi, return: 1 }
 
-  FLOW_COMMA: { match: cb_empty_flow_mapkey, return: 1 }
+  FLOW_COMMA: { match: cb_empty_flowmap_value_comma, return: 1 }
 
   FLOWMAP_END:
     match: cb_end_flowmap_empty
@@ -351,7 +351,7 @@ NODETYPE_FLOWMAPVALUE:
     EOL: { new: RULE_FULLFLOWSCALAR }
     DEFAULT: { new: RULE_FULLFLOWSCALAR }
   FLOW_COMMA:
-    match: cb_empty_flowmap_value
+    match: cb_empty_flowmap_value_comma
     return: 1
   FLOWMAP_END:
     match: cb_end_flowmap_empty
@@ -463,6 +463,13 @@ NODETYPE_FLOWMAP:
     return: 1
   FLOW_COMMA: { match: cb_flow_comma, new: NEWFLOWMAP }
   DEFAULT: { new: NEWFLOWMAP }
+NODETYPE_FLOWMAP_NEXT:
+  EOL: { new: NODETYPE_FLOWMAP_NEXT }
+  WS: { new: NODETYPE_FLOWMAP_NEXT }
+  FLOWMAP_END:
+    match: cb_end_flowmap
+    return: 1
+  FLOW_COMMA: { match: cb_flow_comma, new: NEWFLOWMAP }
 
 END_FLOW:
   EOL:
