@@ -345,6 +345,7 @@ sub _fetch_next_tokens {
             }
             elsif ($first eq '}' or $first eq ']') {
                 $self->set_flowcontext(--$flowcontext);
+                $self->set_context(1);
             }
         }
         else {

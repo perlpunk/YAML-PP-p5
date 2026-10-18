@@ -76,9 +76,21 @@ $GRAMMAR = {
     }
   },
   'END_FLOW' => {
+    'COLON' => {
+      'EOL' => {
+        'new' => 'FULLNODE'
+      },
+      'WS' => {
+        'new' => 'FULLMAPVALUE_INLINE'
+      },
+      'match' => 'cb_flow_key_colon'
+    },
     'EOL' => {
       'match' => 'cb_end_outer_flow',
       'return' => 1
+    },
+    'WS' => {
+      'new' => 'END_FLOW'
     }
   },
   'FLOWMAP' => {
@@ -862,6 +874,26 @@ $GRAMMAR = {
       'new' => 'NODETYPE_FLOWSEQ'
     }
   },
+  'NODETYPE_IMAPVALUE' => {
+    'COLON' => {
+      'DEFAULT' => {
+        'new' => 'RULE_FULLFLOWSCALAR'
+      },
+      'EOL' => {
+        'new' => 'RULE_FULLFLOWSCALAR'
+      },
+      'WS' => {
+        'new' => 'RULE_FULLFLOWSCALAR'
+      },
+      'match' => 'cb_flow_colon'
+    },
+    'EOL' => {
+      'new' => 'NODETYPE_IMAPVALUE'
+    },
+    'WS' => {
+      'new' => 'NODETYPE_IMAPVALUE'
+    }
+  },
   'NODETYPE_MAP' => {
     'ANCHOR' => {
       'WS' => {
@@ -1255,6 +1287,14 @@ $GRAMMAR = {
     },
     'EOL' => {
       'new' => 'RULE_MAPKEY'
+    },
+    'FLOWMAP_START' => {
+      'match' => 'cb_start_flowmap',
+      'new' => 'NEWFLOWMAP'
+    },
+    'FLOWSEQ_START' => {
+      'match' => 'cb_start_flowseq',
+      'new' => 'NEWFLOWSEQ'
     },
     'PLAIN' => {
       'COLON' => {
@@ -1744,6 +1784,15 @@ This is the Grammar in YAML
         match: cb_end_flowmap_empty
         return: 1
     
+    NODETYPE_IMAPVALUE:
+      WS: { new: NODETYPE_IMAPVALUE }
+      EOL: { new: NODETYPE_IMAPVALUE }
+      COLON:
+        match: cb_flow_colon
+        WS: { new: RULE_FULLFLOWSCALAR }
+        EOL: { new: RULE_FULLFLOWSCALAR }
+        DEFAULT: { new: RULE_FULLFLOWSCALAR }
+    
     NEWFLOWSEQ_ANCHOR:
       DEFAULT: { new: FLOWSEQ_EMPTY }
     NEWFLOWSEQ_TAG:
@@ -1852,11 +1901,18 @@ This is the Grammar in YAML
       DEFAULT: { new: NEWFLOWMAP }
     
     END_FLOW:
+      WS: { new: END_FLOW }
+      COLON:
+        match: cb_flow_key_colon
+        EOL: { new: FULLNODE }
+        WS: { new: FULLMAPVALUE_INLINE }
       EOL:
         match: cb_end_outer_flow
         return: 1
     
     RULE_MAPKEY:
+      FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
+      FLOWMAP_START: { match: cb_start_flowmap, new: NEWFLOWMAP }
       QUESTION:
         match: cb_question
         EOL: { new: FULLNODE }

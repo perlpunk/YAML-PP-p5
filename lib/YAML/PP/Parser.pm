@@ -110,6 +110,11 @@ sub init {
     $self->set_tokens([]);
     $self->set_rule(undef);
     $self->set_event_stack([]);
+    $self->{flow_nodes} = [];
+    $self->{flow_pending} = [];
+    $self->{flow_events} = [];
+    $self->{flow_event_base} = 0;
+    $self->{delivering_event} = 0;
     $self->set_yaml_version($self->default_yaml_version);
     $self->set_yaml_version_directive(undef);
     $self->lexer->init;
@@ -137,6 +142,7 @@ my %nodetypes = (
     FLOWMAPVALUE => 'NODETYPE_FLOWMAPVALUE',
     FLOWSEQ      => 'NODETYPE_FLOWSEQ',
     FLOWSEQ_NEXT => 'FLOWSEQ_NEXT',
+    IMAPVALUE    => 'NODETYPE_IMAPVALUE',
     DOC          => 'FULLNODE',
     DOC_END      => 'DOCUMENT_END',
     STR          => 'STREAM',
@@ -158,6 +164,7 @@ sub parse {
         $self->end_stream;
     };
     if (my $error = $@) {
+        $self->flush_flow_nodes unless $self->{delivering_event};
         if (ref $error) {
             croak "$error\n ";
         }
@@ -182,7 +189,7 @@ sub lex_next_tokens {
     my $next = $next_tokens->[0];
 
     return 1 if ($next->{name} ne 'SPACE');
-    my $flow = $event_types->[-1] =~ m/^FLOW/;
+    my $flow = $event_types->[-1] =~ m/^(?:FLOW|IMAP)/;
     my $space = length $next->{value};
     my $tokens = $self->tokens;
 
@@ -373,6 +380,7 @@ sub parse_tokens {
         }
         TRACE and warn __PACKAGE__.':'.__LINE__.$".Data::Dumper->Dump([\$next_tokens->[0]], ['next_token']);
         my $got = $next_tokens->[0]->{name};
+        $self->expire_flow_keys($next_tokens->[0]);
         if ($got eq 'CONTEXT') {
             my $context = shift @$next_tokens;
             my $indent = $offsets->[-1];
@@ -450,7 +458,7 @@ sub end_sequence {
     pop @{ $event_types };
     pop @{ $self->offset };
     my $info = { name => 'sequence_end_event' };
-    $self->callback->($self, $info->{name} => $info );
+    $self->emit_event($info->{name} => $info );
     $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
 
@@ -472,7 +480,7 @@ sub remove_nodes {
         $info->{name} = $event_to_method{ $exp } . '_end_event';
         pop @{ $event_types };
         pop @{ $offset };
-        $self->callback->($self, $info->{name} => $info );
+        $self->emit_event($info->{name} => $info );
         $event_types->[-1] = $next_event{ $event_types->[-1] };
         $exp = $event_types->[-1];
     }
@@ -483,7 +491,7 @@ sub start_stream {
     my ($self) = @_;
     push @{ $self->events }, 'STR';
     push @{ $self->offset }, -1;
-    $self->callback->($self, 'stream_start_event', {
+    $self->emit_event('stream_start_event', {
         name => 'stream_start_event',
     });
 }
@@ -498,7 +506,7 @@ sub start_document {
         my ($major, $minor) = split m/\./, $self->yaml_version;
         %directive = ( version_directive => { major => $major, minor => $minor } );
     }
-    $self->callback->($self, 'document_start_event', {
+    $self->emit_event('document_start_event', {
         name => 'document_start_event',
         implicit => $implicit,
         %directive,
@@ -524,7 +532,7 @@ sub start_sequence {
         my $properties = pop @$event_stack;
         $self->node_properties($properties->[1], $info);
     }
-    $self->callback->($self, 'sequence_start_event', $info);
+    $self->emit_event('sequence_start_event', $info);
 }
 
 sub start_flow_sequence {
@@ -536,7 +544,7 @@ sub start_flow_sequence {
         $new_offset = 0;
     }
     elsif ($self->new_node) {
-        if ($event_types->[-1] !~ m/^FLOW/) {
+        if ($event_types->[-1] !~ m/^(?:FLOW|IMAP)/) {
             $new_offset++;
         }
     }
@@ -548,7 +556,7 @@ sub start_flow_sequence {
     if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
         $self->fetch_inline_properties($event_stack, $info);
     }
-    $self->callback->($self, 'sequence_start_event', $info);
+    $self->start_flow_node($info, $offset);
 }
 
 sub start_flow_mapping {
@@ -560,7 +568,7 @@ sub start_flow_mapping {
         $new_offset = 0;
     }
     elsif ($self->new_node) {
-        if ($event_types->[-1] !~ m/^FLOW/) {
+        if ($event_types->[-1] !~ m/^(?:FLOW|IMAP)/) {
             $new_offset++;
         }
     }
@@ -572,7 +580,145 @@ sub start_flow_mapping {
     if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
         $self->fetch_inline_properties($event_stack, $info);
     }
-    $self->callback->($self, 'mapping_start_event', $info);
+    if ($implicit_flowseq_map) {
+        $self->emit_event('mapping_start_event', $info);
+    }
+    else {
+        $self->start_flow_node($info, $offset);
+    }
+}
+
+sub start_flow_node {
+    my ($self, $info, $offset) = @_;
+    my $parent = $self->events->[-2];
+    my $node = {
+        info => $info,
+        offset => defined $info->{offset} ? $info->{offset} : $offset,
+        line => $self->tokens->[-1]->{line},
+    };
+    my $candidate = $self->rule eq 'NODETYPE_SCALAR_OR_MAP'
+        || $parent eq 'FLOWSEQ';
+    $node->{candidate} = $candidate;
+    my $stack = $self->event_stack;
+    if (@$stack and $stack->[-1]->[0] eq 'properties') {
+        $node->{properties} = pop @$stack;
+    }
+    push @{ $self->{flow_nodes} }, $node;
+    if ($candidate) {
+        $node->{index} = $self->{flow_event_base}
+            + @{ $self->{flow_events} };
+        push @{ $self->{flow_pending} }, $node;
+    }
+    elsif ($node->{properties}) {
+        $self->node_properties($node->{properties}->[1], $info);
+        delete $node->{properties};
+    }
+    $self->emit_event($info->{name}, $info);
+}
+
+sub commit_flow_node {
+    my ($self, $node) = @_;
+    if (my $properties = delete $node->{properties}) {
+        $self->node_properties($properties->[1], $node->{info});
+    }
+    delete $node->{index};
+}
+
+sub emit_event {
+    my ($self, $event, $info) = @_;
+    if (@{ $self->{flow_pending} }) {
+        push @{ $self->{flow_events} }, [$event, $info];
+    }
+    else {
+        $self->{delivering_event} = 1;
+        $self->callback->($self, $event, $info);
+        $self->{delivering_event} = 0;
+    }
+}
+
+sub flush_flow_events {
+    my ($self) = @_;
+    my $events = $self->{flow_events};
+    my $pending = $self->{flow_pending};
+    my $count = @$pending
+        ? $pending->[0]->{index} - $self->{flow_event_base}
+        : scalar @$events;
+    # Remove events before calling the receiver, including when it throws.
+    my @ready = splice @$events, 0, $count;
+    $self->{flow_event_base} += $count;
+    $self->{delivering_event} = 1;
+    for my $event (@ready) {
+        $self->callback->($self, @$event);
+    }
+    $self->{delivering_event} = 0;
+}
+
+sub flush_flow_nodes {
+    my ($self) = @_;
+    for my $node (@{ $self->{flow_pending} }) {
+        $self->commit_flow_node($node);
+    }
+    $self->{flow_pending} = [];
+    $self->flush_flow_events;
+}
+
+sub expire_flow_keys {
+    my ($self, $token) = @_;
+    my $pending = $self->{flow_pending};
+    return unless @$pending;
+    # Implicit keys fit on one line within 1024 characters. Keeping only
+    # unresolved candidates bounds the shared event queue. Candidates are in
+    # source order, so only an expired prefix needs to be examined.
+    # Nested keys never rescan source or replay events through parent buffers.
+    while (@$pending) {
+        my $node = $pending->[0];
+        last unless $token->{name} eq 'EOL'
+            || $token->{line} != $node->{line}
+            || $token->{column} - $node->{offset} > 1024;
+        shift @$pending;
+        $self->commit_flow_node($node);
+    }
+    $self->flush_flow_events;
+}
+
+sub end_flow_node {
+    my ($self, $info) = @_;
+    $self->emit_event($info->{name}, $info);
+    my $node = pop @{ $self->{flow_nodes} };
+    if ($node->{candidate}) {
+        my $next;
+        for my $token (@{ $self->lexer->next_tokens }) {
+            next if $token->{name} eq 'WS';
+            $next = $token;
+            last;
+        }
+        if ($next and $next->{name} eq 'COLON') {
+            if ($next->{line} != $node->{line}) {
+                $self->exception('Implicit mapping key must be on one line');
+            }
+            if ($next->{column} - $node->{offset} > 1024) {
+                $self->exception('Implicit mapping key is too long');
+            }
+            if (my $properties = delete $node->{properties}) {
+                push @{ $self->event_stack }, $properties;
+            }
+            if ($self->events->[-1] eq 'FLOWSEQ') {
+                $self->start_flow_mapping($node->{offset}, 1);
+            }
+            else {
+                $self->start_mapping($node->{offset});
+            }
+            my $events = $self->{flow_events};
+            my $mapping = pop @$events;
+            splice @$events,
+                $node->{index} - $self->{flow_event_base}, 0, $mapping;
+        }
+    }
+    if (exists $node->{index}) {
+        pop @{ $self->{flow_pending} };
+        $self->commit_flow_node($node);
+        $self->flush_flow_events;
+    }
 }
 
 sub end_flow_sequence {
@@ -581,9 +727,10 @@ sub end_flow_sequence {
     pop @{ $event_types };
     pop @{ $self->offset };
     my $info = { name => 'sequence_end_event' };
-    $self->callback->($self, $info->{name}, $info);
+    $self->end_flow_node($info);
     if ($event_types->[-1] =~ m/^FLOW|^IMAP/) {
         $event_types->[-1] = $next_event{ $event_types->[-1] };
+        $self->end_flow_mapping if $event_types->[-1] eq 'IMAP';
     }
     else {
         push @$event_types, 'END_FLOW';
@@ -593,12 +740,18 @@ sub end_flow_sequence {
 sub end_flow_mapping {
     my ($self) = @_;
     my $event_types = $self->events;
-    pop @{ $event_types };
+    my $type = pop @{ $event_types };
     pop @{ $self->offset };
     my $info = { name => 'mapping_end_event' };
-    $self->callback->($self, $info->{name}, $info);
+    if ($type eq 'IMAP') {
+        $self->emit_event($info->{name}, $info);
+    }
+    else {
+        $self->end_flow_node($info);
+    }
     if ($event_types->[-1] =~ m/^FLOW|^IMAP/) {
         $event_types->[-1] = $next_event{ $event_types->[-1] };
+        $self->end_flow_mapping if $event_types->[-1] eq 'IMAP';
     }
     else {
         push @$event_types, 'END_FLOW';
@@ -612,6 +765,15 @@ sub cb_end_outer_flow {
     $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
 
+sub cb_flow_key_colon {
+    my ($self) = @_;
+    unless ($self->events->[-2] eq 'MAP') {
+        $self->exception('Unexpected mapping value after flow collection');
+    }
+    $self->cb_end_outer_flow;
+    $self->set_new_node(1);
+}
+
 sub start_mapping {
     my ($self, $offset) = @_;
     my $offsets = $self->offset;
@@ -623,7 +785,7 @@ sub start_mapping {
         my $properties = pop @$event_stack;
         $self->node_properties($properties->[1], $info);
     }
-    $self->callback->($self, 'mapping_start_event', $info);
+    $self->emit_event('mapping_start_event', $info);
 }
 
 sub end_document {
@@ -646,7 +808,7 @@ sub end_document {
         $self->exception("Unexpected event type $last");
     }
     pop @{ $self->offset };
-    $self->callback->($self, 'document_end_event', {
+    $self->emit_event('document_end_event', {
         name => 'document_end_event',
         implicit => $implicit,
     });
@@ -664,7 +826,7 @@ sub end_stream {
     my $last = pop @{ $self->events };
     $self->exception("Unexpected event type $last") unless $last eq 'STR';
     pop @{ $self->offset };
-    $self->callback->($self, 'stream_end_event', {
+    $self->emit_event('stream_end_event', {
         name => 'stream_end_event',
     });
 }
@@ -720,7 +882,7 @@ sub scalar_event {
     }
 
     $info->{name} = 'scalar_event';
-    $self->callback->($self, 'scalar_event', $info);
+    $self->emit_event('scalar_event', $info);
     $self->set_new_node(0);
     $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
@@ -733,7 +895,7 @@ sub alias_event {
     }
     my $event_types = $self->events;
     $info->{name} = 'alias_event';
-    $self->callback->($self, 'alias_event', $info);
+    $self->emit_event('alias_event', $info);
     $self->set_new_node(0);
     $event_types->[-1] = $next_event{ $event_types->[-1] };
 }
