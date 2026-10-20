@@ -81,6 +81,50 @@ $GRAMMAR = {
       'return' => 1
     }
   },
+  'EXPLICIT_FLOWSEQ_KEY' => {
+    'COLON' => {
+      'DEFAULT' => {
+        'new' => 'EXPLICIT_FLOWSEQ_VALUE'
+      },
+      'match' => 'cb_empty_explicit_flowseq_key'
+    },
+    'DEFAULT' => {
+      'new' => 'RULE_FULLFLOWSCALAR'
+    },
+    'EOL' => {
+      'new' => 'EXPLICIT_FLOWSEQ_KEY'
+    },
+    'FLOWSEQ_END' => {
+      'match' => 'cb_end_empty_explicit_flowseq_map',
+      'return' => 1
+    },
+    'FLOW_COMMA' => {
+      'match' => 'cb_end_empty_explicit_flowseq_map',
+      'return' => 1
+    },
+    'WS' => {
+      'new' => 'EXPLICIT_FLOWSEQ_KEY'
+    }
+  },
+  'EXPLICIT_FLOWSEQ_VALUE' => {
+    'DEFAULT' => {
+      'new' => 'RULE_FULLFLOWSCALAR'
+    },
+    'EOL' => {
+      'new' => 'EXPLICIT_FLOWSEQ_VALUE'
+    },
+    'FLOWSEQ_END' => {
+      'match' => 'cb_end_empty_explicit_flowseq_map',
+      'return' => 1
+    },
+    'FLOW_COMMA' => {
+      'match' => 'cb_end_empty_explicit_flowseq_map',
+      'return' => 1
+    },
+    'WS' => {
+      'new' => 'EXPLICIT_FLOWSEQ_VALUE'
+    }
+  },
   'FLOWMAP' => {
     'ANCHOR' => {
       'DEFAULT' => {
@@ -279,6 +323,10 @@ $GRAMMAR = {
     'PLAIN_MULTI' => {
       'match' => 'cb_send_plain_multi',
       'new' => 'FLOWSEQ_NEXT'
+    },
+    'QUESTION' => {
+      'match' => 'cb_start_explicit_flowseq_map',
+      'new' => 'EXPLICIT_FLOWSEQ_KEY'
     },
     'QUOTED' => {
       'DEFAULT' => {
@@ -800,6 +848,28 @@ $GRAMMAR = {
       'new' => 'NODETYPE_COMPLEX'
     }
   },
+  'NODETYPE_EMAPVALUE' => {
+    'COLON' => {
+      'DEFAULT' => {
+        'new' => 'EXPLICIT_FLOWSEQ_VALUE'
+      },
+      'match' => 'cb_flow_colon'
+    },
+    'EOL' => {
+      'new' => 'NODETYPE_EMAPVALUE'
+    },
+    'FLOWSEQ_END' => {
+      'match' => 'cb_end_empty_explicit_flowseq_map',
+      'return' => 1
+    },
+    'FLOW_COMMA' => {
+      'match' => 'cb_end_empty_explicit_flowseq_map',
+      'return' => 1
+    },
+    'WS' => {
+      'new' => 'NODETYPE_EMAPVALUE'
+    }
+  },
   'NODETYPE_FLOWMAP' => {
     'DEFAULT' => {
       'new' => 'NEWFLOWMAP'
@@ -1119,12 +1189,16 @@ $GRAMMAR = {
       'match' => 'cb_start_flowmap',
       'new' => 'NEWFLOWMAP'
     },
+    'FLOWSEQ_END' => {
+      'match' => 'cb_end_empty_explicit_flowseq_map',
+      'return' => 1
+    },
     'FLOWSEQ_START' => {
       'match' => 'cb_start_flowseq',
       'new' => 'NEWFLOWSEQ'
     },
     'FLOW_COMMA' => {
-      'match' => 'cb_empty_flow_mapkey',
+      'match' => 'cb_flow_scalar_comma',
       'return' => 1
     },
     'PLAIN' => {
@@ -1537,13 +1611,15 @@ This is the Grammar in YAML
     
       PLAIN_MULTI: { match: cb_send_plain_multi, return: 1 }
     
-      FLOW_COMMA: { match: cb_empty_flow_mapkey, return: 1 }
+      FLOW_COMMA: { match: cb_flow_scalar_comma, return: 1 }
+      FLOWSEQ_END: { match: cb_end_empty_explicit_flowseq_map, return: 1 }
     
       FLOWMAP_END:
         match: cb_end_flowmap_empty
         return: 1
     
     FLOWSEQ:
+      QUESTION: { match: cb_start_explicit_flowseq_map, new: EXPLICIT_FLOWSEQ_KEY }
       FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
       FLOWMAP_START: { match: cb_start_flowmap, new: NEWFLOWMAP }
     
@@ -1575,6 +1651,29 @@ This is the Grammar in YAML
           match: cb_insert_empty_implicit_flowseq_map
           new: RULE_FULLFLOWSCALAR
     
+    EXPLICIT_FLOWSEQ_KEY:
+      WS: { new: EXPLICIT_FLOWSEQ_KEY }
+      EOL: { new: EXPLICIT_FLOWSEQ_KEY }
+      COLON:
+        match: cb_empty_explicit_flowseq_key
+        DEFAULT: { new: EXPLICIT_FLOWSEQ_VALUE }
+      FLOW_COMMA: { match: cb_end_empty_explicit_flowseq_map, return: 1 }
+      FLOWSEQ_END: { match: cb_end_empty_explicit_flowseq_map, return: 1 }
+      DEFAULT: { new: RULE_FULLFLOWSCALAR }
+    NODETYPE_EMAPVALUE:
+      WS: { new: NODETYPE_EMAPVALUE }
+      EOL: { new: NODETYPE_EMAPVALUE }
+      COLON:
+        match: cb_flow_colon
+        DEFAULT: { new: EXPLICIT_FLOWSEQ_VALUE }
+      FLOW_COMMA: { match: cb_end_empty_explicit_flowseq_map, return: 1 }
+      FLOWSEQ_END: { match: cb_end_empty_explicit_flowseq_map, return: 1 }
+    EXPLICIT_FLOWSEQ_VALUE:
+      WS: { new: EXPLICIT_FLOWSEQ_VALUE }
+      EOL: { new: EXPLICIT_FLOWSEQ_VALUE }
+      FLOW_COMMA: { match: cb_end_empty_explicit_flowseq_map, return: 1 }
+      FLOWSEQ_END: { match: cb_end_empty_explicit_flowseq_map, return: 1 }
+      DEFAULT: { new: RULE_FULLFLOWSCALAR }
     FLOWSEQ_PROPS:
       FLOWSEQ_START: { match: cb_start_flowseq, new: NEWFLOWSEQ }
       FLOWMAP_START: { match: cb_start_flowmap, new: NEWFLOWMAP }

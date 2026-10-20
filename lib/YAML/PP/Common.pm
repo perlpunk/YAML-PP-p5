@@ -61,6 +61,7 @@ my %scalar_style_to_string = (
     YAML_LITERAL_SCALAR_STYLE() => '|',
     YAML_FOLDED_SCALAR_STYLE() => '>',
 );
+my %string_to_scalar_style = reverse %scalar_style_to_string;
 
 
 sub event_to_test_suite {
@@ -162,6 +163,9 @@ sub test_suite_to_event {
     }
     elsif ($str =~ s/^\+SEQ//) {
         $event->{name} = 'sequence_start_event';
+        if ($str =~ s/^ \[\]//) {
+            $event->{style} = YAML_FLOW_SEQUENCE_STYLE;
+        }
         if ($str =~ s/^ \&(\S+)//) {
             $event->{anchor} = $1;
         }
@@ -174,6 +178,9 @@ sub test_suite_to_event {
     }
     elsif ($str =~ s/^\+MAP//) {
         $event->{name} = 'mapping_start_event';
+        if ($str =~ s/^ \{\}//) {
+            $event->{style} = YAML_FLOW_MAPPING_STYLE;
+        }
         if ($str =~ s/^ \&(\S+)//) {
             $event->{anchor} = $1;
         }
@@ -186,15 +193,19 @@ sub test_suite_to_event {
     }
     elsif ($str =~ s/^=VAL//) {
         $event->{name} = 'scalar_event';
+        if ($str =~ s/^ \&(\S+)//) {
+            $event->{anchor} = $1;
+        }
         if ($str =~ s/^ <(\S+)>//) {
             $event->{tag} = $1;
         }
-        if ($str =~ s/^ [:'">|]//) {
-            $event->{style} = $1;
+        if ($str =~ s/^ ([:'">|])//) {
+            $event->{style} = $string_to_scalar_style{$1};
         }
-        if ($str =~ s/^(.*)//) {
-            $event->{value} = $1;
-        }
+        my %escapes = (n => "\n", r => "\r", t => "\t", b => "\b",
+            '\\' => '\\');
+        $str =~ s/\\([nrtb\\])/$escapes{$1}/eg;
+        $event->{value} = $str;
     }
     elsif ($str =~ s/^=ALI//) {
         $event->{name} = 'alias_event';

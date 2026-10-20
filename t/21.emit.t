@@ -20,77 +20,27 @@ my $yts = "$Bin/../test-suite/yaml-test-suite-data";
 
 # skip tests that parser can't parse
 my @skip = qw/
-    4FJ6 4ABK 87E4 8UDB 9MMW
-    CN3R CT4Q
-    FRK4
+    4FJ6 87E4 8UDB
+    CN3R
     L9U5 LQZ7 LX3P
     Q9WF QF4Y
-
-    6BFJ
     F6MC
-    NB6Z
-    CFD4
-
-    M2N8:01
-    UKK6:01
 /;
 
-# emitter
-push @skip, qw/
-/;
-# quoting
-push @skip, qw/
-36F6
-6CA3
-9YRD
-HS5T
-EX5H
-NAT4
-L24T:00
-L24T:01
-DK95:00
-DK95:02
-DK95:03
-DK95:04
-DK95:05
-DK95:07
-DK95:08
-/;
 # tags
 push @skip, qw/
 v014
 /;
 # block scalar
 push @skip, qw/
-4QFQ
-
-R4YG
 v033
-/;
-
-# test
-push @skip, qw/
-XLQ9
-K54U
-PUW8
-MJS9
-
-
-/;
-# TODO fix testsuite
-# 4QFQ
-
-# unicode
-push @skip, qw/
-H3Z8
-/;
-push @skip, qw/
 /;
 
 my $testsuite = YAML::PP::Test->new(
     test_suite_dir => "$yts",
     dir => "$Bin/valid",
     valid => 1,
+    events => 1,
     in_yaml => 1,
     emit_yaml => 1,
 );
@@ -121,21 +71,21 @@ $testsuite->run_testcases(
 );
 
 $testsuite->print_stats(
-    count => [qw/ SAME_EVENTS SAME_YAML DIFF_EVENTS DIFF_YAML ERROR TODO SKIP /],
-    ids => [qw/ DIFF_YAML DIFF_EVENTS /],
+    count => [qw/ SAME_EVENTS SAME_YAML DIFF_EVENTS DIFF_YAML ERROR TODO SKIP/],
+    ids => [qw/ DIFF_YAML DIFF_EVENTS/],
 );
 
 sub test {
     my ($testsuite, $testcase) = @_;
     my $id = $testcase->{id};
 
-    my $result = $testsuite->emit_yaml($testcase);
+    my $result = $testsuite->emit_yaml($testcase,
+        {presentation => 'reference'});
     if ($skip_yaml_equal{ $id }) {
         delete $result->{emit_yaml};
     }
     $testsuite->compare_emit_yaml($testcase, $result);
 }
-
 
 done_testing;
 exit;

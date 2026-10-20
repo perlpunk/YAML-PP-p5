@@ -15,11 +15,8 @@ my $yts = "$Bin/../test-suite/yaml-test-suite-data";
 
 my @skip = qw/
     CXX2
-
     9KBC
-    S98Z
     T833
-    5LLU
 /;
 
 # in case of error events might not be exactly matching

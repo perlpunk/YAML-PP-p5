@@ -63,11 +63,13 @@ sub init {
 sub mapping_start_event {
     DEBUG and warn __PACKAGE__.':'.__LINE__.": +++ mapping_start_event\n";
     my ($self, $info) = @_;
+    $self->_flush_key_prefix;
     my $stack = $self->event_stack;
     my $last = $stack->[-1];
     my $indent = $last->{indent};
     my $new_indent = $indent;
     my $yaml = '';
+    my ($key_prefix, $empty_key_prefix);
 
     my $props = '';
     my $anchor = $info->{anchor};
@@ -81,15 +83,13 @@ sub mapping_start_event {
     $props = join ' ', grep defined, ($anchor, $tag);
 
     my $flow = $last->{flow} || 0;
-    $flow++ if ($info->{style} || 0) eq YAML_FLOW_MAPPING_STYLE;
+    $flow++ if $flow or ($info->{style} || 0) eq YAML_FLOW_MAPPING_STYLE;
 
     my $newline = 0;
     if ($flow > 1) {
         if ($last->{type} eq 'SEQ') {
-            if ($last->{newline}) {
-                $yaml .= ' ';
-            }
             if ($last->{index} == 0) {
+                $yaml .= ' ' if $self->column;
                 $yaml .= "[";
             }
             else {
@@ -97,10 +97,8 @@ sub mapping_start_event {
             }
         }
         elsif ($last->{type} eq 'MAP') {
-            if ($last->{newline}) {
-                $yaml .= ' ';
-            }
             if ($last->{index} == 0) {
+                $yaml .= ' ' if $self->column;
                 $yaml .= "{";
             }
             else {
@@ -151,7 +149,14 @@ sub mapping_start_event {
                     $yaml .= '-';
                 }
                 elsif ($last->{type} eq 'MAP') {
-                    $yaml .= "?";
+                    if ($flow == 1 and not $props) {
+                        $key_prefix = "$yaml?";
+                        $empty_key_prefix = $yaml;
+                        $yaml = '';
+                    }
+                    else {
+                        $yaml .= "?";
+                    }
                     $last->{type} = 'COMPLEX';
                 }
                 elsif ($last->{type} eq 'COMPLEXVALUE') {
@@ -176,6 +181,7 @@ sub mapping_start_event {
         newline => $newline,
         column => $self->column,
         flow => $flow,
+        key_prefix => $key_prefix, empty_key_prefix => $empty_key_prefix,
     };
     $new_info->{type} = 'MAP';
     push @{ $stack }, $new_info;
@@ -189,21 +195,30 @@ sub mapping_end_event {
     my $stack = $self->event_stack;
 
     my $last = pop @{ $stack };
-    if ($last->{index} == 0) {
+    if (defined $last->{empty_key_prefix} and $last->{index} == 0) {
+        $self->_write("$last->{empty_key_prefix}\{}:");
+        $stack->[-1]->{type} = 'MAP';
+    }
+    elsif ($last->{index} == 0) {
         my $indent = $last->{indent};
         my $zero_indent = $last->{zero_indent};
         if ($last->{zero_indent}) {
             $indent .= ' ' x $self->indent;
         }
         if ($self->column) {
-            $self->_write(" {}\n");
+            $self->_write(' {}' . ($last->{flow} < 2 ? "\n" : ''));
         }
         else {
-            $self->_write("$indent\{}\n");
+            $self->_write("$indent\{}" . ($last->{flow} < 2 ? "\n" : ''));
         }
     }
     elsif ($last->{flow}) {
-        my $yaml = "}";
+        my $yaml = '';
+        if ($last->{info}{flow_multiline}) {
+            $yaml .= ',' if $info->{trailing_comma};
+            $yaml .= "\n$last->{indent}";
+        }
+        $yaml .= "}";
         if ($last->{flow} == 1) {
             $yaml .= "\n";
         }
@@ -230,11 +245,13 @@ sub mapping_end_event {
 sub sequence_start_event {
     DEBUG and warn __PACKAGE__.':'.__LINE__.": +++ sequence_start_event\n";
     my ($self, $info) = @_;
+    $self->_flush_key_prefix;
     my $stack = $self->event_stack;
     my $last = $stack->[-1];
     my $indent = $last->{indent};
     my $new_indent = $indent;
     my $yaml = '';
+    my ($key_prefix, $empty_key_prefix);
 
     my $props = '';
     my $anchor = $info->{anchor};
@@ -253,10 +270,8 @@ sub sequence_start_event {
     my $zero_indent = 0;
     if ($flow > 1) {
         if ($last->{type} eq 'SEQ') {
-            if ($last->{newline}) {
-                $yaml .= ' ';
-            }
             if ($last->{index} == 0) {
+                $yaml .= ' ' if $self->column;
                 $yaml .= "[";
             }
             else {
@@ -264,10 +279,8 @@ sub sequence_start_event {
             }
         }
         elsif ($last->{type} eq 'MAP') {
-            if ($last->{newline}) {
-                $yaml .= ' ';
-            }
             if ($last->{index} == 0) {
+                $yaml .= ' ' if $self->column;
                 $yaml .= "{";
             }
             else {
@@ -318,7 +331,15 @@ sub sequence_start_event {
                 elsif ($last->{type} eq 'MAP') {
                     $last->{type} = 'COMPLEX';
                     $zero_indent = 1;
-                    $yaml .= "?";
+                    if ($flow == 1 and not $props) {
+                        $key_prefix = "$yaml?";
+                        $empty_key_prefix = $yaml;
+                        $yaml = '';
+                    }
+                    else {
+                        $yaml .= "?";
+                    }
+                    $new_indent = $indent if $props;
                 }
                 elsif ($last->{type} eq 'COMPLEXVALUE') {
                     $yaml .= ":";
@@ -347,6 +368,7 @@ sub sequence_start_event {
         newline => $newline,
         column => $self->column,
         flow => $flow,
+        key_prefix => $key_prefix, empty_key_prefix => $empty_key_prefix,
     };
     $new_info->{type} = 'SEQ';
     push @{ $stack }, $new_info;
@@ -359,7 +381,11 @@ sub sequence_end_event {
     my $stack = $self->event_stack;
 
     my $last = pop @{ $stack };
-    if ($last->{index} == 0) {
+    if (defined $last->{empty_key_prefix} and $last->{index} == 0) {
+        $self->_write("$last->{empty_key_prefix}\[]:");
+        $stack->[-1]->{type} = 'MAP';
+    }
+    elsif ($last->{index} == 0) {
         my $indent = $last->{indent};
         my $zero_indent = $last->{zero_indent};
         if ($last->{zero_indent}) {
@@ -373,7 +399,12 @@ sub sequence_end_event {
         $self->_write($yaml);
     }
     elsif ($last->{flow}) {
-        my $yaml = "]";
+        my $yaml = '';
+        if ($last->{info}{flow_multiline}) {
+            $yaml .= ',' if $info->{trailing_comma};
+            $yaml .= "\n$last->{indent}";
+        }
+        $yaml .= "]";
         if ($last->{flow} == 1) {
             $yaml .= "\n";
         }
@@ -488,11 +519,16 @@ my $escape_re_without_lb = $control_re . '\t\r';
 sub scalar_event {
     DEBUG and warn __PACKAGE__.':'.__LINE__.": +++ scalar_event\n";
     my ($self, $info) = @_;
+    $self->_flush_key_prefix;
     my $stack = $self->event_stack;
     my $last = $stack->[-1];
     my $indent = $last->{indent};
     my $value = $info->{value};
     my $flow = $last->{flow};
+    if (defined $info->{indentation_indicator}
+        and $info->{indentation_indicator} !~ /^[1-9]$/) {
+        die 'Block indentation indicator must be a digit from 1 to 9';
+    }
 
     my $props = '';
     my $anchor = $info->{anchor};
@@ -507,6 +543,11 @@ sub scalar_event {
 
     DEBUG and local $Data::Dumper::Useqq = 1;
     $value = '' unless defined $value;
+    if ($flow and $last->{type} eq 'SEQ' and $value eq '' and not $props
+        and ($info->{style} || YAML_PLAIN_SCALAR_STYLE)
+            == YAML_PLAIN_SCALAR_STYLE) {
+        $value = 'null';
+    }
 
     my $style = $self->_find_best_scalar_style(
         info => $info,
@@ -517,6 +558,10 @@ sub scalar_event {
 
     if ($style == YAML_PLAIN_SCALAR_STYLE) {
         $value =~ s/\n/\n\n/g;
+        if ($last->{type} ne 'DOC') {
+            my $continued_indent = $last->{indent} . ' ' x $self->indent;
+            $value =~ s/\n(?=.)/\n$continued_indent/g;
+        }
     }
     elsif ($style == YAML_SINGLE_QUOTED_SCALAR_STYLE) {
         my $new_indent = $last->{indent} . (' ' x $self->indent);
@@ -527,6 +572,7 @@ sub scalar_event {
                 $line = $new_indent . $line
                     if length $line;
             }
+            $lines[-1] = $new_indent unless length $lines[-1];
         }
         $value = join "\n", @lines;
         $value =~ s/'/''/g;
@@ -538,7 +584,10 @@ sub scalar_event {
         if ($value =~ m/\A\n* +/) {
             $indicators .= $self->indent;
         }
-        my $indent = $indent . ' ' x $self->indent;
+        $indicators = $info->{indentation_indicator}
+            if defined $info->{indentation_indicator};
+        my $indent = $indent . ' ' x (
+            $info->{indentation_indicator} || $self->indent);
         if ($value !~ m/\n\z/) {
             $indicators .= '-';
             $value .= "\n";
@@ -570,7 +619,10 @@ sub scalar_event {
         if ($value =~ m/\A\n* +/) {
             $indicators .= $self->indent;
         }
-        my $indent = $indent . ' ' x $self->indent;
+        $indicators = $info->{indentation_indicator}
+            if defined $info->{indentation_indicator};
+        my $indent = $indent . ' ' x (
+            $info->{indentation_indicator} || $self->indent);
         if ($trailing > 0) {
             $indicators .= '+';
             $open_ended = 1;
@@ -614,6 +666,11 @@ sub scalar_event {
     }
     else {
         $value =~ s/([$escape_re"\\])/$to_escape{ $1 } || sprintf '\\u%04x', ord($1)/eg;
+        if ($info->{escape_unicode}) {
+            $value =~ s/([^\x00-\x7f])/ord($1) <= 0xffff
+                ? sprintf('\\u%04X', ord($1))
+                : sprintf('\\U%08X', ord($1))/eg;
+        }
         $value = '"' . $value . '"';
     }
 
@@ -623,6 +680,7 @@ sub scalar_event {
         props => $props,
         value => $value,
         style => $style,
+        info => $info,
     );
 
     $last->{index}++;
@@ -642,8 +700,13 @@ sub _find_best_scalar_style {
     my $flow = $last->{flow};
 
     my $first = substr($value, 0, 1);
+    if ($value eq ':' and !$flow and $last->{type} eq 'MAP'
+        and ($style || YAML_PLAIN_SCALAR_STYLE) == YAML_PLAIN_SCALAR_STYLE) {
+        return YAML_PLAIN_SCALAR_STYLE;
+    }
     if ($value eq '') {
-        if ($flow and $last->{type} ne 'MAPVALUE' and $last->{type} ne 'MAP') {
+        if ($flow and $last->{type} ne 'MAPVALUE' and $last->{type} ne 'MAP'
+            and not defined $info->{anchor} and not defined $info->{tag}) {
             $style = YAML_SINGLE_QUOTED_SCALAR_STYLE;
         }
         elsif (not $style) {
@@ -657,15 +720,12 @@ sub _find_best_scalar_style {
     $style ||= YAML_PLAIN_SCALAR_STYLE;
 
     if ($style == YAML_SINGLE_QUOTED_SCALAR_STYLE) {
-        if ($value =~ m/ \n/ or $value =~ m/\n / or $value =~ m/^\n/ or $value =~ m/\n$/) {
-            $style = YAML_DOUBLE_QUOTED_SCALAR_STYLE;
-        }
-        elsif ($value eq "\n") {
+        if ($value =~ m/ \n/ or $value =~ m/\n /) {
             $style = YAML_DOUBLE_QUOTED_SCALAR_STYLE;
         }
     }
     elsif ($style == YAML_LITERAL_SCALAR_STYLE or $style == YAML_FOLDED_SCALAR_STYLE) {
-        if ($value eq '') {
+        if ($value eq '' and $flow) {
             $style = YAML_DOUBLE_QUOTED_SCALAR_STYLE;
         }
         elsif ($flow) {
@@ -694,7 +754,18 @@ sub _find_best_scalar_style {
             $style = YAML_DOUBLE_QUOTED_SCALAR_STYLE;
         }
         elsif ($value =~ tr/\n//) {
-            $style = $flow ? YAML_DOUBLE_QUOTED_SCALAR_STYLE : YAML_LITERAL_SCALAR_STYLE;
+            if ($flow) {
+                $style = YAML_DOUBLE_QUOTED_SCALAR_STYLE;
+            }
+            elsif (!$info->{multiline_plain}
+                or $value =~ m/\A\n|\n\z|(?:\A|\n)[ \t]|[ \t](?:\n|\z)/
+                or $value =~ m/:(?:\s|\z)|\s#/
+                or $forbidden_first{$first}
+                or ($forbidden_first_plus_space{$first}
+                    and substr($value, 1, 1) =~ /\s/)
+                or $value =~ /\A(?:---|\.\.\.)/) {
+                $style = YAML_LITERAL_SCALAR_STYLE;
+            }
         }
         elsif ($forbidden_first{ $first }) {
             $style = YAML_SINGLE_QUOTED_SCALAR_STYLE;
@@ -756,6 +827,7 @@ sub _emit_scalar {
             value => $value,
             pvalue => $pvalue,
             style => $args{style},
+            info => $args{info},
         );
     }
     else {
@@ -859,6 +931,9 @@ sub _emit_flow_scalar {
     my $pvalue = $args{pvalue};
     my $stack = $self->event_stack;
     my $last = $stack->[-1];
+    my $info = $args{info} || {};
+    my $pretty = $last->{info}{flow_multiline};
+    my $entry_indent = $last->{indent} . ' ' x $self->indent;
 
     my $yaml;
     if ($last->{type} eq 'SEQ') {
@@ -867,9 +942,10 @@ sub _emit_flow_scalar {
                 $yaml .= ' ';
             }
             $yaml .= "[";
+            $yaml .= "\n$entry_indent" if $pretty;
         }
         else {
-            $yaml .= ", ";
+            $yaml .= $pretty ? ",\n$entry_indent" : ", ";
         }
     }
     elsif ($last->{type} eq 'MAP') {
@@ -878,17 +954,22 @@ sub _emit_flow_scalar {
                 $yaml .= ' ';
             }
             $yaml .= "{";
+            $yaml .= "\n$entry_indent" if $pretty;
         }
         else {
-            $yaml .= ", ";
+            $yaml .= $pretty ? ",\n$entry_indent" : ", ";
         }
+        $yaml .= '? ' if $info->{explicit_key};
+        $last->{space_before_colon} = $info->{space_before_colon};
         $last->{type} = 'MAPVALUE';
     }
     elsif ($last->{type} eq 'MAPVALUE') {
         if ($last->{index} == 0) {
             die "Should not happen (index 0 in MAPVALUE)";
         }
-        $yaml .= ": ";
+        $yaml .= ' ' if delete $last->{space_before_colon};
+        $yaml .= ':';
+        $yaml .= ' ' if length $pvalue or not $pretty;
         $last->{type} = 'MAP';
     }
     if ($self->column + length $pvalue > $self->width) {
@@ -903,6 +984,7 @@ sub _emit_flow_scalar {
 sub alias_event {
     DEBUG and warn __PACKAGE__.':'.__LINE__.": +++ alias_event\n";
     my ($self, $info) = @_;
+    $self->_flush_key_prefix;
     my $stack = $self->event_stack;
     my $last = $stack->[-1];
     my $indent = $last->{indent};
@@ -1052,7 +1134,10 @@ sub _emit_tag {
         }
     }
     if ($tag =~ m/^(!.*)/) {
-        $tag = "$1";
+        my $name = substr($tag, 1);
+        $name =~ s/([^0-9A-Za-z#;\/?:\@&=+\$_.~*'()-])/
+            sprintf '%%%02X', ord($1)/eg;
+        $tag = "!$name";
     }
     else {
         $tag = "!<$tag>";
@@ -1083,6 +1168,20 @@ sub _write {
         $self->{column} = 0;
     }
     $self->writer->write($yaml);
+}
+
+sub _flush_key_prefix {
+    my ($self) = @_;
+    # Delay only the key punctuation until its first child arrives, so empty
+    # collections can use []: or {}: without buffering their event streams.
+    my $stack = $self->event_stack;
+    return unless $stack and @$stack;
+    my $last = $stack->[-1];
+    if (defined(my $prefix = delete $last->{key_prefix})) {
+        delete $last->{empty_key_prefix};
+        $self->_write($prefix);
+        $last->{column} = $self->column;
+    }
 }
 
 1;
@@ -1142,6 +1241,38 @@ Constructor. Currently takes these options:
 =back
 
 =item stream_start_event, stream_end_event, document_start_event, document_end_event, sequence_start_event, sequence_end_event, mapping_start_event, mapping_end_event, scalar_event, alias_event
+
+Events can include optional presentation preferences in addition to C<style>.
+The parser records these preferences when it reads the corresponding syntax:
+
+=over
+
+=item flow_multiline
+
+Collection start events can request flow entries on separate lines.
+
+=item trailing_comma
+
+Collection end events can request a trailing comma in multiline flow style.
+
+=item explicit_key, space_before_colon
+
+Scalar keys in flow mappings can request C<?> and a space before C<:>.
+
+=item indentation_indicator
+
+Block scalars can request an explicit indentation digit from 1 to 9.
+The content uses that indentation so the indicator preserves the value.
+
+=item escape_unicode
+
+Double-quoted scalars can request Unicode escape sequences.
+
+=item multiline_plain
+
+Plain scalars can request multiline output when their content permits it.
+
+=back
 
 =item indent, set_indent
 

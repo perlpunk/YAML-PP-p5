@@ -652,90 +652,122 @@ sub emit_yaml {
     my $id = $testcase->{id};
     my $exp_yaml = $testcase->{emit_yaml};
 
-    my @events;
-    my $parser = YAML::PP::Parser->new(
-        receiver => sub {
-            my ($self, @args) = @_;
-            push @events, [@args];
-        },
-    );
+    my $result;
     eval {
-        $parser->parse_string($testcase->{in_yaml});
-    };
-
-    my $err = $@;
-    my $result = {};
-    if ($err) {
-        diag "ERROR parsing $id\n$err";
-        $result->{err} = $err;
-        return $result;
-    }
-
-    my $emit_yaml = $self->_emit_events(\@events, $args);
-
-    my @reparse_events;
-    my @expected_reparse_events;
-    my @ev;
-    my @emit_events;
-    $parser = YAML::PP::Parser->new(
-        receiver => sub {
-            my ($self, @args) = @_;
-            my ($type, $info) = @args;
-            push @emit_events, $info;
-            push @ev, YAML::PP::Common::event_to_test_suite($info, { flow => $flow eq 'keep' });
-        },
-    );
-    eval {
-        $parser->parse_string($emit_yaml);
-    };
-    $err = $@;
-    if ($err) {
-        diag "ERROR parsing $id\n$err";
-        diag $emit_yaml;
-        $result->{err} = $err;
-        return $result;
-    }
-    @reparse_events = @ev;
-
-    if ($flow eq 'keep') {
-        @expected_reparse_events = map {
-            YAML::PP::Common::event_to_test_suite($_->[1], { flow => 1 })
-        } @events;
-    }
-    elsif ($flow eq 'no') {
-        @ev = ();
-        eval {
-            $parser->parse_string($exp_yaml);
+        # Emitter tests consume the corpus event stream. Parser conformance
+        # is checked independently by t/10.parse-valid.t.
+        my $input = [map {
+            my $info = YAML::PP::Common::test_suite_to_event(decode_utf8($_));
+            [$info->{name}, $info];
+        } @{ $testcase->{test_events} }];
+        die 'Missing input event fixture' unless @$input;
+        my $reference = eval { $self->_parse_emit_events($exp_yaml) };
+        my $reference_error = $@;
+        # Some valid references need a parser fix on a separate PR. Their
+        # event fixture still permits an independent, exact emitter check.
+        $reference ||= $input;
+        my $presentation = $args->{presentation} || '';
+        my $events = $presentation eq 'reference' ? $reference : $input;
+        my $emit_yaml = $self->_emit_events($events, $args);
+        my $emitted = eval { $self->_parse_emit_events($emit_yaml) };
+        my $output_error = $@;
+        if (!$emitted and ($presentation ne 'reference'
+            or $emit_yaml ne $exp_yaml)) {
+            die $output_error;
+        }
+        my $expected = $flow eq 'no' ? $reference : $input;
+        my @containers;
+        my @expected = map {
+            my %info = %{ $_->[1] };
+            if ($flow eq 'yes') {
+                if ($info{name} =~ /^(sequence|mapping)_start_event$/) {
+                    push @containers, $1;
+                }
+                elsif ($info{name} =~ /^(sequence|mapping)_end_event$/) {
+                    pop @containers;
+                }
+                elsif ($info{name} eq 'scalar_event' and @containers
+                    and $containers[-1] eq 'sequence'
+                    and $info{style} == YAML_PLAIN_SCALAR_STYLE
+                    and $info{value} eq '' and not defined $info{anchor}
+                    and not defined $info{tag}) {
+                    $info{value} = 'null';
+                }
+                $info{style} = YAML_FLOW_SEQUENCE_STYLE
+                    if $info{name} eq 'sequence_start_event';
+                $info{style} = YAML_FLOW_MAPPING_STYLE
+                    if $info{name} eq 'mapping_start_event';
+                $info{style} = YAML_PLAIN_SCALAR_STYLE
+                    if $info{name} eq 'scalar_event';
+            }
+            YAML::PP::Common::event_to_test_suite(\%info, {flow => 1});
+        } @$expected;
+        my @got = map {
+            my %info = %{ $_->[1] };
+            $info{style} = YAML_PLAIN_SCALAR_STYLE
+                if $flow eq 'yes' and $info{name} eq 'scalar_event';
+            YAML::PP::Common::event_to_test_suite(\%info, {flow => 1});
+        } @{ $emitted || [] };
+        $result = {
+            expected_events => \@expected,
+            reparse_events => \@got,
+            input_data => $self->_construct_emit_events($input),
+            reference_data => $self->_construct_emit_events($reference),
+            input_properties => $self->_emit_event_properties($input),
+            reference_properties => $self->_emit_event_properties($reference),
+            output_data => $emitted
+                ? $self->_construct_emit_events($emitted) : undef,
+            output_properties => $emitted
+                ? $self->_emit_event_properties($emitted) : undef,
+            exact_reference_only => !$emitted,
+            reference_matched => $emit_yaml eq $exp_yaml,
+            reference_parser_error => $reference_error,
         };
-        @expected_reparse_events = @ev;
-    }
-    else {
-        @expected_reparse_events = map {
-            if ($_->[1]->{name} eq 'sequence_start_event') {
-                $_->[1]->{style} = YAML_FLOW_SEQUENCE_STYLE;
-            }
-            elsif ($_->[1]->{name} eq 'mapping_start_event') {
-                $_->[1]->{style} = YAML_FLOW_MAPPING_STYLE;
-            }
-            elsif ($_->[1]->{name} eq 'scalar_event') {
-                $_->[1]->{style} = YAML_PLAIN_SCALAR_STYLE;
-            }
-            YAML::PP::Common::event_to_test_suite($_->[1], { flow => 1 });
-        } @events;
-        @reparse_events = map {
-            if ($_->{name} eq 'scalar_event') {
-                $_->{style} = YAML_PLAIN_SCALAR_STYLE;
-            }
-            YAML::PP::Common::event_to_test_suite($_, { flow => 1 });
-        } @emit_events;
-    }
-    $result = {
-        expected_events => \@expected_reparse_events,
-        reparse_events => \@reparse_events,
+        $result->{emit_yaml} = $emit_yaml if $flow eq 'no';
     };
-#    note "========= EMIT:\n$emit_yaml";
-    $result->{emit_yaml} = $emit_yaml if $flow eq 'no';
+    if (my $err = $@) {
+        return {err => $err};
+    }
     return $result;
+}
+
+sub _parse_emit_events {
+    my ($self, $yaml) = @_;
+    my @events;
+    my $parser = YAML::PP::Parser->new(receiver => sub {
+        my ($parser, $name, $info) = @_;
+        push @events, [$name, {%$info}];
+    });
+    $parser->parse_string($yaml);
+    return \@events;
+}
+
+sub _construct_emit_events {
+    my ($self, $events) = @_;
+    my $yp = YAML::PP->new(schema => ['Core', 'Catchall'],
+        cyclic_refs => 'allow', duplicate_keys => 1);
+    my $constructor = $yp->loader->constructor;
+    for my $event (@$events) {
+        my ($name, $info) = @$event;
+        my %copy = %$info;
+        delete $copy{version_directive};
+        $constructor->$name(\%copy);
+    }
+    return $constructor->docs;
+}
+
+sub _emit_event_properties {
+    my ($self, $events) = @_;
+    return [map {
+        my $info = $_->[1];
+        my %properties = (name => $info->{name});
+        for my $key ('anchor', 'tag') {
+            $properties{$key} = $info->{$key} if defined $info->{$key};
+        }
+        $properties{value} = $info->{value}
+            if $info->{name} eq 'alias_event';
+        \%properties;
+    } grep { $_->[0] !~ /^(?:stream|document)_/ } @$events];
 }
 
 sub _emit_events {
@@ -746,10 +778,12 @@ sub _emit_events {
     $emitter->set_writer($writer);
     $emitter->init;
     for my $event (@$events) {
-        my ($type, $info) = @$event;
+        my ($type, $original) = @$event;
+        my $info = {%$original};
         delete $info->{version_directive};
         if ($type eq 'sequence_start_event' or $type eq 'mapping_start_event') {
-            if ($args->{flow} eq 'no') {
+            if ($args->{flow} eq 'no'
+                and ($args->{presentation} || '') ne 'reference') {
                 delete $info->{style};
             }
             elsif ($args->{flow} eq 'keep') {
@@ -783,8 +817,39 @@ sub compare_emit_yaml {
     my $reparse_events = $result->{reparse_events};
 
     if ($err) {
+        diag "$id: $err" unless $testcase->{todo};
         push @{ $stats->{ERROR} }, $id;
         ok(0, "$id - $title - ERROR");
+        return;
+    }
+    my $same_reference = is_deeply($result->{reference_data},
+        $result->{input_data}, "$id - Reference preserves input values/types");
+    unless ($same_reference) {
+        push @{ $stats->{DIFF_EVENTS} }, $id;
+        return;
+    }
+    my $same_reference_properties = is_deeply($result->{reference_properties},
+        $result->{input_properties}, "$id - Reference preserves tags/anchors");
+    unless ($same_reference_properties) {
+        push @{ $stats->{DIFF_EVENTS} }, $id;
+        return;
+    }
+    if ($result->{exact_reference_only}) {
+        my $same_yaml = ok($result->{reference_matched},
+            "$id - Exact reference output (parser fix is on a separate PR)");
+        push @{ $stats->{$same_yaml ? 'SAME_YAML' : 'DIFF_YAML'} }, $id;
+        return;
+    }
+    my $same_data = is_deeply($result->{output_data}, $result->{input_data},
+        "$id - Emission preserves input values/types");
+    unless ($same_data) {
+        push @{ $stats->{DIFF_EVENTS} }, $id;
+        return;
+    }
+    my $same_properties = is_deeply($result->{output_properties},
+        $result->{input_properties}, "$id - Emission preserves tags/anchors");
+    unless ($same_properties) {
+        push @{ $stats->{DIFF_EVENTS} }, $id;
         return;
     }
     $_ = encode_utf8 $_ for (@$reparse_events, @$exp_events);

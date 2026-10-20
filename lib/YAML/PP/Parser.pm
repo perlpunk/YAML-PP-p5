@@ -137,6 +137,7 @@ my %nodetypes = (
     FLOWMAPVALUE => 'NODETYPE_FLOWMAPVALUE',
     FLOWSEQ      => 'NODETYPE_FLOWSEQ',
     FLOWSEQ_NEXT => 'FLOWSEQ_NEXT',
+    EMAPVALUE    => 'NODETYPE_EMAPVALUE',
     DOC          => 'FULLNODE',
     DOC_END      => 'DOCUMENT_END',
     STR          => 'STREAM',
@@ -182,7 +183,7 @@ sub lex_next_tokens {
     my $next = $next_tokens->[0];
 
     return 1 if ($next->{name} ne 'SPACE');
-    my $flow = $event_types->[-1] =~ m/^FLOW/;
+    my $flow = $event_types->[-1] =~ m/^(?:FLOW|EMAP)/;
     my $space = length $next->{value};
     my $tokens = $self->tokens;
 
@@ -247,6 +248,8 @@ my %next_event = (
     IMAP => 'IMAPVALUE',
     MAPVALUE => 'MAP',
     IMAPVALUE => 'IMAP',
+    EMAP => 'EMAPVALUE',
+    EMAPVALUE => 'EMAP',
     SEQ => 'SEQ',
     SEQ0 => 'SEQ0',
     DOC => 'DOC_END',
@@ -260,6 +263,7 @@ my %next_event = (
 my %event_to_method = (
     MAP => 'mapping',
     IMAP => 'mapping',
+    EMAP => 'mapping',
     FLOWMAP => 'mapping',
     SEQ => 'sequence',
     SEQ0 => 'sequence',
@@ -270,6 +274,7 @@ my %event_to_method = (
     ALI => 'alias',
     MAPVALUE => 'mapping',
     IMAPVALUE => 'mapping',
+    EMAPVALUE => 'mapping',
 );
 
 #sub process_events {
@@ -536,7 +541,7 @@ sub start_flow_sequence {
         $new_offset = 0;
     }
     elsif ($self->new_node) {
-        if ($event_types->[-1] !~ m/^FLOW/) {
+        if ($event_types->[-1] !~ m/^(?:FLOW|EMAP)/) {
             $new_offset++;
         }
     }
@@ -545,6 +550,8 @@ sub start_flow_sequence {
 
     my $event_stack = $self->event_stack;
     my $info = { style => YAML_FLOW_SEQUENCE_STYLE, name => 'sequence_start_event'  };
+    $info->{flow_multiline} = 1
+        if $self->lexer->next_tokens->[0]->{name} eq 'EOL';
     if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
         $self->fetch_inline_properties($event_stack, $info);
     }
@@ -560,15 +567,20 @@ sub start_flow_mapping {
         $new_offset = 0;
     }
     elsif ($self->new_node) {
-        if ($event_types->[-1] !~ m/^FLOW/) {
+        if ($event_types->[-1] !~ m/^(?:FLOW|EMAP)/) {
             $new_offset++;
         }
     }
-    push @{ $self->events }, $implicit_flowseq_map ? 'IMAP' : 'FLOWMAP';
+    my $type = !$implicit_flowseq_map ? 'FLOWMAP'
+        : $implicit_flowseq_map eq 'explicit' ? 'EMAP' : 'IMAP';
+    push @{ $self->events }, $type;
     push @{ $offsets }, $new_offset;
 
     my $event_stack = $self->event_stack;
     my $info = { name => 'mapping_start_event', style => YAML_FLOW_MAPPING_STYLE };
+    $info->{flow_multiline} = 1
+        if !$implicit_flowseq_map
+        and $self->lexer->next_tokens->[0]->{name} eq 'EOL';
     if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
         $self->fetch_inline_properties($event_stack, $info);
     }
@@ -581,9 +593,11 @@ sub end_flow_sequence {
     pop @{ $event_types };
     pop @{ $self->offset };
     my $info = { name => 'sequence_end_event' };
+    $self->flow_trailing_comma($info);
     $self->callback->($self, $info->{name}, $info);
-    if ($event_types->[-1] =~ m/^FLOW|^IMAP/) {
+    if ($event_types->[-1] =~ m/^(?:FLOW|IMAP|EMAP)/) {
         $event_types->[-1] = $next_event{ $event_types->[-1] };
+        $self->end_flow_mapping if $event_types->[-1] eq 'EMAP';
     }
     else {
         push @$event_types, 'END_FLOW';
@@ -593,15 +607,28 @@ sub end_flow_sequence {
 sub end_flow_mapping {
     my ($self) = @_;
     my $event_types = $self->events;
-    pop @{ $event_types };
+    my $type = pop @{ $event_types };
     pop @{ $self->offset };
     my $info = { name => 'mapping_end_event' };
+    $self->flow_trailing_comma($info) if $type eq 'FLOWMAP';
     $self->callback->($self, $info->{name}, $info);
-    if ($event_types->[-1] =~ m/^FLOW|^IMAP/) {
+    if ($event_types->[-1] =~ m/^(?:FLOW|IMAP|EMAP)/) {
         $event_types->[-1] = $next_event{ $event_types->[-1] };
+        $self->end_flow_mapping if $event_types->[-1] eq 'EMAP';
     }
     else {
         push @$event_types, 'END_FLOW';
+    }
+}
+
+sub flow_trailing_comma {
+    my ($self, $info) = @_;
+    my $tokens = $self->tokens;
+    for (my $i = $#$tokens - 1; $i >= 0; $i--) {
+        next if $tokens->[$i]{name} =~ /^(?:WS|EOL|SPACE)$/;
+        $info->{trailing_comma} = 1
+            if $tokens->[$i]{name} eq 'FLOW_COMMA';
+        last;
     }
 }
 
@@ -630,7 +657,7 @@ sub end_document {
     my ($self, $implicit) = @_;
 
     my $event_types = $self->events;
-    if ($event_types->[-1] =~ m/FLOW/) {
+    if ($event_types->[-1] =~ m/^(?:FLOW|EMAP)/) {
         die "Unexpected end of flow context";
     }
     if ($self->new_node) {
@@ -713,6 +740,12 @@ sub node_properties {
 sub scalar_event {
     my ($self, $info) = @_;
     my $event_types = $self->events;
+    if ($event_types->[-1] eq 'FLOWMAP' or $event_types->[-1] eq 'EMAP') {
+        $info->{explicit_key} = 1 if $self->new_node == 2;
+        my $next = $self->lexer->next_tokens;
+        $info->{space_before_colon} = 1 if @$next > 1
+            and $next->[0]{name} eq 'WS' and $next->[1]{name} eq 'COLON';
+    }
     my $event_stack = $self->event_stack;
     if (@$event_stack and $event_stack->[-1]->[0] eq 'properties') {
         my $properties = pop @$event_stack;
@@ -1055,7 +1088,7 @@ sub cb_send_scalar {
     return unless $last;
     $self->scalar_event($last->[1]);
     my $e = $self->events;
-    if ($e->[-1] eq 'IMAP') {
+    if ($e->[-1] eq 'IMAP' or $e->[-1] eq 'EMAP') {
         $self->end_flow_mapping;
     }
 }
@@ -1085,6 +1118,7 @@ sub cb_send_alias {
     my ($self, $token) = @_;
     my $alias = substr($token->{value}, 1);
     $self->alias_event({ value => $alias });
+    $self->end_flow_mapping if $self->events->[-1] eq 'EMAP';
 }
 
 sub cb_send_alias_key {
@@ -1117,6 +1151,47 @@ sub cb_question {
 sub cb_flow_question {
     my ($self, $res) = @_;
     $self->set_new_node(2);
+}
+
+sub cb_start_explicit_flowseq_map {
+    my ($self, $token) = @_;
+    $self->start_flow_mapping($token->{column}, 'explicit');
+    $self->set_new_node(2);
+}
+
+sub cb_empty_explicit_flowseq_key {
+    my ($self, $token) = @_;
+    $self->cb_empty_flowmap_value($token);
+    $self->set_new_node(1);
+}
+
+sub cb_end_empty_explicit_flowseq_map {
+    my ($self, $token) = @_;
+    if ($self->events->[-1] eq 'EMAP') {
+        $self->cb_empty_flowmap_value($token);
+    }
+    unless ($self->events->[-1] eq 'EMAPVALUE') {
+        $self->exception('Unexpected end of an explicit flow pair');
+    }
+    $self->cb_empty_flowmap_value($token);
+    $self->end_flow_mapping;
+    if ($token->{name} eq 'FLOWSEQ_END') {
+        $self->end_flow_sequence;
+    }
+    else {
+        $self->cb_flow_comma;
+    }
+    $self->set_new_node(0);
+}
+
+sub cb_flow_scalar_comma {
+    my ($self, $token) = @_;
+    if ($self->events->[-1] =~ m/^EMAP/) {
+        $self->cb_end_empty_explicit_flowseq_map($token);
+    }
+    else {
+        $self->cb_empty_flow_mapkey($token);
+    }
 }
 
 sub cb_empty_complexvalue {
@@ -1157,6 +1232,9 @@ sub cb_take_quoted {
         value => $token->{value},
         offset => $token->{column},
     };
+    $info->{escape_unicode} = 1 if grep {
+        defined $_->{orig} and $_->{orig} =~ /\\[uU][0-9a-fA-F]/
+    } @$subtokens;
     if (@$stack and $stack->[-1]->[0] eq 'properties') {
         $self->fetch_inline_properties($stack, $info);
     }
@@ -1174,6 +1252,9 @@ sub cb_quoted_multiline {
         value => $token->{value},
         offset => $token->{column},
     };
+    $info->{escape_unicode} = 1 if grep {
+        defined $_->{orig} and $_->{orig} =~ /\\[uU][0-9a-fA-F]/
+    } @$subtokens;
     if (@$stack and $stack->[-1]->[0] eq 'properties') {
         $self->fetch_inline_properties($stack, $info);
     }
@@ -1194,6 +1275,7 @@ sub cb_send_plain_multi {
         style => YAML_PLAIN_SCALAR_STYLE,
         value => $token->{value},
         offset => $token->{column},
+        multiline_plain => 1,
     };
     if (@$stack and $stack->[-1]->[0] eq 'properties') {
         $self->fetch_inline_properties($stack, $info);
@@ -1414,6 +1496,10 @@ sub cb_send_block_scalar {
         value => $token->{value},
         offset => $token->{column},
     };
+    for my $part (@{ $token->{subtokens} }) {
+        $info->{indentation_indicator} = $part->{value}
+            if $part->{name} eq 'BLOCK_SCALAR_INDENT';
+    }
     if (@$stack and $stack->[-1]->[0] eq 'properties') {
         $self->fetch_inline_properties($stack, $info);
     }

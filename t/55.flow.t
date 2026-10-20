@@ -20,17 +20,11 @@ my $yts = "$Bin/../test-suite/yaml-test-suite-data";
 
 # skip tests that parser can't parse
 my @skip = qw/
-    4FJ6 4ABK 87E4 8UDB 9MMW
-    CN3R CT4Q
-    FRK4
+    4FJ6 87E4 8UDB
+    CN3R
     L9U5 LQZ7 LX3P
     QF4Y
-
-    6BFJ
-    CFD4
     Q9WF
-
-    v022
 /;
 
 push @skip, qw/
@@ -42,6 +36,7 @@ my $testsuite = YAML::PP::Test->new(
     test_suite_dir => "$yts",
     dir => "$Bin/valid",
     valid => 1,
+    events => 1,
     in_yaml => 1,
     emit_yaml => 1,
     tag => 'flow',
@@ -56,8 +51,8 @@ $testsuite->run_testcases(
 );
 
 $testsuite->print_stats(
-    count => [qw/ SAME_EVENTS SAME_YAML DIFF_EVENTS DIFF_YAML ERROR TODO SKIP /],
-    ids => [qw/ DIFF_YAML DIFF_EVENTS /],
+    count => [qw/ SAME_EVENTS SAME_YAML DIFF_EVENTS DIFF_YAML ERROR TODO SKIP/],
+    ids => [qw/ DIFF_YAML DIFF_EVENTS/],
 );
 
 sub test {
@@ -67,7 +62,6 @@ sub test {
     my $result = $testsuite->emit_yaml($testcase, { flow => 'keep' });
     $testsuite->compare_emit_yaml($testcase, $result);
 }
-
 
 done_testing;
 exit;

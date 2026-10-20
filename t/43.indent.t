@@ -89,7 +89,6 @@ for my $event (@events) {
 my $out4 = $emitter->writer->output;
 cmp_ok($out4, 'eq', $out_expected4, "Emitting with indent 4");
 
-
 $ENV{YAML_PP_RESERVED_DIRECTIVE} = 'ignore';
 
 $|++;
@@ -97,73 +96,30 @@ $|++;
 my $yts = "$Bin/../test-suite/yaml-test-suite-data";
 
 # skip tests that parser can't parse
+# M2N8:01 needs the separate flow-key parser fix to reparse other indents.
 my @skip = qw/
-    4FJ6 4ABK 87E4 8UDB 9MMW
-    CN3R CT4Q
-    FRK4
+    M2N8:01
+    4FJ6 87E4 8UDB
+    CN3R
     L9U5 LQZ7 LX3P
     Q9WF QF4Y
-
-    6BFJ
     F6MC
-    NB6Z
-    CFD4
-
-    M2N8:01
-    UKK6:01
 /;
 
-# emitter
-push @skip, qw/
-/;
-# quoting
-push @skip, qw/
-36F6
-6CA3
-9YRD
-HS5T
-EX5H
-NAT4
-L24T:00
-L24T:01
-DK95:00
-DK95:02
-DK95:03
-DK95:04
-DK95:05
-DK95:07
-DK95:08
-/;
 # tags
 push @skip, qw/
 v014
 /;
 # block scalar
 push @skip, qw/
-4QFQ
 6VJK
 7T8X
-
-R4YG
 v033
 /;
 
 # test
 push @skip, qw/
-XLQ9
-K54U
-PUW8
 3MYT
-MJS9
-
-
-/;
-# TODO fix testsuite
-# 4QFQ
-
-# unicode
-push @skip, qw/
-H3Z8
 /;
 push @skip, qw/
     X38W
@@ -173,6 +129,7 @@ my $testsuite = YAML::PP::Test->new(
     test_suite_dir => "$yts",
     dir => "$Bin/valid",
     valid => 1,
+    events => 1,
     in_yaml => 1,
     emit_yaml => 1,
 );
@@ -218,21 +175,19 @@ subtest "indent-$indent" => sub {
 };
 
 $testsuite->print_stats(
-    count => [qw/ SAME_EVENTS SAME_YAML DIFF_EVENTS DIFF_YAML ERROR TODO SKIP /],
-    ids => [qw/ DIFF_YAML DIFF_EVENTS /],
+    count => [qw/ SAME_EVENTS SAME_YAML DIFF_EVENTS DIFF_YAML ERROR TODO SKIP/],
+    ids => [qw/ DIFF_YAML DIFF_EVENTS/],
 );
 
 sub test {
     my ($testsuite, $testcase, $indent) = @_;
     my $id = $testcase->{id};
 
-    my $result = $testsuite->emit_yaml($testcase, { indent => $indent });
+    my $result = $testsuite->emit_yaml($testcase,
+        {indent => $indent, presentation => 'reference'});
     delete $result->{emit_yaml};
     $testsuite->compare_emit_yaml($testcase, $result);
 }
-
-
-
 
 done_testing;
 

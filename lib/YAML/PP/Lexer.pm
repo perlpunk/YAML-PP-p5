@@ -26,6 +26,7 @@ sub init {
     $self->{line} = 0;
     $self->{offset} = 0;
     $self->{flowcontext} = 0;
+    $self->{context} = 0;
 }
 
 sub next_line { return $_[0]->{next_line} }
@@ -373,7 +374,7 @@ sub fetch_plain {
     }
 
     my @tokens;
-    unless ($$yaml =~ s/\A($REGEX(?:[:]+(?=\:(\s|\z)))?)//) {
+    unless ($$yaml =~ s/\A($REGEX(?:[:]+(?=\:(\s|\z)))?|:+(?=:(?:\s|\z)))//) {
         $self->_push_tokens(\@tokens);
         $self->exception("Invalid plain scalar");
     }
@@ -571,6 +572,12 @@ sub fetch_block {
         }
         if ((length $spaces) < $current_indent) {
             if (length $content) {
+                if (!$started and length($spaces) >= $indent) {
+                    $self->_push_tokens(\@tokens);
+                    $self->exception(
+                        'Leading blank line is more indented than content'
+                    );
+                }
                 if ($content =~ m/\A\t/) {
                     $self->_push_tokens(\@tokens);
                     $self->exception("Invalid block scalar");
